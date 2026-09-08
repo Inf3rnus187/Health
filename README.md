@@ -43,7 +43,8 @@ This repository currently implements **Phases 1–2** of the
 | **Photo pipeline** (upload → EXIF‑strip/normalize → Ollama vision → compare) | ✅ |
 | **Dashboards** per domain (`/dashboard/{domain}` + React domain tabs) | ✅ |
 | **Exports** CSV/JSON/XLSX/FHIR + async **clinical PDF** reports | ✅ |
-| MCP tools, automations | ⏳ Phase 7+ |
+| **MCP server** — 10 hub tools as a REST‑API client (scoped token) | ✅ |
+| Automations, security hardening | ⏳ Phase 8+ |
 
 See [`docs/`](docs) for architecture, the data model, and how‑to guides.
 

@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **MCP server (Phase 7)**: a FastMCP server (`mcp/`) exposing hub tools —
+  `list_metrics`, `create_metric`, `record_measurement`, `get_measurements`,
+  `get_trend`, `get_daily_summary`, `get_photo_analysis`, `compare_photos`,
+  `generate_report`, `export_data` — each a thin client of the REST API
+  (single source of truth), authenticated with a scoped token. Runnable via
+  the `mcp` compose profile; its own lint/type/test CI job.
 - **Exports & reports (Phase 6)**: `GET /export?format=csv|json|xlsx|fhir`
   streams a tidy dataset (`date, metric_key, value, unit, source`); the FHIR
   format emits an R4 `Bundle` of `Observation` resources. `POST /reports`

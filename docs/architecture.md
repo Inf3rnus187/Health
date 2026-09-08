@@ -79,6 +79,6 @@ Phases, per the specification (§18):
 4. **Photos + AI** — ingest → normalize → Ollama analysis → comparison. ✅
 5. **Dashboards** — per‑domain views with rolling averages. ✅
 6. **Exports & reports** — CSV/JSON/XLSX, clinical PDF, FHIR. ✅
-7. **MCP** — tools wired to the MCP hub.
+7. **MCP** — tools wired to the MCP hub. ✅
 8. **Automations** — NFC/Shortcuts, capture rules, reminders.
 9. **Hardening & docs** — SBOM, scans, signed images, media encryption.
