@@ -11,6 +11,8 @@ os.environ.setdefault(
 )
 os.environ.setdefault("ADMIN_EMAIL", "admin@example.com")
 os.environ.setdefault("ADMIN_PASSWORD", "adminpass123")
+os.environ.setdefault("MEDIA_DIR", "./.pytest_media")
+os.environ.setdefault("EXPORTS_DIR", "./.pytest_exports")
 
 import pytest_asyncio  # noqa: E402
 from app.core.db import engine  # noqa: E402

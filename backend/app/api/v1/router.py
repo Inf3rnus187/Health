@@ -11,6 +11,8 @@ from app.api.v1 import (
     ingest,
     measurements,
     metrics,
+    photos,
+    photos_media,
     tokens,
 )
 
@@ -22,3 +24,5 @@ api_router.include_router(measurements.router)
 api_router.include_router(events.router)
 api_router.include_router(ingest.router)
 api_router.include_router(capture.router)
+api_router.include_router(photos.router)
+api_router.include_router(photos_media.router)

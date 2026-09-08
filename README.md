@@ -40,7 +40,8 @@ This repository currently implements **Phases 1–2** of the
 | Quality gates: ruff, mypy strict, ESLint, custom limits, CI, coverage ≥80% | ✅ |
 | **Ingestion** `/ingest/watch` + `/ingest/ppc` + configurable HealthKit mapping | ✅ |
 | **Mode B** `/capture` (opens session, pre‑fills night data, returns form) | ✅ |
-| Photo+AI pipeline, dashboards, exports, MCP tools | ⏳ Phase 4+ |
+| **Photo pipeline** (upload → EXIF‑strip/normalize → Ollama vision → compare) | ✅ |
+| Dashboards, exports (CSV/FHIR/PDF), MCP tools, automations | ⏳ Phase 5+ |
 
 See [`docs/`](docs) for architecture, the data model, and how‑to guides.
 

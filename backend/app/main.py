@@ -27,6 +27,7 @@ TAGS = [
     {"name": "events", "description": "Grouped measurement contexts."},
     {"name": "ingest", "description": "Apple Watch / CPAP ingestion."},
     {"name": "capture", "description": "Mode B capture sessions."},
+    {"name": "photos", "description": "Photo pipeline and AI analysis."},
     {"name": "health", "description": "Liveness and readiness."},
 ]
 

@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Photo pipeline (Phase 4)**: `POST /ingest/photo` (multipart, scope
+  `ingest:photo`) stores the original outside the web root, EXIF‑sanitizes
+  and normalizes it (Pillow), then queues an async worker job that runs the
+  Ollama vision model for a strict‑JSON silhouette analysis, links the
+  previous same‑angle photo for comparison, and injects the AI change as a
+  measurement (`source=ai`). Read via `GET /photos`, `/photos/{id}`,
+  `/photos/{id}/analysis`, `/photos/compare`, and the authenticated
+  `/photos/{id}/file` stream. Ollama URL/models are configurable and mocked
+  in tests.
 - **Ingestion (Phase 3)**: `POST /ingest/watch` and `POST /ingest/ppc`
   accept generic samples keyed by `metric_key` or by an external
   `healthkit_type`, resolved through a **configurable mapping table**

@@ -76,7 +76,7 @@ Phases, per the specification (§18):
 1. **Foundation & quality** — compose, auth, tokens, audit, CI. ✅
 2. **Registry + measurements** — dynamic metrics, idempotent batch, seed. ✅
 3. **Ingestion** — `/ingest/watch`, `/ingest/ppc`, capture (mode B). ✅
-4. **Photos + AI** — ingest → normalize → Ollama analysis → comparison.
+4. **Photos + AI** — ingest → normalize → Ollama analysis → comparison. ✅
 5. **Dashboards** — per‑domain views with rolling averages.
 6. **Exports & reports** — CSV/JSON/XLSX, clinical PDF, FHIR.
 7. **MCP** — tools wired to the MCP hub.

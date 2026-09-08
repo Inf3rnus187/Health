@@ -21,6 +21,16 @@ async def ping(ctx: dict[str, Any]) -> str:
     return "pong"
 
 
+async def analyze_photo(ctx: dict[str, Any], photo_id: str) -> str:
+    """Run the photo pipeline for ``photo_id`` in a fresh session."""
+    from app.core.db import SessionFactory
+    from app.services.photo_pipeline import process
+
+    async with SessionFactory() as session:
+        await process(session, photo_id)
+    return photo_id
+
+
 async def _startup(ctx: dict[str, Any]) -> None:
     """Configure logging when the worker boots."""
     configure_logging()
@@ -30,6 +40,6 @@ async def _startup(ctx: dict[str, Any]) -> None:
 class WorkerSettings:
     """ARQ worker configuration read by ``arq app...WorkerSettings``."""
 
-    functions = [ping]
+    functions = [ping, analyze_photo]
     on_startup = _startup
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
