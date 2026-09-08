@@ -38,7 +38,9 @@ This repository currently implements **Phases 1–2** of the
 | **Seed catalogue** — the full Annexe A dictionary (76 metrics) | ✅ |
 | React front: login, catalogue, governed chart, quick entry | ✅ |
 | Quality gates: ruff, mypy strict, ESLint, custom limits, CI, coverage ≥80% | ✅ |
-| Ingestion (Watch/PPC/capture), photo+AI pipeline, exports, MCP tools | ⏳ Phase 3+ |
+| **Ingestion** `/ingest/watch` + `/ingest/ppc` + configurable HealthKit mapping | ✅ |
+| **Mode B** `/capture` (opens session, pre‑fills night data, returns form) | ✅ |
+| Photo+AI pipeline, dashboards, exports, MCP tools | ⏳ Phase 4+ |
 
 See [`docs/`](docs) for architecture, the data model, and how‑to guides.
 

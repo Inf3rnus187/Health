@@ -10,6 +10,7 @@ from app.models.audit import AuditLog
 from app.models.automation import Automation
 from app.models.base import Base
 from app.models.event import Event
+from app.models.mapping import IngestMapping
 from app.models.measurement import Measurement
 from app.models.metric import MetricDefinition
 from app.models.photo import Photo, PhotoAnalysis
@@ -25,6 +26,7 @@ __all__ = [
     "AuthSession",
     "Base",
     "Event",
+    "IngestMapping",
     "Measurement",
     "MetricDefinition",
     "Photo",

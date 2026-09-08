@@ -25,6 +25,8 @@ TAGS = [
     {"name": "metrics", "description": "Dynamic metric registry."},
     {"name": "measurements", "description": "Facts and aggregates."},
     {"name": "events", "description": "Grouped measurement contexts."},
+    {"name": "ingest", "description": "Apple Watch / CPAP ingestion."},
+    {"name": "capture", "description": "Mode B capture sessions."},
     {"name": "health", "description": "Liveness and readiness."},
 ]
 

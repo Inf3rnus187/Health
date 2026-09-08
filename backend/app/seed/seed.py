@@ -15,20 +15,23 @@ from app.core.config import get_settings
 from app.core.db import SessionFactory
 from app.core.logging import get_logger
 from app.core.security import hash_password
+from app.models.mapping import IngestMapping
 from app.models.metric import MetricDefinition
 from app.models.user import User
 from app.seed.catalog import CATALOG
+from app.seed.mappings import DEFAULT_MAPPINGS
 
 _log = get_logger("seed")
 
 
 async def seed() -> None:
-    """Seed the admin user and metric catalogue in one transaction."""
+    """Seed admin, metric catalogue and default mappings."""
     async with SessionFactory() as session:
         await _seed_admin(session)
-        created = await _seed_catalog(session)
+        metrics = await _seed_catalog(session)
+        maps = await _seed_mappings(session)
         await session.commit()
-    _log.info("seed_complete", metrics_added=created)
+    _log.info("seed_complete", metrics_added=metrics, mappings_added=maps)
 
 
 def main() -> None:
@@ -65,6 +68,29 @@ async def _seed_catalog(session: AsyncSession) -> int:
         if entry["key"] in existing:
             continue
         session.add(MetricDefinition(**entry))
+        added += 1
+    return added
+
+
+async def _seed_mappings(session: AsyncSession) -> int:
+    """Insert any global default ingest mapping not already present."""
+    result = await session.execute(
+        select(IngestMapping.source, IngestMapping.external_key).where(
+            IngestMapping.user_id.is_(None)
+        )
+    )
+    existing = {(row[0], row[1]) for row in result.all()}
+    added = 0
+    for source, external_key, metric_key in DEFAULT_MAPPINGS:
+        if (source, external_key) in existing:
+            continue
+        session.add(
+            IngestMapping(
+                source=source,
+                external_key=external_key,
+                metric_key=metric_key,
+            )
+        )
         added += 1
     return added
 
