@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     auth,
     capture,
+    dashboard,
     events,
     ingest,
     measurements,
@@ -26,3 +27,4 @@ api_router.include_router(ingest.router)
 api_router.include_router(capture.router)
 api_router.include_router(photos.router)
 api_router.include_router(photos_media.router)
+api_router.include_router(dashboard.router)

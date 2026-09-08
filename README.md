@@ -41,7 +41,8 @@ This repository currently implements **Phases 1–2** of the
 | **Ingestion** `/ingest/watch` + `/ingest/ppc` + configurable HealthKit mapping | ✅ |
 | **Mode B** `/capture` (opens session, pre‑fills night data, returns form) | ✅ |
 | **Photo pipeline** (upload → EXIF‑strip/normalize → Ollama vision → compare) | ✅ |
-| Dashboards, exports (CSV/FHIR/PDF), MCP tools, automations | ⏳ Phase 5+ |
+| **Dashboards** per domain (`/dashboard/{domain}` + React domain tabs) | ✅ |
+| Exports (CSV/JSON/XLSX/FHIR/PDF), MCP tools, automations | ⏳ Phase 6+ |
 
 See [`docs/`](docs) for architecture, the data model, and how‑to guides.
 

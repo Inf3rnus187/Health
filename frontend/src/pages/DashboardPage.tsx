@@ -1,4 +1,5 @@
 import { AppHeader } from '../components/AppHeader';
+import { DomainsSection } from '../components/DomainsSection';
 import { MetricCatalog } from '../components/MetricCatalog';
 import { MetricChart } from '../components/MetricChart';
 import { QuickWeight } from '../components/QuickWeight';
@@ -21,6 +22,7 @@ export function DashboardPage() {
           <MetricChart spec={WEIGHT_SPEC} />
           <QuickWeight />
         </section>
+        <DomainsSection />
         <section className="card">
           <MetricCatalog />
         </section>

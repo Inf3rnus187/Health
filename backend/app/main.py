@@ -28,6 +28,7 @@ TAGS = [
     {"name": "ingest", "description": "Apple Watch / CPAP ingestion."},
     {"name": "capture", "description": "Mode B capture sessions."},
     {"name": "photos", "description": "Photo pipeline and AI analysis."},
+    {"name": "dashboard", "description": "Per-domain plottable series."},
     {"name": "health", "description": "Liveness and readiness."},
 ]
 

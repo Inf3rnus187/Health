@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Dashboards (Phase 5)**: `GET /dashboard/{domain}` returns every numeric
+  metric of a domain as a rolling series (using each metric's aggregation
+  hint). The React app gains a domain tab bar and a dashboard grid that
+  renders each series through the single governed chart component.
 - **Photo pipeline (Phase 4)**: `POST /ingest/photo` (multipart, scope
   `ingest:photo`) stores the original outside the web root, EXIF‑sanitizes
   and normalizes it (Pillow), then queues an async worker job that runs the

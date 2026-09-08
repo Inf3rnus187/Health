@@ -67,3 +67,18 @@ export interface SeriesSpec {
   window: number;
   label?: string;
 }
+
+export interface DashboardSeries {
+  metric_key: string;
+  label: string;
+  unit: string | null;
+  agg: string;
+  window_days: number;
+  points: SeriesPoint[];
+}
+
+export interface Dashboard {
+  domain: string;
+  window_days: number;
+  series: DashboardSeries[];
+}
