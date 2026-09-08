@@ -1,0 +1,35 @@
+"""ARQ worker entrypoint.
+
+Ships with a single ``ping`` job so the worker has something to run;
+photo-analysis and report jobs are registered here from Phase 4 onward.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from arq.connections import RedisSettings
+
+from app.core.config import get_settings
+from app.core.logging import configure_logging, get_logger
+
+_log = get_logger("worker")
+
+
+async def ping(ctx: dict[str, Any]) -> str:
+    """Trivial job used for liveness checks."""
+    return "pong"
+
+
+async def _startup(ctx: dict[str, Any]) -> None:
+    """Configure logging when the worker boots."""
+    configure_logging()
+    _log.info("worker_started")
+
+
+class WorkerSettings:
+    """ARQ worker configuration read by ``arq app...WorkerSettings``."""
+
+    functions = [ping]
+    on_startup = _startup
+    redis_settings = RedisSettings.from_dsn(get_settings().redis_url)

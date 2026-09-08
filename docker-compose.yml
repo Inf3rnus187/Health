@@ -1,0 +1,100 @@
+name: phoenix-health-hub
+
+# Full stack: PostgreSQL, Redis, the FastAPI API, the async worker, the
+# Nginx web tier (React build + /api proxy) and the optional MCP server.
+# Copy .env.example to .env and run ./install.sh before the first start.
+
+x-db-url: &db_url >-
+  postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+    env_file: [.env]
+    environment:
+      DATABASE_URL: *db_url
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    volumes:
+      - media:/data/media
+      - exports:/data/exports
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health')
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./backend
+    command: ["arq", "app.workers.worker.WorkerSettings"]
+    env_file: [.env]
+    environment:
+      DATABASE_URL: *db_url
+      REDIS_URL: redis://redis:6379/0
+      RUN_MIGRATIONS: "false"
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    volumes:
+      - media:/data/media
+      - exports:/data/exports
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    depends_on: [api]
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    restart: unless-stopped
+
+  # MCP server (Phase 7). Enable with: docker compose --profile mcp up -d
+  mcp:
+    build:
+      context: ./mcp
+    profiles: ["mcp"]
+    env_file: [.env]
+    environment:
+      API_BASE_URL: http://api:8000/api/v1
+    depends_on: [api]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  media:
+  exports:

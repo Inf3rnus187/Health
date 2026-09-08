@@ -1,0 +1,170 @@
+/* Base theme. Layout tokens mirror src/theme/tokens.ts (§10.1). */
+:root {
+  --color-bg: #f7f9fc;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-text: #0f172a;
+  --color-muted: #64748b;
+  --color-primary: #2563eb;
+  --color-danger: #dc2626;
+  --color-grid: #eef2f7;
+  --radius: 10px;
+  --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.brand {
+  font-size: 18px;
+  margin: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.content {
+  max-width: 960px;
+  margin: 20px auto;
+  padding: 0 16px;
+  display: grid;
+  gap: 20px;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+}
+
+.card h2 {
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+
+.muted {
+  color: var(--color-muted);
+}
+
+.center {
+  text-align: center;
+  margin-top: 20vh;
+}
+
+.btn {
+  border: none;
+  background: var(--color-primary);
+  color: #fff;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn.ghost {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-border);
+}
+
+.input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 14px;
+  margin: 4px 0 12px;
+}
+
+.login-card {
+  max-width: 340px;
+  margin: 16vh auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.login-card h1 {
+  font-size: 18px;
+  margin: 0 0 16px;
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+.quick {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.quick .input {
+  max-width: 140px;
+  margin: 4px 0 0;
+}
+
+.metric-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 380px;
+  overflow: auto;
+}
+
+.metric-row {
+  display: grid;
+  grid-template-columns: 14px 200px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-grid);
+  font-size: 13px;
+}
+
+.metric-key {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--color-muted);
+}
+
+.metric-type {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}

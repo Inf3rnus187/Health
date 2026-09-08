@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (lint, types, tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      SECRET_KEY: ci-secret-key-0123456789-abcdefghijkl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.8.17"
+      - name: Set up Python
+        run: uv python install 3.11
+      - name: Install dependencies
+        run: uv pip install --system -e ".[dev]"
+      - name: Ruff lint
+        run: ruff check app tests
+      - name: Ruff format check
+        run: ruff format --check app tests
+      - name: Mypy (strict)
+        run: mypy app
+      - name: Structural code limits (§14.1)
+        run: python ../tools/check_code_limits.py app
+      - name: Tests + coverage gate (>=80%)
+        run: pytest --cov-fail-under=80
+      - name: Export OpenAPI schema
+        run: |
+          python -c "import json; from app.main import app; \
+            open('openapi.json','w').write(json.dumps(app.openapi(), indent=2))"
+      - name: Upload OpenAPI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi
+          path: backend/openapi.json
+
+  frontend:
+    name: Frontend (lint, types, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Type check
+        run: pnpm typecheck
+      - name: ESLint
+        run: pnpm lint
+      - name: Prettier check
+        run: pnpm format
+      - name: Build
+        run: pnpm build
+
+  compose:
+    name: Compose config validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate docker-compose.yml
+        run: |
+          cp .env.example .env
+          docker compose config >/dev/null
+          echo "compose config OK"
