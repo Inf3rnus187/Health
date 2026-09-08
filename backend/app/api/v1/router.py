@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.v1 import (
+    account,
     auth,
     automations,
     automations_run,
@@ -15,6 +16,7 @@ from app.api.v1 import (
     ingest,
     measurements,
     metrics,
+    mfa,
     photos,
     photos_media,
     reports,
@@ -23,6 +25,8 @@ from app.api.v1 import (
 
 api_router = APIRouter()
 api_router.include_router(auth.router)
+api_router.include_router(mfa.router)
+api_router.include_router(account.router)
 api_router.include_router(tokens.router)
 api_router.include_router(metrics.router)
 api_router.include_router(measurements.router)

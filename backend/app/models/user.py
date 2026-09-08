@@ -20,3 +20,5 @@ class User(UUIDMixin, TimestampMixin, Base):
     timezone: Mapped[str] = mapped_column(String(64), default="Europe/Paris")
     unit_system: Mapped[str] = mapped_column(String(16), default="metric")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    mfa_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)

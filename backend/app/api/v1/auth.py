@@ -22,7 +22,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/login", response_model=TokenPair)
 async def login(body: LoginRequest, session: SessionDep) -> TokenPair:
     """Authenticate and return an access+refresh token pair."""
-    user = await svc.authenticate(session, body.email, body.password)
+    user = await svc.authenticate(session, body.email, body.password, body.otp)
     pair = await svc.login(session, user)
     await audit.record(session, action="login", entity="user", user_id=user.id)
     await session.commit()

@@ -21,19 +21,25 @@ from app.models.base import as_utc, utcnow
 from app.models.session import AuthSession
 from app.models.user import User
 from app.schemas.auth import TokenPair
+from app.services import mfa
 
 _settings = get_settings()
 
 
 async def authenticate(
-    session: AsyncSession, email: str, password: str
+    session: AsyncSession,
+    email: str,
+    password: str,
+    otp: str | None = None,
 ) -> User:
-    """Return the active user matching the credentials."""
+    """Return the active user matching the credentials (and MFA)."""
     user = await _user_by_email(session, email)
     if user is None or not user.is_active:
         raise AuthError("Invalid email or password")
     if not verify_password(password, user.password_hash):
         raise AuthError("Invalid email or password")
+    if user.mfa_enabled and not mfa.verify_code(user, otp or ""):
+        raise AuthError("MFA code required or invalid")
     return user
 
 

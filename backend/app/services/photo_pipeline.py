@@ -43,10 +43,12 @@ async def process(session: AsyncSession, photo_id: str) -> None:
 async def _run(session: AsyncSession, photo: Photo) -> None:
     """Normalize, analyse and store results for ``photo``."""
     target = photo_storage.normalized_path(photo.user_id, photo.id, photo.angle)
-    imaging.normalize(Path(photo.original_path), target)
+    original = photo_storage.read_bytes(Path(photo.original_path))
+    normalized = imaging.normalize_bytes(original)
+    photo_storage.write_bytes(target, normalized)
     photo.normalized_path = str(target)
     photo.status = "normalized"
-    result = await ollama.vision_json(_PROMPT, target.read_bytes())
+    result = await ollama.vision_json(_PROMPT, normalized)
     ref = await photos.latest_before(
         session, photo.user_id, photo.angle, photo.taken_at
     )

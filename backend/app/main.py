@@ -32,6 +32,7 @@ TAGS = [
     {"name": "exports", "description": "Tidy CSV/JSON/XLSX/FHIR export."},
     {"name": "reports", "description": "Async clinical PDF and files."},
     {"name": "automations", "description": "Trigger→action rules."},
+    {"name": "account", "description": "RGPD account erasure."},
     {"name": "health", "description": "Liveness and readiness."},
 ]
 

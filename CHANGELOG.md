@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Hardening (Phase 9)**: optional **TOTP MFA** (`/auth/mfa/*`; login
+  requires `otp` when enabled), optional **at‑rest media encryption**
+  (Fernet, transparent via `app.core.crypto`), and **RGPD erasure**
+  (`DELETE /me` cascades all data and purges media/export files). Added a
+  `Security` CI workflow (gitleaks, pip‑audit, pnpm audit, Trivy fs, syft
+  SBOM) and a gitleaks pre‑commit hook. Migration `0003` adds the MFA
+  columns idempotently (ADR‑0004/0005).
 - **Automations (Phase 8)**: CRUD for trigger→action rules
   (`/automations`, triggers nfc/shortcut/manual/schedule/api) plus
   `POST /automations/{id}/run` which executes the action — `reminder`

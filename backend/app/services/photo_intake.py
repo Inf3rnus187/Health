@@ -46,7 +46,8 @@ async def intake(
     """Persist the upload and its received-status row."""
     ext = _validate(content_type, angle, data)
     photo_id = new_uuid()
-    path = photo_storage.save_original(user_id, photo_id, angle, ext, data)
+    path = photo_storage.original_path(user_id, photo_id, angle, ext)
+    photo_storage.write_bytes(path, data)
     photo = Photo(
         id=photo_id,
         user_id=user_id,

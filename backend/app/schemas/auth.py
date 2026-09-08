@@ -8,10 +8,11 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class LoginRequest(BaseModel):
-    """Email/password credentials for interactive login."""
+    """Email/password credentials (plus TOTP code when MFA is on)."""
 
     email: EmailStr
     password: str = Field(min_length=1)
+    otp: str | None = None
 
 
 class RefreshRequest(BaseModel):

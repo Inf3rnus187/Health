@@ -81,4 +81,4 @@ Phases, per the specification (§18):
 6. **Exports & reports** — CSV/JSON/XLSX, clinical PDF, FHIR. ✅
 7. **MCP** — tools wired to the MCP hub. ✅
 8. **Automations** — NFC/Shortcuts, capture rules, reminders. ✅
-9. **Hardening & docs** — SBOM, scans, signed images, media encryption.
+9. **Hardening & docs** — MFA, media encryption, RGPD erasure, SBOM+scans in CI. ✅

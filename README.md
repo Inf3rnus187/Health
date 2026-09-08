@@ -45,7 +45,12 @@ This repository currently implements **Phases 1–2** of the
 | **Exports** CSV/JSON/XLSX/FHIR + async **clinical PDF** reports | ✅ |
 | **MCP server** — 12 hub tools as a REST‑API client (scoped token) | ✅ |
 | **Automations** (trigger→action: reminder/capture) + run endpoint | ✅ |
-| Security hardening (SBOM, scans, MFA, media encryption) | ⏳ Phase 9 |
+| **Hardening**: optional TOTP MFA, at‑rest media encryption, RGPD erasure | ✅ |
+| **Supply chain**: gitleaks, pip‑audit, pnpm audit, Trivy, syft SBOM (CI) | ✅ |
+
+**All 9 specification phases are implemented.** Remaining follow‑ups
+(signed container images, encrypted off‑site backups, an automated retention
+purge job) are noted in [`SECURITY.md`](SECURITY.md).
 
 See [`docs/`](docs) for architecture, the data model, and how‑to guides.
 

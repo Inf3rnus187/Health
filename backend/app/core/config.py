@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     ollama_vision_model: str = "llava"
     photo_prompt_version: str = "v1"
     max_upload_mb: int = 15
+    media_encryption_key: str | None = None
+    mfa_issuer: str = "Phoenix Health Hub"
+    retention_days: int = 0
 
     admin_email: str = "admin@example.com"
     admin_password: str = "change-me-please"
