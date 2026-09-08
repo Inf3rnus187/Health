@@ -31,6 +31,20 @@ async def analyze_photo(ctx: dict[str, Any], photo_id: str) -> str:
     return photo_id
 
 
+async def generate_report(ctx: dict[str, Any], report_id: str) -> str:
+    """Build the report ``report_id`` in a fresh session."""
+    from app.core.db import SessionFactory
+    from app.models.report import Report
+    from app.services import reports
+
+    async with SessionFactory() as session:
+        report = await session.get(Report, report_id)
+        if report is not None:
+            await reports.build(session, report)
+            await session.commit()
+    return report_id
+
+
 async def _startup(ctx: dict[str, Any]) -> None:
     """Configure logging when the worker boots."""
     configure_logging()
@@ -40,6 +54,6 @@ async def _startup(ctx: dict[str, Any]) -> None:
 class WorkerSettings:
     """ARQ worker configuration read by ``arq app...WorkerSettings``."""
 
-    functions = [ping, analyze_photo]
+    functions = [ping, analyze_photo, generate_report]
     on_startup = _startup
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)

@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Exports & reports (Phase 6)**: `GET /export?format=csv|json|xlsx|fhir`
+  streams a tidy dataset (`date, metric_key, value, unit, source`); the FHIR
+  format emits an R4 `Bundle` of `Observation` resources. `POST /reports`
+  generates a report (clinical **PDF**, or any export format) as an async
+  worker job with an inline fallback when no worker is running;
+  `GET /reports/{id}` reports status and `GET /reports/{id}/file` streams the
+  result to its owner. Adds `openpyxl` and `fpdf2`.
 - **Dashboards (Phase 5)**: `GET /dashboard/{domain}` returns every numeric
   metric of a domain as a rolling series (using each metric's aggregation
   hint). The React app gains a domain tab bar and a dashboard grid that

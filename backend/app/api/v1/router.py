@@ -9,11 +9,13 @@ from app.api.v1 import (
     capture,
     dashboard,
     events,
+    export,
     ingest,
     measurements,
     metrics,
     photos,
     photos_media,
+    reports,
     tokens,
 )
 
@@ -28,3 +30,5 @@ api_router.include_router(capture.router)
 api_router.include_router(photos.router)
 api_router.include_router(photos_media.router)
 api_router.include_router(dashboard.router)
+api_router.include_router(export.router)
+api_router.include_router(reports.router)

@@ -29,6 +29,8 @@ TAGS = [
     {"name": "capture", "description": "Mode B capture sessions."},
     {"name": "photos", "description": "Photo pipeline and AI analysis."},
     {"name": "dashboard", "description": "Per-domain plottable series."},
+    {"name": "exports", "description": "Tidy CSV/JSON/XLSX/FHIR export."},
+    {"name": "reports", "description": "Async clinical PDF and files."},
     {"name": "health", "description": "Liveness and readiness."},
 ]
 
