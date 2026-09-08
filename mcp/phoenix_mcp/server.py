@@ -152,6 +152,23 @@ async def export_data(
     return await client.get_text("/export", params)
 
 
+@mcp.tool()
+async def list_automations() -> list[dict[str, Any]]:
+    """List the user's automations."""
+    rows: list[dict[str, Any]] = await client.get("/automations")
+    return rows
+
+
+@mcp.tool()
+async def create_automation(
+    name: str, trigger: str, action: dict[str, Any]
+) -> dict[str, Any]:
+    """Create an automation (trigger nfc/shortcut/manual/schedule/api)."""
+    body = {"name": name, "trigger": trigger, "action": action}
+    created: dict[str, Any] = await client.post("/automations", body)
+    return created
+
+
 def main() -> None:
     """Run the MCP server with the configured transport."""
     mcp.run(transport=_transport())

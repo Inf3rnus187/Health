@@ -6,6 +6,8 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     auth,
+    automations,
+    automations_run,
     capture,
     dashboard,
     events,
@@ -32,3 +34,5 @@ api_router.include_router(photos_media.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(export.router)
 api_router.include_router(reports.router)
+api_router.include_router(automations.router)
+api_router.include_router(automations_run.router)

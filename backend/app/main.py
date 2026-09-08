@@ -31,6 +31,7 @@ TAGS = [
     {"name": "dashboard", "description": "Per-domain plottable series."},
     {"name": "exports", "description": "Tidy CSV/JSON/XLSX/FHIR export."},
     {"name": "reports", "description": "Async clinical PDF and files."},
+    {"name": "automations", "description": "Trigger→action rules."},
     {"name": "health", "description": "Liveness and readiness."},
 ]
 

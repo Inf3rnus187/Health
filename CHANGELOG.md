@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Automations (Phase 8)**: CRUD for trigger→action rules
+  (`/automations`, triggers nfc/shortcut/manual/schedule/api) plus
+  `POST /automations/{id}/run` which executes the action — `reminder`
+  (returns the message) or `capture` (opens a capture session). Exposed as
+  MCP tools `list_automations`/`create_automation`.
 - **MCP server (Phase 7)**: a FastMCP server (`mcp/`) exposing hub tools —
   `list_metrics`, `create_metric`, `record_measurement`, `get_measurements`,
   `get_trend`, `get_daily_summary`, `get_photo_analysis`, `compare_photos`,

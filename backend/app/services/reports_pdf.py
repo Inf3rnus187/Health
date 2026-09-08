@@ -21,9 +21,7 @@ def clinical_pdf(report: Report, rows: list[dict[str, Any]]) -> bytes:
 
 def _line(pdf: FPDF, height: float, text: str) -> None:
     """Write one full-width line and return to the left margin."""
-    pdf.multi_cell(
-        pdf.epw, height, text, new_x=XPos.LMARGIN, new_y=YPos.NEXT
-    )
+    pdf.multi_cell(pdf.epw, height, text, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
 
 def _header(pdf: FPDF, report: Report) -> None:
