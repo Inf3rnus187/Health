@@ -21,6 +21,12 @@ const domainColor: Record<string, string> = {
   photo: '#475569',
   ai: '#7c3aed',
   context: '#64748b',
+  activity: '#16a34a',
+  heart: '#dc2626',
+  fitness: '#ea580c',
+  vitals: '#0891b2',
+  nutrition: '#ca8a04',
+  apple: '#64748b',
 };
 
 const metricColor: Record<string, string> = {

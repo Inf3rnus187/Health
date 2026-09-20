@@ -4,8 +4,10 @@ import { createRoot } from 'react-dom/client';
 
 import { App } from './App';
 import { AuthProvider } from './auth/AuthProvider';
+import { applyTheme, initialTheme } from './theme/mode';
 import './styles.css';
 
+applyTheme(initialTheme());
 const client = new QueryClient();
 const root = document.getElementById('root');
 if (!root) {

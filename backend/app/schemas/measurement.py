@@ -85,3 +85,11 @@ class Series(BaseModel):
     agg: str
     window_days: int
     points: list[SeriesPoint]
+
+
+class TrendOut(BaseModel):
+    """A calendar-bucketed series (day/week/month/year)."""
+
+    metric_key: str
+    bucket: str
+    points: list[SeriesPoint]

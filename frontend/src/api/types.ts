@@ -68,6 +68,19 @@ export interface SeriesSpec {
   label?: string;
 }
 
+export type Bucket = 'day' | 'week' | 'month' | 'year';
+
+export interface TrendPoint {
+  t: number;
+  value: number;
+}
+
+export interface Trend {
+  metric_key: string;
+  bucket: Bucket;
+  points: SeriesPoint[];
+}
+
 export interface DashboardSeries {
   metric_key: string;
   label: string;
