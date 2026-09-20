@@ -50,6 +50,8 @@ This repository currently implements **Phases 1–2** of the
 | **Apple Health import** (web + API): all raw samples, workouts, ECG, GPS, CDA | ✅ |
 | ECG waveform & GPS route **viewers**; day/week/month/year charts + wheel zoom | ✅ |
 | **Dark theme** + mobile‑responsive layout | ✅ |
+| **Multi‑page UI** (Accueil/récap · Tableaux de bord · Santé · Données · Rapports · Import) | ✅ |
+| **Rapports** (générer PDF clinique/CSV/JSON/XLSX/FHIR + télécharger) & **exports** dans l'UI | ✅ |
 
 **All 9 specification phases are implemented.** Remaining follow‑ups
 (signed container images, encrypted off‑site backups, an automated retention

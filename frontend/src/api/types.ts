@@ -191,3 +191,20 @@ export interface ClinicalDoc {
   observation_count: number;
   created_at: string;
 }
+
+export interface SummaryTile {
+  key: string;
+  label: string;
+  unit: string | null;
+  value: number;
+  date_key: string;
+}
+
+export interface Report {
+  id: string;
+  type: string;
+  period_start: string | null;
+  period_end: string | null;
+  status: string;
+  created_at: string;
+}

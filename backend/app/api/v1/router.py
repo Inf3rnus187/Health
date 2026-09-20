@@ -25,6 +25,7 @@ from app.api.v1 import (
     photos_media,
     reports,
     samples,
+    summary,
     tokens,
     trends,
     waveforms,
@@ -50,6 +51,7 @@ api_router.include_router(photos.router)
 api_router.include_router(photos_media.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(trends.router)
+api_router.include_router(summary.router)
 api_router.include_router(export.router)
 api_router.include_router(reports.router)
 api_router.include_router(automations.router)

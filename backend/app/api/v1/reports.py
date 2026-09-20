@@ -43,6 +43,12 @@ async def create(
     return report
 
 
+@router.get("", response_model=list[ReportOut])
+async def index(principal: PrincipalDep, session: SessionDep) -> list[Report]:
+    """List the caller's recent reports."""
+    return await svc.list_reports(session, principal.user.id)
+
+
 @router.get("/{report_id}", response_model=ReportOut)
 async def detail(
     report_id: str, principal: PrincipalDep, session: SessionDep

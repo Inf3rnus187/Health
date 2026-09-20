@@ -6,6 +6,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -49,6 +50,17 @@ async def get_report(
     if report is None or report.user_id != user_id:
         raise NotFoundError("Report not found")
     return report
+
+
+async def list_reports(session: AsyncSession, user_id: str) -> list[Report]:
+    """Return the user's recent reports, newest first."""
+    result = await session.execute(
+        select(Report)
+        .where(Report.user_id == user_id)
+        .order_by(Report.created_at.desc())
+        .limit(50)
+    )
+    return list(result.scalars().all())
 
 
 async def build(session: AsyncSession, report: Report) -> None:
