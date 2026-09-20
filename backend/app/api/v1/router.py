@@ -10,6 +10,7 @@ from app.api.v1 import (
     automations,
     automations_run,
     capture,
+    catalog,
     dashboard,
     events,
     export,
@@ -29,6 +30,7 @@ api_router.include_router(mfa.router)
 api_router.include_router(account.router)
 api_router.include_router(tokens.router)
 api_router.include_router(metrics.router)
+api_router.include_router(catalog.router)
 api_router.include_router(measurements.router)
 api_router.include_router(events.router)
 api_router.include_router(ingest.router)

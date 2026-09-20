@@ -203,6 +203,15 @@ phoenix-health-hub/
 └── docs/                   # architecture, data model, guides, ADRs
 ```
 
+## Troubleshooting
+
+- **Catalogue shows "NetworkError" / stays empty in the browser.** A
+  tracking/ad blocker (or Firefox Enhanced Tracking Protection) is dropping
+  requests whose path contains `metrics`. The web app fetches the catalogue
+  from the `/api/v1/catalog` alias to avoid this; the canonical
+  `/api/v1/metrics` endpoints remain for API clients, scripts and the MCP
+  server. If you block `/catalog` too, allow this site in your blocker.
+
 ## Security
 
 Argon2id passwords, short JWTs with rotating/revocable refresh sessions,

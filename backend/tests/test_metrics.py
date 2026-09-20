@@ -17,6 +17,15 @@ async def test_catalogue_is_seeded(
     assert "hydration.liters" in keys
 
 
+async def test_catalog_alias_matches_metrics(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    metrics = await client.get(METRICS, headers=auth)
+    catalog = await client.get("/api/v1/catalog", headers=auth)
+    assert catalog.status_code == 200
+    assert len(catalog.json()) == len(metrics.json())
+
+
 async def test_create_metric_at_runtime(
     client: AsyncClient, auth: dict[str, str]
 ) -> None:
