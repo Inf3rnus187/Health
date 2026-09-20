@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import io
 import zipfile
-from collections.abc import Iterator
+from collections.abc import Collection, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -42,8 +42,7 @@ _OBS_BATCH = 1000
 
 
 async def process(session: AsyncSession, job: ImportJob) -> None:
-    """Replace prior Apple data, then import the file behind ``job``."""
-    await reset(session, job.user_id)
+    """Replace prior Apple data per category, then import the file."""
     path = Path(job.file_path)
     if zipfile.is_zipfile(path):
         await _process_zip(session, job, path)
@@ -56,6 +55,7 @@ async def _process_zip(
 ) -> None:
     """Import export.xml (or CSVs), ECG traces and routes from a zip."""
     with zipfile.ZipFile(path) as archive:
+        await reset(session, job.user_id, _zip_scope(archive))
         had_xml = await _import_xml(session, job, archive)
         if not had_xml:
             await _import_csv(session, job, archive)
@@ -67,6 +67,7 @@ async def _process_xml_file(
     session: AsyncSession, job: ImportJob, path: Path
 ) -> None:
     """Import a bare export.xml file."""
+    await reset(session, job.user_id, {HealthSample, Workout})
     with path.open("rb") as stream:
         stats = await run_import(
             session, job.user_id, stream, _progress(session, job)
@@ -244,17 +245,78 @@ def _progress(session: AsyncSession, job: ImportJob) -> Progress:
     return update
 
 
-async def reset(session: AsyncSession, user_id: str) -> None:
-    """Delete prior Apple-sourced rows so a re-import is idempotent."""
-    await _unlink_blobs(session, user_id)
-    models = (
-        HealthSample,
-        Workout,
-        EcgRecord,
-        RouteFile,
-        ClinicalObservation,
-        ClinicalDocument,
+_ALL_MODELS: tuple[Any, ...] = (
+    HealthSample,
+    Workout,
+    EcgRecord,
+    RouteFile,
+    ClinicalObservation,
+    ClinicalDocument,
+)
+_BLOB_MODELS = (EcgRecord, RouteFile, ClinicalDocument)
+
+
+def _zip_scope(archive: zipfile.ZipFile) -> set[Any]:
+    """Categories to wipe = only those the incoming archive carries."""
+    names = archive.namelist()
+    scope: set[Any] = set()
+    if _find_member(archive, "/export.xml"):
+        scope |= {HealthSample, Workout}
+    members = _health_csv_members(archive)
+    if members:
+        scope.add(HealthSample)
+        if _has_workout_data(archive, members):
+            scope.add(Workout)
+    if _has_ecg(names):
+        scope.add(EcgRecord)
+    if _has_gpx(names):
+        scope.add(RouteFile)
+    if _find_member(archive, "export_cda.xml"):
+        scope |= {ClinicalDocument, ClinicalObservation}
+    return scope
+
+
+def _has_ecg(names: list[str]) -> bool:
+    """True if the archive holds an ECG voltage CSV."""
+    return any(
+        n.lower().endswith(".csv") and "electrocardiogram" in n.lower()
+        for n in names
     )
+
+
+def _has_gpx(names: list[str]) -> bool:
+    """True if the archive holds a GPX route."""
+    return any(n.lower().endswith(".gpx") for n in names)
+
+
+def _has_workout_data(archive: zipfile.ZipFile, members: list[str]) -> bool:
+    """True if any workout CSV member has at least one data row."""
+    for name in members:
+        base = name.rsplit("/", 1)[-1]
+        if base.startswith("HKWorkoutActivityType") and _yields_workout(
+            archive, name
+        ):
+            return True
+    return False
+
+
+def _yields_workout(archive: zipfile.ZipFile, name: str) -> bool:
+    """True if a CSV member parses to at least one workout row."""
+    with archive.open(name) as handle:
+        text = io.TextIOWrapper(handle, encoding="utf-8-sig", errors="replace")
+        for kind, _obj in csv_parser.iter_csv_records(text):
+            if kind == "workout":
+                return True
+    return False
+
+
+async def reset(
+    session: AsyncSession,
+    user_id: str,
+    models: Collection[Any] = _ALL_MODELS,
+) -> None:
+    """Delete prior Apple-sourced rows for the given categories."""
+    await _unlink_blobs(session, user_id, models)
     for model in models:
         await session.execute(
             sql_delete(model).where(
@@ -264,10 +326,12 @@ async def reset(session: AsyncSession, user_id: str) -> None:
     await session.commit()
 
 
-async def _unlink_blobs(session: AsyncSession, user_id: str) -> None:
+async def _unlink_blobs(
+    session: AsyncSession, user_id: str, models: Collection[Any]
+) -> None:
     """Remove ECG/route/CDA files on disk before their rows are deleted."""
     paths: list[str] = []
-    for model in (EcgRecord, RouteFile, ClinicalDocument):
+    for model in (m for m in _BLOB_MODELS if m in models):
         rows = await session.execute(
             select(model.file_path).where(
                 model.user_id == user_id, model.source == "apple"

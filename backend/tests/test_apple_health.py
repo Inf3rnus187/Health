@@ -288,6 +288,23 @@ async def test_upload_bad_query_token_rejected(client: AsyncClient) -> None:
     assert response.status_code == 401
 
 
+async def test_csv_import_preserves_records(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """A CSV re-import must not wipe ECG/routes/workouts from a prior zip."""
+    await _run(await _upload(client, auth))  # native zip: ecg/route/workout
+    response = await client.post(
+        f"{IMPORTS}/apple-health",
+        files={"file": ("csv.zip", _csv_zip_bytes(), "application/zip")},
+        headers=auth,
+    )
+    await _run(response.json()["id"])
+    ecg = (await client.get("/api/v1/ecg", headers=auth)).json()
+    routes = (await client.get("/api/v1/routes", headers=auth)).json()
+    workouts = (await client.get("/api/v1/workouts", headers=auth)).json()
+    assert len(ecg) == 1 and len(routes) == 1 and len(workouts) == 1
+
+
 async def _admin_id() -> str:
     async with SessionFactory() as session:
         result = await session.execute(
