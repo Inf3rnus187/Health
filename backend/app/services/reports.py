@@ -14,7 +14,28 @@ from app.core.errors import NotFoundError
 from app.core.logging import get_logger
 from app.models.metric import MetricDefinition
 from app.models.report import Report
+from app.services import appointments as appts_svc
+from app.services import conditions as cond_svc
 from app.services import export, export_formats, reports_pdf
+from app.services import medical as med_svc
+from app.services import treatments as treat_svc
+
+_STATUS_FR = {
+    "active": "active",
+    "resolved": "résolue",
+    "suspected": "suspectée",
+}
+_KIND_FR = {
+    "ordonnance": "Ordonnance",
+    "imagerie": "Imagerie",
+    "compte_rendu": "Compte-rendu",
+    "biologie": "Biologie",
+    "efr": "EFR",
+    "test_marche": "Test de marche",
+    "cda": "CDA",
+    "vaccination": "Vaccination",
+    "autre": "Autre",
+}
 
 _settings = get_settings()
 _log = get_logger("reports")
@@ -74,7 +95,8 @@ async def build(session: AsyncSession, report: Report) -> None:
             end=report.period_end,
         )
         meta = await _metric_meta(session, {r["metric_key"] for r in rows})
-        data, ext = _render(report, rows, meta)
+        care = await _care(session, report.user_id)
+        data, ext = _render(report, rows, meta, care)
         report.file_path = str(_write(report, ext, data))
         report.status = "ready"
     except Exception as exc:  # noqa: BLE001
@@ -96,13 +118,57 @@ async def _metric_meta(session: AsyncSession, keys: set[str]) -> dict[str, Any]:
 
 
 def _render(
-    report: Report, rows: list[dict[str, Any]], meta: dict[str, Any]
+    report: Report,
+    rows: list[dict[str, Any]],
+    meta: dict[str, Any],
+    care: dict[str, list[str]],
 ) -> tuple[bytes, str]:
     """Render the report body and its file extension."""
     if report.type == "clinical_pdf":
-        return reports_pdf.clinical_pdf(report, rows, meta), "pdf"
+        return reports_pdf.clinical_pdf(report, rows, meta, care), "pdf"
     data, _media, ext = export_formats.render(report.type, rows, report.user_id)
     return data, ext
+
+
+async def _care(session: AsyncSession, user_id: str) -> dict[str, list[str]]:
+    """Gather the patient's care record as printable line lists."""
+    conds = await cond_svc.list_all(session, user_id)
+    treats = await treat_svc.list_all(session, user_id)
+    appts = await appts_svc.list_all(session, user_id)
+    docs = await med_svc.list_documents(session, user_id)
+    return {
+        "Maladies": [_cond(c) for c in conds],
+        "Traitements": [_treat(t) for t in treats],
+        "Rendez-vous": [_appt(a) for a in appts[:20]],
+        "Documents médicaux": [_doc(d) for d in docs[:30]],
+    }
+
+
+def _cond(cond: Any) -> str:
+    """Format one condition line."""
+    status = _STATUS_FR.get(cond.status, cond.status)
+    code = f" [{cond.code}]" if cond.code else ""
+    return f"{cond.name} ({status}){code}"
+
+
+def _treat(treat: Any) -> str:
+    """Format one treatment line."""
+    desc = " · ".join(p for p in (treat.dose, treat.frequency) if p)
+    state = "actif" if treat.active else "arrêté"
+    body = f" — {desc}" if desc else ""
+    return f"{treat.name}{body} [{state}]"
+
+
+def _appt(appt: Any) -> str:
+    """Format one appointment line."""
+    where = f" — {appt.location}" if appt.location else ""
+    return f"{appt.starts_at.date()} — {appt.title}{where}"
+
+
+def _doc(doc: Any) -> str:
+    """Format one document index line."""
+    day = doc.doc_date or doc.created_at.date()
+    return f"{day} — {doc.title} [{_KIND_FR.get(doc.kind, doc.kind)}]"
 
 
 def _write(report: Report, ext: str, data: bytes) -> Path:

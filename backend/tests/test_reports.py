@@ -33,6 +33,40 @@ async def test_clinical_pdf_report(
     assert served.content[:4] == b"%PDF"
 
 
+async def test_caregiver_pdf_with_care_record(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """The clinical PDF builds with conditions/treatments/appointments/docs."""
+    await _seed(client, auth)
+    await client.post(
+        "/api/v1/conditions",
+        json={"name": "Asthme", "status": "active"},
+        headers=auth,
+    )
+    await client.post(
+        "/api/v1/treatments", json={"name": "Ventoline"}, headers=auth
+    )
+    await client.post(
+        "/api/v1/appointments",
+        json={"title": "Pneumologue", "starts_at": "2026-03-01T09:00:00Z"},
+        headers=auth,
+    )
+    await client.post(
+        "/api/v1/medical/documents",
+        data={"kind": "biologie", "title": "NFS"},
+        files={"file": ("nfs.pdf", b"%PDF-1.4 x", "application/pdf")},
+        headers=auth,
+    )
+    created = await client.post(
+        REPORTS, json={"type": "clinical_pdf"}, headers=auth
+    )
+    report_id = created.json()["id"]
+    detail = await client.get(f"{REPORTS}/{report_id}", headers=auth)
+    assert detail.json()["status"] == "ready"
+    served = await client.get(f"{REPORTS}/{report_id}/file", headers=auth)
+    assert served.content[:4] == b"%PDF"
+
+
 async def test_csv_report(client: AsyncClient, auth: dict[str, str]) -> None:
     await _seed(client, auth)
     created = await client.post(REPORTS, json={"type": "csv"}, headers=auth)

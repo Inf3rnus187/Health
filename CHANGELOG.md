@@ -26,6 +26,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Caregiver report (tout donner au médecin)**: the clinical PDF now also
+  prints the care record — Maladies, Traitements, Rendez-vous and a
+  Documents médicaux index — right after the recap, so the single exported
+  report hands a doctor the metrics *and* the medical history in one file.
 - **Suivi médical (conditions, treatments, appointments)**: a new "Suivi"
   tab and APIs to declare maladies (`/conditions`), traitements
   (`/treatments`, with an active toggle) and rendez-vous (`/appointments`),

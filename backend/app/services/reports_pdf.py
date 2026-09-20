@@ -55,18 +55,37 @@ class _Stat(NamedTuple):
 
 
 def clinical_pdf(
-    report: Report, rows: list[dict[str, Any]], meta: dict[str, Any]
+    report: Report,
+    rows: list[dict[str, Any]],
+    meta: dict[str, Any],
+    care: dict[str, list[str]] | None = None,
 ) -> bytes:
-    """Build a clinical summary: recap, trend charts, per-domain tables."""
+    """Build a caregiver summary: recap, care record, charts, tables."""
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     _header(pdf, report)
     series = _series(rows)
     _recap(pdf, series, meta)
+    _care_sections(pdf, care)
     _charts(pdf, series, meta)
     _tables(pdf, series, meta)
     return bytes(pdf.output())
+
+
+def _care_sections(pdf: FPDF, care: dict[str, list[str]] | None) -> None:
+    """Write the care record: conditions, treatments, appointments, docs."""
+    if not care:
+        return
+    for title, lines in care.items():
+        if not lines:
+            continue
+        pdf.set_font("Helvetica", "B", 12)
+        _line(pdf, 9, title)
+        pdf.set_font("Helvetica", size=10)
+        for text in lines:
+            _line(pdf, 6, text)
+        pdf.ln(1)
 
 
 def _latin(text: str) -> str:
