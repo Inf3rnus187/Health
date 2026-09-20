@@ -123,7 +123,7 @@ def _health_csv_members(archive: zipfile.ZipFile) -> list[str]:
 def _looks_health(archive: zipfile.ZipFile, name: str) -> bool:
     """Peek a member's header to see if it is a health-export CSV."""
     with archive.open(name) as handle:
-        return csv_parser.is_health_csv(handle.read(64))
+        return csv_parser.is_health_csv(handle.read(128))
 
 
 def _csv_items(archive: zipfile.ZipFile, names: list[str]) -> Iterator[Item]:

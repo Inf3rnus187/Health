@@ -182,15 +182,16 @@ def _combined_csv_zip() -> bytes:
         + _csv_row(step, "count", "5")
         + _csv_row(mass, "kg", "86.2")
     )
+    doc = ("﻿" + "sep=,\n" + body).replace("\n", "\r\n")
     with zipfile.ZipFile(buffer, "w") as archive:
-        archive.writestr("HealthAll_SimpleHealthExportCSV.csv", "﻿" + body)
+        archive.writestr("HealthAll_SimpleHealthExportCSV.csv", doc)
     return buffer.getvalue()
 
 
 async def test_csv_zip_bom_and_combined(
     client: AsyncClient, auth: dict[str, str]
 ) -> None:
-    """A single BOM-prefixed HealthAll CSV imports every row."""
+    """A BOM + ``sep=,`` + CRLF HealthAll CSV imports every row."""
     response = await client.post(
         f"{IMPORTS}/apple-health",
         files={"file": ("all.zip", _combined_csv_zip(), "application/zip")},
