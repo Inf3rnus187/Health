@@ -68,3 +68,13 @@ def test_bad_number_rejected() -> None:
 def test_bad_time_rejected() -> None:
     with pytest.raises(InvalidInputError):
         mv.columns_for(_metric("time"), "not-a-time")
+
+
+def test_cors_origins_parsing(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.core.config import Settings
+
+    monkeypatch.setenv("SECRET_KEY", "x" * 40)
+    monkeypatch.setenv("CORS_ORIGINS", "http://a.test, http://b.test")
+    assert Settings().cors_origins == ["http://a.test", "http://b.test"]
+    monkeypatch.setenv("CORS_ORIGINS", "")
+    assert Settings().cors_origins == []
