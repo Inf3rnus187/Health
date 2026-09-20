@@ -3,7 +3,10 @@
 # --- Build the React application ---
 FROM node:22-alpine AS build
 WORKDIR /app
-RUN corepack enable
+# Pin the exact pnpm that produced the lockfile. Newer pnpm (>=11) no longer
+# reads pnpm.onlyBuiltDependencies from package.json and hard-fails on
+# ignored build scripts (esbuild), so we do NOT let corepack pull "latest".
+RUN npm install -g pnpm@10.33.0
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY frontend/ ./

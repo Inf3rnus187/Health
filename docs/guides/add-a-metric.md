@@ -6,7 +6,7 @@ schema migration, no redeploy.
 ## Via the API
 
 ```bash
-BASE=http://localhost:8080/api/v1
+BASE=http://localhost:8082/api/v1
 curl -s $BASE/metrics -H "Authorization: Bearer $ACCESS" \
   -H 'Content-Type: application/json' \
   -d '{

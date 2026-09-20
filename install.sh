@@ -43,4 +43,4 @@ info "Starting the full stack"
 docker compose up -d
 
 WEB_PORT="$(grep -E '^WEB_PORT=' .env | cut -d= -f2 || true)"
-info "Ready. Open http://localhost:${WEB_PORT:-8080}  (API docs at /api/v1/docs)"
+info "Ready. Open http://localhost:${WEB_PORT:-8082}  (API docs at /api/v1/docs)"

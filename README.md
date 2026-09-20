@@ -67,9 +67,9 @@ cp .env.example .env      # optional — install.sh does this for you
 ./install.sh              # build + migrate + seed + create admin + start
 ```
 
-Then open **http://localhost:8080** and log in with the `ADMIN_EMAIL` /
+Then open **http://localhost:8082** and log in with the `ADMIN_EMAIL` /
 `ADMIN_PASSWORD` from your `.env`. Interactive API docs live at
-**http://localhost:8080/api/v1/docs** (Swagger) and `/api/v1/redoc`.
+**http://localhost:8082/api/v1/docs** (Swagger) and `/api/v1/redoc`.
 
 `install.sh` is the single bootstrap: it creates `.env` with a strong random
 `SECRET_KEY` on first run, builds the images, applies migrations, seeds the
@@ -92,14 +92,14 @@ commented [`.env.example`](.env.example). Key settings:
 | `ADMIN_EMAIL/PASSWORD` | Initial admin created by the seed step. |
 | `ACCESS_TOKEN_TTL_MIN` / `REFRESH_TOKEN_TTL_DAYS` | Token lifetimes. |
 | `OLLAMA_URL` / `OLLAMA_*_MODEL` | AI endpoint + models (Phase 4). |
-| `WEB_PORT` | Host port for the web tier (default 8080). |
+| `WEB_PORT` | Host port for the web tier (default 8082). |
 
 ---
 
 ## Using the API
 
 ```bash
-BASE=http://localhost:8080/api/v1
+BASE=http://localhost:8082/api/v1
 
 # 1. Log in
 ACCESS=$(curl -s $BASE/auth/login -H 'Content-Type: application/json' \
