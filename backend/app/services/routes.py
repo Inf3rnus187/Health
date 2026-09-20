@@ -12,7 +12,9 @@ from app.core.errors import NotFoundError
 from app.models.health_raw import RouteFile
 
 MAX_POINTS = 3000
-_PT = re.compile(r'lat="(-?\d+\.?\d*)"\s+lon="(-?\d+\.?\d*)"')
+_TRKPT = re.compile(r"<trkpt\b[^>]*>")
+_LAT = re.compile(r'lat="(-?\d+(?:\.\d+)?)"')
+_LON = re.compile(r'lon="(-?\d+(?:\.\d+)?)"')
 
 
 async def track(
@@ -23,9 +25,18 @@ async def track(
     if row is None or row.user_id != user_id:
         raise NotFoundError("Route not found")
     raw = crypto.decrypt(Path(row.file_path).read_bytes())
-    pairs = _PT.findall(raw.decode("utf-8", "replace"))
-    points = [(float(lat), float(lon)) for lat, lon in pairs]
-    return _downsample(points, MAX_POINTS)
+    return _downsample(_extract(raw.decode("utf-8", "replace")), MAX_POINTS)
+
+
+def _extract(text: str) -> list[tuple[float, float]]:
+    """Pull (lat, lon) from every <trkpt>, whatever the attribute order."""
+    points: list[tuple[float, float]] = []
+    for tag in _TRKPT.findall(text):
+        lat = _LAT.search(tag)
+        lon = _LON.search(tag)
+        if lat and lon:
+            points.append((float(lat.group(1)), float(lon.group(1))))
+    return points
 
 
 def _downsample(

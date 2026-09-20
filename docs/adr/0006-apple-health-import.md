@@ -48,10 +48,11 @@ API through a background job.
   Recording* / *mauvais enregistrement* are dropped at import (no row, no
   file).
 - **Viewing signals.** `GET /ecg/{id}/series` returns a downsampled voltage
-  trace and `GET /routes/{id}/track` the route coordinates; the UI draws
-  the ECG waveform and the GPS route as inline SVG, so both work under the
-  self-only CSP with no external map/tile service. Raw CSV/GPX stay
-  downloadable.
+  trace and `GET /routes/{id}/track` the route coordinates. The ECG
+  waveform is drawn as inline SVG (self-only). The GPS route is shown on a
+  real Leaflet + OpenStreetMap map; this is the single CSP exception
+  (`img-src https://*.tile.openstreetmap.org`) and needs Internet for the
+  tiles. Raw CSV/GPX stay downloadable.
 - **CDA.** `export_cda.xml` is streamed too: each value-bearing
   `<observation>` (label, value, unit, date) is stored in
   `clinical_observations` and browsed via `GET /clinical/observations`

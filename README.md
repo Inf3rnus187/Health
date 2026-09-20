@@ -204,8 +204,9 @@ docker compose exec api \
   leurs cartes dédiées et **visualisables** dans le site :
   - l'ECG s'affiche en **courbe de tension** (bouton *Voir*), téléchargeable
     en CSV ;
-  - le tracé GPS s'affiche en **carte de l'itinéraire** (SVG, sans service
-    externe), téléchargeable en GPX.
+  - le tracé GPS s'affiche sur une **vraie carte** (Leaflet +
+    OpenStreetMap ; nécessite un accès Internet pour les tuiles — la seule
+    exception à la CSP « self »), téléchargeable en GPX.
   - Les ECG marqués **« mauvais enregistrement »** (Poor Recording) sont
     **ignorés** à l'import.
 - Le **document clinique CDA** (`export_cda.xml`) est analysé : chaque

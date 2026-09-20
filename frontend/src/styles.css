@@ -370,13 +370,13 @@ progress {
   border-radius: 8px;
 }
 
-.track {
+.route-map {
   width: 100%;
-  max-width: 340px;
-  height: auto;
-  background: var(--color-surface);
+  height: 360px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-grid);
 }
 
 .page-size {

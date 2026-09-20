@@ -69,13 +69,18 @@ def _ecg_meta(text: str) -> dict[str, Any]:
         low = line.lower()
         if _is_sample(line):
             count += 1
-        elif "hz" in low and rate is None:
-            rate = _first_number(line)
         elif low.startswith("classification"):
             label = _field(line)
+        elif rate is None and _is_rate(low):
+            rate = _first_number(line)
         elif ("enregistr" in low or "recorded" in low) and when is None:
             when = to_dt(_field(line))
     return _ecg_dict(rate, label, when, count)
+
+
+def _is_rate(low: str) -> bool:
+    """Return whether a header line carries the sampling frequency."""
+    return "hz" in low or "fréquence" in low or "sample rate" in low
 
 
 def _ecg_dict(

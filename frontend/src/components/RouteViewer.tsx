@@ -1,5 +1,5 @@
 import { useRouteTrack } from '../hooks/useSignals';
-import { TrackSvg } from './TrackSvg';
+import { RouteMap } from './RouteMap';
 
 interface RouteViewerProps {
   id: string;
@@ -21,7 +21,7 @@ export function RouteViewer({ id, onClose }: RouteViewerProps) {
       {isPending ? (
         <p className="muted">Chargement…</p>
       ) : (
-        <TrackSvg points={data?.points ?? []} />
+        <RouteMap points={data?.points ?? []} />
       )}
     </div>
   );
