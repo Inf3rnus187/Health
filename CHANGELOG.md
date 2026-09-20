@@ -6,6 +6,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Faster imports**: the shared importer now commits once per ~50k rows
+  (bulk-inserting every 5k) instead of committing every batch, so a
+  full native export writes far fewer fsync-bound transactions; timestamp
+  parsing is hand-rolled for the canonical Apple format (~3.4× faster than
+  `strptime`, and it's called twice per sample); and each HealthKit type's
+  metric spec is resolved once and cached. Applies to both the XML and CSV
+  paths.
+
 ### Added
 
 - **Home = a health hub**: each `/summary` tile now carries `at` (the

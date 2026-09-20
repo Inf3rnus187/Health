@@ -234,13 +234,16 @@ def _find_member(archive: zipfile.ZipFile, suffix: str) -> str | None:
 
 
 def _progress(session: AsyncSession, job: ImportJob) -> Progress:
-    """Build a callback that records parse progress on the job."""
+    """Build a callback that records parse progress on the job.
+
+    It only sets the fields; the importer owns the commit cadence, so a
+    progress update rides along with the next bulk commit.
+    """
 
     async def update(processed: int) -> None:
         job.processed = processed
         job.phase = "parsing"
         job.updated_at = utcnow()
-        await session.commit()
 
     return update
 

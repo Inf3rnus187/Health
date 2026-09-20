@@ -32,12 +32,14 @@ from app.services.apple_health.spec import (
     SLEEP_TYPE,
     WORKOUT_ATTR,
     WORKOUT_SPECS,
+    MetricSpec,
     synth_spec,
 )
 from app.services.apple_health.timeparse import to_dt, to_float
 from app.services.apple_health.units import convert
 
-_BATCH = 2000
+_BATCH = 5000
+_COMMIT_EVERY = 50000
 _ROLLUP_BATCH = 500
 _WORKOUT_CANON = {spec.key: spec.unit for spec in WORKOUT_SPECS}
 
@@ -124,6 +126,7 @@ class _RawImporter:
         self.user_id = user_id
         self.cache = MetricCache()
         self.agg = DailyAggregator()
+        self._specs: dict[str, MetricSpec] = {}
         self._samples: list[dict[str, Any]] = []
         self._workouts: list[dict[str, Any]] = []
         self.n_samples = 0
@@ -139,10 +142,14 @@ class _RawImporter:
             processed += 1
             if processed % _BATCH == 0:
                 await self._flush()
+            if processed % _COMMIT_EVERY == 0:
                 await on_progress(processed)
+                await self.session.commit()
         await self._flush()
+        await self.session.commit()
         await self._finalize()
         await on_progress(processed)
+        await self.session.commit()
         return ImportStats(self.n_samples, self.n_workouts)
 
     async def _dispatch(self, kind: str, obj: Any) -> None:
@@ -152,13 +159,21 @@ class _RawImporter:
         else:
             await self._workout(obj)
 
+    def _spec(self, hk_type: str, unit: str | None) -> MetricSpec:
+        """Resolve a metric spec once per HealthKit type (cached)."""
+        spec = self._specs.get(hk_type)
+        if spec is None:
+            spec = synth_spec(hk_type, unit)
+            self._specs[hk_type] = spec
+        return spec
+
     async def _record(self, rec: RawRecord) -> None:
         """Buffer a raw sample and feed its daily roll-up."""
         start = to_dt(rec.start)
         if start is None:
             return
         is_sleep = rec.hk_type == SLEEP_TYPE
-        spec = SLEEP_RAW if is_sleep else synth_spec(rec.hk_type, rec.unit)
+        spec = SLEEP_RAW if is_sleep else self._spec(rec.hk_type, rec.unit)
         metric_id = await self.cache.id_for(self.session, spec)
         num = to_float(rec.value)
         self._samples.append(
@@ -194,7 +209,7 @@ class _RawImporter:
                 self.agg.add(key, day, value, "sum")
 
     async def _flush(self) -> None:
-        """Bulk-insert buffered samples and workouts, then commit."""
+        """Bulk-insert buffered samples and workouts (commit is separate)."""
         if self._samples:
             await self.session.execute(insert(HealthSample), self._samples)
             self.n_samples += len(self._samples)
@@ -203,7 +218,6 @@ class _RawImporter:
             await self.session.execute(insert(Workout), self._workouts)
             self.n_workouts += len(self._workouts)
             self._workouts = []
-        await self.session.commit()
 
     async def _finalize(self) -> None:
         """Upsert the cached daily roll-ups into measurements."""
