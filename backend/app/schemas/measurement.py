@@ -59,6 +59,18 @@ class MeasurementOut(BaseModel):
         return None
 
 
+class IdList(BaseModel):
+    """A list of measurement ids to delete in bulk."""
+
+    ids: list[str] = Field(min_length=1, max_length=1000)
+
+
+class DeleteResult(BaseModel):
+    """How many rows a bulk delete removed."""
+
+    deleted: int
+
+
 class SeriesPoint(BaseModel):
     """One point of an aggregated time series."""
 

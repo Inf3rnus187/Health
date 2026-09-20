@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Any, cast
 
-from sqlalchemy import select
+from sqlalchemy import CursorResult, select
+from sqlalchemy import delete as sql_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import InvalidInputError, NotFoundError
@@ -78,6 +80,31 @@ async def aggregate(
         (r.date_key, r.value_num) for r in rows if r.value_num is not None
     ]
     return rolling(points, window_days, agg)
+
+
+async def delete_one(
+    session: AsyncSession, user_id: str, measurement_id: str
+) -> None:
+    """Delete one of the user's measurements or raise NotFound."""
+    row = await session.get(Measurement, measurement_id)
+    if row is None or row.user_id != user_id:
+        raise NotFoundError("Measurement not found")
+    await session.delete(row)
+    await session.flush()
+
+
+async def delete_many(
+    session: AsyncSession, user_id: str, ids: list[str]
+) -> int:
+    """Delete several of the user's measurements; return the count."""
+    result = await session.execute(
+        sql_delete(Measurement).where(
+            Measurement.user_id == user_id,
+            Measurement.id.in_(ids),
+        )
+    )
+    await session.flush()
+    return cast("CursorResult[Any]", result).rowcount or 0
 
 
 def _resolve(

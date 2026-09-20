@@ -79,6 +79,54 @@ async def test_rolling_series(
     assert points[-1]["value"] == 85.0
 
 
+async def test_delete_one_measurement(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    body = {
+        "items": [
+            {"metric_key": "body.weight", "date_key": "2026-08-01", "value": 90}
+        ]
+    }
+    created = await client.post(MEAS, json=body, headers=auth)
+    row_id = created.json()[0]["id"]
+    deleted = await client.delete(f"{MEAS}/{row_id}", headers=auth)
+    assert deleted.status_code == 200
+    listed = await client.get(
+        MEAS, params={"metric_key": "body.weight"}, headers=auth
+    )
+    assert listed.json() == []
+
+
+async def test_delete_many_measurements(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    body = {
+        "items": [
+            {
+                "metric_key": "body.weight",
+                "date_key": "2026-08-01",
+                "value": 90,
+            },
+            {
+                "metric_key": "body.weight",
+                "date_key": "2026-08-02",
+                "value": 89,
+            },
+        ]
+    }
+    created = await client.post(MEAS, json=body, headers=auth)
+    ids = [row["id"] for row in created.json()]
+    result = await client.post(
+        f"{MEAS}/delete", json={"ids": ids}, headers=auth
+    )
+    assert result.status_code == 200
+    assert result.json()["deleted"] == 2
+    listed = await client.get(
+        MEAS, params={"metric_key": "body.weight"}, headers=auth
+    )
+    assert listed.json() == []
+
+
 async def test_event_scoped_measurements(
     client: AsyncClient, auth: dict[str, str]
 ) -> None:

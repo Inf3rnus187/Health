@@ -17,7 +17,10 @@ from app.core.deps import (
 from app.core.errors import InvalidInputError
 from app.core.scopes import WRITE_MEASUREMENTS
 from app.models.measurement import Measurement
+from app.schemas.common import Message
 from app.schemas.measurement import (
+    DeleteResult,
+    IdList,
     MeasurementBatch,
     MeasurementOut,
     Series,
@@ -100,3 +103,37 @@ async def index(
         end=end,
         event_id=event_id,
     )
+
+
+@router.delete("/{measurement_id}", response_model=Message)
+async def delete(
+    measurement_id: str, principal: WriteDep, session: SessionDep
+) -> Message:
+    """Delete one measurement (owner-scoped)."""
+    await svc.delete_one(session, principal.user.id, measurement_id)
+    await audit.record(
+        session,
+        action="delete",
+        entity="measurement",
+        user_id=principal.user.id,
+        entity_id=measurement_id,
+    )
+    await session.commit()
+    return Message(detail="deleted")
+
+
+@router.post("/delete", response_model=DeleteResult)
+async def delete_bulk(
+    body: IdList, principal: WriteDep, session: SessionDep
+) -> DeleteResult:
+    """Delete several measurements at once (owner-scoped)."""
+    count = await svc.delete_many(session, principal.user.id, body.ids)
+    await audit.record(
+        session,
+        action="delete",
+        entity="measurement",
+        user_id=principal.user.id,
+        payload={"deleted": count},
+    )
+    await session.commit()
+    return DeleteResult(deleted=count)

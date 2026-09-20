@@ -121,7 +121,24 @@ curl -s $BASE/measurements -H "Authorization: Bearer $ACCESS" \
 # 4. Read a rolling 7-day trend
 curl -s "$BASE/measurements/series?metric_key=body.weight&agg=avg&window=7" \
   -H "Authorization: Bearer $ACCESS"
+
+# 5. List raw measurements (optionally filtered) to grab their ids
+curl -s "$BASE/measurements?metric_key=body.weight" \
+  -H "Authorization: Bearer $ACCESS"
+
+# 6a. Delete a single measurement by id
+curl -s -X DELETE $BASE/measurements/<id> \
+  -H "Authorization: Bearer $ACCESS"
+
+# 6b. Delete several at once (returns {"deleted": N})
+curl -s $BASE/measurements/delete -H "Authorization: Bearer $ACCESS" \
+  -H 'Content-Type: application/json' \
+  -d '{"ids":["<id1>","<id2>"]}'
 ```
+
+Seed a few fake rows, check the dashboard, then remove them — the same
+delete actions are available in the web UI under the **Données** card
+(tick one or more rows and press *Supprimer*).
 
 Machine access uses **scoped tokens** instead of a login:
 
