@@ -17,14 +17,4 @@ async def summary(
 ) -> list[TileOut]:
     """Return the latest value of each available headline metric."""
     tiles = await svc.headline(session, principal.user.id)
-    return [
-        TileOut(
-            key=tile.key,
-            label=tile.label,
-            unit=tile.unit,
-            value=tile.value,
-            date_key=tile.date_key,
-            at=tile.at,
-        )
-        for tile in tiles
-    ]
+    return [TileOut(**tile._asdict()) for tile in tiles]

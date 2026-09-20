@@ -1,4 +1,9 @@
-"""Headline metrics for the home page's daily recap."""
+"""Headline metrics for the home page's health-hub recap.
+
+Each tile carries the latest value, the time of the last raw reading, and
+lightweight evolution stats (day-over-day delta, 7-day average, and a short
+daily sparkline) so the home page reads like a dashboard, not a list.
+"""
 
 from __future__ import annotations
 
@@ -19,15 +24,17 @@ HEADLINE_KEYS = (
     "activity.steps",
     "rest.hr",
     "heart.rate",
+    "heart.hrv",
     "sleep.asleep",
     "body.spo2",
+    "body.resp_rate",
     "activity.active_energy",
     "activity.exercise_min",
 )
 
 
 class Tile(NamedTuple):
-    """One headline metric's latest value."""
+    """One headline metric's latest value plus evolution stats."""
 
     key: str
     label: str
@@ -35,10 +42,13 @@ class Tile(NamedTuple):
     value: float
     date_key: date
     at: datetime | None
+    delta: float | None
+    avg7: float | None
+    spark: list[float]
 
 
 async def headline(session: AsyncSession, user_id: str) -> list[Tile]:
-    """Return the latest value of each available headline metric."""
+    """Return the latest value + stats of each available headline metric."""
     tiles: list[Tile] = []
     for key in HEADLINE_KEYS:
         tile = await _tile(session, user_id, key)
@@ -48,7 +58,7 @@ async def headline(session: AsyncSession, user_id: str) -> list[Tile]:
 
 
 async def _tile(session: AsyncSession, user_id: str, key: str) -> Tile | None:
-    """Build one tile from a metric's most recent numeric value."""
+    """Build one tile from a metric's recent daily roll-ups."""
     try:
         metric = await metrics_service.get_metric(session, key)
     except NotFoundError:
@@ -56,8 +66,19 @@ async def _tile(session: AsyncSession, user_id: str, key: str) -> Tile | None:
     row = await _latest(session, user_id, metric.id)
     if row is None or row.value_num is None:
         return None
+    series = await _series(session, user_id, metric.id)
     at = await _latest_time(session, user_id, metric.id, row.recorded_at)
-    return Tile(key, metric.label, metric.unit, row.value_num, row.date_key, at)
+    return Tile(
+        key=key,
+        label=metric.label,
+        unit=metric.unit,
+        value=row.value_num,
+        date_key=row.date_key,
+        at=at,
+        delta=_delta(series),
+        avg7=_avg7(series),
+        spark=_spark(series),
+    )
 
 
 async def _latest(
@@ -74,6 +95,25 @@ async def _latest(
         .limit(1)
     )
     return result.scalar_one_or_none()
+
+
+async def _series(
+    session: AsyncSession, user_id: str, metric_id: str
+) -> list[float]:
+    """Return up to 30 recent daily values, oldest first."""
+    result = await session.execute(
+        select(Measurement.value_num)
+        .where(
+            Measurement.user_id == user_id,
+            Measurement.metric_id == metric_id,
+            Measurement.value_num.is_not(None),
+        )
+        .order_by(Measurement.date_key.desc())
+        .limit(30)
+    )
+    values = [float(v) for (v,) in result.all()]
+    values.reverse()
+    return values
 
 
 async def _latest_time(
@@ -93,3 +133,26 @@ async def _latest_time(
         .limit(1)
     )
     return result.scalar_one_or_none() or fallback
+
+
+_MIN_POINTS = 2
+
+
+def _delta(series: list[float]) -> float | None:
+    """Change between the two most recent daily values."""
+    if len(series) < _MIN_POINTS:
+        return None
+    return round(series[-1] - series[-2], 2)
+
+
+def _avg7(series: list[float]) -> float | None:
+    """Mean of the last seven daily values."""
+    window = series[-7:]
+    if not window:
+        return None
+    return round(sum(window) / len(window), 2)
+
+
+def _spark(series: list[float]) -> list[float]:
+    """The last 14 daily values, for a sparkline."""
+    return [round(value, 2) for value in series[-14:]]

@@ -199,6 +199,9 @@ export interface SummaryTile {
   value: number;
   date_key: string;
   at: string | null;
+  delta: number | null;
+  avg7: number | null;
+  spark: number[];
 }
 
 export interface Report {

@@ -118,6 +118,19 @@ body {
   font-size: 11px;
 }
 
+.spark {
+  width: 100%;
+  height: 28px;
+  display: block;
+  margin: 4px 0 2px;
+}
+
+.delta {
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 6px;
+}
+
 .secret {
   margin: 10px 0;
 }
