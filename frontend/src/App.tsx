@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import { useAuth } from './auth/useAuth';
 import { Layout } from './components/Layout';
+import { CarePage } from './pages/CarePage';
 import { DashboardsPage } from './pages/DashboardsPage';
 import { DataPage } from './pages/DataPage';
 import { HealthPage } from './pages/HealthPage';
@@ -28,6 +29,7 @@ export function App() {
           <Route path="sante" element={<HealthPage />} />
           <Route path="donnees" element={<DataPage />} />
           <Route path="dossier" element={<MedicalPage />} />
+          <Route path="suivi" element={<CarePage />} />
           <Route path="rapports" element={<ReportsPage />} />
           <Route path="import" element={<ImportPage />} />
         </Route>

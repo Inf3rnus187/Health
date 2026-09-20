@@ -21,7 +21,12 @@ from app.models.health_raw import (
 )
 from app.models.mapping import IngestMapping
 from app.models.measurement import Measurement
-from app.models.medical import MedicalDocument
+from app.models.medical import (
+    Appointment,
+    Condition,
+    MedicalDocument,
+    Treatment,
+)
 from app.models.metric import MetricDefinition
 from app.models.photo import Photo, PhotoAnalysis
 from app.models.report import Report
@@ -31,12 +36,14 @@ from app.models.user import User
 
 __all__ = [
     "ApiToken",
+    "Appointment",
     "AuditLog",
     "Automation",
     "AuthSession",
     "Base",
     "ClinicalDocument",
     "ClinicalObservation",
+    "Condition",
     "EcgRecord",
     "Event",
     "HealthSample",
@@ -45,6 +52,7 @@ __all__ = [
     "Measurement",
     "MedicalDocument",
     "MetricDefinition",
+    "Treatment",
     "Photo",
     "PhotoAnalysis",
     "Report",

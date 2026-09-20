@@ -7,9 +7,18 @@ the crypto layer); only metadata is stored here.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 
-from sqlalchemy import Date, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
@@ -34,3 +43,61 @@ class MedicalDocument(UUIDMixin, TimestampMixin, Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (Index("ix_meddoc_user_created", "user_id", "created_at"),)
+
+
+class Condition(UUIDMixin, TimestampMixin, Base):
+    """A declared medical condition (maladie)."""
+
+    __tablename__ = "conditions"
+
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE")
+    )
+    name: Mapped[str] = mapped_column(String(200))
+    code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default="active")
+    onset_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    __table_args__ = (Index("ix_cond_user", "user_id", "created_at"),)
+
+
+class Treatment(UUIDMixin, TimestampMixin, Base):
+    """A treatment / medication the patient is on (traitement)."""
+
+    __tablename__ = "treatments"
+
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE")
+    )
+    name: Mapped[str] = mapped_column(String(200))
+    dose: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    frequency: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    __table_args__ = (Index("ix_treat_user", "user_id", "created_at"),)
+
+
+class Appointment(UUIDMixin, TimestampMixin, Base):
+    """A medical appointment (rendez-vous), manual or from .ics."""
+
+    __tablename__ = "appointments"
+
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE")
+    )
+    title: Mapped[str] = mapped_column(String(200))
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    ends_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    practitioner: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    location: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str] = mapped_column(String(16), default="manual")
+    external_uid: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
+    __table_args__ = (Index("ix_appt_user_start", "user_id", "starts_at"),)

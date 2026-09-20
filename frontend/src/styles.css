@@ -406,12 +406,44 @@ progress {
   resize: vertical;
 }
 
+.care-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.care-form .input {
+  width: auto;
+  flex: 1 1 140px;
+  margin: 0;
+}
+
+.care-list,
 .med-list {
   list-style: none;
   margin: 12px 0 0;
   padding: 0;
   display: grid;
   gap: 8px;
+}
+
+.care-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--color-grid);
+  padding-top: 8px;
+}
+
+.care-list .import-name {
+  flex: 1 1 160px;
+}
+
+.care-list li button:last-child {
+  margin-left: auto;
 }
 
 .med-list li {

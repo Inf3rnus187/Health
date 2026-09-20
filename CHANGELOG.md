@@ -26,6 +26,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Suivi médical (conditions, treatments, appointments)**: a new "Suivi"
+  tab and APIs to declare maladies (`/conditions`), traitements
+  (`/treatments`, with an active toggle) and rendez-vous (`/appointments`),
+  including **Apple Calendar (.ics) import** (`POST /appointments/import`,
+  deduped by UID) parsed with a dependency-free VEVENT reader. Tables added
+  via migration `0007`.
 - **Dossier médical (medical documents)**: a new "Dossier" tab and API
   (`/medical/documents`) to upload, list, view and delete medical files —
   ordonnances, imageries + comptes-rendus, biologie (prises de sang), EFR,

@@ -6,12 +6,14 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     account,
+    appointments,
     auth,
     automations,
     automations_run,
     capture,
     catalog,
     clinical,
+    conditions,
     dashboard,
     events,
     export,
@@ -29,6 +31,7 @@ from app.api.v1 import (
     summary,
     sync,
     tokens,
+    treatments,
     trends,
     waveforms,
 )
@@ -49,6 +52,9 @@ api_router.include_router(health_records.router)
 api_router.include_router(waveforms.router)
 api_router.include_router(clinical.router)
 api_router.include_router(medical.router)
+api_router.include_router(conditions.router)
+api_router.include_router(treatments.router)
+api_router.include_router(appointments.router)
 api_router.include_router(capture.router)
 api_router.include_router(photos.router)
 api_router.include_router(photos_media.router)

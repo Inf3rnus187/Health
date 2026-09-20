@@ -204,6 +204,40 @@ export interface SummaryTile {
   spark: number[];
 }
 
+export interface Condition {
+  id: string;
+  name: string;
+  code: string | null;
+  status: string;
+  onset_date: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface Treatment {
+  id: string;
+  name: string;
+  dose: string | null;
+  frequency: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  active: boolean;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface Appointment {
+  id: string;
+  title: string;
+  starts_at: string;
+  ends_at: string | null;
+  practitioner: string | null;
+  location: string | null;
+  notes: string | null;
+  source: string;
+  created_at: string;
+}
+
 export interface MedicalDoc {
   id: string;
   kind: string;
