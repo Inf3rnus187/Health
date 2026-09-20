@@ -172,6 +172,37 @@ async def test_csv_zip_import(
     assert mass.json()[0]["value"] == 86.2
 
 
+def _combined_csv_zip() -> bytes:
+    buffer = io.BytesIO()
+    step = "HKQuantityTypeIdentifierStepCount"
+    mass = "HKQuantityTypeIdentifierBodyMass"
+    body = (
+        _CSV_HEAD
+        + _csv_row(step, "count", "10")
+        + _csv_row(step, "count", "5")
+        + _csv_row(mass, "kg", "86.2")
+    )
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("HealthAll_SimpleHealthExportCSV.csv", "﻿" + body)
+    return buffer.getvalue()
+
+
+async def test_csv_zip_bom_and_combined(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """A single BOM-prefixed HealthAll CSV imports every row."""
+    response = await client.post(
+        f"{IMPORTS}/apple-health",
+        files={"file": ("all.zip", _combined_csv_zip(), "application/zip")},
+        headers=auth,
+    )
+    job_id = response.json()["id"]
+    await _run(job_id)
+    job = (await client.get(f"{IMPORTS}/{job_id}", headers=auth)).json()
+    assert job["status"] == "done"
+    assert job["samples"] == 3
+
+
 async def test_upload_via_query_token(
     client: AsyncClient, auth: dict[str, str]
 ) -> None:

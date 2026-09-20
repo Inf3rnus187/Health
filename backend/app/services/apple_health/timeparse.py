@@ -14,6 +14,14 @@ def to_dt(raw: str | None) -> datetime | None:
     try:
         return datetime.strptime(raw, _FMT)
     except ValueError:
+        return _iso(raw)
+
+
+def _iso(raw: str) -> datetime | None:
+    """Fallback: parse an ISO-8601 timestamp (``…T…Z`` or offset)."""
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
         return None
 
 

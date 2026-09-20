@@ -115,17 +115,24 @@ def _health_csv_members(archive: zipfile.ZipFile) -> list[str]:
         low = name.lower()
         if not low.endswith(".csv") or "electrocardiogram" in low:
             continue
-        with archive.open(name) as handle:
-            if csv_parser.is_health_csv(handle.read(64)):
-                names.append(name)
+        if "simplehealthexport" in low or _looks_health(archive, name):
+            names.append(name)
     return names
+
+
+def _looks_health(archive: zipfile.ZipFile, name: str) -> bool:
+    """Peek a member's header to see if it is a health-export CSV."""
+    with archive.open(name) as handle:
+        return csv_parser.is_health_csv(handle.read(64))
 
 
 def _csv_items(archive: zipfile.ZipFile, names: list[str]) -> Iterator[Item]:
     """Chain the raw records of every CSV member into one stream."""
     for name in names:
         with archive.open(name) as handle:
-            text = io.TextIOWrapper(handle, encoding="utf-8", errors="replace")
+            text = io.TextIOWrapper(
+                handle, encoding="utf-8-sig", errors="replace"
+            )
             yield from csv_parser.iter_csv_records(text)
 
 

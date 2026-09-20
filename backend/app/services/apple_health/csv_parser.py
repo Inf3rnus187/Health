@@ -16,10 +16,13 @@ from typing import TextIO
 
 from app.services.apple_health.parser import Item, RawRecord
 
+_BOM = b"\xef\xbb\xbf"
+
 
 def is_health_csv(head: bytes) -> bool:
     """True if the first bytes look like a SimpleHealthExportCSV header."""
-    return head.lstrip().lower().startswith(b"type,")
+    body = head[len(_BOM) :] if head.startswith(_BOM) else head
+    return body.lstrip().lower().startswith(b"type,")
 
 
 def iter_csv_records(stream: TextIO) -> Iterator[Item]:
