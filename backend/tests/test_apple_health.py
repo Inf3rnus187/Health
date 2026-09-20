@@ -84,12 +84,26 @@ _GPX = (
     "</trkseg></trk></gpx>"
 )
 
+_CDA = (
+    '<?xml version="1.0"?>\n'
+    '<ClinicalDocument xmlns="urn:hl7-org:v3" '
+    'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+    "<title>Résumé</title><component><structuredBody><component>"
+    "<section><entry><observation>"
+    '<code code="2339-0" displayName="Glucose" codeSystemName="LOINC"/>'
+    '<effectiveTime value="20260115"/>'
+    '<value xsi:type="PQ" value="5.4" unit="mmol/L"/>'
+    "</observation></entry></section>"
+    "</component></structuredBody></component></ClinicalDocument>"
+)
+
 
 def _zip_bytes() -> bytes:
     buffer = io.BytesIO()
     root = "apple_health_export"
     with zipfile.ZipFile(buffer, "w") as archive:
         archive.writestr(f"{root}/export.xml", _export_xml())
+        archive.writestr(f"{root}/export_cda.xml", _CDA)
         archive.writestr(f"{root}/electrocardiograms/ecg_1.csv", _ECG)
         archive.writestr(f"{root}/workout-routes/route_1.gpx", _GPX)
     return buffer.getvalue()
@@ -155,6 +169,19 @@ async def test_rollups_and_records(
     assert ecg.json()[0]["classification"] == "Rythme sinusal"
     routes = await client.get("/api/v1/routes", headers=auth)
     assert routes.json()[0]["point_count"] == 2
+
+
+async def test_import_cda_observations(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    await _run(await _upload(client, auth))
+    obs = await client.get("/api/v1/clinical/observations", headers=auth)
+    body = obs.json()
+    assert body["total"] == 1
+    assert body["items"][0]["label"] == "Glucose"
+    assert body["items"][0]["value_num"] == 5.4
+    doc = await client.get("/api/v1/clinical/document", headers=auth)
+    assert doc.json()["observation_count"] == 1
 
 
 async def test_reimport_is_idempotent(

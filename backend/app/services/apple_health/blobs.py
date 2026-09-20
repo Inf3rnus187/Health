@@ -40,6 +40,11 @@ def save_route(user_id: str, data: bytes) -> dict[str, Any]:
     }
 
 
+def save_cda(user_id: str, data: bytes) -> str:
+    """Persist the raw CDA document and return its file path."""
+    return str(_write(user_id, "cda", ".xml", data))
+
+
 def _ecg_meta(text: str) -> dict[str, Any]:
     """Best-effort parse of ECG header fields and sample count."""
     rate: float | None = None

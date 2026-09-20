@@ -115,6 +115,43 @@ class RouteFile(UUIDMixin, TimestampMixin, Base):
     __table_args__ = (Index("ix_routes_user_start", "user_id", "started_at"),)
 
 
+class ClinicalObservation(UUIDMixin, TimestampMixin, Base):
+    """One observation parsed from the CDA clinical document."""
+
+    __tablename__ = "clinical_observations"
+
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE")
+    )
+    label: Mapped[str] = mapped_column(String(200))
+    value_num: Mapped[float | None] = mapped_column(Float, nullable=True)
+    value_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    unit: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    effective_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    source: Mapped[str] = mapped_column(String(32), default="apple")
+
+    __table_args__ = (
+        Index("ix_clinical_user_time", "user_id", "effective_at"),
+    )
+
+
+class ClinicalDocument(UUIDMixin, TimestampMixin, Base):
+    """The stored CDA file (export_cda.xml) plus a small summary."""
+
+    __tablename__ = "clinical_documents"
+
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE")
+    )
+    file_path: Mapped[str] = mapped_column(String(400))
+    observation_count: Mapped[int] = mapped_column(Integer, default=0)
+    source: Mapped[str] = mapped_column(String(32), default="apple")
+
+    __table_args__ = (Index("ix_cda_user", "user_id", "created_at"),)
+
+
 class ImportJob(UUIDMixin, TimestampMixin, Base):
     """Progress record for one background Apple Health import."""
 

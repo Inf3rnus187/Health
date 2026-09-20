@@ -160,3 +160,25 @@ export interface RouteRow {
   started_at: string | null;
   point_count: number;
 }
+
+export interface Observation {
+  id: string;
+  label: string;
+  value_num: number | null;
+  value_text: string | null;
+  unit: string | null;
+  effective_at: string | null;
+}
+
+export interface ObservationPage {
+  items: Observation[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ClinicalDoc {
+  id: string;
+  observation_count: number;
+  created_at: string;
+}

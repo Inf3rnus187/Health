@@ -65,3 +65,35 @@ class RouteOut(BaseModel):
     id: str
     started_at: datetime | None
     point_count: int
+
+
+class ObservationOut(BaseModel):
+    """One clinical observation parsed from the CDA document."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    label: str
+    value_num: float | None
+    value_text: str | None
+    unit: str | None
+    effective_at: datetime | None
+
+
+class ObservationPage(BaseModel):
+    """A page of clinical observations plus the total match count."""
+
+    items: list[ObservationOut]
+    total: int
+    limit: int
+    offset: int
+
+
+class ClinicalDocOut(BaseModel):
+    """Summary of the stored CDA document."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    observation_count: int
+    created_at: datetime

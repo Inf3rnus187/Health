@@ -1,4 +1,5 @@
 import { AppHeader } from '../components/AppHeader';
+import { ClinicalCard } from '../components/ClinicalCard';
 import { DomainsSection } from '../components/DomainsSection';
 import { EcgCard } from '../components/EcgCard';
 import { ImportPanel } from '../components/ImportPanel';
@@ -24,6 +25,7 @@ export function DashboardPage() {
         <WorkoutsCard />
         <EcgCard />
         <RoutesCard />
+        <ClinicalCard />
         <SamplesBrowser />
         <section className="card">
           <MetricCatalog />

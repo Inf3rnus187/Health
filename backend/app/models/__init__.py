@@ -11,6 +11,8 @@ from app.models.automation import Automation
 from app.models.base import Base
 from app.models.event import Event
 from app.models.health_raw import (
+    ClinicalDocument,
+    ClinicalObservation,
     EcgRecord,
     HealthSample,
     ImportJob,
@@ -32,6 +34,8 @@ __all__ = [
     "Automation",
     "AuthSession",
     "Base",
+    "ClinicalDocument",
+    "ClinicalObservation",
     "EcgRecord",
     "Event",
     "HealthSample",

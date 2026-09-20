@@ -11,6 +11,7 @@ from app.api.v1 import (
     automations_run,
     capture,
     catalog,
+    clinical,
     dashboard,
     events,
     export,
@@ -41,6 +42,7 @@ api_router.include_router(events.router)
 api_router.include_router(ingest.router)
 api_router.include_router(imports.router)
 api_router.include_router(health_records.router)
+api_router.include_router(clinical.router)
 api_router.include_router(capture.router)
 api_router.include_router(photos.router)
 api_router.include_router(photos_media.router)
