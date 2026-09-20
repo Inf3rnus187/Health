@@ -3,18 +3,38 @@ import L from 'leaflet';
 import { useEffect, useRef } from 'react';
 
 const env = import.meta.env as Record<string, string | undefined>;
-const TILE_URL =
-  env.VITE_TILE_URL ??
+const CARTO =
   'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-const TILE_ATTRIB = env.VITE_TILE_ATTRIB ?? '© OpenStreetMap · © CARTO';
+
+interface Tiles {
+  url: string;
+  attrib: string;
+}
+
+function resolveTiles(): Tiles | null {
+  if (env.VITE_TILE_URL) {
+    if (env.VITE_TILE_URL === 'none') return null;
+    return { url: env.VITE_TILE_URL, attrib: env.VITE_TILE_ATTRIB ?? '' };
+  }
+  if (env.VITE_MAP_KEY) {
+    const key = env.VITE_MAP_KEY;
+    return {
+      url: `https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${key}`,
+      attrib: '© MapTiler © OpenStreetMap',
+    };
+  }
+  return { url: CARTO, attrib: '© OpenStreetMap · © CARTO' };
+}
+
+const TILES = resolveTiles();
 
 function draw(el: HTMLDivElement, points: [number, number][]): () => void {
   const map = L.map(el);
-  if (TILE_URL && TILE_URL !== 'none') {
-    L.tileLayer(TILE_URL, {
+  if (TILES) {
+    L.tileLayer(TILES.url, {
       maxZoom: 19,
       subdomains: 'abc',
-      attribution: TILE_ATTRIB,
+      attribution: TILES.attrib,
     }).addTo(map);
   }
   const line = L.polyline(points as L.LatLngExpression[], {

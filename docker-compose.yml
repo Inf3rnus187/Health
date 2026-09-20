@@ -84,6 +84,13 @@ services:
     build:
       context: .
       dockerfile: nginx/Dockerfile
+      args:
+        # Baked into the SPA at build time. Set VITE_MAP_KEY in .env for a
+        # keyed map provider (MapTiler); leave empty for the keyless Carto
+        # default. Rebuild the web image after changing these.
+        VITE_MAP_KEY: ${VITE_MAP_KEY:-}
+        VITE_TILE_URL: ${VITE_TILE_URL:-}
+        VITE_TILE_ATTRIB: ${VITE_TILE_ATTRIB:-}
     depends_on: [api]
     ports:
       - "${WEB_PORT:-8082}:80"

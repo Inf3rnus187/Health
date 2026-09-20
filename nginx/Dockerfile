@@ -10,6 +10,15 @@ RUN npm install -g pnpm@10.33.0
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY frontend/ ./
+# Map tiles are baked into the build. Set VITE_MAP_KEY (e.g. a MapTiler
+# key) for a keyed provider, or VITE_TILE_URL / VITE_TILE_ATTRIB to point
+# at any provider (VITE_TILE_URL=none disables the basemap).
+ARG VITE_MAP_KEY=""
+ARG VITE_TILE_URL=""
+ARG VITE_TILE_ATTRIB=""
+ENV VITE_MAP_KEY=$VITE_MAP_KEY \
+    VITE_TILE_URL=$VITE_TILE_URL \
+    VITE_TILE_ATTRIB=$VITE_TILE_ATTRIB
 RUN pnpm build
 
 # --- Serve static assets with Nginx ---

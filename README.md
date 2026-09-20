@@ -204,14 +204,17 @@ docker compose exec api \
   leurs cartes dédiées et **visualisables** dans le site :
   - l'ECG s'affiche en **courbe de tension** (bouton *Voir*), téléchargeable
     en CSV ;
-  - le tracé GPS s'affiche sur une **vraie carte** (Leaflet), téléchargeable
-    en GPX. Fond de carte **Carto** par défaut (les serveurs publics
-    d'OpenStreetMap **bloquent** l'usage par des apps tierces). Nécessite
-    un accès Internet ; c'est la seule exception à la CSP « self ».
-    Pour changer de fournisseur (ou utiliser votre clé), définissez au
-    build `VITE_TILE_URL` (gabarit `{s}/{z}/{x}/{y}`) et `VITE_TILE_ATTRIB`
-    (et ajoutez son domaine à `img-src` dans `nginx/default.conf`) ;
-    `VITE_TILE_URL=none` affiche la trace sans fond de carte.
+    - le tracé GPS s'affiche sur une **vraie carte** (Leaflet), GPX
+      téléchargeable. Fond de carte configurable dans `.env` (rebuild
+      `web` ensuite) :
+      - **clé API** (recommandé) : créez-en une gratuite sur
+        [MapTiler](https://cloud.maptiler.com) et mettez `VITE_MAP_KEY=…` ;
+      - sinon, fond **Carto** par défaut, sans clé (les serveurs publics
+        d'OpenStreetMap **bloquent** les apps tierces, d'où ce choix) ;
+      - `VITE_TILE_URL` / `VITE_TILE_ATTRIB` pour tout autre fournisseur
+        (ajoutez son domaine à `img-src` dans `nginx/default.conf`) ;
+        `VITE_TILE_URL=none` = trace seule, sans fond ni appel externe.
+      La carte est la seule exception à la CSP « self ».
   - Les ECG marqués **« mauvais enregistrement »** (Poor Recording) sont
     **ignorés** à l'import.
 - Le **document clinique CDA** (`export_cda.xml`) est analysé : chaque
