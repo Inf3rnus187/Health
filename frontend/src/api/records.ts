@@ -1,5 +1,11 @@
 import { api, getAccessToken } from './client';
-import type { EcgRow, RouteRow, WorkoutRow } from './types';
+import type {
+  EcgRow,
+  EcgSeries,
+  RouteRow,
+  RouteTrack,
+  WorkoutRow,
+} from './types';
 
 export function fetchWorkouts(limit: number): Promise<WorkoutRow[]> {
   return api<WorkoutRow[]>(`/workouts?limit=${limit}`);
@@ -11,6 +17,14 @@ export function fetchEcg(): Promise<EcgRow[]> {
 
 export function fetchRoutes(): Promise<RouteRow[]> {
   return api<RouteRow[]>('/routes');
+}
+
+export function fetchEcgSeries(id: string): Promise<EcgSeries> {
+  return api<EcgSeries>(`/ecg/${id}/series`);
+}
+
+export function fetchRouteTrack(id: string): Promise<RouteTrack> {
+  return api<RouteTrack>(`/routes/${id}/track`);
 }
 
 export async function downloadRecord(

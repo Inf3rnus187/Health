@@ -161,6 +161,15 @@ export interface RouteRow {
   point_count: number;
 }
 
+export interface EcgSeries {
+  sample_rate_hz: number | null;
+  values: number[];
+}
+
+export interface RouteTrack {
+  points: [number, number][];
+}
+
 export interface Observation {
   id: string;
   label: string;

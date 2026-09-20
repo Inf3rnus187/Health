@@ -44,6 +44,18 @@ API through a background job.
 - **Scalable browsing.** `GET /samples` is filtered (metric, date range)
   and paginated with a total count; the UI shows one page at a time and can
   never load the whole history into the browser.
+- **ECG quality filter.** Traces whose classification reads *Poor
+  Recording* / *mauvais enregistrement* are dropped at import (no row, no
+  file).
+- **Viewing signals.** `GET /ecg/{id}/series` returns a downsampled voltage
+  trace and `GET /routes/{id}/track` the route coordinates; the UI draws
+  the ECG waveform and the GPS route as inline SVG, so both work under the
+  self-only CSP with no external map/tile service. Raw CSV/GPX stay
+  downloadable.
+- **CDA.** `export_cda.xml` is streamed too: each value-bearing
+  `<observation>` (label, value, unit, date) is stored in
+  `clinical_observations` and browsed via `GET /clinical/observations`
+  (searchable, paginated); the raw XML is kept for download.
 
 ## Consequences
 

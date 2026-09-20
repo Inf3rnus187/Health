@@ -77,6 +77,12 @@ _ECG = (
     ",\n-10\n-12\n-8\n"
 )
 
+_ECG_POOR = (
+    "Classification,Mauvais enregistrement\n"
+    "Fréquence d'échantillonnage,512 Hz\n"
+    ",\n1\n2\n3\n"
+)
+
 _GPX = (
     '<?xml version="1.0"?><gpx><trk><trkseg>'
     '<trkpt lat="1" lon="2"><time>2026-03-02T17:18:00Z</time></trkpt>'
@@ -105,6 +111,7 @@ def _zip_bytes() -> bytes:
         archive.writestr(f"{root}/export.xml", _export_xml())
         archive.writestr(f"{root}/export_cda.xml", _CDA)
         archive.writestr(f"{root}/electrocardiograms/ecg_1.csv", _ECG)
+        archive.writestr(f"{root}/electrocardiograms/ecg_bad.csv", _ECG_POOR)
         archive.writestr(f"{root}/workout-routes/route_1.gpx", _GPX)
     return buffer.getvalue()
 
@@ -169,6 +176,30 @@ async def test_rollups_and_records(
     assert ecg.json()[0]["classification"] == "Rythme sinusal"
     routes = await client.get("/api/v1/routes", headers=auth)
     assert routes.json()[0]["point_count"] == 2
+
+
+async def test_ecg_and_route_viewers(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    await _run(await _upload(client, auth))
+    ecg = (await client.get("/api/v1/ecg", headers=auth)).json()
+    series = await client.get(f"/api/v1/ecg/{ecg[0]['id']}/series", headers=auth)
+    assert series.json()["values"] == [-10.0, -12.0, -8.0]
+    routes = (await client.get("/api/v1/routes", headers=auth)).json()
+    track = await client.get(
+        f"/api/v1/routes/{routes[0]['id']}/track", headers=auth
+    )
+    assert len(track.json()["points"]) == 2
+
+
+async def test_poor_ecg_skipped(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    await _run(await _upload(client, auth))
+    ecg = (await client.get("/api/v1/ecg", headers=auth)).json()
+    labels = [row["classification"] for row in ecg]
+    assert "Mauvais enregistrement" not in labels
+    assert len(ecg) == 1
 
 
 async def test_import_cda_observations(

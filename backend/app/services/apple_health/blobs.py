@@ -22,12 +22,26 @@ _TIME = re.compile(r"<time>([^<]+)</time>")
 _NUM = re.compile(r"-?\d+[.,]?\d*")
 
 
-def save_ecg(user_id: str, data: bytes) -> dict[str, Any]:
-    """Persist an ECG CSV and return its metadata."""
+#: Classification fragments that mark an unusable trace (skipped).
+_POOR = ("poor", "mauvais")
+
+
+def save_ecg(user_id: str, data: bytes) -> dict[str, Any] | None:
+    """Persist an ECG CSV and return its metadata, or None if unusable."""
     text = data.decode("utf-8", "replace")
     meta = _ecg_meta(text)
+    if _is_poor(meta.get("classification")):
+        return None
     meta["file_path"] = str(_write(user_id, "ecg", ".csv", data))
     return meta
+
+
+def _is_poor(label: str | None) -> bool:
+    """Return whether a classification denotes a poor recording."""
+    if not label:
+        return False
+    low = label.lower()
+    return any(term in low for term in _POOR)
 
 
 def save_route(user_id: str, data: bytes) -> dict[str, Any]:

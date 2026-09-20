@@ -47,6 +47,9 @@ This repository currently implements **Phases 1–2** of the
 | **Automations** (trigger→action: reminder/capture) + run endpoint | ✅ |
 | **Hardening**: optional TOTP MFA, at‑rest media encryption, RGPD erasure | ✅ |
 | **Supply chain**: gitleaks, pip‑audit, pnpm audit, Trivy, syft SBOM (CI) | ✅ |
+| **Apple Health import** (web + API): all raw samples, workouts, ECG, GPS, CDA | ✅ |
+| ECG waveform & GPS route **viewers**; day/week/month/year charts + wheel zoom | ✅ |
+| **Dark theme** + mobile‑responsive layout | ✅ |
 
 **All 9 specification phases are implemented.** Remaining follow‑ups
 (signed container images, encrypted off‑site backups, an automated retention
@@ -196,14 +199,25 @@ docker compose exec api \
   exact, unité, appareil) — parcourables page par page dans la carte
   **Données brutes** (filtre par métrique et par dates ; jamais de scroll
   infini, même avec des millions de lignes).
-- **Séances** (`workouts`), **ECG** (`ecg_records`, le tracé complet est
-  conservé sur disque, chiffré) et **tracés GPS** (`route_files`, le GPX
-  est conservé). Téléchargeables via `/api/v1/ecg/<id>/file` et
-  `/api/v1/routes/<id>/file`.
+- **Séances** (`workouts`), **ECG** (`ecg_records`, tracé complet chiffré
+  sur disque) et **tracés GPS** (`route_files`, GPX conservé), listés dans
+  leurs cartes dédiées et **visualisables** dans le site :
+  - l'ECG s'affiche en **courbe de tension** (bouton *Voir*), téléchargeable
+    en CSV ;
+  - le tracé GPS s'affiche en **carte de l'itinéraire** (SVG, sans service
+    externe), téléchargeable en GPX.
+  - Les ECG marqués **« mauvais enregistrement »** (Poor Recording) sont
+    **ignorés** à l'import.
+- Le **document clinique CDA** (`export_cda.xml`) est analysé : chaque
+  observation (analyses, constantes…) est extraite dans
+  `clinical_observations` et consultable dans la carte **Documents
+  cliniques** (recherche + pagination) ; le XML brut reste téléchargeable.
 - En plus du brut, un **résumé quotidien** par métrique est mis en cache
   dans `measurements` pour que les tableaux de bord restent traçables
   (les points, l'énergie et les minutes sont sommés ; la FC, la SpO2 et la
-  respiration moyennées ; poids/IMC/taille = dernière valeur du jour).
+  respiration moyennées ; poids/IMC/taille = dernière valeur du jour). Les
+  tableaux de bord se règlent par **jour / semaine / mois / année** et la
+  **molette zoome** l'axe du temps.
 - Les unités Apple (`mi`, `lb`, `mL`, `degF`, `%` fractionnel…) sont
   converties. Les métriques inconnues sont créées automatiquement (sans
   migration) sous le domaine `apple`.

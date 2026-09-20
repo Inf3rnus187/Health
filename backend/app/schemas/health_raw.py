@@ -97,3 +97,16 @@ class ClinicalDocOut(BaseModel):
     id: str
     observation_count: int
     created_at: datetime
+
+
+class EcgSeries(BaseModel):
+    """Downsampled ECG voltage trace ready to plot."""
+
+    sample_rate_hz: float | None
+    values: list[float]
+
+
+class RouteTrack(BaseModel):
+    """A route as ``(lat, lon)`` points ready to draw."""
+
+    points: list[tuple[float, float]]

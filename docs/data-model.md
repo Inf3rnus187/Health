@@ -60,6 +60,27 @@ erDiagram
 `audit_log`. Their columns follow the specification §5.2 (plus
 `auth_sessions`, see [ADR‑0003](adr/0003-refresh-sessions.md)).
 
+## Full-fidelity Apple Health tables
+
+Added for the Apple Health import (see
+[ADR‑0006](adr/0006-apple-health-import.md)). Unlike `measurements` (one
+curated value per day), these keep **every** imported record:
+
+- `health_samples` — every raw quantity/category sample (metric, exact
+  `start_at`, value, unit, device); millions of rows, indexed
+  `(user_id, metric_id, start_at)`.
+- `workouts` — one row per session (type, duration, energy, distance).
+- `ecg_records` — ECG metadata (classification, rate, sample count) with
+  the voltage CSV stored encrypted on disk; poor-quality traces are
+  skipped at import.
+- `route_files` — GPS route metadata; the GPX stays on disk.
+- `clinical_observations` / `clinical_documents` — observations parsed
+  from the CDA document, plus the stored raw `export_cda.xml`.
+- `import_jobs` — background import status and progress.
+
+These are additive (migrations `0004`, `0005`); the daily roll-ups written
+into `measurements` remain the dashboards' plottable cache.
+
 ## Idempotency (zero redundancy)
 
 A measurement is unique per `(user_id, metric_id, date_key, event_id)`.

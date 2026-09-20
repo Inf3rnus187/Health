@@ -95,8 +95,10 @@ async def _import_blobs(
 
 
 def _add_ecg(session: AsyncSession, job: ImportJob, data: bytes) -> None:
-    """Persist one ECG record."""
+    """Persist one ECG record, skipping poor-quality recordings."""
     meta = blobs.save_ecg(job.user_id, data)
+    if meta is None:
+        return
     session.add(EcgRecord(user_id=job.user_id, **meta))
     job.ecg += 1
 
