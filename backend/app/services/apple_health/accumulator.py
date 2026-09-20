@@ -1,8 +1,7 @@
-"""Fold a stream of samples into one value per metric key and day.
+"""Fold samples into one daily roll-up value per metric and day.
 
-Apple exports thousands of raw samples per day; the fact table keeps a
-single value per metric/day (§5.3). This aggregates in constant memory
-per (metric, day) cell, using each metric's declared aggregation.
+Used only to cache dashboard-friendly daily values in ``measurements``;
+the raw samples themselves are stored in full in ``health_samples``.
 """
 
 from __future__ import annotations
@@ -10,8 +9,6 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import date
-
-from app.services.apple_health.spec import AGG_BY_KEY
 
 
 @dataclass
@@ -50,13 +47,12 @@ class DailyAggregator:
         """Start with no buckets."""
         self._cells: dict[tuple[str, date], _Cell] = {}
 
-    def add(self, key: str, day: date, value: float) -> None:
+    def add(self, key: str, day: date, value: float, agg: str) -> None:
         """Add one sample, creating or folding its daily cell."""
         cell = self._cells.get((key, day))
         if cell is not None:
             _fold(cell, value)
             return
-        agg = AGG_BY_KEY.get(key, "last")
         self._cells[(key, day)] = _Cell(agg, value, 1)
 
     def results(self) -> Iterator[tuple[str, date, float]]:

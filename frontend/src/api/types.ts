@@ -82,3 +82,44 @@ export interface Dashboard {
   window_days: number;
   series: DashboardSeries[];
 }
+
+export interface ImportJob {
+  id: string;
+  filename: string;
+  status: string;
+  phase: string;
+  processed: number;
+  samples: number;
+  workouts: number;
+  ecg: number;
+  routes: number;
+  error: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface Sample {
+  id: string;
+  metric_id: string;
+  start_at: string;
+  end_at: string | null;
+  value_num: number | null;
+  value_text: string | null;
+  unit: string | null;
+  source: string;
+}
+
+export interface SamplePage {
+  items: Sample[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface SampleQuery {
+  metricKey?: string;
+  start?: string;
+  end?: string;
+  limit: number;
+  offset: number;
+}

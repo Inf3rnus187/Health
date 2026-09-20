@@ -1,59 +1,55 @@
-# ADR 0006 — Apple Health export import
+# ADR 0006 — Apple Health import (full fidelity)
 
 - Status: accepted
-- Date: 2026-09
+- Date: 2026-09 (supersedes the daily-only first draft)
 
 ## Context
 
-Apple Health exports a single archive whose `export.xml` is frequently
-hundreds of megabytes and holds millions of `<Record>` samples (heart
-rate every few minutes, steps in tiny increments, …) plus `<Workout>`
-entries. Users want their history in Phoenix Health Hub. Three tensions
-shape the design:
-
-1. The fact table keeps **one value per metric per day** with no
-   redundancy (§5.3, ADR on the data model); raw per-sample rows do not
-   belong there.
-2. The file is far too large to upload through the browser (Nginx caps
-   the body at 25 MB) or to hold in memory as a DOM.
-3. XML from an untrusted archive can carry entity-expansion attacks.
+Apple Health exports a `.zip` whose `export.xml` is frequently hundreds of
+megabytes and holds **millions** of `<Record>` samples, plus `<Workout>`
+entries, ECG voltage CSVs and GPS routes. Users want *all* of it, and they
+want to import it from the web UI — not a CLI. A first attempt stored only
+one aggregated value per day and shipped a CLI; that was rejected: it threw
+away the raw data and was unusable for a non-technical user.
 
 ## Decision
 
-A dedicated importer under `app/services/apple_health/`, driven by a
-small CLI (`python -m app.cli.import_apple_health`) run inside the API
-container against a mounted file.
+Keep every record, at full resolution, imported from the browser or the
+API through a background job.
 
-- **Streaming parse.** `defusedxml.ElementTree.iterparse` reads the file
-  incrementally; the tree is cleared after every top-level element, so
-  memory stays flat regardless of file size. `defusedxml` blocks entity
-  and external-reference attacks while still accepting the internal DTD
-  subset Apple emits.
-- **Daily aggregation.** Samples are folded into one value per
-  `(metric key, day)` using each metric's declared aggregation
-  (`sum` for steps/energy/minutes/distance, `avg`/`min`/`max` for heart
-  rate and SpO2, `last` for weight/BMI). One HealthKit type may fan out
-  to several metrics (heart rate → avg/min/max). Sleep stages are summed
-  in minutes and bucketed to the **wake-up** day; workouts contribute a
-  daily count, duration, energy and distance.
-- **Unit conversion.** Each record's own unit (`mi`, `lb`, `mL`, `degF`,
-  fractional `%`, …) is converted to the metric's canonical unit; unknown
-  pairs pass through unchanged so an unexpected unit never aborts a run.
-- **Dynamic registry, no migration.** Target metrics that do not yet
-  exist are created as ordinary `metric_definitions` rows at import time
-  (ADR 0002). New domains (`activity`, `heart`, `vitals`, `nutrition`,
-  `fitness`) therefore appear automatically; the dashboard tabs are
-  derived from the live catalogue rather than hard-coded.
-- **Idempotent.** Values are upserted through the normal measurement
-  path, so re-running overwrites each day's row with the same aggregate —
-  safe to repeat after a newer export.
+- **Raw storage.** New tables hold the data verbatim: `health_samples`
+  (every quantity/category sample with its exact timestamp, value, unit and
+  device), `workouts`, `ecg_records` and `route_files`. ECG voltages and
+  GPX bytes are large, so they live on disk (encrypted, under the media
+  volume) with only metadata in the database.
+- **Streaming + bulk insert.** `defusedxml.iterparse` reads `export.xml`
+  incrementally (straight out of the zip) and the tree is cleared after
+  every top-level element, so memory stays flat. Samples are bulk-inserted
+  with SQLAlchemy Core in batches, so millions of rows load in bounded
+  memory.
+- **Background job.** The upload streams to the exports volume; an
+  `import_jobs` row tracks status/phase/counts; an ARQ worker
+  (`import_apple_health_job`, long `job_timeout`) runs the import while the
+  page polls for progress. Nginx allows an unbounded body and disables
+  request buffering on the upload route only.
+- **Daily roll-up cache.** Charts cannot plot millions of points, so the
+  same pass also caches one value per metric per day in `measurements`
+  (sum/avg/last per the metric's aggregation). This is an explicit derived
+  cache over the raw data, not the source of truth.
+- **Dynamic registry.** Unmapped HealthKit types are still imported under a
+  synthesised `apple.<type>` metric created on the fly (ADR 0002) — nothing
+  is dropped. Dashboard tabs are derived from the live catalogue.
+- **Idempotent.** A re-import first deletes the user's prior Apple-sourced
+  rows (and their on-disk blobs), then re-inserts — no duplicates.
+- **Scalable browsing.** `GET /samples` is filtered (metric, date range)
+  and paginated with a total count; the UI shows one page at a time and can
+  never load the whole history into the browser.
 
 ## Consequences
 
-- A multi-hundred-MB export imports in bounded memory; only compact daily
-  rows land in the database (tens of thousands, not millions).
-- Sub-daily granularity is intentionally lost — consistent with the
-  zero-redundancy model. ECG waveforms (`electrocardiograms/*.csv`) and
-  GPS routes (`workout-routes/*.gpx`) are **not** health metrics and are
-  skipped; they can be added later as attachments if needed.
-- `defusedxml` is now a direct dependency.
+- The database grows to the true size of the export (millions of rows);
+  this is accepted as the cost of full fidelity. Postgres indexes on
+  `(user_id, metric_id, start_at)` keep browsing fast.
+- ECG/GPX bytes stay on disk; the DB holds metadata plus download routes.
+- `defusedxml` is a direct dependency; large uploads spool onto the durable
+  volume (`TMPDIR`) rather than the container's `/tmp`.

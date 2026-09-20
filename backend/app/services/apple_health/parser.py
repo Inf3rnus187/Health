@@ -1,142 +1,101 @@
-"""Stream an Apple Health ``export.xml`` into canonical samples.
+"""Stream raw records and workouts from an Apple Health ``export.xml``.
 
-The export is often hundreds of megabytes, so it is parsed with
-``iterparse`` and the tree is cleared after every top-level element to
-keep memory flat. Each yielded :class:`Sample` is already resolved to a
-metric key and converted to that metric's canonical unit.
+The file (often hundreds of MB) is parsed incrementally with
+``defusedxml.iterparse`` and the tree is cleared after every top-level
+element, so memory stays flat regardless of size. Values are yielded raw;
+the importer resolves metrics, units and timestamps.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterator
-from datetime import date, datetime
-from typing import NamedTuple
+from typing import IO, NamedTuple
 from xml.etree.ElementTree import Element
 
 from defusedxml.ElementTree import iterparse
 
-from app.services.apple_health.spec import (
-    CANON_UNIT,
-    QUANTITY_MAP,
-    SLEEP_MAP,
-    SLEEP_TYPE,
-    WORKOUT_MAP,
-)
-from app.services.apple_health.units import convert
+
+class RawRecord(NamedTuple):
+    """A single quantity or category record, unparsed."""
+
+    hk_type: str
+    unit: str | None
+    value: str | None
+    start: str | None
+    end: str | None
+    device: str | None
 
 
-class Sample(NamedTuple):
-    """One value bound to a metric key and day, in canonical units."""
+class RawWorkout(NamedTuple):
+    """A workout element with its numeric attributes kept as strings."""
 
-    metric_key: str
-    day: date
-    value: float
+    activity_type: str
+    start: str | None
+    end: str | None
+    attrs: dict[str, str]
 
 
-def parse(path: str) -> Iterator[Sample]:
-    """Yield canonical samples from every Record and Workout element."""
+Item = tuple[str, RawRecord | RawWorkout]
+
+
+def parse_xml(source: IO[bytes]) -> Iterator[Item]:
+    """Yield ``("record"|"workout", obj)`` for every top-level element."""
     depth = 0
     root: Element | None = None
-    for event, elem in iterparse(path, events=("start", "end")):
+    for event, elem in iterparse(source, events=("start", "end")):
         if event == "start":
             depth += 1
             root = root or elem
             continue
         depth -= 1
         if depth == 1 and root is not None:
-            yield from _emit(elem)
+            item = _emit(elem)
+            if item is not None:
+                yield item
             root.clear()
 
 
-def _emit(elem: Element) -> Iterator[Sample]:
-    """Dispatch a top-level element to its sample builder."""
+def _emit(elem: Element) -> Item | None:
+    """Convert a Record or Workout element to a raw item."""
     if elem.tag == "Record":
-        return _record(elem)
+        return ("record", _record(elem))
     if elem.tag == "Workout":
-        return _workout(elem)
-    return iter(())
+        return ("workout", _workout(elem))
+    return None
 
 
-def _record(elem: Element) -> Iterator[Sample]:
-    """Build samples from a quantity or sleep-analysis record."""
-    rtype = elem.get("type", "")
-    if rtype in QUANTITY_MAP:
-        return _quantity(elem, rtype)
-    if rtype == SLEEP_TYPE:
-        return _sleep(elem)
-    return iter(())
+def _record(elem: Element) -> RawRecord:
+    """Read the attributes of a Record element."""
+    return RawRecord(
+        hk_type=elem.get("type", ""),
+        unit=elem.get("unit"),
+        value=elem.get("value"),
+        start=elem.get("startDate"),
+        end=elem.get("endDate"),
+        device=elem.get("sourceName"),
+    )
 
 
-def _quantity(elem: Element, rtype: str) -> Iterator[Sample]:
-    """Emit one sample per target metric of a quantity record."""
-    raw = _to_float(elem.get("value"))
-    day = _day(elem.get("startDate"))
-    if raw is None or day is None:
-        return
-    unit = elem.get("unit", "")
-    for key in QUANTITY_MAP[rtype]:
-        yield Sample(key, day, convert(raw, unit, CANON_UNIT.get(key)))
+def _workout(elem: Element) -> RawWorkout:
+    """Read a Workout element and its numeric attributes."""
+    attrs = {
+        name: value
+        for name in _WORKOUT_KEYS
+        if (value := elem.get(name)) is not None
+    }
+    return RawWorkout(
+        activity_type=elem.get("workoutActivityType", "workout"),
+        start=elem.get("startDate"),
+        end=elem.get("endDate"),
+        attrs=attrs,
+    )
 
 
-def _sleep(elem: Element) -> Iterator[Sample]:
-    """Emit sleep-stage minutes bucketed by the wake-up day."""
-    keys = SLEEP_MAP.get(elem.get("value", ""))
-    minutes = _minutes(elem)
-    day = _day(elem.get("endDate"))
-    if not keys or minutes is None or day is None:
-        return
-    for key in keys:
-        yield Sample(key, day, minutes)
-
-
-def _workout(elem: Element) -> Iterator[Sample]:
-    """Emit a session count plus its duration, energy and distance."""
-    day = _day(elem.get("startDate"))
-    if day is None:
-        return
-    yield Sample("workout.count", day, 1.0)
-    for attr, key in WORKOUT_MAP:
-        value = _to_float(elem.get(attr))
-        if value is None:
-            continue
-        unit = elem.get(f"{attr}Unit", "")
-        yield Sample(key, day, convert(value, unit, CANON_UNIT.get(key)))
-
-
-def _minutes(elem: Element) -> float | None:
-    """Return the record's span in minutes, or ``None`` if unparsable."""
-    start = _stamp(elem.get("startDate"))
-    end = _stamp(elem.get("endDate"))
-    if start is None or end is None:
-        return None
-    return (end - start).total_seconds() / 60.0
-
-
-def _to_float(raw: str | None) -> float | None:
-    """Parse a numeric attribute, tolerating missing or bad values."""
-    if raw is None:
-        return None
-    try:
-        return float(raw)
-    except ValueError:
-        return None
-
-
-def _day(raw: str | None) -> date | None:
-    """Read the calendar day from an Apple timestamp attribute."""
-    if not raw:
-        return None
-    try:
-        return date.fromisoformat(raw[:10])
-    except ValueError:
-        return None
-
-
-def _stamp(raw: str | None) -> datetime | None:
-    """Parse a full Apple timestamp (``YYYY-MM-DD HH:MM:SS ±ZZZZ``)."""
-    if not raw:
-        return None
-    try:
-        return datetime.strptime(raw, "%Y-%m-%d %H:%M:%S %z")
-    except ValueError:
-        return None
+_WORKOUT_KEYS = (
+    "duration",
+    "durationUnit",
+    "totalEnergyBurned",
+    "totalEnergyBurnedUnit",
+    "totalDistance",
+    "totalDistanceUnit",
+)

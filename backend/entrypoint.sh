@@ -22,6 +22,11 @@ else:
 print("Database is up.")
 PY
 
+# Ensure the upload spool directory exists (large import uploads).
+if [ -n "${TMPDIR:-}" ]; then
+    mkdir -p "$TMPDIR"
+fi
+
 if [ "${RUN_MIGRATIONS:-true}" != "false" ]; then
     echo "Applying migrations ..."
     alembic upgrade head

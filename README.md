@@ -159,48 +159,59 @@ Adding a metric is also documented step‑by‑step in
 Depuis l'app **Santé** sur iPhone : votre photo de profil → **Exporter
 toutes les données de santé**. Vous obtenez un `export.zip` contenant un
 gros `export.xml` (souvent plusieurs centaines de Mo), `export_cda.xml`,
-et des dossiers `electrocardiograms/` et `workout-routes/`.
+et les dossiers `electrocardiograms/` et `workout-routes/`.
 
-L'import se fait côté serveur (le fichier est trop volumineux pour le
-navigateur). Dézippez l'archive, déposez le dossier dans `import/` à la
-racine du projet (déjà monté en lecture seule dans le conteneur `api`),
-puis lancez la commande :
+**Tout est importé, sans rien jeter** : chaque échantillon brut (des
+millions de lignes), chaque séance, chaque ECG et chaque tracé GPS.
+
+### Depuis le site (recommandé)
+
+Connectez-vous, ouvrez la carte **Importer mes données Apple Santé**,
+choisissez votre `export.zip` (ECG et tracés inclus) et cliquez
+**Importer**. Le fichier est envoyé en flux (aucune limite de taille sur
+cette route), traité en tâche de fond par le worker, et la carte affiche
+la progression puis le décompte final (échantillons / séances / ECG /
+tracés). Le bouton **Supprimer les données importées** efface tout.
+
+### Depuis l'API
 
 ```bash
-# 1. Décompressez export.zip et copiez export.xml dans ./import/
-#    (l'arborescence exacte importe peu, seul export.xml est lu)
-
-# 2. Lancez l'import dans le conteneur déjà démarré
-docker compose exec api \
-  python -m app.cli.import_apple_health /import/export.xml
-
-# → « Imported N daily values; M new metrics created. »
-# Ciblez un autre utilisateur avec --email vous@exemple.fr
+BASE=http://localhost:8082/api/v1
+# ACCESS = jeton obtenu via /auth/login (voir plus haut)
+curl -s "$BASE/imports/apple-health" -H "Authorization: Bearer $ACCESS" \
+  -F "file=@export.zip"                 # → renvoie un job {id,status}
+curl -s "$BASE/imports/<id>" -H "Authorization: Bearer $ACCESS"  # statut
 ```
 
-Ce que fait l'import :
+### En ligne de commande (très gros fichiers)
 
-- **Une valeur par jour et par métrique** (le modèle ne stocke pas les
-  échantillons bruts) : les pas, la distance, l'énergie et les minutes
-  d'exercice sont **sommés** ; la fréquence cardiaque devient
-  `heart.rate_avg` / `_min` / `_max` ; la SpO2 et la fréquence
-  respiratoire sont **moyennées** ; le poids, l'IMC et la taille gardent
-  la **dernière** valeur du jour.
-- **Sommeil** (stades profond/paradoxal/léger, éveil, temps au lit) en
-  minutes, rattaché au jour du réveil ; **séances** (`workout.count`,
-  durée, énergie, distance).
+```bash
+docker compose exec api \
+  python -m app.cli.import_apple_health /import/export.zip
+```
+
+### Ce que l'import stocke
+
+- **Tous les échantillons bruts** dans `health_samples` (valeur, horodatage
+  exact, unité, appareil) — parcourables page par page dans la carte
+  **Données brutes** (filtre par métrique et par dates ; jamais de scroll
+  infini, même avec des millions de lignes).
+- **Séances** (`workouts`), **ECG** (`ecg_records`, le tracé complet est
+  conservé sur disque, chiffré) et **tracés GPS** (`route_files`, le GPX
+  est conservé). Téléchargeables via `/api/v1/ecg/<id>/file` et
+  `/api/v1/routes/<id>/file`.
+- En plus du brut, un **résumé quotidien** par métrique est mis en cache
+  dans `measurements` pour que les tableaux de bord restent traçables
+  (les points, l'énergie et les minutes sont sommés ; la FC, la SpO2 et la
+  respiration moyennées ; poids/IMC/taille = dernière valeur du jour).
 - Les unités Apple (`mi`, `lb`, `mL`, `degF`, `%` fractionnel…) sont
-  converties vers l'unité canonique de chaque métrique.
-- Les nouvelles métriques (`activity.*`, `heart.*`, `vitals.*`,
-  `nutrition.*`, `fitness.*`) sont créées automatiquement — sans
-  migration — et apparaissent aussitôt dans les onglets par domaine.
-- **Rejouable** : relancer l'import après un nouvel export met simplement
-  à jour les valeurs quotidiennes existantes.
+  converties. Les métriques inconnues sont créées automatiquement (sans
+  migration) sous le domaine `apple`.
+- **Rejouable** : réimporter remplace proprement les données Apple
+  précédentes (aucun doublon).
 
-> Les ECG (`electrocardiograms/*.csv`) et les tracés GPS
-> (`workout-routes/*.gpx`) ne sont pas des mesures quotidiennes et sont
-> ignorés pour l'instant. Détails dans
-> [docs/adr/0006-apple-health-import.md](docs/adr/0006-apple-health-import.md).
+Détails d'architecture dans
+[docs/adr/0006-apple-health-import.md](docs/adr/0006-apple-health-import.md).
 
 ---
 

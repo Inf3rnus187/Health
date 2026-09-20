@@ -14,6 +14,8 @@ from app.api.v1 import (
     dashboard,
     events,
     export,
+    health_records,
+    imports,
     ingest,
     measurements,
     metrics,
@@ -21,6 +23,7 @@ from app.api.v1 import (
     photos,
     photos_media,
     reports,
+    samples,
     tokens,
 )
 
@@ -32,8 +35,11 @@ api_router.include_router(tokens.router)
 api_router.include_router(metrics.router)
 api_router.include_router(catalog.router)
 api_router.include_router(measurements.router)
+api_router.include_router(samples.router)
 api_router.include_router(events.router)
 api_router.include_router(ingest.router)
+api_router.include_router(imports.router)
+api_router.include_router(health_records.router)
 api_router.include_router(capture.router)
 api_router.include_router(photos.router)
 api_router.include_router(photos_media.router)

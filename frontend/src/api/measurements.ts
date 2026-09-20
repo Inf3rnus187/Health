@@ -22,16 +22,3 @@ export function recordMeasurements(
     body: JSON.stringify({ items }),
   });
 }
-
-export function fetchMeasurements(): Promise<Measurement[]> {
-  return api<Measurement[]>('/measurements');
-}
-
-export function deleteMeasurements(
-  ids: string[],
-): Promise<{ deleted: number }> {
-  return api<{ deleted: number }>('/measurements/delete', {
-    method: 'POST',
-    body: JSON.stringify({ ids }),
-  });
-}

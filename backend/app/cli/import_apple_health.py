@@ -1,63 +1,60 @@
-r"""Import an Apple Health ``export.xml`` from the command line.
+r"""Import an Apple Health export from the command line (power users).
 
-Run inside the API container against a mounted export, for example::
+The web UI (Réglages → Importer) is the normal path; this CLI runs the
+exact same pipeline for very large files, against a ``.zip`` or a bare
+``export.xml`` mounted into the container::
 
-    docker compose exec api \\
-        python -m app.cli.import_apple_health /import/export.xml
-
-Use ``--email`` to target a user other than the configured admin.
+    docker compose exec api \
+        python -m app.cli.import_apple_health /import/export.zip
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.db import SessionFactory
-from app.core.logging import get_logger
+from app.models.health_raw import ImportJob
 from app.models.user import User
-from app.services.apple_health.importer import ImportSummary, run_import
-
-_log = get_logger("apple_import")
+from app.services import imports
 
 
 def main() -> None:
-    """Parse arguments and run the import."""
+    """Parse arguments and run the import job inline."""
     args = _parse_args()
-    summary = asyncio.run(_run(args.path, args.email))
+    job = asyncio.run(_run(args.path, args.email))
     print(
-        f"Imported {summary.rows} daily values; "
-        f"{summary.metrics_added} new metrics created."
+        f"status={job.status} samples={job.samples} "
+        f"workouts={job.workouts} ecg={job.ecg} routes={job.routes}"
     )
+    if job.error:
+        print(f"error: {job.error}")
 
 
 def _parse_args() -> argparse.Namespace:
     """Build and parse the command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="Import an Apple Health export.xml"
+        description="Import an Apple Health export (.zip or export.xml)"
     )
-    parser.add_argument("path", help="Path to the export.xml file")
+    parser.add_argument("path", help="Path to export.zip or export.xml")
     parser.add_argument(
         "--email", default=None, help="Target user (defaults to admin)"
     )
     return parser.parse_args()
 
 
-async def _run(path: str, email: str | None) -> ImportSummary:
-    """Resolve the user and import the export in one session."""
+async def _run(path: str, email: str | None) -> ImportJob:
+    """Create and run one import job, returning its final state."""
     async with SessionFactory() as session:
         user = await _find_user(session, email)
-        summary = await run_import(session, user.id, path)
-    _log.info(
-        "apple_import_done",
-        rows=summary.rows,
-        metrics_added=summary.metrics_added,
-    )
-    return summary
+        job = await imports.create_job(session, user.id, Path(path).name, path)
+        await imports.run_job(session, job.id)
+        return await imports.get_job(session, user.id, job.id)
 
 
 async def _find_user(session: AsyncSession, email: str | None) -> User:

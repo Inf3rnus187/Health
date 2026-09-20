@@ -31,6 +31,16 @@ async def analyze_photo(ctx: dict[str, Any], photo_id: str) -> str:
     return photo_id
 
 
+async def import_apple_health_job(ctx: dict[str, Any], job_id: str) -> str:
+    """Run a queued Apple Health import in a fresh session."""
+    from app.core.db import SessionFactory
+    from app.services import imports
+
+    async with SessionFactory() as session:
+        await imports.run_job(session, job_id)
+    return job_id
+
+
 async def generate_report(ctx: dict[str, Any], report_id: str) -> str:
     """Build the report ``report_id`` in a fresh session."""
     from app.core.db import SessionFactory
@@ -54,6 +64,14 @@ async def _startup(ctx: dict[str, Any]) -> None:
 class WorkerSettings:
     """ARQ worker configuration read by ``arq app...WorkerSettings``."""
 
-    functions = [ping, analyze_photo, generate_report]
+    functions = [
+        ping,
+        analyze_photo,
+        generate_report,
+        import_apple_health_job,
+    ]
     on_startup = _startup
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
+    # Full-history imports can run for many minutes; give them room.
+    job_timeout = 7200
+    max_tries = 1

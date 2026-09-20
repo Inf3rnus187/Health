@@ -10,6 +10,13 @@ from app.models.audit import AuditLog
 from app.models.automation import Automation
 from app.models.base import Base
 from app.models.event import Event
+from app.models.health_raw import (
+    EcgRecord,
+    HealthSample,
+    ImportJob,
+    RouteFile,
+    Workout,
+)
 from app.models.mapping import IngestMapping
 from app.models.measurement import Measurement
 from app.models.metric import MetricDefinition
@@ -25,12 +32,17 @@ __all__ = [
     "Automation",
     "AuthSession",
     "Base",
+    "EcgRecord",
     "Event",
+    "HealthSample",
+    "ImportJob",
     "IngestMapping",
     "Measurement",
     "MetricDefinition",
     "Photo",
     "PhotoAnalysis",
     "Report",
+    "RouteFile",
     "User",
+    "Workout",
 ]

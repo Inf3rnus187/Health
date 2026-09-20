@@ -1,104 +1,212 @@
-"""Import an Apple Health export into the measurement store.
+"""Import every Apple Health record into full-fidelity raw storage.
 
-Ensures the target metrics exist, folds the export's samples into daily
-values, and upserts them in batches. Re-running is safe: each day's row
-is overwritten with the same aggregated value (§7.3).
+One streaming pass over ``export.xml`` bulk-inserts all samples into
+``health_samples`` and workouts into ``workouts`` (millions of rows in
+bounded memory), while caching a daily roll-up per metric in
+``measurements`` so the dashboards stay plottable.
 """
 
 from __future__ import annotations
 
-from typing import NamedTuple
+from collections.abc import Awaitable, Callable
+from typing import IO, Any, NamedTuple
 
-from sqlalchemy import select
+from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.metric import MetricDefinition
+from app.models.base import new_uuid, utcnow
+from app.models.health_raw import HealthSample, Workout
 from app.schemas.measurement import MeasurementIn
 from app.services import measurements as measure
 from app.services.apple_health.accumulator import DailyAggregator
-from app.services.apple_health.parser import parse
+from app.services.apple_health.metrics_cache import MetricCache
+from app.services.apple_health.parser import RawRecord, RawWorkout, parse_xml
 from app.services.apple_health.spec import (
-    METRIC_DEFS,
-    SEEDED_KEYS,
-    MetricDef,
+    SLEEP_RAW,
+    SLEEP_STAGE_MAP,
+    SLEEP_TYPE,
+    WORKOUT_ATTR,
+    WORKOUT_SPECS,
+    synth_spec,
 )
+from app.services.apple_health.timeparse import to_dt, to_float
+from app.services.apple_health.units import convert
 
-_BATCH = 500
+_BATCH = 2000
+_ROLLUP_BATCH = 500
+_WORKOUT_CANON = {spec.key: spec.unit for spec in WORKOUT_SPECS}
+
+Progress = Callable[[int], Awaitable[None]]
 
 
-class ImportSummary(NamedTuple):
-    """Outcome of one import run."""
+class ImportStats(NamedTuple):
+    """Row counts written by one import."""
 
-    metrics_added: int
-    rows: int
+    samples: int
+    workouts: int
 
 
 async def run_import(
-    session: AsyncSession, user_id: str, path: str
-) -> ImportSummary:
-    """Ensure metrics, aggregate the export and upsert daily rows."""
-    added = await _ensure_metrics(session)
-    aggregator = _aggregate(path)
-    rows = await _record_all(session, user_id, aggregator)
-    return ImportSummary(metrics_added=added, rows=rows)
+    session: AsyncSession,
+    user_id: str,
+    xml: IO[bytes],
+    on_progress: Progress,
+) -> ImportStats:
+    """Stream ``export.xml`` into raw storage plus daily roll-ups."""
+    return await _RawImporter(session, user_id).run(xml, on_progress)
 
 
-def _aggregate(path: str) -> DailyAggregator:
-    """Stream the export into one value per metric key and day."""
-    aggregator = DailyAggregator()
-    for sample in parse(path):
-        aggregator.add(sample.metric_key, sample.day, sample.value)
-    return aggregator
+def _sample_row(
+    user_id: str, metric_id: str, rec: RawRecord, start: Any, num: float | None
+) -> dict[str, Any]:
+    """Build one health_samples insert row."""
+    return {
+        "id": new_uuid(),
+        "user_id": user_id,
+        "metric_id": metric_id,
+        "start_at": start,
+        "end_at": to_dt(rec.end),
+        "value_num": num,
+        "value_text": None if num is not None else rec.value,
+        "unit": rec.unit,
+        "source": "apple",
+        "device": rec.device,
+        "created_at": utcnow(),
+    }
 
 
-async def _ensure_metrics(session: AsyncSession) -> int:
-    """Create any target metric that is not already registered."""
-    result = await session.execute(select(MetricDefinition.key))
-    existing = {row[0] for row in result.all()}
-    added = 0
-    for spec in METRIC_DEFS:
-        if spec.key in existing or spec.key in SEEDED_KEYS:
-            continue
-        session.add(_metric_row(spec))
-        added += 1
-    await session.commit()
-    return added
+def _canon(wk: RawWorkout, attr: str, canon: str | None) -> float | None:
+    """Convert a workout numeric attribute to its canonical unit."""
+    value = to_float(wk.attrs.get(attr))
+    if value is None:
+        return None
+    return convert(value, wk.attrs.get(f"{attr}Unit", ""), canon)
 
 
-def _metric_row(spec: MetricDef) -> MetricDefinition:
-    """Build a metric-definition row from a spec entry."""
-    return MetricDefinition(
-        key=spec.key,
-        label=spec.label,
-        domain=spec.domain,
-        data_type=spec.data_type,
-        unit=spec.unit,
-        source="watch",
-        aggregation_hint=spec.agg,
-    )
+def _workout_row(user_id: str, wk: RawWorkout, start: Any) -> dict[str, Any]:
+    """Build one workouts insert row."""
+    return {
+        "id": new_uuid(),
+        "user_id": user_id,
+        "activity_type": wk.activity_type,
+        "start_at": start,
+        "end_at": to_dt(wk.end),
+        "duration_min": _canon(wk, "duration", "min"),
+        "energy_kcal": _canon(wk, "totalEnergyBurned", "kcal"),
+        "distance_km": _canon(wk, "totalDistance", "km"),
+        "source": "apple",
+        "created_at": utcnow(),
+    }
 
 
-async def _record_all(
-    session: AsyncSession, user_id: str, aggregator: DailyAggregator
-) -> int:
-    """Upsert every aggregated bucket in bounded batches."""
-    batch: list[MeasurementIn] = []
-    total = 0
-    for key, day, value in aggregator.results():
-        batch.append(MeasurementIn(metric_key=key, date_key=day, value=value))
-        if len(batch) >= _BATCH:
-            total += await _flush(session, user_id, batch)
-            batch = []
-    total += await _flush(session, user_id, batch)
-    return total
+class _RawImporter:
+    """Streaming importer accumulating raw rows and daily roll-ups."""
 
+    def __init__(self, session: AsyncSession, user_id: str) -> None:
+        """Bind the importer to a session and user."""
+        self.session = session
+        self.user_id = user_id
+        self.cache = MetricCache()
+        self.agg = DailyAggregator()
+        self._samples: list[dict[str, Any]] = []
+        self._workouts: list[dict[str, Any]] = []
+        self.n_samples = 0
+        self.n_workouts = 0
 
-async def _flush(
-    session: AsyncSession, user_id: str, batch: list[MeasurementIn]
-) -> int:
-    """Persist and commit one batch, returning its row count."""
-    if not batch:
-        return 0
-    rows = await measure.record_batch(session, user_id, batch, source="watch")
-    await session.commit()
-    return len(rows)
+    async def run(self, xml: IO[bytes], on_progress: Progress) -> ImportStats:
+        """Run the streaming pass, then materialise the roll-ups."""
+        processed = 0
+        for kind, obj in parse_xml(xml):
+            await self._dispatch(kind, obj)
+            processed += 1
+            if processed % _BATCH == 0:
+                await self._flush()
+                await on_progress(processed)
+        await self._flush()
+        await self._finalize()
+        await on_progress(processed)
+        return ImportStats(self.n_samples, self.n_workouts)
+
+    async def _dispatch(self, kind: str, obj: Any) -> None:
+        """Route one parsed item to its handler."""
+        if kind == "record":
+            await self._record(obj)
+        else:
+            await self._workout(obj)
+
+    async def _record(self, rec: RawRecord) -> None:
+        """Buffer a raw sample and feed its daily roll-up."""
+        start = to_dt(rec.start)
+        if start is None:
+            return
+        is_sleep = rec.hk_type == SLEEP_TYPE
+        spec = SLEEP_RAW if is_sleep else synth_spec(rec.hk_type, rec.unit)
+        metric_id = await self.cache.id_for(self.session, spec)
+        num = to_float(rec.value)
+        self._samples.append(
+            _sample_row(self.user_id, metric_id, rec, start, num)
+        )
+        if is_sleep:
+            self._rollup_sleep(rec, start)
+        elif num is not None:
+            value = convert(num, rec.unit or "", spec.unit)
+            self.agg.add(spec.key, start.date(), value, spec.agg)
+
+    def _rollup_sleep(self, rec: RawRecord, start: Any) -> None:
+        """Add sleep-stage minutes to the wake-up day roll-up."""
+        keys = SLEEP_STAGE_MAP.get(rec.value or "")
+        end = to_dt(rec.end)
+        if not keys or end is None:
+            return
+        minutes = (end - start).total_seconds() / 60.0
+        for key in keys:
+            self.agg.add(key, end.date(), minutes, "sum")
+
+    async def _workout(self, wk: RawWorkout) -> None:
+        """Buffer a workout row and feed its daily roll-ups."""
+        start = to_dt(wk.start)
+        if start is None:
+            return
+        self._workouts.append(_workout_row(self.user_id, wk, start))
+        day = start.date()
+        self.agg.add("workout.count", day, 1.0, "sum")
+        for attr, key in WORKOUT_ATTR:
+            value = _canon(wk, attr, _WORKOUT_CANON[key])
+            if value is not None:
+                self.agg.add(key, day, value, "sum")
+
+    async def _flush(self) -> None:
+        """Bulk-insert buffered samples and workouts, then commit."""
+        if self._samples:
+            await self.session.execute(insert(HealthSample), self._samples)
+            self.n_samples += len(self._samples)
+            self._samples = []
+        if self._workouts:
+            await self.session.execute(insert(Workout), self._workouts)
+            self.n_workouts += len(self._workouts)
+            self._workouts = []
+        await self.session.commit()
+
+    async def _finalize(self) -> None:
+        """Upsert the cached daily roll-ups into measurements."""
+        for spec in WORKOUT_SPECS:
+            await self.cache.id_for(self.session, spec)
+        await self.session.commit()
+        batch: list[MeasurementIn] = []
+        for key, day, value in self.agg.results():
+            batch.append(
+                MeasurementIn(metric_key=key, date_key=day, value=value)
+            )
+            if len(batch) >= _ROLLUP_BATCH:
+                await self._flush_rollups(batch)
+                batch = []
+        await self._flush_rollups(batch)
+
+    async def _flush_rollups(self, batch: list[MeasurementIn]) -> None:
+        """Persist one roll-up batch through the measurement upsert."""
+        if not batch:
+            return
+        await measure.record_batch(
+            self.session, self.user_id, batch, source="watch"
+        )
+        await self.session.commit()

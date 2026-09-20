@@ -40,13 +40,15 @@ services:
     environment:
       DATABASE_URL: *db_url
       REDIS_URL: redis://redis:6379/0
+      # Spool large multipart uploads onto the durable volume, not /tmp.
+      TMPDIR: /data/exports/tmp
     depends_on:
       db: {condition: service_healthy}
       redis: {condition: service_healthy}
     volumes:
       - media:/data/media
       - exports:/data/exports
-      # Drop an unzipped Apple Health export here, then run:
+      # (Optional) drop an unzipped export here for the CLI importer, then:
       #   docker compose exec api \
       #     python -m app.cli.import_apple_health /import/export.xml
       - ./import:/import:ro
