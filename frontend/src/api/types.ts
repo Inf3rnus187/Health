@@ -208,3 +208,17 @@ export interface Report {
   status: string;
   created_at: string;
 }
+
+export interface ApiToken {
+  id: string;
+  name: string;
+  scopes: string[];
+  last_used_at: string | null;
+  expires_at: string | null;
+  revoked: boolean;
+  created_at: string;
+}
+
+export interface TokenCreated extends ApiToken {
+  token: string;
+}

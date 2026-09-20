@@ -238,6 +238,32 @@ docker compose exec api \
 Détails d'architecture dans
 [docs/adr/0006-apple-health-import.md](docs/adr/0006-apple-health-import.md).
 
+### Synchro automatique depuis l'iPhone (Raccourci)
+
+Le web **ne peut pas** lire HealthKit (Apple ne l'expose pas au navigateur).
+Pour une synchro **sans app à installer**, utilisez l'app **Raccourcis** :
+la page **Import → « Synchro iPhone »** crée un **jeton scoped**
+(`ingest:watch`, affiché une seule fois) et donne l'URL. Le Raccourci lit
+vos échantillons Santé (au 1er lancement iOS **demande l'autorisation**) et
+les envoie en `POST` à `/api/v1/ingest/watch` :
+
+```jsonc
+// En-tête : Authorization: Bearer <votre-jeton>
+{
+  "date_key": "2026-09-20",
+  "samples": [
+    { "metric_key": "body.weight", "value": 86.2 },
+    { "metric_key": "rest.hr", "value": 58 },
+    { "healthkit_type": "HKQuantityTypeIdentifierBodyMass", "value": 86.2 }
+  ]
+}
+```
+
+Ceci alimente les **métriques du jour** (tableaux de bord, récap). Pour
+l'**historique complet, les ECG et le CDA**, l'upload du `zip` reste
+nécessaire. Une app iOS native (HealthKit) permettrait d'aller plus loin
+mais demande un compte développeur Apple.
+
 ---
 
 ## Development

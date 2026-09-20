@@ -118,6 +118,60 @@ body {
   font-size: 11px;
 }
 
+.secret {
+  margin: 10px 0;
+}
+
+.secret-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.secret-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  background: var(--color-grid);
+  padding: 6px 8px;
+  border-radius: 6px;
+  word-break: break-all;
+}
+
+.recipe ol {
+  margin: 8px 0;
+  padding-left: 20px;
+  font-size: 13px;
+  display: grid;
+  gap: 4px;
+}
+
+.code-block {
+  background: var(--color-grid);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  overflow-x: auto;
+}
+
+.token-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.token-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  border-top: 1px solid var(--color-grid);
+  padding-top: 6px;
+}
+
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
