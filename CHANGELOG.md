@@ -26,6 +26,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Biologie → valeurs suivies**: `POST /biology/import` parses a
+  **text-based French lab PDF** (pypdf) and records each analyte's current
+  value **and its antériorités** (previous value + its own date) as
+  measurements under `bio.<slug>` metrics — so a blood test becomes real
+  tracked curves (verified on a BIOGROUP report: 42 values, 21 analyses, 4
+  dates). The source PDF is kept as a `biologie` document. Dossier tab gets
+  an "Analyser une prise de sang (PDF)" upload. Scanned (image-only) PDFs
+  yield no text and are kept as documents but not yet parsed (needs OCR).
 - **Caregiver report (tout donner au médecin)**: the clinical PDF now also
   prints the care record — Maladies, Traitements, Rendez-vous and a
   Documents médicaux index — right after the recap, so the single exported

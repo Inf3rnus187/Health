@@ -27,6 +27,7 @@ _DOMAINS = {
     "vitals": "Signes vitaux",
     "nutrition": "Nutrition",
     "workout": "Seances",
+    "biology": "Biologie",
     "apple": "Autres (Apple)",
 }
 

@@ -10,6 +10,7 @@ from app.api.v1 import (
     auth,
     automations,
     automations_run,
+    biology,
     capture,
     catalog,
     clinical,
@@ -55,6 +56,7 @@ api_router.include_router(medical.router)
 api_router.include_router(conditions.router)
 api_router.include_router(treatments.router)
 api_router.include_router(appointments.router)
+api_router.include_router(biology.router)
 api_router.include_router(capture.router)
 api_router.include_router(photos.router)
 api_router.include_router(photos_media.router)

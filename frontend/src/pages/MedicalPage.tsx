@@ -1,9 +1,11 @@
+import { BiologyImport } from '../components/BiologyImport';
 import { MedicalList } from '../components/MedicalList';
 import { MedicalUpload } from '../components/MedicalUpload';
 
 export function MedicalPage() {
   return (
     <>
+      <BiologyImport />
       <MedicalUpload />
       <section className="card">
         <h2>Dossier médical</h2>
