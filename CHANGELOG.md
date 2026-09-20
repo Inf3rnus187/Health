@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Readable clinical PDF**: the report was a bare list of raw metric keys
+  with a single average. It now groups metrics by domain (Corps, Coeur,
+  Sommeil, Activite…) and shows, per metric, the human label + unit and the
+  latest value plus average / min / max / count over the period, with a
+  generation date in the header. Text is latin-1-sanitised so an unusual
+  label can never crash the render.
 - **Faster imports**: the shared importer now commits once per ~50k rows
   (bulk-inserting every 5k) instead of committing every batch, so a
   full native export writes far fewer fsync-bound transactions; timestamp

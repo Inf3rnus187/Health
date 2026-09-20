@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.errors import NotFoundError
 from app.core.logging import get_logger
+from app.models.metric import MetricDefinition
 from app.models.report import Report
 from app.services import export, export_formats, reports_pdf
 
@@ -72,7 +73,8 @@ async def build(session: AsyncSession, report: Report) -> None:
             start=report.period_start,
             end=report.period_end,
         )
-        data, ext = _render(report, rows)
+        meta = await _metric_meta(session, {r["metric_key"] for r in rows})
+        data, ext = _render(report, rows, meta)
         report.file_path = str(_write(report, ext, data))
         report.status = "ready"
     except Exception as exc:  # noqa: BLE001
@@ -80,10 +82,25 @@ async def build(session: AsyncSession, report: Report) -> None:
         _log.warning("report_failed", report_id=report.id, error=str(exc))
 
 
-def _render(report: Report, rows: list[dict[str, Any]]) -> tuple[bytes, str]:
+async def _metric_meta(session: AsyncSession, keys: set[str]) -> dict[str, Any]:
+    """Return ``key -> {label, domain, unit}`` for the referenced metrics."""
+    if not keys:
+        return {}
+    result = await session.execute(
+        select(MetricDefinition).where(MetricDefinition.key.in_(keys))
+    )
+    return {
+        m.key: {"label": m.label, "domain": m.domain, "unit": m.unit}
+        for m in result.scalars()
+    }
+
+
+def _render(
+    report: Report, rows: list[dict[str, Any]], meta: dict[str, Any]
+) -> tuple[bytes, str]:
     """Render the report body and its file extension."""
     if report.type == "clinical_pdf":
-        return reports_pdf.clinical_pdf(report, rows), "pdf"
+        return reports_pdf.clinical_pdf(report, rows, meta), "pdf"
     data, _media, ext = export_formats.render(report.type, rows, report.user_id)
     return data, ext
 
