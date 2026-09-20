@@ -18,7 +18,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `write:measurements` upload token and shows the exact POST config for the
   shortcut's upload step. The upload also accepts the token as a `?token=`
   query param (not just the `Authorization` header), so the shortcut needs
-  only a URL — no fragile header entry on mobile.
+  only a URL — no fragile header entry on mobile. The CSV parser tolerates
+  the real export's quirks (Excel `sep=,` preamble, UTF-8 BOM, CRLF), maps
+  the short sleep-stage values (`asleepCore`/`asleepREM`/…) into the sleep
+  roll-ups, and routes `HKWorkoutActivityType…` CSVs into the workouts
+  table (duration/energy/distance) rather than generic `apple.*` samples.
 
 - **iPhone one-tap sync**: Import → « Synchro iPhone » now offers a
   **pre-filled downloadable Shortcut** (`GET /sync/shortcut`) with the

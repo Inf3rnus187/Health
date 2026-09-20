@@ -204,6 +204,57 @@ async def test_csv_zip_bom_and_combined(
     assert job["samples"] == 3
 
 
+_SLEEP_HEAD = (
+    "type,sourceName,sourceVersion,productType,device,"
+    "startDate,endDate,value,HKTimeZone\n"
+)
+_WORK_HEAD = (
+    "type,sourceName,sourceVersion,productType,device,startDate,endDate,"
+    "activityType,duration,durationUnit,totalEnergyBurned,totalDistance\n"
+)
+
+
+def _sleep_workout_zip() -> bytes:
+    buffer = io.BytesIO()
+    sleep = (
+        _SLEEP_HEAD + "HKCategoryTypeIdentifierSleepAnalysis,W,26,W7,,"
+        "2026-08-21 23:00:00 +0000,2026-08-21 23:30:00 +0000,"
+        "asleepCore,Europe/Paris\n"
+    )
+    work = (
+        _WORK_HEAD + "HKWorkoutActivityTypeRunning,W,26,W7,,"
+        "2026-08-22 07:00:00 +0000,2026-08-22 07:30:00 +0000,"
+        "Running,30,min,300,5\n"
+    )
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("SleepAnalysis_SimpleHealthExportCSV.csv", sleep)
+        archive.writestr("Running_SimpleHealthExportCSV.csv", work)
+    return buffer.getvalue()
+
+
+async def test_csv_sleep_shortforms_and_workout(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """CSV short sleep values roll up and a workout lands in workouts."""
+    response = await client.post(
+        f"{IMPORTS}/apple-health",
+        files={"file": ("sw.zip", _sleep_workout_zip(), "application/zip")},
+        headers=auth,
+    )
+    job_id = response.json()["id"]
+    await _run(job_id)
+    job = (await client.get(f"{IMPORTS}/{job_id}", headers=auth)).json()
+    assert job["workouts"] == 1
+    workouts = await client.get("/api/v1/workouts", headers=auth)
+    assert len(workouts.json()) == 1
+    core = await client.get(
+        "/api/v1/measurements",
+        params={"metric_key": "sleep.core"},
+        headers=auth,
+    )
+    assert core.json()[0]["value"] == 30.0
+
+
 async def test_upload_via_query_token(
     client: AsyncClient, auth: dict[str, str]
 ) -> None:

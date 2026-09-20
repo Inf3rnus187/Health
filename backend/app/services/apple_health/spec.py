@@ -284,6 +284,8 @@ SLEEP_RAW = MetricSpec(
 )
 
 #: SleepAnalysis category value → seeded sleep metrics it adds minutes to.
+#: Both the XML long form and the CSV short form (``asleepCore``) are keyed,
+#: since SimpleHealthExportCSV emits the short one.
 SLEEP_STAGE_MAP: dict[str, tuple[str, ...]] = {
     "HKCategoryValueSleepAnalysisAsleepDeep": ("sleep.deep", "sleep.asleep"),
     "HKCategoryValueSleepAnalysisAsleepREM": ("sleep.rem", "sleep.asleep"),
@@ -292,6 +294,13 @@ SLEEP_STAGE_MAP: dict[str, tuple[str, ...]] = {
     "HKCategoryValueSleepAnalysisAsleep": ("sleep.asleep",),
     "HKCategoryValueSleepAnalysisAwake": ("sleep.awake",),
     "HKCategoryValueSleepAnalysisInBed": ("sleep.time_in_bed",),
+    "asleepDeep": ("sleep.deep", "sleep.asleep"),
+    "asleepREM": ("sleep.rem", "sleep.asleep"),
+    "asleepCore": ("sleep.core", "sleep.asleep"),
+    "asleepUnspecified": ("sleep.asleep",),
+    "asleep": ("sleep.asleep",),
+    "awake": ("sleep.awake",),
+    "inBed": ("sleep.time_in_bed",),
 }
 
 #: Roll-up metrics for workouts (summed per start day).

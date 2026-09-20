@@ -104,7 +104,7 @@ async def _import_csv(
     stats = await run_records(
         session, job.user_id, items, _progress(session, job)
     )
-    job.samples = stats.samples
+    job.samples, job.workouts = stats.samples, stats.workouts
     await session.commit()
 
 
