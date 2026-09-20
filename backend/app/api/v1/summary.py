@@ -24,6 +24,7 @@ async def summary(
             unit=tile.unit,
             value=tile.value,
             date_key=tile.date_key,
+            at=tile.at,
         )
         for tile in tiles
     ]

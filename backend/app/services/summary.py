@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import NamedTuple
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFoundError
+from app.models.health_raw import HealthSample
 from app.models.measurement import Measurement
 from app.services import metrics as metrics_service
 
@@ -33,6 +34,7 @@ class Tile(NamedTuple):
     unit: str | None
     value: float
     date_key: date
+    at: datetime | None
 
 
 async def headline(session: AsyncSession, user_id: str) -> list[Tile]:
@@ -54,7 +56,8 @@ async def _tile(session: AsyncSession, user_id: str, key: str) -> Tile | None:
     row = await _latest(session, user_id, metric.id)
     if row is None or row.value_num is None:
         return None
-    return Tile(key, metric.label, metric.unit, row.value_num, row.date_key)
+    at = await _latest_time(session, user_id, metric.id, row.recorded_at)
+    return Tile(key, metric.label, metric.unit, row.value_num, row.date_key, at)
 
 
 async def _latest(
@@ -71,3 +74,22 @@ async def _latest(
         .limit(1)
     )
     return result.scalar_one_or_none()
+
+
+async def _latest_time(
+    session: AsyncSession,
+    user_id: str,
+    metric_id: str,
+    fallback: datetime | None,
+) -> datetime | None:
+    """Return the newest raw sample time for a metric (else fallback)."""
+    result = await session.execute(
+        select(HealthSample.start_at)
+        .where(
+            HealthSample.user_id == user_id,
+            HealthSample.metric_id == metric_id,
+        )
+        .order_by(HealthSample.start_at.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none() or fallback

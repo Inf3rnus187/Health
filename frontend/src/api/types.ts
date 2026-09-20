@@ -198,6 +198,7 @@ export interface SummaryTile {
   unit: string | null;
   value: number;
   date_key: string;
+  at: string | null;
 }
 
 export interface Report {

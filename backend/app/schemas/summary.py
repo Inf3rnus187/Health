@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel
 
@@ -15,3 +15,4 @@ class TileOut(BaseModel):
     unit: str | None
     value: float
     date_key: date
+    at: datetime | None = None

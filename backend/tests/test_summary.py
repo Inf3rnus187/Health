@@ -22,6 +22,7 @@ async def test_summary_returns_latest(
     weight = next(t for t in tiles if t["key"] == "body.weight")
     assert weight["value"] == 80.0
     assert weight["date_key"] == "2026-01-10"
+    assert weight["at"]  # last-reading time (falls back to recorded_at)
 
 
 async def test_reports_list(client: AsyncClient, auth: dict[str, str]) -> None:

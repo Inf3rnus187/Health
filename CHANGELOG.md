@@ -8,6 +8,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Home recap: last-reading time**: each `/summary` tile now carries `at`
+  — the newest raw sample time for that metric (from `health_samples`,
+  falling back to the measurement's `recorded_at`) — shown next to the day
+  on the Accueil tiles. Sleep tiles render as hours (`6 h 28`) instead of
+  raw minutes.
+- **Santé tab no longer blank**: it now leads with a **Signes vitaux —
+  tendances** section (heart rate, resting HR, HRV, SpO2, respiratory rate,
+  sleep charts) so a CSV-only import (no workouts/ECG/routes) still shows
+  content, plus a hint explaining those records come from the native Health
+  export.
 - **iPhone CSV sync**: the Apple Health import (`POST /imports/apple-health`)
   now **auto-detects** and ingests a **SimpleHealthExportCSV** zip (one CSV
   per HealthKit type) in addition to Apple's native `export.xml` — same
