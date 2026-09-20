@@ -8,7 +8,7 @@ bounded memory), while caching a daily roll-up per metric in
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
 from typing import IO, Any, NamedTuple
 
 from sqlalchemy import insert
@@ -20,7 +20,12 @@ from app.schemas.measurement import MeasurementIn
 from app.services import measurements as measure
 from app.services.apple_health.accumulator import DailyAggregator
 from app.services.apple_health.metrics_cache import MetricCache
-from app.services.apple_health.parser import RawRecord, RawWorkout, parse_xml
+from app.services.apple_health.parser import (
+    Item,
+    RawRecord,
+    RawWorkout,
+    parse_xml,
+)
 from app.services.apple_health.spec import (
     SLEEP_RAW,
     SLEEP_STAGE_MAP,
@@ -53,7 +58,18 @@ async def run_import(
     on_progress: Progress,
 ) -> ImportStats:
     """Stream ``export.xml`` into raw storage plus daily roll-ups."""
-    return await _RawImporter(session, user_id).run(xml, on_progress)
+    items = parse_xml(xml)
+    return await _RawImporter(session, user_id).run(items, on_progress)
+
+
+async def run_records(
+    session: AsyncSession,
+    user_id: str,
+    items: Iterator[Item],
+    on_progress: Progress,
+) -> ImportStats:
+    """Import raw records from any source (e.g. CSV) into raw storage."""
+    return await _RawImporter(session, user_id).run(items, on_progress)
 
 
 def _sample_row(
@@ -113,10 +129,12 @@ class _RawImporter:
         self.n_samples = 0
         self.n_workouts = 0
 
-    async def run(self, xml: IO[bytes], on_progress: Progress) -> ImportStats:
-        """Run the streaming pass, then materialise the roll-ups."""
+    async def run(
+        self, items: Iterator[Item], on_progress: Progress
+    ) -> ImportStats:
+        """Consume raw items, then materialise the daily roll-ups."""
         processed = 0
-        for kind, obj in parse_xml(xml):
+        for kind, obj in items:
             await self._dispatch(kind, obj)
             processed += 1
             if processed % _BATCH == 0:

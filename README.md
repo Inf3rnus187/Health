@@ -49,7 +49,7 @@ This repository currently implements **Phases 1–2** of the
 | **Supply chain**: gitleaks, pip‑audit, pnpm audit, Trivy, syft SBOM (CI) | ✅ |
 | **Apple Health import** (web + API): all raw samples, workouts, ECG, GPS, CDA | ✅ |
 | ECG waveform & GPS route **viewers**; day/week/month/year charts + wheel zoom | ✅ |
-| **iPhone sync** — one-tap pre-filled Shortcut (`/sync/shortcut`) + flat ingest | ✅ |
+| **iPhone sync** — SimpleHealthExportCSV zip upload (auto‑detected import) | ✅ |
 | **Dark theme** + mobile‑responsive layout | ✅ |
 | **Multi‑page UI** (Accueil/récap · Tableaux de bord · Santé · Données · Rapports · Import) | ✅ |
 | **Rapports** (générer PDF clinique/CSV/JSON/XLSX/FHIR + télécharger) & **exports** dans l'UI | ✅ |
@@ -239,39 +239,30 @@ docker compose exec api \
 Détails d'architecture dans
 [docs/adr/0006-apple-health-import.md](docs/adr/0006-apple-health-import.md).
 
-### Synchro iPhone en un tap (Raccourci pré-rempli)
+### Synchro iPhone (raccourci d'export CSV)
 
-Le web **ne peut pas** lire HealthKit (Apple ne l'expose pas au
-navigateur). La page **Import → « Synchro iPhone »** propose donc un
-bouton **« Télécharger le Raccourci (pré-rempli) »** : le serveur génère
-un fichier `.shortcut` avec **le jeton et l'adresse déjà intégrés**
-(`GET /api/v1/sync/shortcut`). Rien à choisir, aucun JSON à éditer.
+Le web **ne peut pas** lire HealthKit, et iOS **refuse d'importer un
+raccourci non signé** (la signature Apple exige un appareil Apple — donc
+impossible à fabriquer côté serveur). La voie fiable utilise un raccourci
+**déjà signé et distribué** : **SimpleHealthExportCSV** (RoutineHub,
+gratuit). Il exporte tes données Santé en CSV (un fichier par type),
+zippés, et sait les **uploader** vers une URL.
 
-Sur l'iPhone :
+La page **Import → « Synchro iPhone »** crée un **jeton d'upload**
+(`write:measurements`) et donne l'URL. Dans l'action d'envoi du raccourci
+(« Obtenir le contenu de l'URL ») :
 
-1. Ouvrez le fichier téléchargé → il s'ouvre dans **Raccourcis**.
-2. Une seule fois : **Réglages → Raccourcis → Autoriser les raccourcis
-   non fiables** (les fichiers non signés l'exigent), puis rouvrez-le et
-   ajoutez-le.
-3. Lancez-le : saisissez votre poids, il part en `POST` vers
-   `/api/v1/sync/health` (jeton `ingest:watch`).
+- **URL** : `https://TON-SERVEUR/api/v1/imports/apple-health`
+- **Méthode** : `POST`
+- **En-tête** : `Authorization: Bearer <ton-jeton>`
+- **Corps** : `Formulaire` → un champ **Fichier** nommé **`file`** = le
+  `.zip`
 
-L'endpoint `POST /api/v1/sync/health` accepte une map plate
-`{"date_key"?: "…", "metrics": {"<type>": <valeur>}}` — pratique côté
-Raccourci — et tolère les valeurs texte (`"86,2 kg"`, `"8 542 pas"`).
-Les clés `healthkit_type` inconnues du catalogue sont **créées à la
-volée** sous une métrique `apple.*` (rien n'est perdu), comme à l'import
-du `zip`.
-
-Pour l'**historique complet (millions de mesures, ECG, séances, tracés
-GPS, CDA)**, l'upload du `zip` reste la voie de référence — un seul
-fichier, sans rien sélectionner non plus.
-
-> Le raccourci fourni synchronise le poids du jour de façon fiable. La
-> lecture automatique de dizaines de métriques Santé via Raccourcis n'est
-> pas pré-construite ici (les actions Santé varient selon les versions
-> d'iOS et ne sont pas testables sans appareil) : le `zip` couvre ce
-> besoin de bout en bout.
+Le serveur avale ce zip de CSV **exactement** comme l'`export.xml`
+d'Apple : stockage full-fidélité (`health_samples`), roll-ups quotidiens,
+et création à la volée des métriques `apple.*` pour les types inconnus.
+L'upload web du `zip` (export Santé natif, avec ECG et CDA) reste la voie
+de référence — un seul fichier, sans rien sélectionner.
 
 ---
 

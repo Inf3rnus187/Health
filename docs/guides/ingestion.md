@@ -53,9 +53,27 @@ curl -s $BASE/sync/health -H "Authorization: Bearer $WATCH_TOKEN" \
 # → {"recorded": 2, "skipped": []}
 ```
 
-`date_key` is optional (defaults to the server's today). Unsigned
-`.shortcut` files require the one-time iOS **Allow Untrusted Shortcuts**
-toggle.
+`date_key` is optional (defaults to the server's today).
+
+## iPhone → CSV zip (SimpleHealthExportCSV)
+
+Because iOS refuses to import unsigned shortcut files (Apple signing needs
+an Apple device), the reliable device path reuses an already-signed
+community shortcut, **SimpleHealthExportCSV**, which exports Health data as
+one CSV per HealthKit type, zipped, and can upload the zip. Point its
+upload at the existing import endpoint:
+
+```
+POST /api/v1/imports/apple-health          (scope write:measurements)
+Authorization: Bearer <token>
+Body: multipart/form-data, file field "file" = the .zip
+→ 202 { id, status: "queued", ... }   # then poll GET /imports/{id}
+```
+
+The importer **auto-detects** the archive: `export.xml` → Apple's native
+format; otherwise it reads every `type,sourceName,…,unit,value` CSV member
+into the same full-fidelity storage (`health_samples`) and daily roll-ups,
+creating `apple.*` metrics on the fly for unknown types.
 
 ## Managing mappings
 

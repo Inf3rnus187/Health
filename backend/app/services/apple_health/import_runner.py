@@ -1,14 +1,17 @@
 """Drive one import: reset prior data, load XML, then ECG and routes.
 
-Accepts either a ``.zip`` archive (export.xml + electrocardiograms +
-workout-routes) or a bare ``export.xml``. Progress is written back onto
-the :class:`ImportJob` as the streaming pass advances.
+Accepts a ``.zip`` archive (Apple's ``export.xml`` + electrocardiograms +
+workout-routes), a bare ``export.xml``, or a zip of *SimpleHealthExportCSV*
+files (one CSV per HealthKit type, uploadable straight from an iPhone
+Shortcut). Progress is written back onto the :class:`ImportJob` as the
+streaming pass advances.
 """
 
 from __future__ import annotations
 
 import io
 import zipfile
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -26,9 +29,14 @@ from app.models.health_raw import (
     RouteFile,
     Workout,
 )
-from app.services.apple_health import blobs
+from app.services.apple_health import blobs, csv_parser
 from app.services.apple_health.cda import Observation, iter_observations
-from app.services.apple_health.importer import Progress, run_import
+from app.services.apple_health.importer import (
+    Progress,
+    run_import,
+    run_records,
+)
+from app.services.apple_health.parser import Item
 
 _OBS_BATCH = 1000
 
@@ -46,9 +54,11 @@ async def process(session: AsyncSession, job: ImportJob) -> None:
 async def _process_zip(
     session: AsyncSession, job: ImportJob, path: Path
 ) -> None:
-    """Import export.xml, ECG traces and routes from a zip archive."""
+    """Import export.xml (or CSVs), ECG traces and routes from a zip."""
     with zipfile.ZipFile(path) as archive:
-        await _import_xml(session, job, archive)
+        had_xml = await _import_xml(session, job, archive)
+        if not had_xml:
+            await _import_csv(session, job, archive)
         await _import_blobs(session, job, archive)
         await _import_cda(session, job, archive)
 
@@ -67,17 +77,56 @@ async def _process_xml_file(
 
 async def _import_xml(
     session: AsyncSession, job: ImportJob, archive: zipfile.ZipFile
-) -> None:
-    """Stream export.xml out of the archive into raw storage."""
+) -> bool:
+    """Stream export.xml into raw storage; ``False`` if none is present."""
     name = _find_member(archive, "/export.xml")
     if name is None:
-        return
+        return False
     with archive.open(name) as stream:
         stats = await run_import(
             session, job.user_id, stream, _progress(session, job)
         )
     job.samples, job.workouts = stats.samples, stats.workouts
     await session.commit()
+    return True
+
+
+async def _import_csv(
+    session: AsyncSession, job: ImportJob, archive: zipfile.ZipFile
+) -> None:
+    """Import every SimpleHealthExportCSV member as raw records."""
+    names = _health_csv_members(archive)
+    if not names:
+        return
+    job.phase = "parsing"
+    await session.commit()
+    items = _csv_items(archive, names)
+    stats = await run_records(
+        session, job.user_id, items, _progress(session, job)
+    )
+    job.samples = stats.samples
+    await session.commit()
+
+
+def _health_csv_members(archive: zipfile.ZipFile) -> list[str]:
+    """Return archive members that are SimpleHealthExportCSV files."""
+    names: list[str] = []
+    for name in archive.namelist():
+        low = name.lower()
+        if not low.endswith(".csv") or "electrocardiogram" in low:
+            continue
+        with archive.open(name) as handle:
+            if csv_parser.is_health_csv(handle.read(64)):
+                names.append(name)
+    return names
+
+
+def _csv_items(archive: zipfile.ZipFile, names: list[str]) -> Iterator[Item]:
+    """Chain the raw records of every CSV member into one stream."""
+    for name in names:
+        with archive.open(name) as handle:
+            text = io.TextIOWrapper(handle, encoding="utf-8", errors="replace")
+            yield from csv_parser.iter_csv_records(text)
 
 
 async def _import_blobs(

@@ -8,6 +8,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **iPhone CSV sync**: the Apple Health import (`POST /imports/apple-health`)
+  now **auto-detects** and ingests a **SimpleHealthExportCSV** zip (one CSV
+  per HealthKit type) in addition to Apple's native `export.xml` — same
+  full-fidelity `health_samples` storage, daily roll-ups and on-the-fly
+  `apple.*` metric creation. This is the reliable device path since iOS
+  refuses to import unsigned shortcut files (server-side signing is
+  impossible). The Import → « Synchro iPhone » card now mints a
+  `write:measurements` upload token and shows the exact POST config for the
+  shortcut's upload step.
+
 - **iPhone one-tap sync**: Import → « Synchro iPhone » now offers a
   **pre-filled downloadable Shortcut** (`GET /sync/shortcut`) with the
   scoped token and endpoint already embedded — no data picking, no JSON

@@ -118,6 +118,60 @@ def _zip_bytes() -> bytes:
     return buffer.getvalue()
 
 
+_CSV_HEAD = (
+    "type,sourceName,sourceVersion,productType,device,"
+    "startDate,endDate,unit,value\n"
+)
+_DEV = '"<<HKDevice: 0x1>, name:Apple Watch, model:Watch>"'
+
+
+def _csv_row(hk: str, unit: str, value: str) -> str:
+    d = "2026-03-02 08:00:00 +0000"
+    return f"{hk},Apple Watch,26.2,Watch7,{_DEV},{d},{d},{unit},{value}\n"
+
+
+def _csv_zip_bytes() -> bytes:
+    buffer = io.BytesIO()
+    step = "HKQuantityTypeIdentifierStepCount"
+    mass = "HKQuantityTypeIdentifierBodyMass"
+    steps_csv = (
+        _CSV_HEAD + _csv_row(step, "count", "10") + _csv_row(step, "count", "5")
+    )
+    mass_csv = _CSV_HEAD + _csv_row(mass, "kg", "86.2")
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr(f"{step}_SimpleHealthExportCSV.csv", steps_csv)
+        archive.writestr(f"{mass}_SimpleHealthExportCSV.csv", mass_csv)
+    return buffer.getvalue()
+
+
+async def test_csv_zip_import(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """A SimpleHealthExportCSV zip imports like the XML export."""
+    response = await client.post(
+        f"{IMPORTS}/apple-health",
+        files={"file": ("csv.zip", _csv_zip_bytes(), "application/zip")},
+        headers=auth,
+    )
+    job_id = response.json()["id"]
+    await _run(job_id)
+    job = (await client.get(f"{IMPORTS}/{job_id}", headers=auth)).json()
+    assert job["status"] == "done"
+    assert job["samples"] == 3
+    steps = await client.get(
+        "/api/v1/measurements",
+        params={"metric_key": "activity.steps"},
+        headers=auth,
+    )
+    assert steps.json()[0]["value"] == 15.0
+    mass = await client.get(
+        "/api/v1/measurements",
+        params={"metric_key": "body.weight"},
+        headers=auth,
+    )
+    assert mass.json()[0]["value"] == 86.2
+
+
 async def _admin_id() -> str:
     async with SessionFactory() as session:
         result = await session.execute(

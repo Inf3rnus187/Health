@@ -1,9 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { listTokens, revokeToken } from '../api/tokens';
+import { createToken, listTokens, revokeToken } from '../api/tokens';
 
 export function useTokens() {
   return useQuery({ queryKey: ['tokens'], queryFn: listTokens });
+}
+
+export function useCreateToken() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => createToken('iPhone (CSV)', ['write:measurements']),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['tokens'] }),
+  });
 }
 
 export function useRevokeToken() {
