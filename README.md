@@ -204,9 +204,14 @@ docker compose exec api \
   leurs cartes dédiées et **visualisables** dans le site :
   - l'ECG s'affiche en **courbe de tension** (bouton *Voir*), téléchargeable
     en CSV ;
-  - le tracé GPS s'affiche sur une **vraie carte** (Leaflet +
-    OpenStreetMap ; nécessite un accès Internet pour les tuiles — la seule
-    exception à la CSP « self »), téléchargeable en GPX.
+  - le tracé GPS s'affiche sur une **vraie carte** (Leaflet), téléchargeable
+    en GPX. Fond de carte **Carto** par défaut (les serveurs publics
+    d'OpenStreetMap **bloquent** l'usage par des apps tierces). Nécessite
+    un accès Internet ; c'est la seule exception à la CSP « self ».
+    Pour changer de fournisseur (ou utiliser votre clé), définissez au
+    build `VITE_TILE_URL` (gabarit `{s}/{z}/{x}/{y}`) et `VITE_TILE_ATTRIB`
+    (et ajoutez son domaine à `img-src` dans `nginx/default.conf`) ;
+    `VITE_TILE_URL=none` affiche la trace sans fond de carte.
   - Les ECG marqués **« mauvais enregistrement »** (Poor Recording) sont
     **ignorés** à l'import.
 - Le **document clinique CDA** (`export_cda.xml`) est analysé : chaque
