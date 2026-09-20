@@ -28,7 +28,9 @@ ENV PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
-RUN useradd --create-home --uid 10001 appuser
+RUN useradd --create-home --uid 10001 appuser \
+    && mkdir -p /data/media /data/exports \
+    && chown -R appuser:appuser /data
 
 COPY --from=builder --chown=appuser:appuser /app /app
 COPY --chown=appuser:appuser entrypoint.sh ./entrypoint.sh

@@ -23,8 +23,13 @@ print("Database is up.")
 PY
 
 # Ensure the upload spool directory exists (large import uploads).
+# Never fatal: if the volume is not writable, fall back to the default
+# temp dir so the API still starts (a crash here would block login too).
 if [ -n "${TMPDIR:-}" ]; then
-    mkdir -p "$TMPDIR"
+    if ! mkdir -p "$TMPDIR" 2>/dev/null; then
+        echo "warn: cannot create TMPDIR=$TMPDIR; using default temp dir"
+        unset TMPDIR
+    fi
 fi
 
 if [ "${RUN_MIGRATIONS:-true}" != "false" ]; then
