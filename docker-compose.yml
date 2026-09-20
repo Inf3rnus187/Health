@@ -46,6 +46,10 @@ services:
     volumes:
       - media:/data/media
       - exports:/data/exports
+      # Drop an unzipped Apple Health export here, then run:
+      #   docker compose exec api \
+      #     python -m app.cli.import_apple_health /import/export.xml
+      - ./import:/import:ro
     healthcheck:
       test:
         - CMD

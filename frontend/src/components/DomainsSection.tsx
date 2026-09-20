@@ -1,14 +1,16 @@
 import { useState } from 'react';
 
+import { useDomains } from '../hooks/useDomains';
 import { DomainDashboard } from './DomainDashboard';
 import { DomainTabs } from './DomainTabs';
 
 export function DomainsSection() {
+  const domains = useDomains();
   const [domain, setDomain] = useState('body');
   return (
     <section className="card">
       <h2>Tableaux de bord par domaine</h2>
-      <DomainTabs active={domain} onSelect={setDomain} />
+      <DomainTabs domains={domains} active={domain} onSelect={setDomain} />
       <DomainDashboard domain={domain} />
     </section>
   );

@@ -154,6 +154,56 @@ Adding a metric is also documented step‑by‑step in
 
 ---
 
+## Importer vos données Apple Santé
+
+Depuis l'app **Santé** sur iPhone : votre photo de profil → **Exporter
+toutes les données de santé**. Vous obtenez un `export.zip` contenant un
+gros `export.xml` (souvent plusieurs centaines de Mo), `export_cda.xml`,
+et des dossiers `electrocardiograms/` et `workout-routes/`.
+
+L'import se fait côté serveur (le fichier est trop volumineux pour le
+navigateur). Dézippez l'archive, déposez le dossier dans `import/` à la
+racine du projet (déjà monté en lecture seule dans le conteneur `api`),
+puis lancez la commande :
+
+```bash
+# 1. Décompressez export.zip et copiez export.xml dans ./import/
+#    (l'arborescence exacte importe peu, seul export.xml est lu)
+
+# 2. Lancez l'import dans le conteneur déjà démarré
+docker compose exec api \
+  python -m app.cli.import_apple_health /import/export.xml
+
+# → « Imported N daily values; M new metrics created. »
+# Ciblez un autre utilisateur avec --email vous@exemple.fr
+```
+
+Ce que fait l'import :
+
+- **Une valeur par jour et par métrique** (le modèle ne stocke pas les
+  échantillons bruts) : les pas, la distance, l'énergie et les minutes
+  d'exercice sont **sommés** ; la fréquence cardiaque devient
+  `heart.rate_avg` / `_min` / `_max` ; la SpO2 et la fréquence
+  respiratoire sont **moyennées** ; le poids, l'IMC et la taille gardent
+  la **dernière** valeur du jour.
+- **Sommeil** (stades profond/paradoxal/léger, éveil, temps au lit) en
+  minutes, rattaché au jour du réveil ; **séances** (`workout.count`,
+  durée, énergie, distance).
+- Les unités Apple (`mi`, `lb`, `mL`, `degF`, `%` fractionnel…) sont
+  converties vers l'unité canonique de chaque métrique.
+- Les nouvelles métriques (`activity.*`, `heart.*`, `vitals.*`,
+  `nutrition.*`, `fitness.*`) sont créées automatiquement — sans
+  migration — et apparaissent aussitôt dans les onglets par domaine.
+- **Rejouable** : relancer l'import après un nouvel export met simplement
+  à jour les valeurs quotidiennes existantes.
+
+> Les ECG (`electrocardiograms/*.csv`) et les tracés GPS
+> (`workout-routes/*.gpx`) ne sont pas des mesures quotidiennes et sont
+> ignorés pour l'instant. Détails dans
+> [docs/adr/0006-apple-health-import.md](docs/adr/0006-apple-health-import.md).
+
+---
+
 ## Development
 
 Backend (Python 3.11+, [uv](https://docs.astral.sh/uv/)):

@@ -32,3 +32,7 @@ frontend/coverage/
 
 # Build / media (runtime volumes)
 /data/
+
+# Apple Health export drop folder (keep the folder, ignore the dumps)
+/import/*
+!/import/.gitkeep
