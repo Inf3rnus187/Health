@@ -16,7 +16,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   refuses to import unsigned shortcut files (server-side signing is
   impossible). The Import → « Synchro iPhone » card now mints a
   `write:measurements` upload token and shows the exact POST config for the
-  shortcut's upload step.
+  shortcut's upload step. The upload also accepts the token as a `?token=`
+  query param (not just the `Authorization` header), so the shortcut needs
+  only a URL — no fragile header entry on mobile.
 
 - **iPhone one-tap sync**: Import → « Synchro iPhone » now offers a
   **pre-filled downloadable Shortcut** (`GET /sync/shortcut`) with the

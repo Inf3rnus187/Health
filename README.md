@@ -248,15 +248,18 @@ impossible à fabriquer côté serveur). La voie fiable utilise un raccourci
 gratuit). Il exporte tes données Santé en CSV (un fichier par type),
 zippés, et sait les **uploader** vers une URL.
 
-La page **Import → « Synchro iPhone »** crée un **jeton d'upload**
-(`write:measurements`) et donne l'URL. Dans l'action d'envoi du raccourci
-(« Obtenir le contenu de l'URL ») :
+La page **Import → « Synchro iPhone »** génère une **URL d'upload avec le
+jeton déjà inclus** (`write:measurements`) — aucun en-tête à saisir. Dans
+l'action d'envoi du raccourci (« Obtenir le contenu de l'URL ») :
 
-- **URL** : `https://TON-SERVEUR/api/v1/imports/apple-health`
+- **URL** : `https://TON-SERVEUR/api/v1/imports/apple-health?token=<jeton>`
 - **Méthode** : `POST`
-- **En-tête** : `Authorization: Bearer <ton-jeton>`
 - **Corps** : `Formulaire` → un champ **Fichier** nommé **`file`** = le
   `.zip`
+
+Le jeton s'accepte aussi via l'en-tête `Authorization: Bearer <jeton>` si
+tu préfères ; le paramètre `?token=` évite juste la saisie fragile de
+l'en-tête sur mobile (jeton scoped et révocable, réseau local).
 
 Le serveur avale ce zip de CSV **exactement** comme l'`export.xml`
 d'Apple : stockage full-fidélité (`health_samples`), roll-ups quotidiens,

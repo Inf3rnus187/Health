@@ -9,7 +9,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, UploadFile, status
 
 from app.core.config import get_settings
-from app.core.deps import Principal, SessionDep, require_scope
+from app.core.deps import (
+    Principal,
+    SessionDep,
+    require_scope,
+    require_scope_flex,
+)
 from app.core.scopes import WRITE_MEASUREMENTS
 from app.models.base import new_uuid
 from app.models.health_raw import ImportJob
@@ -21,6 +26,9 @@ from app.workers.queue import enqueue
 router = APIRouter(prefix="/imports", tags=["imports"])
 
 WriteDep = Annotated[Principal, Depends(require_scope(WRITE_MEASUREMENTS))]
+UploadDep = Annotated[
+    Principal, Depends(require_scope_flex(WRITE_MEASUREMENTS))
+]
 _CHUNK = 1 << 20
 
 
@@ -30,9 +38,13 @@ _CHUNK = 1 << 20
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def upload(
-    principal: WriteDep, session: SessionDep, file: UploadFile
+    principal: UploadDep, session: SessionDep, file: UploadFile
 ) -> ImportJob:
-    """Store the uploaded export and queue a background import."""
+    """Store the uploaded export and queue a background import.
+
+    Accepts the token in the ``Authorization`` header or a ``?token=``
+    query param, so an iPhone Shortcut can upload with just a URL.
+    """
     safe = _safe_name(file.filename or "export")
     path = await _stream_to_disk(file, safe)
     job = await imports.create_job(session, principal.user.id, safe, path)

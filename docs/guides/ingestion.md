@@ -64,11 +64,13 @@ one CSV per HealthKit type, zipped, and can upload the zip. Point its
 upload at the existing import endpoint:
 
 ```
-POST /api/v1/imports/apple-health          (scope write:measurements)
-Authorization: Bearer <token>
+POST /api/v1/imports/apple-health?token=<token>   (scope write:measurements)
 Body: multipart/form-data, file field "file" = the .zip
 → 202 { id, status: "queued", ... }   # then poll GET /imports/{id}
 ```
+
+The token may be given as `?token=` (handy for a Shortcut — no header to
+hand-enter) **or** the usual `Authorization: Bearer <token>` header.
 
 The importer **auto-detects** the archive: `export.xml` → Apple's native
 format; otherwise it reads every `type,sourceName,…,unit,value` CSV member

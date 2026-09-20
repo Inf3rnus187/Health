@@ -172,6 +172,39 @@ async def test_csv_zip_import(
     assert mass.json()[0]["value"] == 86.2
 
 
+async def test_upload_via_query_token(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """A ?token= query param authenticates the upload (no header)."""
+    created = await client.post(
+        "/api/v1/tokens",
+        json={"name": "csv", "scopes": ["write:measurements"]},
+        headers=auth,
+    )
+    token = created.json()["token"]
+    response = await client.post(
+        f"{IMPORTS}/apple-health?token={token}",
+        files={"file": ("csv.zip", _csv_zip_bytes(), "application/zip")},
+    )
+    assert response.status_code == 202
+    await _run(response.json()["id"])
+    steps = await client.get(
+        "/api/v1/samples",
+        params={"metric_key": "activity.steps"},
+        headers=auth,
+    )
+    assert steps.json()["total"] == 2
+
+
+async def test_upload_bad_query_token_rejected(client: AsyncClient) -> None:
+    """An unknown ?token= is rejected, not silently accepted."""
+    response = await client.post(
+        f"{IMPORTS}/apple-health?token=nope",
+        files={"file": ("csv.zip", _csv_zip_bytes(), "application/zip")},
+    )
+    assert response.status_code == 401
+
+
 async def _admin_id() -> str:
     async with SessionFactory() as session:
         result = await session.execute(

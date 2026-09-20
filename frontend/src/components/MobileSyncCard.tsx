@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import type { TokenCreated } from '../api/types';
 import { useCreateToken, useRevokeToken, useTokens } from '../hooks/useTokens';
 import { CopyButton } from './CopyButton';
 import { ShortcutRecipe } from './ShortcutRecipe';
@@ -8,37 +9,37 @@ import { TokenList } from './TokenList';
 const ENDPOINT = `${window.location.origin}/api/v1/imports/apple-health`;
 
 export function MobileSyncCard() {
-  const [secret, setSecret] = useState<string | null>(null);
+  const [url, setUrl] = useState<string | null>(null);
   const tokens = useTokens().data ?? [];
   const create = useCreateToken();
   const revoke = useRevokeToken();
-  const onCreate = () =>
-    create.mutate(undefined, { onSuccess: (t) => setSecret(t.token) });
+  const save = (t: TokenCreated) => setUrl(`${ENDPOINT}?token=${t.token}`);
+  const onCreate = () => create.mutate(undefined, { onSuccess: save });
   return (
     <section className="card">
       <h2>Synchro iPhone (export CSV)</h2>
       <p className="muted">
-        iOS bloque l’import d’un raccourci non signé. La voie fiable : le
-        raccourci « SimpleHealthExportCSV » exporte tout Santé en CSV et les
-        envoie ici. Crée un jeton, puis colle-le + l’URL dans son envoi.
+        iOS bloque les raccourcis non signés. Voie fiable : le raccourci «
+        SimpleHealthExportCSV » exporte tout Santé en CSV et l’envoie ici. Crée
+        l’URL (jeton inclus), colle-la dans son envoi — aucun en-tête.
       </p>
       <button className="btn" disabled={create.isPending} onClick={onCreate}>
-        Créer un jeton d’upload
+        Créer l’URL d’upload
       </button>
-      {secret && <Secret secret={secret} />}
-      <ShortcutRecipe endpoint={ENDPOINT} />
+      {url && <UploadUrl url={url} />}
+      <ShortcutRecipe />
       <TokenList tokens={tokens} onRevoke={(id) => revoke.mutate(id)} />
     </section>
   );
 }
 
-function Secret({ secret }: { secret: string }) {
+function UploadUrl({ url }: { url: string }) {
   return (
     <div className="secret">
-      <p className="muted">Jeton (affiché une seule fois) :</p>
+      <p className="muted">URL d’upload (jeton inclus, affichée une fois) :</p>
       <div className="secret-row">
-        <code className="secret-code">{secret}</code>
-        <CopyButton text={secret} label="Copier le jeton" />
+        <code className="secret-code">{url}</code>
+        <CopyButton text={url} label="Copier l’URL" />
       </div>
     </div>
   );
