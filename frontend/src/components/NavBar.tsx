@@ -5,6 +5,7 @@ const LINKS = [
   { to: '/dashboards', label: 'Tableaux de bord', end: false },
   { to: '/sante', label: 'Santé', end: false },
   { to: '/donnees', label: 'Données', end: false },
+  { to: '/dossier', label: 'Dossier', end: false },
   { to: '/rapports', label: 'Rapports', end: false },
   { to: '/import', label: 'Import', end: false },
 ];

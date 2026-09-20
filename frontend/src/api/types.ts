@@ -204,6 +204,17 @@ export interface SummaryTile {
   spark: number[];
 }
 
+export interface MedicalDoc {
+  id: string;
+  kind: string;
+  title: string;
+  doc_date: string | null;
+  media_type: string;
+  size_bytes: number;
+  notes: string | null;
+  created_at: string;
+}
+
 export interface Report {
   id: string;
   type: string;

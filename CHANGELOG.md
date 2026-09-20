@@ -26,6 +26,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Dossier médical (medical documents)**: a new "Dossier" tab and API
+  (`/medical/documents`) to upload, list, view and delete medical files —
+  ordonnances, imageries + comptes-rendus, biologie (prises de sang), EFR,
+  tests de marche, dossier CDA, vaccinations, autre. Files are stored
+  encrypted at rest (same crypto layer as photos), typed and dated, and
+  purged by RGPD account erasure. Table added via migration `0006`.
 - **Home = a health hub**: each `/summary` tile now carries `at` (the
   newest raw sample time), `delta` (day-over-day change), `avg7` (7-day
   average) and `spark` (last 14 daily values). The Accueil tiles show the

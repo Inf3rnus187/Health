@@ -8,6 +8,7 @@ import { HealthPage } from './pages/HealthPage';
 import { HomePage } from './pages/HomePage';
 import { ImportPage } from './pages/ImportPage';
 import { LoginPage } from './pages/LoginPage';
+import { MedicalPage } from './pages/MedicalPage';
 import { ReportsPage } from './pages/ReportsPage';
 
 export function App() {
@@ -26,6 +27,7 @@ export function App() {
           <Route path="dashboards" element={<DashboardsPage />} />
           <Route path="sante" element={<HealthPage />} />
           <Route path="donnees" element={<DataPage />} />
+          <Route path="dossier" element={<MedicalPage />} />
           <Route path="rapports" element={<ReportsPage />} />
           <Route path="import" element={<ImportPage />} />
         </Route>

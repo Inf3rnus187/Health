@@ -395,6 +395,42 @@ progress {
   height: 10px;
 }
 
+.med-form {
+  display: grid;
+  gap: 10px;
+  max-width: 460px;
+}
+
+.med-form textarea.input {
+  min-height: 60px;
+  resize: vertical;
+}
+
+.med-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.med-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--color-grid);
+  padding-top: 8px;
+}
+
+.med-list .import-name {
+  flex: 1 1 200px;
+}
+
+.med-list .row-actions {
+  margin-left: auto;
+}
+
 .import-list {
   list-style: none;
   margin: 12px 0 0;
