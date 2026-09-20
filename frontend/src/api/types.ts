@@ -136,3 +136,27 @@ export interface SampleQuery {
   limit: number;
   offset: number;
 }
+
+export interface WorkoutRow {
+  id: string;
+  activity_type: string;
+  start_at: string;
+  end_at: string | null;
+  duration_min: number | null;
+  energy_kcal: number | null;
+  distance_km: number | null;
+}
+
+export interface EcgRow {
+  id: string;
+  recorded_at: string | null;
+  classification: string | null;
+  sample_rate_hz: number | null;
+  sample_count: number | null;
+}
+
+export interface RouteRow {
+  id: string;
+  started_at: string | null;
+  point_count: number;
+}

@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { WheelEvent } from 'react';
 
 import type { Bucket, TrendPoint } from '../api/types';
 import { formatTick } from '../utils/formatTick';
-import { zoomDomain } from '../utils/zoom';
+import { cursorFraction, zoomDomain } from '../utils/zoom';
 import { TrendLines } from './TrendLines';
 
 interface ZoomChartProps {
@@ -16,16 +16,18 @@ interface ZoomChartProps {
 type TimeDomain = [number, number] | ['dataMin', 'dataMax'];
 
 export function ZoomChart({ points, color, label, bucket }: ZoomChartProps) {
+  const ref = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState<[number, number] | null>(null);
   const min = points[0]?.t ?? 0;
   const max = points[points.length - 1]?.t ?? min;
   const onWheel = (event: WheelEvent) => {
     event.preventDefault();
-    setZoom(zoomDomain(zoom, min, max, event.deltaY));
+    const anchor = cursorFraction(ref.current, event.clientX);
+    setZoom(zoomDomain(zoom, min, max, event.deltaY, anchor));
   };
   const domain: TimeDomain = zoom ?? ['dataMin', 'dataMax'];
   return (
-    <div className="chart-zoom" onWheel={onWheel}>
+    <div className="chart-zoom" ref={ref} onWheel={onWheel}>
       <TrendLines
         points={points}
         color={color}

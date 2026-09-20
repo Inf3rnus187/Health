@@ -1,10 +1,13 @@
 import { AppHeader } from '../components/AppHeader';
 import { DomainsSection } from '../components/DomainsSection';
+import { EcgCard } from '../components/EcgCard';
 import { ImportPanel } from '../components/ImportPanel';
 import { MetricCatalog } from '../components/MetricCatalog';
 import { QuickWeight } from '../components/QuickWeight';
+import { RoutesCard } from '../components/RoutesCard';
 import { SamplesBrowser } from '../components/SamplesBrowser';
 import { TrendChart } from '../components/TrendChart';
+import { WorkoutsCard } from '../components/WorkoutsCard';
 
 export function DashboardPage() {
   return (
@@ -18,6 +21,9 @@ export function DashboardPage() {
         </section>
         <ImportPanel />
         <DomainsSection />
+        <WorkoutsCard />
+        <EcgCard />
+        <RoutesCard />
         <SamplesBrowser />
         <section className="card">
           <MetricCatalog />

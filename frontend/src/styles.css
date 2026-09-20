@@ -338,6 +338,24 @@ progress {
   overflow-x: auto;
 }
 
+.scroll-y {
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.page-size .input {
+  width: auto;
+  margin: 0;
+  padding: 6px 8px;
+}
+
 /* Mobile: stack the header, single-column dashboards, scrollable tabs. */
 @media (max-width: 640px) {
   .content {
