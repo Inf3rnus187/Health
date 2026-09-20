@@ -22,6 +22,41 @@ curl -s $BASE/ingest/watch -H "Authorization: Bearer $WATCH_TOKEN" \
 
 CPAP data uses the same shape at `/ingest/ppc` (scope `ingest:ppc`).
 
+A `healthkit_type` that has **no mapping** is no longer skipped: it is
+imported under a synthesised `apple.*` metric, created on the fly (same
+full-fidelity behaviour as the zip importer). Only samples with neither a
+`metric_key` nor a `healthkit_type` are reported in `skipped`.
+
+## iPhone Shortcut sync — `/sync/*`
+
+For a **one-tap, zero-config** sync, the web UI (Import → « Synchro
+iPhone ») offers a pre-filled Shortcut:
+
+```bash
+# Interactive user session (JWT). Mints an ingest:watch token and returns
+# a .shortcut file with the token + endpoint already embedded.
+curl -s "$BASE/sync/shortcut?base=https://health.example.com" \
+  -H "Authorization: Bearer $ACCESS" -o "Phoenix Sante.shortcut"
+```
+
+The Shortcut posts a **flat map** (easy to build on-device) that the
+server adapts to the ingest pipeline. Values may be plain text with units
+or French separators — they are parsed leniently; unparsable keys are
+reported, never fatal:
+
+```bash
+curl -s $BASE/sync/health -H "Authorization: Bearer $WATCH_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"date_key":"2026-01-15","metrics":{
+        "HKQuantityTypeIdentifierBodyMass":"86,2 kg",
+        "HKQuantityTypeIdentifierStepCount":"8 542 pas"}}'
+# → {"recorded": 2, "skipped": []}
+```
+
+`date_key` is optional (defaults to the server's today). Unsigned
+`.shortcut` files require the one-time iOS **Allow Untrusted Shortcuts**
+toggle.
+
 ## Managing mappings
 
 ```bash

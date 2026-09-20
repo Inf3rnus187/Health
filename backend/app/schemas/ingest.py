@@ -47,6 +47,13 @@ class IngestResult(BaseModel):
     skipped: list[str]
 
 
+class HealthSyncPayload(BaseModel):
+    """Flat ``{healthkit_type: value}`` map sent by the iPhone Shortcut."""
+
+    date_key: date | None = None
+    metrics: dict[str, Any] = Field(min_length=1, max_length=500)
+
+
 class MappingCreate(BaseModel):
     """Create/override an external-key → metric-key mapping."""
 

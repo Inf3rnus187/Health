@@ -10,6 +10,8 @@ from app.schemas.ingest import IngestPayload, IngestResult, IngestSample
 from app.schemas.measurement import MeasurementIn
 from app.services import mappings
 from app.services import measurements as measure
+from app.services.apple_health.metrics_cache import MetricCache
+from app.services.apple_health.spec import synth_spec
 
 
 async def ingest(
@@ -21,10 +23,11 @@ async def ingest(
     token_id: str | None = None,
 ) -> IngestResult:
     """Map samples to metrics and record them; report unresolved keys."""
+    cache = MetricCache()
     items: list[MeasurementIn] = []
     skipped: list[str] = []
     for sample in payload.samples:
-        key = await _resolve_key(session, user_id, source, sample)
+        key = await _resolve_key(session, user_id, source, sample, cache)
         if key is None:
             skipped.append(sample.healthkit_type or "unknown")
             continue
@@ -38,15 +41,21 @@ async def _resolve_key(
     user_id: str,
     source: str,
     sample: IngestSample,
+    cache: MetricCache,
 ) -> str | None:
-    """Return the metric key for a sample (direct or via mapping)."""
+    """Return the metric key for a sample (direct, mapped, or Apple)."""
     if sample.metric_key:
         return sample.metric_key
-    if sample.healthkit_type:
-        return await mappings.resolve(
-            session, user_id, source, sample.healthkit_type
-        )
-    return None
+    if not sample.healthkit_type:
+        return None
+    mapped = await mappings.resolve(
+        session, user_id, source, sample.healthkit_type
+    )
+    if mapped is not None:
+        return mapped
+    spec = synth_spec(sample.healthkit_type, sample.unit)
+    await cache.id_for(session, spec)
+    return spec.key
 
 
 def _to_item(

@@ -1,0 +1,109 @@
+"""One-tap mobile sync: a pre-filled Shortcut + flat health ingest."""
+
+from __future__ import annotations
+
+import re
+from datetime import date
+from typing import Annotated, Any
+
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import Response
+
+from app.core.deps import Principal, SessionDep, UserDep, require_scope
+from app.core.scopes import INGEST_WATCH
+from app.schemas.ingest import (
+    HealthSyncPayload,
+    IngestPayload,
+    IngestResult,
+    IngestSample,
+)
+from app.services import audit, ingest, shortcut
+from app.services import tokens as tokens_svc
+
+router = APIRouter(prefix="/sync", tags=["sync"])
+
+WatchDep = Annotated[Principal, Depends(require_scope(INGEST_WATCH))]
+
+_NUM = re.compile(r"-?\d+(?:[.,]\d+)?")
+
+
+@router.get("/shortcut")
+async def download_shortcut(
+    principal: UserDep,
+    session: SessionDep,
+    base: Annotated[str, Query()] = "",
+) -> Response:
+    """Mint an ingest token and return a pre-filled ``.shortcut``."""
+    token, secret = await tokens_svc.create_token(
+        session, principal.user, "iPhone (Raccourci)", [INGEST_WATCH], None
+    )
+    await audit.record(
+        session,
+        action="create",
+        entity="sync_shortcut",
+        user_id=principal.user.id,
+        entity_id=token.id,
+    )
+    await session.commit()
+    data = shortcut.build_shortcut(_endpoint(base), secret)
+    disposition = 'attachment; filename="Phoenix Sante.shortcut"'
+    return Response(
+        content=data,
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": disposition},
+    )
+
+
+@router.post("/health", response_model=IngestResult)
+async def sync_health(
+    body: HealthSyncPayload, principal: WatchDep, session: SessionDep
+) -> IngestResult:
+    """Ingest a flat ``{healthkit_type: value}`` map (Shortcut-friendly)."""
+    ok, bad = _samples(body.metrics)
+    if not ok:
+        return IngestResult(recorded=0, skipped=bad)
+    day = body.date_key or date.today()
+    payload = IngestPayload(date_key=day, samples=ok)
+    result = await ingest.ingest(
+        session,
+        principal.user.id,
+        "watch",
+        payload,
+        token_id=principal.token_id,
+    )
+    await session.commit()
+    return IngestResult(recorded=result.recorded, skipped=result.skipped + bad)
+
+
+def _endpoint(base: str) -> str:
+    """Build the absolute /sync/health URL from the caller's origin."""
+    root = base.rstrip("/") if base.startswith("http") else ""
+    return f"{root}/api/v1/sync/health"
+
+
+def _samples(
+    metrics: dict[str, Any],
+) -> tuple[list[IngestSample], list[str]]:
+    """Split a flat metric map into valid samples and unparsable keys."""
+    ok: list[IngestSample] = []
+    bad: list[str] = []
+    for hk, raw in metrics.items():
+        num = _num(raw)
+        if num is None:
+            bad.append(hk)
+            continue
+        ok.append(IngestSample(healthkit_type=hk, value=num))
+    return ok, bad
+
+
+def _num(value: Any) -> float | None:
+    """Leniently coerce a value to float (handles ``"8 542 pas"``)."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        return float(value)
+    text = re.sub(r"[\s  ]", "", str(value))
+    match = _NUM.search(text)
+    if match is None:
+        return None
+    return float(match.group().replace(",", "."))

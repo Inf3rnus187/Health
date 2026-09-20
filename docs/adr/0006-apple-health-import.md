@@ -58,6 +58,34 @@ API through a background job.
   `clinical_observations` and browsed via `GET /clinical/observations`
   (searchable, paginated); the raw XML is kept for download.
 
+## Live sync (iPhone Shortcut)
+
+The `.zip` is the exhaustive path but is a manual, occasional action. For a
+daily top-up we add a **one-tap** path that needs no app and no
+configuration:
+
+- `GET /sync/shortcut` (interactive user) mints a scoped `ingest:watch`
+  token and returns a **pre-filled, unsigned `.shortcut`** built with
+  `plistlib` — the token and the `/sync/health` URL are embedded, so the
+  user never picks data types or edits JSON. Only action identifiers and
+  the variable-token serialisation that are stable across Shortcuts
+  versions are emitted, so the file imports cleanly (it does require the
+  one-time iOS *Allow Untrusted Shortcuts* toggle).
+- `POST /sync/health` accepts a **flat** `{date_key?, metrics:{type:
+  value}}` map — trivial to assemble in Shortcuts — and adapts it to the
+  ingest pipeline. Values are parsed leniently (`"86,2 kg"`, `"8 542
+  pas"`); unparsable keys are reported, never fatal.
+- Ingestion was hardened so this actually lands: a `healthkit_type` with
+  no user mapping now resolves through the Apple spec and **auto-creates**
+  its metric (`MetricCache`), exactly like the zip importer. This also
+  changes `/ingest/watch`: previously-skipped unmapped types are now
+  recorded under `apple.*` (nothing is silently dropped).
+
+Scope note: the shipped Shortcut reliably syncs the day's weight.
+Auto-reading dozens of Health metrics through Shortcuts is intentionally
+not pre-built — the Health *read* actions vary across iOS versions and
+cannot be verified without a device; the `.zip` covers that end to end.
+
 ## Consequences
 
 - The database grows to the true size of the export (millions of rows);

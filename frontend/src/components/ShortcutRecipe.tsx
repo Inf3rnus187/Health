@@ -1,36 +1,25 @@
-import { CopyButton } from './CopyButton';
-
 const STEPS = [
-  'App Raccourcis → créez un raccourci.',
-  'Ajoutez « Rechercher des échantillons de santé » (Poids, Pas, FC, ' +
-    'Sommeil…). Au 1er lancement, iOS demande l’accès Santé.',
-  'Construisez le corps JSON (exemple ci-dessous) avec vos échantillons.',
-  'Ajoutez « Obtenir le contenu de l’URL » : POST vers l’endpoint, en-tête ' +
-    'Authorization: Bearer VOTRE_JETON, corps = le JSON.',
-  'Lancez-le d’un clic, ou programmez une automatisation quotidienne.',
+  'Ouvre le fichier téléchargé sur ton iPhone : il s’ouvre dans ' +
+    'l’app Raccourcis.',
+  'Une seule fois : Réglages → Raccourcis → active « Autoriser les ' +
+    'raccourcis non fiables », puis rouvre le fichier et ajoute-le.',
+  'Lance-le : saisis ton poids, il part vers ton serveur. Aucun jeton ' +
+    'ni JSON à toucher — tout est déjà inclus.',
 ];
 
-const SAMPLE = `{
-  "date_key": "2026-09-20",
-  "samples": [
-    { "metric_key": "body.weight", "value": 86.2 },
-    { "metric_key": "rest.hr", "value": 58 }
-  ]
-}`;
-
-export function ShortcutRecipe({ endpoint }: { endpoint: string }) {
+export function ShortcutRecipe() {
   return (
     <div className="recipe">
-      <p className="muted">
-        Endpoint : <code>{endpoint}</code>{' '}
-        <CopyButton text={endpoint} label="Copier l’URL" />
-      </p>
       <ol>
         {STEPS.map((step) => (
           <li key={step}>{step}</li>
         ))}
       </ol>
-      <pre className="code-block">{SAMPLE}</pre>
+      <p className="muted">
+        L’historique complet (millions de mesures, ECG, séances, tracés)
+        s’importe en un fichier via l’onglet Import (export Santé .zip) — sans
+        rien sélectionner non plus.
+      </p>
     </div>
   );
 }

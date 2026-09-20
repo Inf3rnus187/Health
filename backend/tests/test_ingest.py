@@ -40,16 +40,24 @@ async def test_watch_ingest_via_healthkit_mapping(
     assert listed.json()[0]["value"] == 85.2
 
 
-async def test_unknown_healthkit_type_is_skipped(
+async def test_unmapped_healthkit_type_is_auto_created(
     client: AsyncClient, auth: dict[str, str]
 ) -> None:
+    """Unmapped types land under a synthesised ``apple.*`` metric."""
+    hk = "HKQuantityTypeIdentifierEnvironmentalAudioExposure"
     body = {
         "date_key": "2026-03-01",
-        "samples": [{"healthkit_type": "HKUnknownThing", "value": 1}],
+        "samples": [{"healthkit_type": hk, "value": 42, "unit": "dBASPL"}],
     }
     response = await client.post(f"{INGEST}/watch", json=body, headers=auth)
-    assert response.json()["recorded"] == 0
-    assert "HKUnknownThing" in response.json()["skipped"]
+    assert response.json()["recorded"] == 1
+    assert response.json()["skipped"] == []
+    listed = await client.get(
+        MEAS,
+        params={"metric_key": "apple.environmental_audio_exposure"},
+        headers=auth,
+    )
+    assert listed.json()[0]["value"] == 42
 
 
 async def test_ppc_ingest(client: AsyncClient, auth: dict[str, str]) -> None:

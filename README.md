@@ -49,6 +49,7 @@ This repository currently implements **Phases 1–2** of the
 | **Supply chain**: gitleaks, pip‑audit, pnpm audit, Trivy, syft SBOM (CI) | ✅ |
 | **Apple Health import** (web + API): all raw samples, workouts, ECG, GPS, CDA | ✅ |
 | ECG waveform & GPS route **viewers**; day/week/month/year charts + wheel zoom | ✅ |
+| **iPhone sync** — one-tap pre-filled Shortcut (`/sync/shortcut`) + flat ingest | ✅ |
 | **Dark theme** + mobile‑responsive layout | ✅ |
 | **Multi‑page UI** (Accueil/récap · Tableaux de bord · Santé · Données · Rapports · Import) | ✅ |
 | **Rapports** (générer PDF clinique/CSV/JSON/XLSX/FHIR + télécharger) & **exports** dans l'UI | ✅ |
@@ -238,31 +239,39 @@ docker compose exec api \
 Détails d'architecture dans
 [docs/adr/0006-apple-health-import.md](docs/adr/0006-apple-health-import.md).
 
-### Synchro automatique depuis l'iPhone (Raccourci)
+### Synchro iPhone en un tap (Raccourci pré-rempli)
 
-Le web **ne peut pas** lire HealthKit (Apple ne l'expose pas au navigateur).
-Pour une synchro **sans app à installer**, utilisez l'app **Raccourcis** :
-la page **Import → « Synchro iPhone »** crée un **jeton scoped**
-(`ingest:watch`, affiché une seule fois) et donne l'URL. Le Raccourci lit
-vos échantillons Santé (au 1er lancement iOS **demande l'autorisation**) et
-les envoie en `POST` à `/api/v1/ingest/watch` :
+Le web **ne peut pas** lire HealthKit (Apple ne l'expose pas au
+navigateur). La page **Import → « Synchro iPhone »** propose donc un
+bouton **« Télécharger le Raccourci (pré-rempli) »** : le serveur génère
+un fichier `.shortcut` avec **le jeton et l'adresse déjà intégrés**
+(`GET /api/v1/sync/shortcut`). Rien à choisir, aucun JSON à éditer.
 
-```jsonc
-// En-tête : Authorization: Bearer <votre-jeton>
-{
-  "date_key": "2026-09-20",
-  "samples": [
-    { "metric_key": "body.weight", "value": 86.2 },
-    { "metric_key": "rest.hr", "value": 58 },
-    { "healthkit_type": "HKQuantityTypeIdentifierBodyMass", "value": 86.2 }
-  ]
-}
-```
+Sur l'iPhone :
 
-Ceci alimente les **métriques du jour** (tableaux de bord, récap). Pour
-l'**historique complet, les ECG et le CDA**, l'upload du `zip` reste
-nécessaire. Une app iOS native (HealthKit) permettrait d'aller plus loin
-mais demande un compte développeur Apple.
+1. Ouvrez le fichier téléchargé → il s'ouvre dans **Raccourcis**.
+2. Une seule fois : **Réglages → Raccourcis → Autoriser les raccourcis
+   non fiables** (les fichiers non signés l'exigent), puis rouvrez-le et
+   ajoutez-le.
+3. Lancez-le : saisissez votre poids, il part en `POST` vers
+   `/api/v1/sync/health` (jeton `ingest:watch`).
+
+L'endpoint `POST /api/v1/sync/health` accepte une map plate
+`{"date_key"?: "…", "metrics": {"<type>": <valeur>}}` — pratique côté
+Raccourci — et tolère les valeurs texte (`"86,2 kg"`, `"8 542 pas"`).
+Les clés `healthkit_type` inconnues du catalogue sont **créées à la
+volée** sous une métrique `apple.*` (rien n'est perdu), comme à l'import
+du `zip`.
+
+Pour l'**historique complet (millions de mesures, ECG, séances, tracés
+GPS, CDA)**, l'upload du `zip` reste la voie de référence — un seul
+fichier, sans rien sélectionner non plus.
+
+> Le raccourci fourni synchronise le poids du jour de façon fiable. La
+> lecture automatique de dizaines de métriques Santé via Raccourcis n'est
+> pas pré-construite ici (les actions Santé varient selon les versions
+> d'iOS et ne sont pas testables sans appareil) : le `zip` couvre ce
+> besoin de bout en bout.
 
 ---
 

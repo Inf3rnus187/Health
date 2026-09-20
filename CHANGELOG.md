@@ -8,6 +8,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **iPhone one-tap sync**: Import → « Synchro iPhone » now offers a
+  **pre-filled downloadable Shortcut** (`GET /sync/shortcut`) with the
+  scoped token and endpoint already embedded — no data picking, no JSON
+  editing. It posts to `POST /sync/health`, a Shortcut-friendly flat
+  `{date_key?, metrics:{type:value}}` map with lenient numeric parsing
+  (`"86,2 kg"`, `"8 542 pas"`). The manual copy/paste recipe and its dead
+  helper components were removed.
+
+### Changed
+
+- **Robust ingestion**: a `healthkit_type` with no user mapping now
+  resolves via the Apple spec and **auto-creates** its metric
+  (`MetricCache`), so `/ingest/watch` and `/sync/health` no longer drop
+  unmapped types — they land under `apple.*` (matching the zip importer).
+  Previously such samples were reported as `skipped`.
+
 - **Hardening (Phase 9)**: optional **TOTP MFA** (`/auth/mfa/*`; login
   requires `otp` when enabled), optional **at‑rest media encryption**
   (Fernet, transparent via `app.core.crypto`), and **RGPD erasure**
