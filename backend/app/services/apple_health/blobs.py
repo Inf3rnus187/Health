@@ -119,8 +119,13 @@ def _first_number(line: str) -> float | None:
 
 
 def _first_time(text: str) -> datetime | None:
-    """Return the first ISO ``<time>`` in a GPX document."""
-    match = _TIME.search(text)
+    """Return the first track-point time (not the export ``<metadata>``).
+
+    Apple writes the export-generation time in ``<metadata><time>`` — the
+    same for every file — so we search from the first ``<trkpt>``.
+    """
+    anchor = text.find("<trkpt")
+    match = _TIME.search(text[anchor:] if anchor != -1 else text)
     if match is None:
         return None
     try:

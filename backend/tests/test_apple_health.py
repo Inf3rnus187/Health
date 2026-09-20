@@ -84,7 +84,9 @@ _ECG_POOR = (
 )
 
 _GPX = (
-    '<?xml version="1.0"?><gpx><trk><trkseg>'
+    '<?xml version="1.0"?><gpx>'
+    "<metadata><time>2030-01-01T00:00:00Z</time></metadata>"
+    "<trk><trkseg>"
     '<trkpt lat="1" lon="2"><time>2026-03-02T17:18:00Z</time></trkpt>'
     '<trkpt lat="1" lon="2"><time>2026-03-02T17:18:05Z</time></trkpt>'
     "</trkseg></trk></gpx>"
@@ -183,13 +185,17 @@ async def test_ecg_and_route_viewers(
 ) -> None:
     await _run(await _upload(client, auth))
     ecg = (await client.get("/api/v1/ecg", headers=auth)).json()
-    series = await client.get(f"/api/v1/ecg/{ecg[0]['id']}/series", headers=auth)
+    series = await client.get(
+        f"/api/v1/ecg/{ecg[0]['id']}/series", headers=auth
+    )
     assert series.json()["values"] == [-10.0, -12.0, -8.0]
     routes = (await client.get("/api/v1/routes", headers=auth)).json()
     track = await client.get(
         f"/api/v1/routes/{routes[0]['id']}/track", headers=auth
     )
     assert len(track.json()["points"]) == 2
+    # started_at is the first track point, not the export <metadata> time.
+    assert routes[0]["started_at"].startswith("2026-03-02")
 
 
 async def test_poor_ecg_skipped(
