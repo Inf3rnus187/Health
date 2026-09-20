@@ -4,11 +4,14 @@ import { colorForMetric } from '../theme/palette';
 import { Chart } from './Chart';
 
 export function MetricChart({ spec }: { spec: SeriesSpec }) {
-  const { data, isPending, isError } = useSeries(spec);
+  const { data, isPending, isError, error } = useSeries(spec);
   if (isPending) {
     return <p className="muted">Chargement…</p>;
   }
-  if (isError || !data || data.points.length === 0) {
+  if (isError) {
+    return <p className="error">Erreur : {(error as Error).message}</p>;
+  }
+  if (!data || data.points.length === 0) {
     return <p className="muted">Aucune donnée pour le moment.</p>;
   }
   return (

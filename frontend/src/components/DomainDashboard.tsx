@@ -7,7 +7,10 @@ function hasData(series: DashboardSeries): boolean {
 }
 
 export function DomainDashboard({ domain }: { domain: string }) {
-  const { data, isPending } = useDashboard(domain);
+  const { data, isPending, isError, error } = useDashboard(domain);
+  if (isError) {
+    return <p className="error">Erreur : {(error as Error).message}</p>;
+  }
   if (isPending || !data) {
     return <p className="muted">Chargement…</p>;
   }
