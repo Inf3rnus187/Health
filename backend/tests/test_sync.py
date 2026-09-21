@@ -193,10 +193,10 @@ async def test_auto_export_json_body(
     assert row["date_key"] == "2026-02-01"
 
 
-async def test_auto_export_dedups_intraday_points(
+async def test_auto_export_aggregates_intraday_by_hint(
     client: AsyncClient, auth: dict[str, str]
 ) -> None:
-    """Many points on one day collapse to one row (last wins), tz-aware."""
+    """A day of raw points sums for steps and averages for heart rate."""
     token = await _write_token(client, auth)
     payload = {
         "data": {
@@ -206,22 +206,31 @@ async def test_auto_export_dedups_intraday_points(
                     "units": "count",
                     "data": [
                         {"date": "2026-03-01 08:00:00 +0200", "qty": 100},
-                        {"date": "2026-03-01 20:00:00 +0200", "qty": 9000},
+                        {"date": "2026-03-01 20:00:00 +0200", "qty": 900},
                     ],
-                }
+                },
+                {
+                    "name": "heart_rate",
+                    "units": "count/min",
+                    "data": [
+                        {"date": "2026-03-01 08:00:00 +0200", "Avg": 60},
+                        {"date": "2026-03-01 20:00:00 +0200", "Avg": 80},
+                    ],
+                },
             ]
         }
     }
     res = await client.post(f"{SYNC}/auto-export?token={token}", json=payload)
     assert res.status_code == 200
-    assert res.json()["recorded"] == 1
+    assert res.json()["recorded"] == 2
     steps = await client.get(
         MEAS, params={"metric_key": "activity.steps"}, headers=auth
     )
-    rows = steps.json()
-    assert len(rows) == 1
-    assert rows[0]["value_num"] == 9000
-    assert rows[0]["date_key"] == "2026-03-01"
+    assert steps.json()[0]["value_num"] == 1000
+    hr = await client.get(
+        MEAS, params={"metric_key": "heart.rate"}, headers=auth
+    )
+    assert hr.json()[0]["value_num"] == 70
 
 
 def test_auto_export_timestamps_are_tz_aware() -> None:

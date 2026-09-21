@@ -35,9 +35,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   date, `qty` or `Avg` taken as the value. Same `write:measurements` token
   (`?token=` in the URL), so the app needs no header. A full history export
   is tens of MB and tens of thousands of points, so the payload is chunked
-  (the ingest schema caps a batch at 500), deduplicated to one point per
-  metric/day, and timestamps are parsed timezone-aware (PostgreSQL rejects
-  naive ones); nginx lifts its 25 MB body cap on this route.
+  (the ingest schema caps a batch at 500) and timestamps are parsed
+  timezone-aware (PostgreSQL rejects naive ones); nginx lifts its 25 MB
+  body cap on this route. Raw intraday points are **aggregated per
+  metric/day by the metric's own hint** — summed for steps / distance /
+  energy / exercise minutes, averaged for heart rate / SpO2 — so a daily
+  tile shows a real total, not the last minute's reading.
 - **One-tap counters (café, cigarette, eau)**: `POST /sync/tally` adds to a
   metric's *daily total* (read-modify-write) instead of overwriting it, so
   an iPhone Shortcut can tap `{"metric":"habit.cigarettes"}` repeatedly and

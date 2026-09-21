@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.ingest import IngestPayload, IngestResult, IngestSample
 from app.services import ingest as ingest_svc
+from app.services.apple_health.spec import synth_spec
 
 #: The ingest schema caps a batch at 500 samples, so a full export is
 #: chunked; each metric/day pair is recorded once (last value wins).
@@ -95,37 +96,67 @@ def _metrics(payload: dict[str, Any]) -> list[dict[str, Any]]:
 def _samples(
     metrics: list[dict[str, Any]],
 ) -> tuple[list[IngestSample], list[str]]:
-    """Flatten Health Auto Export metrics into ingest samples."""
-    seen: dict[tuple[str, date | None], IngestSample] = {}
+    """Aggregate Health Auto Export points into one sample per metric/day.
+
+    The app exports many raw intraday points; each day is reduced by the
+    metric's own hint (sum for steps/energy, average for heart rate…) so a
+    daily total is a total, not the last reading.
+    """
+    groups: dict[tuple[str, date | None], dict[str, Any]] = {}
     skipped: list[str] = []
     for metric in metrics:
         name = str(metric.get("name") or "")
         hk_type = HAE_MAP.get(name) or name
-        unit = metric.get("units")
+        unit = str(metric["units"]) if metric.get("units") else None
         for point in metric.get("data") or []:
-            sample = _sample(hk_type, unit, point)
-            if sample is None:
+            if not _absorb(groups, hk_type, unit, point):
                 skipped.append(name or "unknown")
-                continue
-            day = sample.ts.date() if sample.ts else None
-            seen[(hk_type, day)] = sample
-    return list(seen.values()), skipped
+    return [_finalize(key[0], grp) for key, grp in groups.items()], skipped
 
 
-def _sample(hk_type: str, unit: Any, point: Any) -> IngestSample | None:
-    """Build one sample from a metric point (``qty`` or ``Avg``)."""
+def _absorb(
+    groups: dict[tuple[str, date | None], dict[str, Any]],
+    hk_type: str,
+    unit: str | None,
+    point: Any,
+) -> bool:
+    """Add one metric point to its (metric, day) group; False if unusable."""
     if not isinstance(point, dict) or not hk_type:
-        return None
+        return False
     num = _num(point.get("qty", point.get("Avg")))
     if num is None:
-        return None
-    unit_str = str(unit) if unit else None
+        return False
+    ts = _ts(point.get("date"))
+    key = (hk_type, ts.date() if ts else None)
+    group = groups.setdefault(key, {"values": [], "unit": unit, "ts": ts})
+    group["values"].append(num)
+    if ts is not None:
+        group["ts"] = ts
+    return True
+
+
+def _finalize(hk_type: str, group: dict[str, Any]) -> IngestSample:
+    """Reduce a day's points to one sample using the metric's hint."""
+    agg = synth_spec(hk_type, group["unit"]).agg
     return IngestSample(
         healthkit_type=hk_type,
-        value=num,
-        unit=unit_str,
-        ts=_ts(point.get("date")),
+        value=_reduce(group["values"], agg),
+        unit=group["unit"],
+        ts=group["ts"],
     )
+
+
+def _reduce(values: list[float], agg: str) -> float:
+    """Combine a day's values by aggregation hint."""
+    if agg == "sum":
+        return float(sum(values))
+    if agg == "min":
+        return float(min(values))
+    if agg == "max":
+        return float(max(values))
+    if agg == "avg":
+        return sum(values) / len(values)
+    return float(values[-1])
 
 
 def _num(value: Any) -> float | None:
