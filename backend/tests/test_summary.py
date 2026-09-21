@@ -58,3 +58,33 @@ async def test_reports_list(client: AsyncClient, auth: dict[str, str]) -> None:
     assert created.status_code == 202
     listed = (await client.get("/api/v1/reports", headers=auth)).json()
     assert any(r["id"] == created.json()["id"] for r in listed)
+
+
+async def test_summary_prefers_latest_reading_for_instant_metric(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """An instant metric's tile shows the latest reading, not the day mean."""
+    created = await client.post(
+        "/api/v1/tokens",
+        json={"name": "s", "scopes": ["write:measurements"]},
+        headers=auth,
+    )
+    token = created.json()["token"]
+    payload = {
+        "data": {
+            "metrics": [
+                {
+                    "name": "heart_rate",
+                    "units": "count/min",
+                    "data": [
+                        {"date": "2026-05-01 08:00:00 +0000", "Avg": 60},
+                        {"date": "2026-05-01 20:00:00 +0000", "Avg": 80},
+                    ],
+                }
+            ]
+        }
+    }
+    await client.post(f"/api/v1/sync/auto-export?token={token}", json=payload)
+    tiles = (await client.get("/api/v1/summary", headers=auth)).json()
+    hr = next(t for t in tiles if t["key"] == "heart.rate")
+    assert hr["value"] == 80

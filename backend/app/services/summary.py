@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import NotFoundError
 from app.models.health_raw import HealthSample
 from app.models.measurement import Measurement
+from app.models.metric import MetricDefinition
 from app.services import metrics as metrics_service
 
 #: The metrics shown as tiles, in order (missing ones are skipped).
@@ -100,18 +101,32 @@ async def _tile(session: AsyncSession, user_id: str, key: str) -> Tile | None:
     if row is None or row.value_num is None:
         return None
     series = await _series(session, user_id, metric.id)
-    at = await _latest_time(session, user_id, metric.id, row.recorded_at)
+    value, at = await _headline(session, user_id, metric, row)
     return Tile(
         key=key,
         label=metric.label,
         unit=metric.unit,
-        value=row.value_num,
+        value=value,
         date_key=row.date_key,
         at=at,
         delta=_delta(series),
         avg7=_avg7(series),
         spark=_spark(series),
     )
+
+
+async def _headline(
+    session: AsyncSession,
+    user_id: str,
+    metric: MetricDefinition,
+    rollup: Measurement,
+) -> tuple[float, datetime | None]:
+    """Latest reading for instant metrics; daily total for cumulative ones."""
+    latest = await _latest_sample(session, user_id, metric.id)
+    if metric.aggregation_hint != "sum" and latest and latest[0] is not None:
+        return latest[0], latest[1]
+    fallback = latest[1] if latest else rollup.recorded_at
+    return float(rollup.value_num or 0.0), fallback
 
 
 async def _latest(
@@ -149,15 +164,12 @@ async def _series(
     return values
 
 
-async def _latest_time(
-    session: AsyncSession,
-    user_id: str,
-    metric_id: str,
-    fallback: datetime | None,
-) -> datetime | None:
-    """Return the newest raw sample time for a metric (else fallback)."""
+async def _latest_sample(
+    session: AsyncSession, user_id: str, metric_id: str
+) -> tuple[float | None, datetime] | None:
+    """Return the newest raw sample's (value, time) for a metric, or None."""
     result = await session.execute(
-        select(HealthSample.start_at)
+        select(HealthSample.value_num, HealthSample.start_at)
         .where(
             HealthSample.user_id == user_id,
             HealthSample.metric_id == metric_id,
@@ -165,7 +177,8 @@ async def _latest_time(
         .order_by(HealthSample.start_at.desc())
         .limit(1)
     )
-    return result.scalar_one_or_none() or fallback
+    row = result.first()
+    return (row[0], row[1]) if row is not None else None
 
 
 _MIN_POINTS = 2

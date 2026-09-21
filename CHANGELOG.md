@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Home tiles show the current reading**: an instant metric's tile (heart
+  rate, SpO2, HRV, respiratory rate, weight…) now shows the **latest raw
+  sample's value and its real time**, instead of the day's average stamped
+  with the last sample time — which made a live reading look like "2 hours
+  ago". Cumulative metrics (steps, energy, water) keep showing the daily
+  total. The sparkline still reflects the daily history.
 - **Clinical PDF for a doctor**: the report was a bare list of raw metric
   keys with a single average. It now has a **Faits marquants** recap, an
   **Évolution des indicateurs clés** section with per-metric **trend
