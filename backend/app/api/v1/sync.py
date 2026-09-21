@@ -25,7 +25,7 @@ from app.schemas.ingest import (
     TallyPayload,
     TallyResult,
 )
-from app.services import audit, ingest, shortcut, tally
+from app.services import audit, auto_export, ingest, shortcut, tally
 from app.services import tokens as tokens_svc
 
 router = APIRouter(prefix="/sync", tags=["sync"])
@@ -102,6 +102,18 @@ async def tally_counter(
     )
     await session.commit()
     return TallyResult(metric=body.metric, date_key=day, total=total)
+
+
+@router.post("/auto-export", response_model=IngestResult)
+async def auto_export_ingest(
+    body: dict[str, Any], principal: FlexWriteDep, session: SessionDep
+) -> IngestResult:
+    """Ingest a Health Auto Export JSON payload (JSON body, no file)."""
+    result = await auto_export.ingest(
+        session, principal.user.id, body, token_id=principal.token_id
+    )
+    await session.commit()
+    return result
 
 
 def _endpoint(base: str) -> str:

@@ -157,3 +157,37 @@ async def test_tally_water_bottle_default_amount(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert result.json()["total"] == 1.0
+
+
+async def test_auto_export_json_body(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """Health Auto Export JSON (no file) maps names and records points."""
+    token = await _write_token(client, auth)
+    payload = {
+        "data": {
+            "metrics": [
+                {
+                    "name": "step_count",
+                    "units": "count",
+                    "data": [
+                        {"date": "2026-02-01 00:00:00 +0000", "qty": 8432}
+                    ],
+                },
+                {
+                    "name": "heart_rate",
+                    "units": "count/min",
+                    "data": [{"date": "2026-02-01 12:00:00 +0000", "Avg": 72}],
+                },
+            ]
+        }
+    }
+    res = await client.post(f"{SYNC}/auto-export?token={token}", json=payload)
+    assert res.status_code == 200
+    assert res.json()["recorded"] == 2
+    steps = await client.get(
+        MEAS, params={"metric_key": "activity.steps"}, headers=auth
+    )
+    row = steps.json()[0]
+    assert row["value_num"] == 8432
+    assert row["date_key"] == "2026-02-01"

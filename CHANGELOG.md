@@ -26,6 +26,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Health Auto Export (JSON)**: `POST /sync/auto-export` ingests the JSON
+  body posted by the *Health Auto Export* iOS app
+  (`{"data":{"metrics":[{"name,units,data:[{date,qty}]}]}}`) — no multipart
+  file, unlike the CSV upload. Metric names map to the matching HealthKit
+  identifier so they land on the same canonical keys a native export uses
+  (and are auto-created when missing); each point is recorded on its own
+  date, `qty` or `Avg` taken as the value. Same `write:measurements` token
+  (`?token=` in the URL), so the app needs no header.
 - **One-tap counters (café, cigarette, eau)**: `POST /sync/tally` adds to a
   metric's *daily total* (read-modify-write) instead of overwriting it, so
   an iPhone Shortcut can tap `{"metric":"habit.cigarettes"}` repeatedly and
