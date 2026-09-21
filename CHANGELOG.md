@@ -26,6 +26,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **One-tap counters (café, cigarette, eau)**: `POST /sync/tally` adds to a
+  metric's *daily total* (read-modify-write) instead of overwriting it, so
+  an iPhone Shortcut can tap `{"metric":"habit.cigarettes"}` repeatedly and
+  the day's count climbs. Body is `{metric, amount?=1, date_key?}`; the
+  token rides in the URL (`?token=`) so no header is needed. Fractional
+  amounts work (a half mug of coffee = `amount: 0.5`), and the seeded
+  `water.bottles_1_5` feeds the derived `hydration.liters` (× 1.5). Reuses
+  the same `write:measurements` token as the CSV upload URL.
 - **Biologie → valeurs suivies**: `POST /biology/import` parses a
   **text-based French lab PDF** (pypdf) and records each analyte's current
   value **and its antériorités** (previous value + its own date) as

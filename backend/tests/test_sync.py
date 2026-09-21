@@ -20,6 +20,16 @@ async def _watch_token(client: AsyncClient, auth: dict[str, str]) -> str:
     return str(created.json()["token"])
 
 
+async def _write_token(client: AsyncClient, auth: dict[str, str]) -> str:
+    """Mint a write:measurements token and return its secret."""
+    created = await client.post(
+        "/api/v1/tokens",
+        json={"name": "iphone-tally", "scopes": ["write:measurements"]},
+        headers=auth,
+    )
+    return str(created.json()["token"])
+
+
 async def test_shortcut_download_is_valid_plist(
     client: AsyncClient, auth: dict[str, str]
 ) -> None:
@@ -110,3 +120,40 @@ async def test_shortcut_download_requires_user_session(
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 403
+
+
+async def test_tally_accumulates_with_query_token(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """Each tap adds to the day's total; the token rides in the URL."""
+    token = await _write_token(client, auth)
+    url = f"{SYNC}/tally?token={token}"
+    first = await client.post(url, json={"metric": "habit.cigarettes"})
+    assert first.status_code == 200
+    assert first.json()["total"] == 1.0
+    second = await client.post(url, json={"metric": "habit.cigarettes"})
+    assert second.json()["total"] == 2.0
+
+
+async def test_tally_half_mug_coffee(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """A half mug (0.5) then a full one sums to 1.5 on an int metric."""
+    token = await _write_token(client, auth)
+    url = f"{SYNC}/tally?token={token}"
+    await client.post(url, json={"metric": "habit.coffee", "amount": 0.5})
+    full = await client.post(url, json={"metric": "habit.coffee", "amount": 1})
+    assert full.json()["total"] == 1.5
+
+
+async def test_tally_water_bottle_default_amount(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """Omitting the amount adds one 1.5 L bottle."""
+    token = await _write_token(client, auth)
+    result = await client.post(
+        f"{SYNC}/tally",
+        json={"metric": "water.bottles_1_5"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert result.json()["total"] == 1.0

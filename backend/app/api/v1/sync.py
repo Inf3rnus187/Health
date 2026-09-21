@@ -9,20 +9,31 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 
-from app.core.deps import Principal, SessionDep, UserDep, require_scope
-from app.core.scopes import INGEST_WATCH
+from app.core.deps import (
+    Principal,
+    SessionDep,
+    UserDep,
+    require_scope,
+    require_scope_flex,
+)
+from app.core.scopes import INGEST_WATCH, WRITE_MEASUREMENTS
 from app.schemas.ingest import (
     HealthSyncPayload,
     IngestPayload,
     IngestResult,
     IngestSample,
+    TallyPayload,
+    TallyResult,
 )
-from app.services import audit, ingest, shortcut
+from app.services import audit, ingest, shortcut, tally
 from app.services import tokens as tokens_svc
 
 router = APIRouter(prefix="/sync", tags=["sync"])
 
 WatchDep = Annotated[Principal, Depends(require_scope(INGEST_WATCH))]
+FlexWriteDep = Annotated[
+    Principal, Depends(require_scope_flex(WRITE_MEASUREMENTS))
+]
 
 _NUM = re.compile(r"-?\d+(?:[.,]\d+)?")
 
@@ -73,6 +84,24 @@ async def sync_health(
     )
     await session.commit()
     return IngestResult(recorded=result.recorded, skipped=result.skipped + bad)
+
+
+@router.post("/tally", response_model=TallyResult)
+async def tally_counter(
+    body: TallyPayload, principal: FlexWriteDep, session: SessionDep
+) -> TallyResult:
+    """Add to a daily counter (café, cigarette, bouteille d'eau)."""
+    day = body.date_key or date.today()
+    total = await tally.increment(
+        session,
+        principal.user.id,
+        body.metric,
+        body.amount,
+        day,
+        token_id=principal.token_id,
+    )
+    await session.commit()
+    return TallyResult(metric=body.metric, date_key=day, total=total)
 
 
 def _endpoint(base: str) -> str:

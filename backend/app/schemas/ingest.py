@@ -54,6 +54,22 @@ class HealthSyncPayload(BaseModel):
     metrics: dict[str, Any] = Field(min_length=1, max_length=500)
 
 
+class TallyPayload(BaseModel):
+    """One-tap counter increment (café, cigarette, bouteille d'eau)."""
+
+    metric: str = Field(min_length=1, max_length=80)
+    amount: float = 1.0
+    date_key: date | None = None
+
+
+class TallyResult(BaseModel):
+    """The metric's running daily total after the increment."""
+
+    metric: str
+    date_key: date
+    total: float
+
+
 class MappingCreate(BaseModel):
     """Create/override an external-key → metric-key mapping."""
 
