@@ -2,7 +2,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 
-import { importBiology, type BiologyResult } from '../api/biology';
+import {
+  importBiology,
+  purgeBiology,
+  type BiologyResult,
+} from '../api/biology';
 
 interface Sink {
   setBusy: (b: boolean) => void;
@@ -32,6 +36,26 @@ function Intro() {
       suivies (domaine Biologie). PDF texte uniquement — un PDF scanné (image)
       est conservé mais pas encore analysé.
     </p>
+  );
+}
+
+async function purge(refresh: () => void): Promise<void> {
+  if (!window.confirm('Supprimer toutes les analyses de biologie suivies ?')) {
+    return;
+  }
+  await purgeBiology();
+  refresh();
+}
+
+function PurgeButton({ refresh }: { refresh: () => void }) {
+  return (
+    <button
+      className="btn btn-ghost"
+      type="button"
+      onClick={() => void purge(refresh)}
+    >
+      Réinitialiser la biologie
+    </button>
   );
 }
 
@@ -92,6 +116,7 @@ export function BiologyImport() {
       <Intro />
       <Form busy={busy} onSubmit={onSubmit} />
       <Result result={result} error={error} />
+      <PurgeButton refresh={() => void client.invalidateQueries()} />
     </section>
   );
 }

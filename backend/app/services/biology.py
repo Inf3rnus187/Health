@@ -1,36 +1,35 @@
 """Extract lab (biology) results from a text PDF into tracked series.
 
-French lab reports list, per analyte, the current value and one or more
-*antériorités* (previous value + its own date). Each becomes a measurement
-under a ``bio.<slug>`` metric, so the values flow into the normal trends,
-dashboards and reports. Scanned (image-only) PDFs yield no text and are
-skipped — those need OCR, handled elsewhere.
+French lab reports list, per analyte, a current value and often an
+*antériorité* (a previous value with its own date). Only analytes in the
+curated catalog (:mod:`app.services.biology_catalog`) are recorded, each
+under a ``bio.<key>`` metric, so a blood test becomes real tracked curves
+without polluting the registry with notes or continuation lines. Scanned
+(image-only) PDFs yield no extractable text and are skipped — those need
+OCR, handled elsewhere.
 """
 
 from __future__ import annotations
 
 import re
-import unicodedata
 from datetime import date
 from io import BytesIO
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, cast
 
 from pypdf import PdfReader
+from sqlalchemy import CursorResult, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.measurement import Measurement
+from app.models.metric import MetricDefinition
 from app.schemas.measurement import MeasurementIn
+from app.services import biology_catalog as cat
 from app.services import measurements as measure
 from app.services.apple_health.metrics_cache import MetricCache
 from app.services.apple_health.spec import MetricSpec
 
-_LINE = re.compile(
-    r"^(?P<name>[A-Za-zÀ-ÿ][^\d]*?)\s+(?:\[AC\]\s+)?"
-    r"(?:\d+[.,]\d+\s+%\s+)?(?P<val>\d+(?:[.,]\d+)?)\s+"
-    r"(?P<unit>[^\s(]+)\s+\([\d.,]+[-−][\d.,]+\)\s*"
-    r"(?P<ant>\d+(?:[.,]\d+)?)?\s*$"
-)
 _DATE = re.compile(r"^\d{2}[-−]\d{2}[-−]\d{4}$")
-_SKIP = {"soit"}
+_NUM = r"\d[\d ]*(?:[.,]\d+)?"
 
 
 class Reading(NamedTuple):
@@ -46,16 +45,15 @@ class Reading(NamedTuple):
 def parse_text(text: str) -> list[Reading]:
     """Parse a lab report's text into current + antériorité readings."""
     current = _current_date(text)
-    ant_date: date | None = None
     out: list[Reading] = []
+    pending: cat.Analyte | None = None
+    ant_day: date | None = None
     for raw in text.splitlines():
         line = raw.strip()
         if _DATE.match(line):
-            ant_date = _iso(line)
+            ant_day = _iso(line)
             continue
-        match = _LINE.match(line)
-        if match is not None:
-            out.extend(_readings(match, current, ant_date))
+        pending = _consume(line, current, ant_day, out, pending)
     return out
 
 
@@ -81,23 +79,92 @@ async def import_pdf(
     return _summary(readings, len(items))
 
 
+async def purge(session: AsyncSession, user_id: str) -> dict[str, int]:
+    """Delete this user's biology values and any now-empty bio metrics."""
+    metric_ids = list(
+        (
+            await session.execute(
+                select(MetricDefinition.id).where(
+                    MetricDefinition.key.like("bio.%")
+                )
+            )
+        ).scalars()
+    )
+    if not metric_ids:
+        return {"values": 0, "metrics": 0}
+    values = await session.execute(
+        delete(Measurement).where(
+            Measurement.user_id == user_id,
+            Measurement.metric_id.in_(metric_ids),
+        )
+    )
+    deleted = cast("CursorResult[Any]", values).rowcount or 0
+    metrics = await _drop_empty(session, metric_ids)
+    return {"values": deleted, "metrics": metrics}
+
+
+def _consume(
+    line: str,
+    current: date,
+    ant_day: date | None,
+    out: list[Reading],
+    pending: cat.Analyte | None,
+) -> cat.Analyte | None:
+    """Record any reading on one line; return the next pending analyte."""
+    analyte = cat.match(_name_of(line))
+    target = analyte or pending
+    if target is None:
+        return None
+    value, ant = _values(line, target)
+    if value is None:
+        return analyte or pending
+    out.extend(_readings(target, current, ant_day, value, ant))
+    return None
+
+
 def _readings(
-    match: re.Match[str], current: date, ant_date: date | None
+    analyte: cat.Analyte,
+    current: date,
+    ant_day: date | None,
+    value: float,
+    ant: float | None,
 ) -> list[Reading]:
-    """Build the current and antériorité readings from one line."""
-    name = match.group("name").strip()
-    slug = _slug(name)
-    if not slug or slug in _SKIP:
-        return []
-    key, unit, label = f"bio.{slug}", match.group("unit"), name[:200]
-    out: list[Reading] = []
-    value = _to_float(match.group("val"))
-    if value is not None:
-        out.append(Reading(key, label, unit, current, value))
-    ant = _to_float(match.group("ant"))
-    if ant is not None and ant_date is not None:
-        out.append(Reading(key, label, unit, ant_date, ant))
+    """Build the current and antériorité readings for one analyte."""
+    key = f"bio.{analyte.key}"
+    out = [Reading(key, analyte.label, analyte.unit, current, value)]
+    if ant is not None and ant_day is not None:
+        out.append(Reading(key, analyte.label, analyte.unit, ant_day, ant))
     return out
+
+
+def _values(
+    line: str, analyte: cat.Analyte
+) -> tuple[float | None, float | None]:
+    """Extract (current, antériorité) values for an analyte from a line."""
+    match = re.search(rf"({_NUM})\s*{_find_re(analyte.find)}", line)
+    if match is None:
+        return None, None
+    before = line[: match.start()].rstrip()
+    if before and before[-1] in "<>=":
+        return None, None
+    rest = line[match.end() :]
+    tail = rest.rsplit(")", 1)[-1] if ")" in rest else rest
+    nums = re.findall(_NUM, tail)
+    ant = _to_float(nums[-1]) if nums else None
+    return _to_float(match.group(1)), ant
+
+
+def _find_re(find: str) -> str:
+    """Regex for a unit token (dimensionless matches a word boundary)."""
+    if not find:
+        return r"(?!\w)"
+    return re.escape(find).replace("µ", "[µμ]") + r"(?![A-Za-z])"
+
+
+def _name_of(line: str) -> str:
+    """The candidate analyte name: text before the first value digit."""
+    match = re.search(r"(?<![A-Za-zÀ-ÿ0-9])\d", line)
+    return line[: match.start()] if match else line
 
 
 def _summary(readings: list[Reading], added: int) -> dict[str, Any]:
@@ -107,6 +174,26 @@ def _summary(readings: list[Reading], added: int) -> dict[str, Any]:
         "metrics": len({r.key for r in readings}),
         "dates": sorted({r.day.isoformat() for r in readings}),
     }
+
+
+async def _drop_empty(session: AsyncSession, metric_ids: list[str]) -> int:
+    """Delete bio metric definitions that have no measurements left."""
+    used = set(
+        (
+            await session.execute(
+                select(Measurement.metric_id)
+                .where(Measurement.metric_id.in_(metric_ids))
+                .distinct()
+            )
+        ).scalars()
+    )
+    empty = [mid for mid in metric_ids if mid not in used]
+    if not empty:
+        return 0
+    result = await session.execute(
+        delete(MetricDefinition).where(MetricDefinition.id.in_(empty))
+    )
+    return cast("CursorResult[Any]", result).rowcount or 0
 
 
 def _extract(data: bytes) -> str:
@@ -135,18 +222,11 @@ def _iso(value: str) -> date | None:
     return date(int(match.group(3)), int(match.group(2)), int(match.group(1)))
 
 
-def _slug(name: str) -> str:
-    """Accent-stripped snake_case key suffix for an analyte name."""
-    norm = unicodedata.normalize("NFKD", name)
-    ascii_only = norm.encode("ascii", "ignore").decode("ascii").lower()
-    return re.sub(r"[^a-z0-9]+", "_", ascii_only).strip("_")
-
-
 def _to_float(value: str | None) -> float | None:
-    """Parse a French-decimal number, or ``None``."""
+    """Parse a French-decimal number (with thousands spaces), or None."""
     if value is None:
         return None
     try:
-        return float(value.replace(",", "."))
+        return float(value.replace(" ", "").replace(",", "."))
     except ValueError:
         return None

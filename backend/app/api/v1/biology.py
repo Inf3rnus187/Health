@@ -31,6 +31,23 @@ async def import_biology(
     return summary
 
 
+@router.delete("/values")
+async def purge_biology(
+    principal: UserDep, session: SessionDep
+) -> dict[str, int]:
+    """Delete all imported biology values and their bio.* metrics."""
+    result = await biology.purge(session, principal.user.id)
+    await audit.record(
+        session,
+        action="delete",
+        entity="biology",
+        user_id=principal.user.id,
+        payload=result,
+    )
+    await session.commit()
+    return result
+
+
 async def _keep(
     session: SessionDep, user_id: str, file: UploadFile, data: bytes
 ) -> None:

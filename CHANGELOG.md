@@ -29,10 +29,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Biologie → valeurs suivies**: `POST /biology/import` parses a
   **text-based French lab PDF** (pypdf) and records each analyte's current
   value **and its antériorités** (previous value + its own date) as
-  measurements under `bio.<slug>` metrics — so a blood test becomes real
-  tracked curves (verified on a BIOGROUP report: 42 values, 21 analyses, 4
-  dates). The source PDF is kept as a `biologie` document. Dossier tab gets
-  an "Analyser une prise de sang (PDF)" upload. Scanned (image-only) PDFs
+  measurements under `bio.<key>` metrics — so a blood test becomes real
+  tracked curves. Parsing is **catalog-driven** (`biology_catalog`): only
+  recognized analytes are recorded, with canonical labels/units, so notes,
+  method lines, thresholds and continuation lines (e.g. `soit (IFCC)`)
+  never become fake metrics. It handles the real report layouts — name on
+  its own line, `percentage then absolute` counts (records the absolute),
+  the same analyte in two units, French thousands separators — and matched
+  a full BIOGROUP hémogramme + biochimie + bilan on the real PDF: **45
+  analyses, 85 values across 4 dates** with zero junk. `DELETE
+  /biology/values` (and a "Réinitialiser la biologie" button) purges all
+  `bio.*` values and their now-empty metrics to recover from a bad import.
+  The source PDF is kept as a `biologie` document. Dossier tab gets an
+  "Analyser une prise de sang (PDF)" upload. Scanned (image-only) PDFs
   yield no text and are kept as documents but not yet parsed (needs OCR).
 - **Dossier CDA du médecin**: `POST /clinical/import` imports a
   doctor-delivered **French CI-SIS / HL7 CDA** file (namespace-agnostic
