@@ -191,3 +191,43 @@ async def test_auto_export_json_body(
     row = steps.json()[0]
     assert row["value_num"] == 8432
     assert row["date_key"] == "2026-02-01"
+
+
+async def test_auto_export_dedups_intraday_points(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """Many points on one day collapse to one row (last wins), tz-aware."""
+    token = await _write_token(client, auth)
+    payload = {
+        "data": {
+            "metrics": [
+                {
+                    "name": "step_count",
+                    "units": "count",
+                    "data": [
+                        {"date": "2026-03-01 08:00:00 +0200", "qty": 100},
+                        {"date": "2026-03-01 20:00:00 +0200", "qty": 9000},
+                    ],
+                }
+            ]
+        }
+    }
+    res = await client.post(f"{SYNC}/auto-export?token={token}", json=payload)
+    assert res.status_code == 200
+    assert res.json()["recorded"] == 1
+    steps = await client.get(
+        MEAS, params={"metric_key": "activity.steps"}, headers=auth
+    )
+    rows = steps.json()
+    assert len(rows) == 1
+    assert rows[0]["value_num"] == 9000
+    assert rows[0]["date_key"] == "2026-03-01"
+
+
+def test_auto_export_timestamps_are_tz_aware() -> None:
+    from app.services.auto_export import _ts
+
+    offset = _ts("2026-03-01 08:00:00 +0200")
+    assert offset is not None and offset.tzinfo is not None
+    naive = _ts("2026-03-01")
+    assert naive is not None and naive.tzinfo is not None

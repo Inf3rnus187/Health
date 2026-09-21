@@ -15,13 +15,18 @@ anything else auto-creates an ``apple.*`` metric on the fly.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from collections.abc import Iterator
+from datetime import UTC, date, datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.ingest import IngestPayload, IngestResult, IngestSample
 from app.services import ingest as ingest_svc
+
+#: The ingest schema caps a batch at 500 samples, so a full export is
+#: chunked; each metric/day pair is recorded once (last value wins).
+_CHUNK = 400
 
 #: Health Auto Export metric name -> HealthKit identifier (so it resolves
 #: to the same canonical key a native Apple export would create).
@@ -62,15 +67,21 @@ async def ingest(
 ) -> IngestResult:
     """Ingest a Health Auto Export JSON payload into measurements."""
     samples, skipped = _samples(_metrics(payload))
-    if not samples:
-        return IngestResult(recorded=0, skipped=skipped)
-    batch = IngestPayload(date_key=date.today(), samples=samples)
-    result = await ingest_svc.ingest(
-        session, user_id, "watch", batch, token_id=token_id
-    )
-    return IngestResult(
-        recorded=result.recorded, skipped=result.skipped + skipped
-    )
+    recorded = 0
+    for chunk in _chunks(samples):
+        batch = IngestPayload(date_key=date.today(), samples=chunk)
+        result = await ingest_svc.ingest(
+            session, user_id, "watch", batch, token_id=token_id
+        )
+        recorded += result.recorded
+        skipped.extend(result.skipped)
+    return IngestResult(recorded=recorded, skipped=skipped)
+
+
+def _chunks(samples: list[IngestSample]) -> Iterator[list[IngestSample]]:
+    """Split samples into batches the ingest schema will accept."""
+    for start in range(0, len(samples), _CHUNK):
+        yield samples[start : start + _CHUNK]
 
 
 def _metrics(payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -85,7 +96,7 @@ def _samples(
     metrics: list[dict[str, Any]],
 ) -> tuple[list[IngestSample], list[str]]:
     """Flatten Health Auto Export metrics into ingest samples."""
-    samples: list[IngestSample] = []
+    seen: dict[tuple[str, date | None], IngestSample] = {}
     skipped: list[str] = []
     for metric in metrics:
         name = str(metric.get("name") or "")
@@ -95,9 +106,10 @@ def _samples(
             sample = _sample(hk_type, unit, point)
             if sample is None:
                 skipped.append(name or "unknown")
-            else:
-                samples.append(sample)
-    return samples, skipped
+                continue
+            day = sample.ts.date() if sample.ts else None
+            seen[(hk_type, day)] = sample
+    return list(seen.values()), skipped
 
 
 def _sample(hk_type: str, unit: Any, point: Any) -> IngestSample | None:
@@ -126,10 +138,19 @@ def _num(value: Any) -> float | None:
 
 
 def _ts(raw: Any) -> datetime | None:
-    """Parse the date portion of a Health Auto Export timestamp."""
+    """Parse a Health Auto Export timestamp to a tz-aware datetime.
+
+    PostgreSQL ``timestamptz`` columns reject naive datetimes, so anything
+    without an offset is anchored to UTC.
+    """
     if not isinstance(raw, str):
         return None
-    try:
-        return datetime.strptime(raw[:10], "%Y-%m-%d")
-    except ValueError:
-        return None
+    for fmt in ("%Y-%m-%d %H:%M:%S %z", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            parsed = datetime.strptime(raw.strip(), fmt)
+        except ValueError:
+            continue
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=UTC)
+        return parsed
+    return None
