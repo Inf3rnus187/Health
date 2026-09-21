@@ -2,14 +2,21 @@
 
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
+from typing import Any
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, func, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import crypto
+from app.core.config import get_settings
 from app.core.errors import NotFoundError
+from app.models.base import new_uuid, utcnow
 from app.models.health_raw import ClinicalDocument, ClinicalObservation
+from app.services.apple_health.cda import Observation, iter_observations
+
+_settings = get_settings()
 
 
 async def page(
@@ -53,9 +60,53 @@ async def document_bytes(session: AsyncSession, user_id: str) -> bytes:
     return crypto.decrypt(Path(doc.file_path).read_bytes())
 
 
+async def import_cda(
+    session: AsyncSession, user_id: str, data: bytes
+) -> dict[str, int]:
+    """Import a doctor-delivered CDA: store observations + the document."""
+    rows = [_obs_row(user_id, obs) for obs in iter_observations(BytesIO(data))]
+    if rows:
+        await session.execute(insert(ClinicalObservation), rows)
+    path = _save(user_id, data)
+    session.add(
+        ClinicalDocument(
+            user_id=user_id,
+            file_path=str(path),
+            observation_count=len(rows),
+            source="cda",
+        )
+    )
+    await session.flush()
+    return {"observations": len(rows)}
+
+
 async def _count(
     session: AsyncSession, stmt: Select[tuple[ClinicalObservation]]
 ) -> int:
     """Count the rows a filtered statement would return."""
     counter = select(func.count()).select_from(stmt.subquery())
     return int((await session.execute(counter)).scalar_one())
+
+
+def _obs_row(user_id: str, obs: Observation) -> dict[str, Any]:
+    """Build one clinical_observations insert row (source=cda)."""
+    return {
+        "id": new_uuid(),
+        "user_id": user_id,
+        "label": obs.label,
+        "value_num": obs.value_num,
+        "value_text": obs.value_text,
+        "unit": obs.unit,
+        "effective_at": obs.effective_at,
+        "source": "cda",
+        "created_at": utcnow(),
+    }
+
+
+def _save(user_id: str, data: bytes) -> Path:
+    """Write the encrypted CDA XML to disk and return its path."""
+    base = Path(_settings.media_dir) / user_id / "cda"
+    base.mkdir(parents=True, exist_ok=True)
+    path = base / f"{new_uuid()}.xml"
+    path.write_bytes(crypto.encrypt(data))
+    return path

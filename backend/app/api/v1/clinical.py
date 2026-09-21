@@ -4,16 +4,17 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, UploadFile
 from fastapi.responses import Response
 
-from app.core.deps import PrincipalDep, SessionDep
+from app.core.deps import PrincipalDep, SessionDep, UserDep
 from app.models.health_raw import ClinicalDocument
 from app.schemas.health_raw import (
     ClinicalDocOut,
     ObservationOut,
     ObservationPage,
 )
+from app.services import audit
 from app.services import clinical as svc
 
 router = APIRouter(prefix="/clinical", tags=["clinical"])
@@ -54,3 +55,21 @@ async def document_file(
     """Download the raw CDA XML document."""
     data = await svc.document_bytes(session, principal.user.id)
     return Response(content=data, media_type="application/xml")
+
+
+@router.post("/import")
+async def import_cda(
+    principal: UserDep, session: SessionDep, file: UploadFile
+) -> dict[str, int]:
+    """Import a doctor-delivered CDA (French CI-SIS / HL7 CDA) file."""
+    data = await file.read()
+    result = await svc.import_cda(session, principal.user.id, data)
+    await audit.record(
+        session,
+        action="import",
+        entity="cda",
+        user_id=principal.user.id,
+        payload=result,
+    )
+    await session.commit()
+    return result

@@ -34,6 +34,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   dates). The source PDF is kept as a `biologie` document. Dossier tab gets
   an "Analyser une prise de sang (PDF)" upload. Scanned (image-only) PDFs
   yield no text and are kept as documents but not yet parsed (needs OCR).
+- **Dossier CDA du médecin**: `POST /clinical/import` imports a
+  doctor-delivered **French CI-SIS / HL7 CDA** file (namespace-agnostic
+  parser reused from the native-export clinical path). Each `<observation>`
+  becomes a searchable clinical observation (label / value / unit / date)
+  browsable in Santé → Observations cliniques, and the raw CDA is stored
+  encrypted as a `cda` document. The Dossier tab gets an "Importer un
+  dossier CDA (médecin)" upload.
 - **Caregiver report (tout donner au médecin)**: the clinical PDF now also
   prints the care record — Maladies, Traitements, Rendez-vous and a
   Documents médicaux index — right after the recap, so the single exported
