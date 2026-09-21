@@ -240,3 +240,34 @@ def test_auto_export_timestamps_are_tz_aware() -> None:
     assert offset is not None and offset.tzinfo is not None
     naive = _ts("2026-03-01")
     assert naive is not None and naive.tzinfo is not None
+
+
+async def test_auto_export_stores_raw_samples_idempotently(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """Points land in the raw sample browser; re-pushing replaces the day."""
+    token = await _write_token(client, auth)
+    payload = {
+        "data": {
+            "metrics": [
+                {
+                    "name": "step_count",
+                    "units": "count",
+                    "data": [
+                        {"date": "2026-04-01 08:00:00 +0200", "qty": 50},
+                        {"date": "2026-04-01 09:00:00 +0200", "qty": 70},
+                    ],
+                }
+            ]
+        }
+    }
+    await client.post(f"{SYNC}/auto-export?token={token}", json=payload)
+    await client.post(f"{SYNC}/auto-export?token={token}", json=payload)
+    samples = await client.get(
+        "/api/v1/samples", params={"metric_key": "activity.steps"}, headers=auth
+    )
+    assert samples.json()["total"] == 2
+    meas = await client.get(
+        MEAS, params={"metric_key": "activity.steps"}, headers=auth
+    )
+    assert meas.json()[0]["value_num"] == 120

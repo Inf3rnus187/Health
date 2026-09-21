@@ -37,10 +37,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   is tens of MB and tens of thousands of points, so the payload is chunked
   (the ingest schema caps a batch at 500) and timestamps are parsed
   timezone-aware (PostgreSQL rejects naive ones); nginx lifts its 25 MB
-  body cap on this route. Raw intraday points are **aggregated per
-  metric/day by the metric's own hint** — summed for steps / distance /
-  energy / exercise minutes, averaged for heart rate / SpO2 — so a daily
-  tile shows a real total, not the last minute's reading.
+  body cap on this route. Like the native Apple import, every point is now
+  stored as a raw `health_samples` row (so it appears in the **Données**
+  browser, not only as a daily tile) **and** folded into a daily
+  `measurements` roll-up via the shared `DailyAggregator` — summed for
+  steps / distance / energy / exercise minutes, averaged for heart rate /
+  SpO2 — so a daily tile is a real total, not the last minute's reading.
+  Units are normalised (e.g. SpO2 0.96 → 96 %). Re-pushing a day replaces
+  that day's Health-Auto-Export samples, so the every-5-minutes automation
+  stays idempotent instead of piling up duplicates.
 - **One-tap counters (café, cigarette, eau)**: `POST /sync/tally` adds to a
   metric's *daily total* (read-modify-write) instead of overwriting it, so
   an iPhone Shortcut can tap `{"metric":"habit.cigarettes"}` repeatedly and

@@ -7,27 +7,35 @@ file)::
         {"name": "step_count", "units": "count",
          "data": [{"date": "2026-02-01 00:00:00 +0000", "qty": 8432}]}]}}
 
-Each metric's points become daily measurements. Common metric names map
-to the matching HealthKit identifier so they resolve to the same canonical
-keys a native Apple export creates (and are auto-created when missing);
-anything else auto-creates an ``apple.*`` metric on the fly.
+Like the native Apple import, every point is stored as a raw
+``health_samples`` row (so it shows up in the Données browser) *and* folded
+into a daily ``measurements`` roll-up (so the dashboards and home tiles
+read a real daily total, aggregated by the metric's own hint — summed for
+steps/energy, averaged for heart rate…). Re-pushing a day replaces that
+day's Health-Auto-Export samples, so repeated syncs stay idempotent.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from datetime import UTC, date, datetime
-from typing import Any
+from datetime import UTC, datetime, time, timedelta
+from typing import Any, NamedTuple
 
+from sqlalchemy import delete, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.ingest import IngestPayload, IngestResult, IngestSample
-from app.services import ingest as ingest_svc
-from app.services.apple_health.spec import synth_spec
+from app.models.base import new_uuid, utcnow
+from app.models.health_raw import HealthSample
+from app.schemas.ingest import IngestResult
+from app.schemas.measurement import MeasurementIn
+from app.services import measurements as measure
+from app.services.apple_health.accumulator import DailyAggregator
+from app.services.apple_health.metrics_cache import MetricCache
+from app.services.apple_health.spec import MetricSpec, synth_spec
+from app.services.apple_health.units import convert
 
-#: The ingest schema caps a batch at 500 samples, so a full export is
-#: chunked; each metric/day pair is recorded once (last value wins).
-_CHUNK = 400
+_SOURCE = "auto-export"
+_RAW_CHUNK = 2000
+_ROLLUP_CHUNK = 400
 
 #: Health Auto Export metric name -> HealthKit identifier (so it resolves
 #: to the same canonical key a native Apple export would create).
@@ -59,6 +67,25 @@ HAE_MAP: dict[str, str] = {
 }
 
 
+class _Raw(NamedTuple):
+    """One parsed Health Auto Export point, before metric resolution."""
+
+    hk_type: str
+    unit: str | None
+    ts: datetime
+    value: float
+
+
+class _Point(NamedTuple):
+    """A parsed point with its resolved metric id and spec."""
+
+    metric_id: str
+    spec: MetricSpec
+    unit: str | None
+    ts: datetime
+    value: float
+
+
 async def ingest(
     session: AsyncSession,
     user_id: str,
@@ -66,23 +93,14 @@ async def ingest(
     *,
     token_id: str | None = None,
 ) -> IngestResult:
-    """Ingest a Health Auto Export JSON payload into measurements."""
-    samples, skipped = _samples(_metrics(payload))
-    recorded = 0
-    for chunk in _chunks(samples):
-        batch = IngestPayload(date_key=date.today(), samples=chunk)
-        result = await ingest_svc.ingest(
-            session, user_id, "watch", batch, token_id=token_id
-        )
-        recorded += result.recorded
-        skipped.extend(result.skipped)
+    """Store a Health Auto Export payload as raw samples + daily roll-ups."""
+    raw, skipped = _parse(_metrics(payload))
+    if not raw:
+        return IngestResult(recorded=0, skipped=skipped)
+    points = await _resolve(session, raw, MetricCache())
+    await _store_raw(session, user_id, points)
+    recorded = await _store_rollups(session, user_id, points)
     return IngestResult(recorded=recorded, skipped=skipped)
-
-
-def _chunks(samples: list[IngestSample]) -> Iterator[list[IngestSample]]:
-    """Split samples into batches the ingest schema will accept."""
-    for start in range(0, len(samples), _CHUNK):
-        yield samples[start : start + _CHUNK]
 
 
 def _metrics(payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -93,70 +111,119 @@ def _metrics(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return [m for m in metrics or [] if isinstance(m, dict)]
 
 
-def _samples(
-    metrics: list[dict[str, Any]],
-) -> tuple[list[IngestSample], list[str]]:
-    """Aggregate Health Auto Export points into one sample per metric/day.
-
-    The app exports many raw intraday points; each day is reduced by the
-    metric's own hint (sum for steps/energy, average for heart rate…) so a
-    daily total is a total, not the last reading.
-    """
-    groups: dict[tuple[str, date | None], dict[str, Any]] = {}
+def _parse(metrics: list[dict[str, Any]]) -> tuple[list[_Raw], list[str]]:
+    """Flatten metric points into raw entries; collect unusable names."""
+    raw: list[_Raw] = []
     skipped: list[str] = []
     for metric in metrics:
         name = str(metric.get("name") or "")
         hk_type = HAE_MAP.get(name) or name
         unit = str(metric["units"]) if metric.get("units") else None
         for point in metric.get("data") or []:
-            if not _absorb(groups, hk_type, unit, point):
-                skipped.append(name or "unknown")
-    return [_finalize(key[0], grp) for key, grp in groups.items()], skipped
+            entry = _entry(hk_type, unit, point)
+            if entry is None:
+                skipped.append(name or "?")
+            else:
+                raw.append(entry)
+    return raw, skipped
 
 
-def _absorb(
-    groups: dict[tuple[str, date | None], dict[str, Any]],
-    hk_type: str,
-    unit: str | None,
-    point: Any,
-) -> bool:
-    """Add one metric point to its (metric, day) group; False if unusable."""
+def _entry(hk_type: str, unit: str | None, point: Any) -> _Raw | None:
+    """Build one raw entry from a metric point (``qty`` or ``Avg``)."""
     if not isinstance(point, dict) or not hk_type:
-        return False
+        return None
     num = _num(point.get("qty", point.get("Avg")))
-    if num is None:
-        return False
     ts = _ts(point.get("date"))
-    key = (hk_type, ts.date() if ts else None)
-    group = groups.setdefault(key, {"values": [], "unit": unit, "ts": ts})
-    group["values"].append(num)
-    if ts is not None:
-        group["ts"] = ts
-    return True
+    if num is None or ts is None:
+        return None
+    return _Raw(hk_type, unit, ts, num)
 
 
-def _finalize(hk_type: str, group: dict[str, Any]) -> IngestSample:
-    """Reduce a day's points to one sample using the metric's hint."""
-    agg = synth_spec(hk_type, group["unit"]).agg
-    return IngestSample(
-        healthkit_type=hk_type,
-        value=_reduce(group["values"], agg),
-        unit=group["unit"],
-        ts=group["ts"],
+async def _resolve(
+    session: AsyncSession, raw: list[_Raw], cache: MetricCache
+) -> list[_Point]:
+    """Resolve each entry's metric id + spec (creating metrics as needed)."""
+    specs: dict[str, MetricSpec] = {}
+    out: list[_Point] = []
+    for entry in raw:
+        spec = specs.get(entry.hk_type)
+        if spec is None:
+            spec = synth_spec(entry.hk_type, entry.unit)
+            specs[entry.hk_type] = spec
+        metric_id = await cache.id_for(session, spec)
+        out.append(_Point(metric_id, spec, entry.unit, entry.ts, entry.value))
+    return out
+
+
+async def _store_raw(
+    session: AsyncSession, user_id: str, points: list[_Point]
+) -> None:
+    """Replace each metric's covered day-range, then bulk-insert samples."""
+    by_metric: dict[str, list[_Point]] = {}
+    for point in points:
+        by_metric.setdefault(point.metric_id, []).append(point)
+    for metric_id, group in by_metric.items():
+        await _clear_range(session, user_id, metric_id, group)
+    rows = [_raw_row(user_id, point) for point in points]
+    for start in range(0, len(rows), _RAW_CHUNK):
+        chunk = rows[start : start + _RAW_CHUNK]
+        await session.execute(insert(HealthSample), chunk)
+
+
+async def _clear_range(
+    session: AsyncSession, user_id: str, metric_id: str, group: list[_Point]
+) -> None:
+    """Delete this metric's Health-Auto-Export samples over the day-range."""
+    lo = min(point.ts for point in group)
+    hi = max(point.ts for point in group)
+    floor = datetime.combine(lo.date(), time.min, tzinfo=lo.tzinfo)
+    ceil = datetime.combine(hi.date(), time.min, tzinfo=hi.tzinfo) + timedelta(
+        days=1
+    )
+    await session.execute(
+        delete(HealthSample).where(
+            HealthSample.user_id == user_id,
+            HealthSample.metric_id == metric_id,
+            HealthSample.source == _SOURCE,
+            HealthSample.start_at >= floor,
+            HealthSample.start_at < ceil,
+        )
     )
 
 
-def _reduce(values: list[float], agg: str) -> float:
-    """Combine a day's values by aggregation hint."""
-    if agg == "sum":
-        return float(sum(values))
-    if agg == "min":
-        return float(min(values))
-    if agg == "max":
-        return float(max(values))
-    if agg == "avg":
-        return sum(values) / len(values)
-    return float(values[-1])
+def _raw_row(user_id: str, point: _Point) -> dict[str, Any]:
+    """Build one ``health_samples`` insert row for a point."""
+    return {
+        "id": new_uuid(),
+        "user_id": user_id,
+        "metric_id": point.metric_id,
+        "start_at": point.ts,
+        "end_at": None,
+        "value_num": point.value,
+        "value_text": None,
+        "unit": point.unit,
+        "source": _SOURCE,
+        "device": "Health Auto Export",
+        "created_at": utcnow(),
+    }
+
+
+async def _store_rollups(
+    session: AsyncSession, user_id: str, points: list[_Point]
+) -> int:
+    """Fold points into daily roll-ups and upsert them into measurements."""
+    agg = DailyAggregator()
+    for point in points:
+        value = convert(point.value, point.unit or "", point.spec.unit)
+        agg.add(point.spec.key, point.ts.date(), value, point.spec.agg)
+    batch = [
+        MeasurementIn(metric_key=key, date_key=day, value=value)
+        for key, day, value in agg.results()
+    ]
+    for start in range(0, len(batch), _ROLLUP_CHUNK):
+        chunk = batch[start : start + _ROLLUP_CHUNK]
+        await measure.record_batch(session, user_id, chunk, source=_SOURCE)
+    return len(batch)
 
 
 def _num(value: Any) -> float | None:
