@@ -54,6 +54,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   still kept). Note: OCR can drop decimal points on dense EFR / blood-gas
   tables, so structured EFR / gaz-du-sang value tracking is intentionally
   not auto-recorded yet — those reports are kept as documents.
+- **Visionneuse DICOM**: the Dossier tab gets a built-in DICOM viewer
+  (`components/dicom`, using `dicom-parser`) to open the `.dcm` files from
+  an imaging CD (scanner, IRM, radio) — entirely in the browser, nothing is
+  uploaded. It renders uncompressed monochrome studies (8/16-bit, signed or
+  not, little- or big-endian, MONOCHROME1 inverted, rescale slope/intercept
+  applied) with window-centre/width controls (auto-fit from the pixel
+  range) and a slice slider for a multi-file series, plus a metadata panel
+  (patient, modality, study/series, dimensions). Compressed transfer
+  syntaxes (JPEG/JPEG2000) are detected and reported with their metadata
+  rather than rendered — a full codec stack can come later.
 - **Dossier CDA du médecin**: `POST /clinical/import` imports a
   doctor-delivered **French CI-SIS / HL7 CDA** file (namespace-agnostic
   parser reused from the native-export clinical path). Each `<observation>`
