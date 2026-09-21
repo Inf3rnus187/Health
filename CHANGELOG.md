@@ -41,8 +41,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   /biology/values` (and a "Réinitialiser la biologie" button) purges all
   `bio.*` values and their now-empty metrics to recover from a bad import.
   The source PDF is kept as a `biologie` document. Dossier tab gets an
-  "Analyser une prise de sang (PDF)" upload. Scanned (image-only) PDFs
-  yield no text and are kept as documents but not yet parsed (needs OCR).
+  "Analyser une prise de sang (PDF)" upload.
+- **OCR for scanned PDFs**: a scanned (image-only) lab PDF has no text
+  layer, so biology import now falls back to **OCR** (`ocr` service:
+  PyMuPDF rasterises each page, Tesseract reads it in French) and feeds the
+  result through the same strict catalog — a scanned blood test still
+  yields tracked values, and OCR noise cannot create junk metrics because
+  unrecognised lines are simply skipped (verified: a fully rasterised
+  BIOGROUP report still yields 27 analyses / 50 values, zero junk).
+  Tesseract (`tesseract-ocr` + `tesseract-ocr-fra`) is added to the backend
+  image; when it is absent the import degrades gracefully (the document is
+  still kept). Note: OCR can drop decimal points on dense EFR / blood-gas
+  tables, so structured EFR / gaz-du-sang value tracking is intentionally
+  not auto-recorded yet — those reports are kept as documents.
 - **Dossier CDA du médecin**: `POST /clinical/import` imports a
   doctor-delivered **French CI-SIS / HL7 CDA** file (namespace-agnostic
   parser reused from the native-export clinical path). Each `<observation>`

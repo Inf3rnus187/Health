@@ -25,6 +25,7 @@ from app.models.metric import MetricDefinition
 from app.schemas.measurement import MeasurementIn
 from app.services import biology_catalog as cat
 from app.services import measurements as measure
+from app.services import ocr
 from app.services.apple_health.metrics_cache import MetricCache
 from app.services.apple_health.spec import MetricSpec
 
@@ -197,9 +198,10 @@ async def _drop_empty(session: AsyncSession, metric_ids: list[str]) -> int:
 
 
 def _extract(data: bytes) -> str:
-    """Return the concatenated text of every page (empty if scanned)."""
+    """Text of every page; OCR the PDF when it has no text layer (scanned)."""
     reader = PdfReader(BytesIO(data))
-    return "\n".join((page.extract_text() or "") for page in reader.pages)
+    text = "\n".join((page.extract_text() or "") for page in reader.pages)
+    return text if text.strip() else ocr.ocr_pdf(data)
 
 
 def _current_date(text: str) -> date:

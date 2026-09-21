@@ -28,6 +28,13 @@ ENV PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
+
+# OCR runtime for scanned (image-only) medical PDFs: Tesseract + French.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        tesseract-ocr tesseract-ocr-fra \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN useradd --create-home --uid 10001 appuser \
     && mkdir -p /data/media /data/exports \
     && chown -R appuser:appuser /data
