@@ -16,6 +16,7 @@ from app.api.v1 import (
     clinical,
     conditions,
     dashboard,
+    data,
     events,
     evolution,
     export,
@@ -65,6 +66,7 @@ api_router.include_router(photos.router)
 api_router.include_router(photos_media.router)
 api_router.include_router(evolution.router)
 api_router.include_router(dashboard.router)
+api_router.include_router(data.router)
 api_router.include_router(trends.router)
 api_router.include_router(summary.router)
 api_router.include_router(sync.router)

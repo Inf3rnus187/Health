@@ -9,6 +9,7 @@ from app.core.errors import NotFoundError
 from app.models.base import utcnow
 from app.models.health_raw import ImportJob
 from app.services.apple_health.import_runner import process
+from app.workers.queue import enqueue
 
 
 async def create_job(
@@ -36,6 +37,8 @@ async def run_job(session: AsyncSession, job_id: str) -> None:
         return
     job.status, job.phase, job.updated_at = "done", "done", utcnow()
     await session.commit()
+    # One truth: merge duplicate keys, rebuild daily values from raw data.
+    await enqueue("reconcile_data", job.user_id)
 
 
 async def get_job(

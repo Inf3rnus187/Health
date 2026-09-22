@@ -40,8 +40,34 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     milestones; each before/after photo shows that day's weight.
   - Each marker lists the exact values (and dates) used by its formula.
 
+- **One truth for every page.** One metric key per concept whatever the
+  channel (SpO2, HRV, breathing rate, flights, distance, waist, weight,
+  glucose had two keys), units converted at write time; `POST
+  /data/reconcile` (run automatically after each Apple import) merges a
+  user's duplicate keys and recomputes every daily value from the raw
+  samples with a single rule — one HealthKit channel per day (native
+  export and Health Auto Export carry the same data: never added, a
+  partial day never overwrites a full one), explicit entries kept. This
+  also restores days an interrupted import never wrote.
+- **Données page**: "Tout ce qui est enregistré" (every metric, raw and
+  daily counts per source with their period, reconcile button) and
+  "Valeurs journalières (toutes sources)".
+- **FibroScan** (CAP, stiffness E) in the web form and read from reports;
+  markers graded S0-S3 / F, FLI and FIB-4 flagged as superseded.
+- **Marker history** from previous lab results.
+- **AI reading of medical documents** (document model, e.g. MedGemma
+  1.5), with every AI value grounded in the document text.
+- **One Ollama model per task** (`OLLAMA_VISION_MODEL`,
+  `OLLAMA_DOCUMENT_MODEL`, `OLLAMA_TEXT_MODEL`); the photo trend only
+  mixes scores of the current vision model.
+
 ### Fixed
 
+- Home tiles showed raw sample units (lb, SpO2 fraction) and ignored a
+  newer typed weigh-in; QuickWeight used the UTC date and refreshed
+  nothing.
+- Health Auto Export recomputed a day from its payload only (partial
+  days overwrote full ones).
 - Markers never found imported lab values: the blood-test import stores
   them as `bio.<analyte>` but the markers looked up bare keys. Both now
   use one shared key helper, and a test imports a real lab PDF end to end.

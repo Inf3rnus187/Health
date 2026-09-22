@@ -7,6 +7,11 @@ through unchanged so an unexpected unit never aborts an import.
 
 from __future__ import annotations
 
+import re
+
+# HealthKit spells glucose molarity with its molar mass: mmol<180.15…>/L.
+_MOLAR_MASS = re.compile(r"<[^>]*>")
+
 #: (source unit, destination unit) → multiplier.
 _FACTORS: dict[tuple[str, str], float] = {
     ("mi", "km"): 1.609344,
@@ -20,6 +25,8 @@ _FACTORS: dict[tuple[str, str], float] = {
     ("ft", "cm"): 30.48,
     ("m", "cm"): 100.0,
     ("hr", "min"): 60.0,
+    ("mg/dL", "g/L"): 0.01,
+    ("mmol/L", "g/L"): 0.18,  # glucose (180.16 g/mol)
 }
 
 
@@ -27,6 +34,7 @@ def convert(value: float, src: str, dst: str | None) -> float:
     """Return ``value`` expressed in the destination unit."""
     if dst == "%" and 0.0 < value <= 1.0:
         return value * 100.0
+    src = _MOLAR_MASS.sub("", src)
     if not dst or not src or src == dst:
         return value
     if src == "degF" and dst == "°C":

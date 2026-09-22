@@ -9,7 +9,7 @@ can be looked up the same way.
 from __future__ import annotations
 
 from datetime import date, timedelta
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,7 +39,10 @@ async def load(session: AsyncSession, user_id: str) -> Series:
     keys = {key: name for name, group in cat.SOURCES.items() for key in group}
     result = await session.execute(
         select(
-            MetricDefinition.key, Measurement.value_num, Measurement.date_key
+            MetricDefinition.key,
+            Measurement.value_num,
+            Measurement.date_key,
+            Measurement.source,
         )
         .join(MetricDefinition, Measurement.metric_id == MetricDefinition.id)
         .where(
@@ -49,9 +52,17 @@ async def load(session: AsyncSession, user_id: str) -> Series:
         )
         .order_by(Measurement.date_key)
     )
+    return _by_input(result.all(), keys)
+
+
+def _by_input(rows: Any, keys: dict[str, str]) -> Series:
+    """Group rows per input (one value per day, lab-only filter)."""
     by_day: dict[str, dict[date, float]] = {}
-    for key, num, day in result.all():
-        by_day.setdefault(keys[key], {})[day] = _normalize(keys[key], num)
+    for key, num, day, source in rows:
+        name = keys[key]
+        if name in cat.LAB_ONLY and source not in cat.LAB_SOURCES:
+            continue
+        by_day.setdefault(name, {})[day] = _normalize(name, num)
     return {
         name: [Value(v, d) for d, v in sorted(days.items())]
         for name, days in by_day.items()

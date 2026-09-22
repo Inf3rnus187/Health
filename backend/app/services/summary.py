@@ -7,7 +7,7 @@ daily sparkline) so the home page reads like a dashboard, not a list.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import NamedTuple
 
 from sqlalchemy import select
@@ -18,6 +18,7 @@ from app.models.health_raw import HealthSample
 from app.models.measurement import Measurement
 from app.models.metric import MetricDefinition
 from app.services import metrics as metrics_service
+from app.services.apple_health.units import convert
 
 #: The metrics shown as tiles, in order (missing ones are skipped).
 HEADLINE_KEYS = (
@@ -121,12 +122,23 @@ async def _headline(
     metric: MetricDefinition,
     rollup: Measurement,
 ) -> tuple[float, datetime | None]:
-    """Latest reading for instant metrics; daily total for cumulative ones."""
+    """Latest reading for instant metrics; daily total for cumulative ones.
+
+    The raw reading is converted to the metric's unit (lb → kg, SpO2
+    fraction → %), and an explicit entry newer than the last synced
+    sample (a weigh-in typed in the web form) wins.
+    """
     latest = await _latest_sample(session, user_id, metric.id)
-    if metric.aggregation_hint != "sum" and latest and latest[0] is not None:
-        return latest[0], latest[1]
-    fallback = latest[1] if latest else rollup.recorded_at
-    return float(rollup.value_num or 0.0), fallback
+    daily = float(rollup.value_num or 0.0)
+    if latest is None:
+        return daily, rollup.recorded_at
+    value, at, unit = latest
+    if metric.aggregation_hint == "sum" or value is None:
+        return daily, at
+    explicit = rollup.source not in _SYNCED
+    if explicit and _aware(rollup.recorded_at) > _aware(at):
+        return daily, rollup.recorded_at
+    return convert(value, unit or "", metric.unit), at
 
 
 async def _latest(
@@ -166,10 +178,10 @@ async def _series(
 
 async def _latest_sample(
     session: AsyncSession, user_id: str, metric_id: str
-) -> tuple[float | None, datetime] | None:
-    """Return the newest raw sample's (value, time) for a metric, or None."""
+) -> tuple[float | None, datetime, str | None] | None:
+    """The newest raw sample's (value, time, unit) for a metric, or None."""
     result = await session.execute(
-        select(HealthSample.value_num, HealthSample.start_at)
+        select(HealthSample.value_num, HealthSample.start_at, HealthSample.unit)
         .where(
             HealthSample.user_id == user_id,
             HealthSample.metric_id == metric_id,
@@ -178,10 +190,17 @@ async def _latest_sample(
         .limit(1)
     )
     row = result.first()
-    return (row[0], row[1]) if row is not None else None
+    return (row[0], row[1], row[2]) if row is not None else None
+
+
+def _aware(at: datetime) -> datetime:
+    """Treat a naive timestamp (SQLite) as UTC."""
+    return at if at.tzinfo else at.replace(tzinfo=UTC)
 
 
 _MIN_POINTS = 2
+#: Daily rows written by syncs (not an explicit entry).
+_SYNCED = ("apple", "auto-export", "watch")
 
 
 def _delta(series: list[float]) -> float | None:

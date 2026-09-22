@@ -114,6 +114,11 @@ EVENTS = frozenset(
     }
 )
 
+#: Inputs that must come from a lab / explicit entry: Apple glucose shares
+#: the ``bio.glycemie`` field, but a sensor reading is not a fasting value.
+LAB_ONLY = frozenset({"glucose"})
+LAB_SOURCES = frozenset({"biology", "document", "document-ai", "manual", "cda"})
+
 #: How old a looked-up input may be for a past marker value (days).
 MAX_AGE = {"weight": 30, "waist": 120}
 DEFAULT_MAX_AGE = 400

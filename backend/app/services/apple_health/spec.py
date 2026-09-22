@@ -209,6 +209,26 @@ _QUANTITY_PAIRS = (
         "last",
     ),
     _q(
+        "HKQuantityTypeIdentifierWaistCircumference",
+        "body.waist",
+        "Tour de taille",
+        "body",
+        "float",
+        "cm",
+        "last",
+    ),
+    # Same field as the lab reports' glucose; the fasting-glucose marker
+    # only uses lab values (a sensor reading is not a fasting value).
+    _q(
+        "HKQuantityTypeIdentifierBloodGlucose",
+        "bio.glycemie",
+        "Glycémie",
+        "bio",
+        "float",
+        "g/L",
+        "last",
+    ),
+    _q(
         "HKQuantityTypeIdentifierHeight",
         "body.height",
         "Taille",

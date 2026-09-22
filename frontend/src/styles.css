@@ -1238,3 +1238,41 @@ progress {
     grid-column: 1 / -1;
   }
 }
+
+/* Data inventory. */
+.inv-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+.inv-search {
+  margin: 4px 0 10px;
+  max-width: 360px;
+}
+.inv-scroll {
+  overflow-x: auto;
+}
+.inv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.inv-table th,
+.inv-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-grid);
+}
+.inv-key {
+  display: block;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.inv-stats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

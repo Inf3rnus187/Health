@@ -20,18 +20,16 @@ from __future__ import annotations
 from datetime import UTC, datetime, time, timedelta
 from typing import Any, NamedTuple
 
-from sqlalchemy import delete, insert
+from sqlalchemy import delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import new_uuid, utcnow
 from app.models.health_raw import HealthSample
+from app.models.metric import MetricDefinition
 from app.schemas.ingest import IngestResult
-from app.schemas.measurement import MeasurementIn
-from app.services import measurements as measure
-from app.services.apple_health.accumulator import DailyAggregator
+from app.services import daily_rollup
 from app.services.apple_health.metrics_cache import MetricCache
 from app.services.apple_health.spec import MetricSpec, synth_spec
-from app.services.apple_health.units import convert
 
 _SOURCE = "auto-export"
 _RAW_CHUNK = 2000
@@ -211,19 +209,17 @@ def _raw_row(user_id: str, point: _Point) -> dict[str, Any]:
 async def _store_rollups(
     session: AsyncSession, user_id: str, points: list[_Point]
 ) -> int:
-    """Fold points into daily roll-ups and upsert them into measurements."""
-    agg = DailyAggregator()
-    for point in points:
-        value = convert(point.value, point.unit or "", point.spec.unit)
-        agg.add(point.spec.key, point.ts.date(), value, point.spec.agg)
-    batch = [
-        MeasurementIn(metric_key=key, date_key=day, value=value)
-        for key, day, value in agg.results()
-    ]
-    for start in range(0, len(batch), _ROLLUP_CHUNK):
-        chunk = batch[start : start + _ROLLUP_CHUNK]
-        await measure.record_batch(session, user_id, chunk, source=_SOURCE)
-    return len(batch)
+    """Recompute the touched days from ALL raw samples (one rule)."""
+    tz = await daily_rollup.user_zone(session, user_id)
+    since = min(point.ts for point in points).astimezone(tz).date()
+    ids = {point.metric_id for point in points}
+    metrics = await session.execute(
+        select(MetricDefinition).where(MetricDefinition.id.in_(ids))
+    )
+    total = 0
+    for metric in metrics.scalars().all():
+        total += await daily_rollup.rebuild(session, user_id, metric, tz, since)
+    return total
 
 
 def _num(value: Any) -> float | None:

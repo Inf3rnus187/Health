@@ -5,24 +5,24 @@ from __future__ import annotations
 #: (source, external_key, metric_key). Seeded as global defaults.
 DEFAULT_MAPPINGS: list[tuple[str, str, str]] = [
     ("watch", "HKQuantityTypeIdentifierBodyMass", "body.weight"),
-    ("watch", "HKQuantityTypeIdentifierOxygenSaturation", "sleep.spo2_avg"),
+    ("watch", "HKQuantityTypeIdentifierOxygenSaturation", "body.spo2"),
     ("watch", "HKQuantityTypeIdentifierRestingHeartRate", "rest.hr"),
-    ("watch", "HKQuantityTypeIdentifierRespiratoryRate", "sleep.resp_rate"),
+    ("watch", "HKQuantityTypeIdentifierRespiratoryRate", "body.resp_rate"),
     (
         "watch",
         "HKQuantityTypeIdentifierHeartRateVariabilitySDNN",
-        "sleep.hrv",
+        "heart.hrv",
     ),
     (
         "watch",
         "HKQuantityTypeIdentifierAppleSleepingWristTemperature",
         "sleep.wrist_temp",
     ),
-    ("watch", "HKQuantityTypeIdentifierFlightsClimbed", "stairs.floors"),
+    ("watch", "HKQuantityTypeIdentifierFlightsClimbed", "activity.flights"),
     (
         "watch",
         "HKQuantityTypeIdentifierDistanceWalkingRunning",
-        "walk.distance",
+        "activity.distance",
     ),
     ("ppc", "AHI", "ppc.ahi"),
     ("ppc", "UsageHours", "ppc.hours_used"),

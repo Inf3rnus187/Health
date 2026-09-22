@@ -8,10 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.ingest import IngestPayload, IngestResult, IngestSample
 from app.schemas.measurement import MeasurementIn
-from app.services import mappings
+from app.services import canonical, mappings
 from app.services import measurements as measure
 from app.services.apple_health.metrics_cache import MetricCache
-from app.services.apple_health.spec import synth_spec
+from app.services.apple_health.spec import MetricSpec, synth_spec
+from app.services.apple_health.units import convert
 
 
 async def ingest(
@@ -27,11 +28,11 @@ async def ingest(
     items: list[MeasurementIn] = []
     skipped: list[str] = []
     for sample in payload.samples:
-        key = await _resolve_key(session, user_id, source, sample, cache)
-        if key is None:
+        target = await _resolve_key(session, user_id, source, sample, cache)
+        if target is None:
             skipped.append(sample.healthkit_type or "unknown")
             continue
-        items.append(_to_item(key, sample, payload.date_key))
+        items.append(_to_item(target, sample, payload.date_key))
     recorded = await _record(session, user_id, source, items, token_id)
     return IngestResult(recorded=recorded, skipped=skipped)
 
@@ -42,32 +43,34 @@ async def _resolve_key(
     source: str,
     sample: IngestSample,
     cache: MetricCache,
-) -> str | None:
-    """Return the metric key for a sample (direct, mapped, or Apple)."""
-    if sample.metric_key:
-        return sample.metric_key
-    if not sample.healthkit_type:
+) -> MetricSpec | str | None:
+    """The sample's canonical metric (curated spec when known)."""
+    key = sample.metric_key
+    if not key and sample.healthkit_type:
+        key = await mappings.resolve(
+            session, user_id, source, sample.healthkit_type
+        )
+        if key is None:
+            spec = synth_spec(sample.healthkit_type, sample.unit)
+            await cache.id_for(session, spec)
+            key = spec.key
+    if not key:
         return None
-    mapped = await mappings.resolve(
-        session, user_id, source, sample.healthkit_type
-    )
-    if mapped is not None:
-        return mapped
-    spec = synth_spec(sample.healthkit_type, sample.unit)
-    await cache.id_for(session, spec)
-    return spec.key
+    key = canonical.canonical(key)
+    return await canonical.ensure(session, key, cache) or key
 
 
 def _to_item(
-    key: str, sample: IngestSample, default_day: date
+    target: MetricSpec | str, sample: IngestSample, default_day: date
 ) -> MeasurementIn:
-    """Build a measurement input from a resolved sample."""
+    """A measurement input, converted to the metric's unit when known."""
     day = sample.ts.date() if sample.ts else default_day
+    value = sample.value
+    if isinstance(target, MetricSpec) and isinstance(value, int | float):
+        value = convert(float(value), sample.unit or "", target.unit)
+    key = target.key if isinstance(target, MetricSpec) else target
     return MeasurementIn(
-        metric_key=key,
-        date_key=day,
-        value=sample.value,
-        recorded_at=sample.ts,
+        metric_key=key, date_key=day, value=value, recorded_at=sample.ts
     )
 
 

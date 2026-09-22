@@ -12,6 +12,7 @@ from arq.connections import RedisSettings
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
+from app.workers.jobs import analyze_document, reconcile_data
 
 _log = get_logger("worker")
 
@@ -29,16 +30,6 @@ async def analyze_photo(ctx: dict[str, Any], photo_id: str) -> str:
     async with SessionFactory() as session:
         await process(session, photo_id)
     return photo_id
-
-
-async def analyze_document(ctx: dict[str, Any], doc_id: str) -> str:
-    """Read a medical document into grounded values (document model)."""
-    from app.core.db import SessionFactory
-    from app.services import document_ai
-
-    async with SessionFactory() as session:
-        await document_ai.run(session, doc_id)
-    return doc_id
 
 
 async def import_apple_health_job(ctx: dict[str, Any], job_id: str) -> str:
@@ -78,6 +69,7 @@ class WorkerSettings:
         ping,
         analyze_photo,
         analyze_document,
+        reconcile_data,
         generate_report,
         import_apple_health_job,
     ]
