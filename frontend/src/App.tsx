@@ -10,7 +10,26 @@ import { HomePage } from './pages/HomePage';
 import { ImportPage } from './pages/ImportPage';
 import { LoginPage } from './pages/LoginPage';
 import { MedicalPage } from './pages/MedicalPage';
+import { PhotosPage } from './pages/PhotosPage';
 import { ReportsPage } from './pages/ReportsPage';
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<HomePage />} />
+        <Route path="dashboards" element={<DashboardsPage />} />
+        <Route path="sante" element={<HealthPage />} />
+        <Route path="donnees" element={<DataPage />} />
+        <Route path="dossier" element={<MedicalPage />} />
+        <Route path="photos" element={<PhotosPage />} />
+        <Route path="suivi" element={<CarePage />} />
+        <Route path="rapports" element={<ReportsPage />} />
+        <Route path="import" element={<ImportPage />} />
+      </Route>
+    </Routes>
+  );
+}
 
 export function App() {
   const { user, ready } = useAuth();
@@ -22,18 +41,7 @@ export function App() {
   }
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<HomePage />} />
-          <Route path="dashboards" element={<DashboardsPage />} />
-          <Route path="sante" element={<HealthPage />} />
-          <Route path="donnees" element={<DataPage />} />
-          <Route path="dossier" element={<MedicalPage />} />
-          <Route path="suivi" element={<CarePage />} />
-          <Route path="rapports" element={<ReportsPage />} />
-          <Route path="import" element={<ImportPage />} />
-        </Route>
-      </Routes>
+      <AppRoutes />
     </BrowserRouter>
   );
 }

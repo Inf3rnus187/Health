@@ -32,6 +32,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Photos tab**: a new "Photos" page shows the progress photos uploaded via
+  `POST /ingest/photo` (mirror/device) as a grid — angle (Face/Profil/Dos)
+  filter, date, linked weight, processing status, and the **AI (Ollama
+  vision) analysis** per photo. Images are fetched with the auth token
+  (blob) since the file endpoint is owner-only. Previously the photo
+  pipeline had no viewer at all — photos could be uploaded but not seen.
 - **Token manager in the web UI**: the Import tab gets a *Jetons d'accès*
   card to create an API token and **tick its scopes** (Photos
   `ingest:photo`, Montre/Santé `ingest:watch`, Mesures `write:measurements`,

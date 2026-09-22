@@ -669,3 +669,54 @@ progress {
   gap: 8px;
   flex-wrap: wrap;
 }
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+.photo-card {
+  border: 1px solid var(--border, #24304a);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--panel, #141c2e);
+}
+.photo-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  background: #000;
+}
+.photo-skeleton {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: linear-gradient(100deg, #1a2336, #223049, #1a2336);
+}
+.photo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+}
+.photo-analysis {
+  margin: 0;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border, #24304a);
+  font-size: 13px;
+}
+.photo-analysis dt {
+  color: var(--muted, #8a94a6);
+}
+.photo-analysis dd {
+  margin: 0 0 6px;
+  word-break: break-word;
+}
+.badge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #223049;
+}
