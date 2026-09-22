@@ -1,6 +1,7 @@
 import { AutoExportCard } from '../components/AutoExportCard';
 import { ImportPanel } from '../components/ImportPanel';
 import { MobileSyncCard } from '../components/MobileSyncCard';
+import { TokenManager } from '../components/TokenManager';
 
 export function ImportPage() {
   return (
@@ -8,6 +9,7 @@ export function ImportPage() {
       <ImportPanel />
       <AutoExportCard />
       <MobileSyncCard />
+      <TokenManager />
     </>
   );
 }

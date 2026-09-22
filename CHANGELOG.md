@@ -32,6 +32,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Token manager in the web UI**: the Import tab gets a *Jetons d'accès*
+  card to create an API token and **tick its scopes** (Photos
+  `ingest:photo`, Montre/Santé `ingest:watch`, Mesures `write:measurements`,
+  PPC, métriques, lecture seule), see each token's scopes and revoke — so a
+  non-technical user can mint the right token (e.g. the `ingest:photo` token
+  a photo mirror needs) without curl. The one-off secret is shown once with
+  a copy button; the CLI path stays available. Previously the UI could only
+  mint a fixed `write:measurements` token, which is why photo uploads 403'd
+  with "Missing scope: ingest:photo".
 - **Health Auto Export (JSON)**: `POST /sync/auto-export` ingests the JSON
   body posted by the *Health Auto Export* iOS app
   (`{"data":{"metrics":[{"name,units,data:[{date,qty}]}]}}`) — no multipart

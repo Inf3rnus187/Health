@@ -16,6 +16,7 @@ export function TokenList({ tokens, onRevoke }: TokenListProps) {
       {active.map((token) => (
         <li key={token.id}>
           <span className="import-name">{token.name}</span>
+          <span className="muted">{token.scopes.join(', ')}</span>
           <span className="muted">{shortDateTime(token.created_at)}</span>
           <button className="btn ghost" onClick={() => onRevoke(token.id)}>
             Révoquer

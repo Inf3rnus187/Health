@@ -14,6 +14,15 @@ export function useCreateToken() {
   });
 }
 
+export function useMintToken() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { name: string; scopes: string[] }) =>
+      createToken(input.name, input.scopes),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['tokens'] }),
+  });
+}
+
 export function useRevokeToken() {
   const client = useQueryClient();
   return useMutation({

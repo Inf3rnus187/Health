@@ -1,18 +1,15 @@
 import { useState } from 'react';
 
 import type { TokenCreated } from '../api/types';
-import { useCreateToken, useRevokeToken, useTokens } from '../hooks/useTokens';
+import { useCreateToken } from '../hooks/useTokens';
 import { CopyButton } from './CopyButton';
 import { ShortcutRecipe } from './ShortcutRecipe';
-import { TokenList } from './TokenList';
 
 const ENDPOINT = `${window.location.origin}/api/v1/imports/apple-health`;
 
 export function MobileSyncCard() {
   const [url, setUrl] = useState<string | null>(null);
-  const tokens = useTokens().data ?? [];
   const create = useCreateToken();
-  const revoke = useRevokeToken();
   const save = (t: TokenCreated) => setUrl(`${ENDPOINT}?token=${t.token}`);
   const onCreate = () => create.mutate(undefined, { onSuccess: save });
   return (
@@ -28,7 +25,6 @@ export function MobileSyncCard() {
       </button>
       {url && <UploadUrl url={url} />}
       <ShortcutRecipe />
-      <TokenList tokens={tokens} onRevoke={(id) => revoke.mutate(id)} />
     </section>
   );
 }
