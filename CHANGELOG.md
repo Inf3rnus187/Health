@@ -99,6 +99,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   removed and listed with the reason. Shown on the Rapports page (hover
   a reference to read the fact) and at the top of the clinical PDF, with
   the facts in an annex. A model failure is reported, never hidden.
+- **MCP server covers the whole hub** (53 tools): data and metrics
+  (overview, samples, trends, inventory, reconcile, entries), the record
+  (Dossier, Suivi, documents and the text the AI read, conditions,
+  treatments, appointments, CDA), markers, weight / photo evolution,
+  Apple workouts / ECG / routes, reports with the AI synthesis,
+  automations, plus `api_get` / `api_call` for any other route.
+- **`hub:full` token scope** (« Accès complet — MCP / assistant »): lets
+  a token do everything the web app does; managing tokens, 2FA, the
+  account and the Shortcut download still require an interactive login.
+- `GET /medical/documents/{id}/text`: the text the AI reads from a
+  document (OCR for scans), to check an extraction against its source.
 - `GET /catalog/domains`: French name of every domain, used by the
   dashboard tabs (Apple Santé and the hub's own domains — tabac, PPC,
   biologie…).
@@ -124,6 +135,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   made-up time when only the day is known.
 - PDF reports printed "?" for œ, typographic quotes or dashes; domain
   titles now use the shared French names.
+- MCP `get_measurements` / `get_daily_summary` sent `from` / `to` where
+  the API expects `start` / `end` (the period was ignored), and three
+  tools called routes that no longer exist.
+
+### Security
+
+- The MCP server's network transports now require `MCP_AUTH_TOKEN`
+  (`Authorization: Bearer …`, 401 otherwise) and refuse to start without
+  it; compose publishes its port on 127.0.0.1 unless `MCP_BIND` says
+  otherwise. Previously anyone on the network could use its token.
 
 ### Changed
 

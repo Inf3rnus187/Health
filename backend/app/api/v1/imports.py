@@ -13,8 +13,8 @@ from app.core.deps import (
     Principal,
     SessionDep,
     require_scope,
-    require_scope_flex,
 )
+from app.core.deps_query import require_scope_flex
 from app.core.scopes import WRITE_MEASUREMENTS
 from app.models.base import new_uuid
 from app.models.health_raw import ImportJob

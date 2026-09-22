@@ -8,6 +8,9 @@ INGEST_PHOTO = "ingest:photo"
 WRITE_MEASUREMENTS = "write:measurements"
 WRITE_METRICS = "write:metrics"
 READ_ALL = "read:all"
+#: Everything the web app does (e.g. for the MCP server), except managing
+#: tokens, MFA and the account, which need an interactive login.
+HUB_FULL = "hub:full"
 
 #: Every scope a token may be granted.
 ALL_SCOPES: frozenset[str] = frozenset(
@@ -18,5 +21,6 @@ ALL_SCOPES: frozenset[str] = frozenset(
         WRITE_MEASUREMENTS,
         WRITE_METRICS,
         READ_ALL,
+        HUB_FULL,
     }
 )

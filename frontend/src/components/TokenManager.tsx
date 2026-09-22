@@ -12,6 +12,10 @@ const SCOPES: { id: string; label: string }[] = [
   { id: 'ingest:ppc', label: 'PPC / CPAP' },
   { id: 'write:metrics', label: 'Créer des métriques' },
   { id: 'read:all', label: 'Lecture seule' },
+  {
+    id: 'hub:full',
+    label: 'Accès complet — MCP / assistant (sauf jetons, 2FA, compte)',
+  },
 ];
 
 function toggle(list: string[], id: string): string[] {

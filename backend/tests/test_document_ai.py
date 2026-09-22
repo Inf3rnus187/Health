@@ -276,3 +276,16 @@ async def test_stale_readings_are_requeued(
     await _upload(client, auth, [_TEXT], "autre")
     async with SessionFactory() as session:
         assert await document_ai.requeue_stale(session) >= 0
+
+
+async def test_document_text_is_readable_for_checking(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """What the AI reads can be checked (MCP / assistant)."""
+    doc_id = await _upload(client, auth, [_TEXT], "compte_rendu")
+    res = await client.get(
+        f"/api/v1/medical/documents/{doc_id}/text", headers=auth
+    )
+    body = res.json()
+    assert body["scanned"] is False
+    assert "HbA1c a 7,9 %" in body["text"]

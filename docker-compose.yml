@@ -104,7 +104,7 @@ services:
     restart: unless-stopped
 
   # MCP server (Phase 7). Enable with: docker compose --profile mcp up -d
-  # Set PHOENIX_API_TOKEN in .env to a scoped token before enabling.
+  # Set PHOENIX_API_TOKEN (hub:full token) and MCP_AUTH_TOKEN in .env first.
   mcp:
     build:
       context: ./mcp
@@ -115,7 +115,7 @@ services:
       MCP_TRANSPORT: ${MCP_TRANSPORT:-sse}
       MCP_PORT: "9000"
     ports:
-      - "${MCP_PORT:-9000}:9000"
+      - "${MCP_BIND:-127.0.0.1}:${MCP_PORT:-9000}:9000"
     depends_on: [api]
     restart: unless-stopped
 

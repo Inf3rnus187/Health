@@ -1,34 +1,142 @@
-"""MCP client + tool-helper tests (no network, via MockTransport)."""
+"""MCP client, tools and access gate (no network: MockTransport / ASGI)."""
 
 from __future__ import annotations
 
+import json
+from typing import Any
+
 import httpx
+import pytest
+from starlette.types import Receive, Scope, Send
 
-from phoenix_mcp import client, server
+from phoenix_mcp import (
+    auth,
+    client,
+    server,
+    tools_data,
+    tools_record,
+    tools_reports,
+)
+from phoenix_mcp.app import mcp
+
+Seen = list[httpx.Request]
 
 
-def _handler(request: httpx.Request) -> httpx.Response:
-    if request.url.path.endswith("/metrics"):
-        return httpx.Response(200, json=[{"key": "body.weight"}])
-    return httpx.Response(404, json={"detail": "not found"})
+def _capture(status: int = 200, payload: Any = None) -> Seen:
+    """Route every call to a recorder answering ``payload``."""
+    seen: Seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        body = {"ok": 1} if payload is None else payload
+        return httpx.Response(status, json=body)
+
+    client.configure("http://test/api/v1", "tok", httpx.MockTransport(handler))
+    return seen
 
 
-async def test_get_returns_json_over_transport() -> None:
-    client.configure("http://test/api/v1", "tok", httpx.MockTransport(_handler))
-    data = await client.get("/metrics")
-    assert data[0]["key"] == "body.weight"
+async def test_every_area_of_the_hub_has_tools() -> None:
+    names = {tool.name for tool in await mcp.list_tools()}
+    expected = {
+        "health_summary",
+        "metric_overview",
+        "data_inventory",
+        "reconcile_data",
+        "medical_record",
+        "care_overview",
+        "document_text",
+        "analyze_all_documents",
+        "save_condition",
+        "save_treatment",
+        "metabolic_markers",
+        "evolution_trend",
+        "generate_report",
+        "get_report",
+        "api_get",
+        "api_call",
+    }
+    assert expected <= names
+    assert len(names) >= 50
 
 
-def test_summarize_groups_by_metric() -> None:
-    rows = [
-        {"metric_id": "m1", "value": 5},
-        {"metric_id": "m2", "value": "x"},
+async def test_requests_carry_the_token_and_drop_unset_params() -> None:
+    seen = _capture()
+    await tools_data.get_measurements("body.weight", start="2026-01-01")
+    request = seen[0]
+    assert request.headers["authorization"] == "Bearer tok"
+    assert request.url.path == "/api/v1/measurements"
+    assert dict(request.url.params) == {
+        "metric_key": "body.weight",
+        "start": "2026-01-01",
+    }
+
+
+async def test_daily_summary_filters_one_day() -> None:
+    seen = _capture(payload=[])
+    await tools_data.daily_summary("2026-09-16")
+    params = dict(seen[0].url.params)
+    assert params == {"start": "2026-09-16", "end": "2026-09-16"}
+
+
+def test_daily_values_carry_their_metric_name() -> None:
+    row = {"metric_id": "m1", "value_num": 4.0, "source": "manual"}
+    metrics = {"m1": {"key": "habit.cigarettes", "label": "Cigarettes"}}
+    named = tools_data.named(row, metrics)
+    assert named["key"] == "habit.cigarettes"
+    assert named["value"] == 4.0
+
+
+async def test_save_condition_creates_or_replaces() -> None:
+    seen = _capture()
+    await tools_record.save_condition("Asthme")
+    await tools_record.save_condition("Asthme", condition_id="c1")
+    assert [(r.method, r.url.path) for r in seen] == [
+        ("POST", "/api/v1/conditions"),
+        ("PUT", "/api/v1/conditions/c1"),
     ]
-    summary = server._summarize("2026-01-01", rows)
-    assert summary["count"] == 2
-    assert summary["values"]["m1"] == 5
+    assert json.loads(seen[1].content)["status"] == "active"
 
 
-def test_today_defaults() -> None:
-    assert server._today("2026-01-02") == "2026-01-02"
-    assert len(server._today(None)) == 10
+async def test_default_report_is_the_ai_synthesis() -> None:
+    seen = _capture()
+    await tools_reports.generate_report()
+    assert json.loads(seen[0].content)["type"] == "synthesis"
+
+
+async def test_api_errors_carry_the_api_message() -> None:
+    _capture(403, {"detail": "User session required"})
+    with pytest.raises(client.ApiError, match="403: User session required"):
+        await tools_record.medical_record()
+
+
+async def test_upload_sends_a_multipart_form() -> None:
+    seen = _capture()
+    await tools_record.upload_document("fs.pdf", "JVBERi0=", kind="imagerie")
+    body = seen[0].content
+    assert b'name="kind"' in body and b"imagerie" in body
+    assert b"%PDF-" in body
+
+
+async def _ok(scope: Scope, receive: Receive, send: Send) -> None:
+    await send({"type": "http.response.start", "status": 200, "headers": []})
+    await send({"type": "http.response.body", "body": b"ok"})
+
+
+async def test_network_access_needs_the_secret() -> None:
+    gated = auth.bearer_gate(_ok, "s3cret")
+    transport = httpx.ASGITransport(app=gated)
+    async with httpx.AsyncClient(transport=transport, base_url="http://t") as h:
+        assert (await h.get("/sse")).status_code == 401
+        bad = {"Authorization": "Bearer nope"}
+        assert (await h.get("/sse", headers=bad)).status_code == 401
+        good = {"Authorization": "Bearer s3cret"}
+        assert (await h.get("/sse", headers=good)).status_code == 200
+
+
+def test_network_transport_refuses_to_start_without_a_secret(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MCP_TRANSPORT", "sse")
+    monkeypatch.delenv("MCP_AUTH_TOKEN", raising=False)
+    with pytest.raises(SystemExit, match="MCP_AUTH_TOKEN"):
+        server.main()

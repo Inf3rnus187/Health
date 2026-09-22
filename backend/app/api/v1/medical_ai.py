@@ -1,13 +1,16 @@
-"""AI reading of medical documents: (re-)analyse one or all documents."""
+"""AI reading of medical documents: (re-)analyse, read the text."""
 
 from __future__ import annotations
+
+from typing import Any
 
 from fastapi import APIRouter, status
 
 from app.core.deps import SessionDep, UserDep
-from app.services import document_ai, medical
+from app.services import document_ai, document_text, medical
 
 router = APIRouter(prefix="/medical", tags=["medical"])
+_TEXT_MAX = 200_000  # characters returned (a long report fits)
 
 
 @router.post("/documents/analyze-all", status_code=status.HTTP_202_ACCEPTED)
@@ -32,3 +35,19 @@ async def analyze(
     doc = await medical.get_document(session, principal.user.id, doc_id)
     queued = await document_ai.queue(session, doc)
     return {"status": "queued" if queued else "unavailable"}
+
+
+@router.get("/documents/{doc_id}/text")
+async def text(
+    doc_id: str, principal: UserDep, session: SessionDep
+) -> dict[str, Any]:
+    """The text the AI reads from a document (OCR for a scan)."""
+    doc = await medical.get_document(session, principal.user.id, doc_id)
+    content = document_text.extract(medical.read_file(doc), doc.media_type)
+    return {
+        "id": doc.id,
+        "title": doc.title,
+        "scanned": content.scanned,
+        "images": len(content.images),
+        "text": content.text[:_TEXT_MAX],
+    }

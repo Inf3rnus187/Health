@@ -11,7 +11,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Annotated
 
-from fastapi import Depends, Query
+from fastapi import Depends
 from fastapi.security import (
     HTTPAuthorizationCredentials,
     HTTPBearer,
@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_session
 from app.core.errors import AuthError, ForbiddenError
 from app.core.jwt import decode_token
-from app.core.scopes import ALL_SCOPES
+from app.core.scopes import ALL_SCOPES, HUB_FULL
 from app.core.security import hash_token
 from app.models.base import as_utc, utcnow
 from app.models.token import ApiToken
@@ -43,7 +43,7 @@ class Principal:
 
     def has_scope(self, scope: str) -> bool:
         """Return whether the caller may use ``scope``."""
-        if self.source == "jwt":
+        if self.source == "jwt" or HUB_FULL in self.scopes:
             return True
         return scope in self.scopes
 
@@ -109,13 +109,21 @@ PrincipalDep = Annotated[Principal, Depends(get_current_principal)]
 
 
 async def get_user_principal(principal: PrincipalDep) -> Principal:
-    """Require an interactive user session (not an API token)."""
+    """Require the user: a session, or a token with ``hub:full`` (MCP)."""
+    if principal.source != "jwt" and HUB_FULL not in principal.scopes:
+        raise ForbiddenError("User session or hub:full token required")
+    return principal
+
+
+async def get_interactive_principal(principal: PrincipalDep) -> Principal:
+    """Require an interactive login (tokens, MFA, account: never a token)."""
     if principal.source != "jwt":
         raise ForbiddenError("User session required")
     return principal
 
 
 UserDep = Annotated[Principal, Depends(get_user_principal)]
+InteractiveDep = Annotated[Principal, Depends(get_interactive_principal)]
 
 ScopeDep = Callable[[Principal], Awaitable[Principal]]
 
@@ -124,44 +132,6 @@ def require_scope(scope: str) -> ScopeDep:
     """Return a dependency that enforces ``scope`` on the caller."""
 
     async def _dep(principal: PrincipalDep) -> Principal:
-        if not principal.has_scope(scope):
-            raise ForbiddenError(f"Missing scope: {scope}")
-        return principal
-
-    return _dep
-
-
-async def _resolve(
-    session: AsyncSession,
-    creds: HTTPAuthorizationCredentials | None,
-    token: str | None,
-) -> Principal | None:
-    """Resolve a principal from a bearer header or a ``token`` query."""
-    if creds is not None:
-        principal = await _from_jwt(session, creds.credentials)
-        return principal or await _from_token(session, creds.credentials)
-    if token:
-        return await _from_token(session, token)
-    return None
-
-
-def require_scope_flex(
-    scope: str,
-) -> Callable[..., Awaitable[Principal]]:
-    """Like ``require_scope`` but also accepts a ``?token=`` query param.
-
-    Lets an iPhone Shortcut authenticate an upload via the URL alone, with
-    no ``Authorization`` header to hand-enter.
-    """
-
-    async def _dep(
-        session: SessionDep,
-        creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
-        token: Annotated[str | None, Query()] = None,
-    ) -> Principal:
-        principal = await _resolve(session, creds, token)
-        if principal is None:
-            raise AuthError("Invalid credentials")
         if not principal.has_scope(scope):
             raise ForbiddenError(f"Missing scope: {scope}")
         return principal

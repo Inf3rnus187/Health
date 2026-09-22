@@ -10,12 +10,12 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 
 from app.core.deps import (
+    InteractiveDep,
     Principal,
     SessionDep,
-    UserDep,
     require_scope,
-    require_scope_flex,
 )
+from app.core.deps_query import require_scope_flex
 from app.core.scopes import INGEST_WATCH, WRITE_MEASUREMENTS
 from app.schemas.ingest import (
     HealthSyncPayload,
@@ -40,7 +40,7 @@ _NUM = re.compile(r"-?\d+(?:[.,]\d+)?")
 
 @router.get("/shortcut")
 async def download_shortcut(
-    principal: UserDep,
+    principal: InteractiveDep,
     session: SessionDep,
     base: Annotated[str, Query()] = "",
 ) -> Response:

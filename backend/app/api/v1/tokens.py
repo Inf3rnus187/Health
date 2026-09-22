@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, status
 
-from app.core.deps import SessionDep, UserDep
+from app.core.deps import InteractiveDep, SessionDep
 from app.models.token import ApiToken
 from app.schemas.common import Message
 from app.schemas.token import TokenCreate, TokenCreated, TokenOut
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/tokens", tags=["tokens"])
     "", response_model=TokenCreated, status_code=status.HTTP_201_CREATED
 )
 async def create(
-    body: TokenCreate, principal: UserDep, session: SessionDep
+    body: TokenCreate, principal: InteractiveDep, session: SessionDep
 ) -> TokenCreated:
     """Mint a scoped token; the secret is returned only once."""
     token, secret = await svc.create_token(
@@ -37,14 +37,16 @@ async def create(
 
 
 @router.get("", response_model=list[TokenOut])
-async def index(principal: UserDep, session: SessionDep) -> list[ApiToken]:
+async def index(
+    principal: InteractiveDep, session: SessionDep
+) -> list[ApiToken]:
     """List the caller's API tokens (secrets are never returned)."""
     return await svc.list_tokens(session, principal.user)
 
 
 @router.delete("/{token_id}", response_model=Message)
 async def delete(
-    token_id: str, principal: UserDep, session: SessionDep
+    token_id: str, principal: InteractiveDep, session: SessionDep
 ) -> Message:
     """Revoke one of the caller's API tokens."""
     await svc.revoke_token(session, principal.user, token_id)
