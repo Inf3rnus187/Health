@@ -91,3 +91,24 @@ async def test_compare_two_photos(
     assert response.status_code == 200
     assert response.json()["from_photo"]["id"] == first
     assert response.json()["to_photo"]["id"] == second
+
+
+async def test_pipeline_survives_ai_failure(
+    client: AsyncClient,
+    auth: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """If Ollama is down the photo stays viewable (status ai_failed)."""
+
+    async def boom(prompt: str, image: bytes, **_: object) -> dict:
+        raise RuntimeError("ollama unreachable")
+
+    monkeypatch.setattr(ollama, "vision_json", boom)
+    photo_id = await _upload(client, auth, "2026-04-03")
+    async with SessionFactory() as session:
+        await process(session, photo_id)
+
+    detail = await client.get(f"/api/v1/photos/{photo_id}", headers=auth)
+    assert detail.json()["status"] == "ai_failed"
+    served = await client.get(f"/api/v1/photos/{photo_id}/file", headers=auth)
+    assert served.status_code == 200

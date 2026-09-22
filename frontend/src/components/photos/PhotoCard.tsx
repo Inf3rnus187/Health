@@ -10,9 +10,10 @@ const ANGLE_LABEL: Record<string, string> = {
 
 const STATUS_LABEL: Record<string, string> = {
   received: 'Reçue',
-  processing: 'Analyse…',
+  normalized: 'Prête',
   analyzed: 'Analysée',
-  failed: 'Échec',
+  ai_failed: 'IA indisponible',
+  error: 'Image illisible',
 };
 
 function present(value: unknown): string {

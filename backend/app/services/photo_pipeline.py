@@ -28,33 +28,51 @@ _PROMPT = (
 
 
 async def process(session: AsyncSession, photo_id: str) -> None:
-    """Run the full pipeline for one photo, marking status/errors."""
+    """Store the normalized image, then analyse it (failures isolated)."""
     photo = await session.get(Photo, photo_id)
     if photo is None:
         return
-    try:
-        await _run(session, photo)
-    except Exception as exc:  # noqa: BLE001
-        photo.status = "error"
-        _log.warning("photo_failed", photo_id=photo_id, error=str(exc))
+    normalized = await _normalize(session, photo)
+    if normalized is not None:
+        await _analyse(session, photo, normalized)
     await session.commit()
 
 
-async def _run(session: AsyncSession, photo: Photo) -> None:
-    """Normalize, analyse and store results for ``photo``."""
-    target = photo_storage.normalized_path(photo.user_id, photo.id, photo.angle)
-    original = photo_storage.read_bytes(Path(photo.original_path))
-    normalized = imaging.normalize_bytes(original)
-    photo_storage.write_bytes(target, normalized)
-    photo.normalized_path = str(target)
-    photo.status = "normalized"
-    result = await ollama.vision_json(_PROMPT, normalized)
-    ref = await photos.latest_before(
-        session, photo.user_id, photo.angle, photo.taken_at
-    )
-    _store(session, photo, result, ref.id if ref else None)
-    await _inject(session, photo, result)
-    photo.status = "analyzed"
+async def _normalize(session: AsyncSession, photo: Photo) -> bytes | None:
+    """Decode/orient/store the image; ``error`` status only if this fails."""
+    try:
+        target = photo_storage.normalized_path(
+            photo.user_id, photo.id, photo.angle
+        )
+        original = photo_storage.read_bytes(Path(photo.original_path))
+        normalized = imaging.normalize_bytes(original)
+        photo_storage.write_bytes(target, normalized)
+        photo.normalized_path = str(target)
+        photo.status = "normalized"
+        return normalized
+    except Exception as exc:  # noqa: BLE001
+        photo.status = "error"
+        _log.warning(
+            "photo_normalize_failed", photo_id=photo.id, error=str(exc)
+        )
+        return None
+
+
+async def _analyse(
+    session: AsyncSession, photo: Photo, normalized: bytes
+) -> None:
+    """Run the AI analysis; the photo stays viewable if the AI is down."""
+    try:
+        result = await ollama.vision_json(_PROMPT, normalized)
+        ref = await photos.latest_before(
+            session, photo.user_id, photo.angle, photo.taken_at
+        )
+        _store(session, photo, result, ref.id if ref else None)
+        await _inject(session, photo, result)
+        photo.status = "analyzed"
+    except Exception as exc:  # noqa: BLE001
+        photo.status = "ai_failed"
+        _log.warning("photo_ai_failed", photo_id=photo.id, error=str(exc))
 
 
 def _store(

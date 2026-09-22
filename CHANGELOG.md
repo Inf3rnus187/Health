@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Photo AI failure no longer marks the photo broken**: the pipeline now
+  stores/normalises the image and analyses it in two isolated steps. If
+  Ollama is unreachable the photo stays viewable with status `ai_failed`
+  ("IA indisponible") instead of the whole photo showing `error`; `error`
+  is reserved for an image that genuinely can't be decoded.
 - **Home tiles show the current reading**: an instant metric's tile (heart
   rate, SpO2, HRV, respiratory rate, weight…) now shows the **latest raw
   sample's value and its real time**, instead of the day's average stamped
