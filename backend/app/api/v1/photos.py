@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from app.core.deps import PrincipalDep, SessionDep
+from app.core.deps import ReaderDep, SessionDep
 from app.core.errors import NotFoundError
 from app.models.photo import Photo, PhotoAnalysis
 from app.schemas.photo import (
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/photos", tags=["photos"])
 
 @router.get("", response_model=list[PhotoOut])
 async def index(
-    principal: PrincipalDep,
+    principal: ReaderDep,
     session: SessionDep,
     angle: Annotated[str | None, Query()] = None,
 ) -> list[Photo]:
@@ -31,7 +31,7 @@ async def index(
 
 @router.get("/compare", response_model=PhotoComparison)
 async def compare(
-    principal: PrincipalDep,
+    principal: ReaderDep,
     session: SessionDep,
     from_id: Annotated[str, Query(alias="from")],
     to_id: Annotated[str, Query(alias="to")],
@@ -49,7 +49,7 @@ async def compare(
 
 @router.get("/{photo_id}/analysis", response_model=PhotoAnalysisOut)
 async def analysis(
-    photo_id: str, principal: PrincipalDep, session: SessionDep
+    photo_id: str, principal: ReaderDep, session: SessionDep
 ) -> PhotoAnalysis:
     """Return the latest AI analysis for one photo."""
     await svc.get_photo(session, principal.user.id, photo_id)
@@ -61,7 +61,7 @@ async def analysis(
 
 @router.get("/{photo_id}", response_model=PhotoOut)
 async def detail(
-    photo_id: str, principal: PrincipalDep, session: SessionDep
+    photo_id: str, principal: ReaderDep, session: SessionDep
 ) -> Photo:
     """Return one photo's metadata."""
     return await svc.get_photo(session, principal.user.id, photo_id)

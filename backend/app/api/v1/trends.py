@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from app.core.deps import PrincipalDep, SessionDep
+from app.core.deps import ReaderDep, SessionDep
 from app.core.errors import InvalidInputError
 from app.schemas.measurement import SeriesPoint, TrendOut
 from app.services import trends as svc
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/trends", tags=["trends"])
 
 @router.get("", response_model=TrendOut)
 async def index(
-    principal: PrincipalDep,
+    principal: ReaderDep,
     session: SessionDep,
     metric_key: Annotated[str, Query()],
     bucket: Annotated[str, Query()] = "day",

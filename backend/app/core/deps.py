@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_session
 from app.core.errors import AuthError, ForbiddenError
 from app.core.jwt import decode_token
-from app.core.scopes import ALL_SCOPES, HUB_FULL
+from app.core.scopes import ALL_SCOPES, HUB_FULL, READ_ALL
 from app.core.security import hash_token
 from app.models.base import as_utc, utcnow
 from app.models.token import ApiToken
@@ -137,3 +137,8 @@ def require_scope(scope: str) -> ScopeDep:
         return principal
 
     return _dep
+
+
+#: Reading health data: a session, or a token with ``read:all`` (or
+#: ``hub:full``). Write-only tokens (Shortcut, CSV, Auto Export) cannot.
+ReaderDep = Annotated[Principal, Depends(require_scope(READ_ALL))]

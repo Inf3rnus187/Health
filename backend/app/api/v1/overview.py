@@ -6,7 +6,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Query
 
-from app.core.deps import PrincipalDep, SessionDep
+from app.core.deps import ReaderDep, SessionDep
 from app.services import metric_overview
 
 router = APIRouter(prefix="/metrics", tags=["metrics"])
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/metrics", tags=["metrics"])
 @router.get("/{key}/overview")
 async def overview(
     key: str,
-    principal: PrincipalDep,
+    principal: ReaderDep,
     session: SessionDep,
     days: Annotated[int, Query(ge=7, le=36500)] = 365,
 ) -> dict[str, Any]:

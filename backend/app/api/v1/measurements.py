@@ -8,12 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status
 
 from app.core.constants import AGGREGATIONS
-from app.core.deps import (
-    Principal,
-    PrincipalDep,
-    SessionDep,
-    require_scope,
-)
+from app.core.deps import Principal, ReaderDep, SessionDep, require_scope
 from app.core.errors import InvalidInputError
 from app.core.scopes import WRITE_MEASUREMENTS
 from app.models.measurement import Measurement
@@ -65,7 +60,7 @@ async def create(
 
 @router.get("/series", response_model=Series)
 async def series(
-    principal: PrincipalDep,
+    principal: ReaderDep,
     session: SessionDep,
     metric_key: Annotated[str, Query()],
     agg: Annotated[str, Query()] = "avg",
@@ -87,7 +82,7 @@ async def series(
 
 @router.get("", response_model=list[MeasurementOut])
 async def index(
-    principal: PrincipalDep,
+    principal: ReaderDep,
     session: SessionDep,
     metric_key: Annotated[str | None, Query()] = None,
     start: Annotated[date | None, Query()] = None,

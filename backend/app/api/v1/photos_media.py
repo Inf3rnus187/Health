@@ -12,8 +12,9 @@ from fastapi.responses import Response
 
 from app.core.deps import (
     Principal,
-    PrincipalDep,
+    ReaderDep,
     SessionDep,
+    UserDep,
     require_scope,
 )
 from app.core.scopes import INGEST_PHOTO
@@ -65,7 +66,7 @@ async def upload(
 
 @router.post("/photos/{photo_id}/analyze", status_code=status.HTTP_202_ACCEPTED)
 async def reanalyze(
-    photo_id: str, principal: PrincipalDep, session: SessionDep
+    photo_id: str, principal: UserDep, session: SessionDep
 ) -> dict[str, str]:
     """Re-queue the normalize + AI analysis for an existing photo."""
     photo = await svc.get_photo(session, principal.user.id, photo_id)
@@ -74,9 +75,7 @@ async def reanalyze(
 
 
 @router.delete("/photos", status_code=status.HTTP_200_OK)
-async def remove_all(
-    principal: PrincipalDep, session: SessionDep
-) -> dict[str, int]:
+async def remove_all(principal: UserDep, session: SessionDep) -> dict[str, int]:
     """Delete every photo of the caller (files + analyses + rows)."""
     count = await photo_delete.delete_all(session, principal.user.id)
     await audit.record(
@@ -92,7 +91,7 @@ async def remove_all(
 
 @router.delete("/photos/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove(
-    photo_id: str, principal: PrincipalDep, session: SessionDep
+    photo_id: str, principal: UserDep, session: SessionDep
 ) -> Response:
     """Delete one of the caller's photos."""
     await photo_delete.delete_one(session, principal.user.id, photo_id)
@@ -109,7 +108,7 @@ async def remove(
 
 @router.get("/photos/{photo_id}/file")
 async def download(
-    photo_id: str, principal: PrincipalDep, session: SessionDep
+    photo_id: str, principal: ReaderDep, session: SessionDep
 ) -> Response:
     """Return a photo's file (decrypted, normalized if ready) to its owner."""
     photo = await svc.get_photo(session, principal.user.id, photo_id)

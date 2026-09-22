@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 from fastapi.responses import Response
 
-from app.core.deps import PrincipalDep, SessionDep
+from app.core.deps import ReaderDep, SessionDep
 from app.services import export as svc
 from app.services import export_formats
 
@@ -17,7 +17,7 @@ router = APIRouter(tags=["exports"])
 
 @router.get("/export")
 async def export_data(
-    principal: PrincipalDep,
+    principal: ReaderDep,
     session: SessionDep,
     fmt: Annotated[str, Query(alias="format")] = "csv",
     domain: Annotated[str | None, Query()] = None,

@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, UploadFile
 from fastapi.responses import Response
 
-from app.core.deps import PrincipalDep, SessionDep, UserDep
+from app.core.deps import ReaderDep, SessionDep, UserDep
 from app.models.health_raw import ClinicalDocument
 from app.schemas.health_raw import (
     ClinicalDocOut,
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/clinical", tags=["clinical"])
 
 @router.get("/observations", response_model=ObservationPage)
 async def observations(
-    principal: PrincipalDep,
+    principal: ReaderDep,
     session: SessionDep,
     search: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=500)] = 25,
@@ -42,16 +42,14 @@ async def observations(
 
 @router.get("/document", response_model=ClinicalDocOut | None)
 async def document(
-    principal: PrincipalDep, session: SessionDep
+    principal: ReaderDep, session: SessionDep
 ) -> ClinicalDocument | None:
     """Return the stored CDA document summary, or null."""
     return await svc.document(session, principal.user.id)
 
 
 @router.get("/document/file")
-async def document_file(
-    principal: PrincipalDep, session: SessionDep
-) -> Response:
+async def document_file(principal: ReaderDep, session: SessionDep) -> Response:
     """Download the raw CDA XML document."""
     data = await svc.document_bytes(session, principal.user.id)
     return Response(content=data, media_type="application/xml")

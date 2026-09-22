@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, status
 from fastapi.responses import FileResponse
 
-from app.core.deps import PrincipalDep, SessionDep
+from app.core.deps import ReaderDep, SessionDep
 from app.core.errors import NotFoundError
 from app.models.report import Report
 from app.schemas.export import ReportCreate, ReportOut
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 
 @router.post("", response_model=ReportOut, status_code=status.HTTP_202_ACCEPTED)
 async def create(
-    body: ReportCreate, principal: PrincipalDep, session: SessionDep
+    body: ReportCreate, principal: ReaderDep, session: SessionDep
 ) -> Report:
     """Queue a report; build it inline if no worker is available."""
     report = await svc.create_report(
@@ -44,14 +44,14 @@ async def create(
 
 
 @router.get("", response_model=list[ReportOut])
-async def index(principal: PrincipalDep, session: SessionDep) -> list[Report]:
+async def index(principal: ReaderDep, session: SessionDep) -> list[Report]:
     """List the caller's recent reports."""
     return await svc.list_reports(session, principal.user.id)
 
 
 @router.get("/{report_id}", response_model=ReportOut)
 async def detail(
-    report_id: str, principal: PrincipalDep, session: SessionDep
+    report_id: str, principal: ReaderDep, session: SessionDep
 ) -> Report:
     """Return a report's status and metadata."""
     return await svc.get_report(session, principal.user.id, report_id)
@@ -59,7 +59,7 @@ async def detail(
 
 @router.get("/{report_id}/file")
 async def download(
-    report_id: str, principal: PrincipalDep, session: SessionDep
+    report_id: str, principal: ReaderDep, session: SessionDep
 ) -> FileResponse:
     """Stream a finished report file to its owner."""
     report = await svc.get_report(session, principal.user.id, report_id)

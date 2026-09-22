@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from app.core.deps import PrincipalDep, SessionDep
+from app.core.deps import ReaderDep, SessionDep
 from app.schemas.dashboard import DashboardOut
 from app.services import dashboard as svc
 
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 @router.get("/{domain}", response_model=DashboardOut)
 async def domain_dashboard(
     domain: str,
-    principal: PrincipalDep,
+    principal: ReaderDep,
     session: SessionDep,
     window: Annotated[int, Query(ge=1, le=365)] = 7,
 ) -> DashboardOut:

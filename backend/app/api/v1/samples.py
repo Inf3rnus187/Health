@@ -7,7 +7,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from app.core.deps import PrincipalDep, SessionDep
+from app.core.deps import ReaderDep, SessionDep
 from app.schemas.health_raw import SampleOut, SamplePage
 from app.services import samples as svc
 
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/samples", tags=["samples"])
 
 @router.get("", response_model=SamplePage)
 async def index(
-    principal: PrincipalDep,
+    principal: ReaderDep,
     session: SessionDep,
     metric_key: Annotated[str | None, Query()] = None,
     start: Annotated[date | None, Query()] = None,

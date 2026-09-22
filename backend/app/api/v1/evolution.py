@@ -7,7 +7,13 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, status
 
-from app.core.deps import Principal, PrincipalDep, SessionDep, require_scope
+from app.core.deps import (
+    Principal,
+    ReaderDep,
+    SessionDep,
+    UserDep,
+    require_scope,
+)
 from app.core.scopes import WRITE_MEASUREMENTS
 from app.schemas.evolution import ProfileIn
 from app.services import metabolic, photo_trend
@@ -20,15 +26,13 @@ WriteDep = Annotated[Principal, Depends(require_scope(WRITE_MEASUREMENTS))]
 
 
 @router.get("/trend")
-async def trend(principal: PrincipalDep, session: SessionDep) -> dict[str, Any]:
+async def trend(principal: ReaderDep, session: SessionDep) -> dict[str, Any]:
     """Per-angle, per-criterion long-term photo score evolution."""
     return await photo_trend.trend(session, principal.user.id)
 
 
 @router.get("/markers")
-async def markers(
-    principal: PrincipalDep, session: SessionDep
-) -> dict[str, Any]:
+async def markers(principal: ReaderDep, session: SessionDep) -> dict[str, Any]:
     """Validated metabolic / liver markers from the latest data."""
     return await metabolic.markers(session, principal.user.id)
 
@@ -47,7 +51,7 @@ async def profile(
 
 @router.post("/reanalyze-all", status_code=status.HTTP_202_ACCEPTED)
 async def reanalyze_all(
-    principal: PrincipalDep, session: SessionDep
+    principal: UserDep, session: SessionDep
 ) -> dict[str, int]:
     """Re-run the current method over every photo, oldest first."""
     photos = await photo_svc.list_photos(session, principal.user.id)

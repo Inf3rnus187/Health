@@ -7,12 +7,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
 
-from app.core.deps import (
-    Principal,
-    PrincipalDep,
-    SessionDep,
-    require_scope,
-)
+from app.core.deps import Principal, ReaderDep, SessionDep, require_scope
 from app.core.scopes import WRITE_MEASUREMENTS
 from app.models.event import Event
 from app.models.measurement import Measurement
@@ -70,7 +65,7 @@ async def attach(
 
 @router.get("", response_model=list[EventOut])
 async def index(
-    principal: PrincipalDep,
+    principal: ReaderDep,
     session: SessionDep,
     event_type: Annotated[str | None, Query()] = None,
     start: Annotated[date | None, Query()] = None,

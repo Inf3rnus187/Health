@@ -141,6 +141,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **API tokens need `read:all` to read health data.** The scope was never
+  checked: any token — including the write-only one embedded in the
+  iPhone Shortcut or the CSV token — could read the export, the values,
+  samples, summary, markers, photos, reports, Apple records and the CDA
+  record. These routes now answer 403 without `read:all` (sessions and
+  `hub:full` tokens are unaffected). Existing tokens used only to send
+  data keep working; a token that must read needs `read:all` added.
+- A token without `read:all` can no longer create reports, and deleting
+  all photos, deleting or re-analysing one photo, re-analysing the photo
+  history and resetting the Apple import now need a login or `hub:full`
+  (previously any token, for photos, or a `write:measurements` token,
+  for the reset).
 - The MCP server's network transports now require `MCP_AUTH_TOKEN`
   (`Authorization: Bearer …`, 401 otherwise) and refuse to start without
   it; compose publishes its port on 127.0.0.1 unless `MCP_BIND` says

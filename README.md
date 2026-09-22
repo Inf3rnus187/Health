@@ -43,7 +43,7 @@ This repository currently implements **Phases 1–2** of the
 | **Photo pipeline** (upload → EXIF‑strip/normalize → Ollama vision → compare) | ✅ |
 | **Dashboards** per domain (`/dashboard/{domain}` + React domain tabs) | ✅ |
 | **Exports** CSV/JSON/XLSX/FHIR + async **clinical PDF** reports | ✅ |
-| **MCP server** — 12 hub tools as a REST‑API client (scoped token) | ✅ |
+| **MCP server** — 53 tools covering the whole hub, as a REST‑API client (`hub:full` token + access secret) | ✅ |
 | **Automations** (trigger→action: reminder/capture) + run endpoint | ✅ |
 | **Hardening**: optional TOTP MFA, at‑rest media encryption, RGPD erasure | ✅ |
 | **Supply chain**: gitleaks, pip‑audit, pnpm audit, Trivy, syft SBOM (CI) | ✅ |
@@ -154,6 +154,12 @@ curl -s $BASE/tokens -H "Authorization: Bearer $ACCESS" \
   -d '{"name":"apple-watch","scopes":["ingest:watch","write:measurements"]}'
 # → returns the plaintext token ONCE; store it in your Shortcut.
 ```
+
+Scopes are least-privilege: `ingest:*` and `write:*` tokens can only
+**send** data. Reading health data (values, export, reports, photos,
+record) needs `read:all`; `hub:full` (MCP / assistant) can do everything
+the web app does except managing tokens, 2FA and the account. Bulk
+deletions (all photos, Apple import reset) need a login or `hub:full`.
 
 Adding a metric is also documented step‑by‑step in
 [docs/guides/add-a-metric.md](docs/guides/add-a-metric.md).

@@ -12,6 +12,7 @@ from app.core.config import get_settings
 from app.core.deps import (
     Principal,
     SessionDep,
+    UserDep,
     require_scope,
 )
 from app.core.deps_query import require_scope_flex
@@ -74,7 +75,7 @@ async def get(
 
 
 @router.post("/reset", response_model=Message)
-async def reset(principal: WriteDep, session: SessionDep) -> Message:
+async def reset(principal: UserDep, session: SessionDep) -> Message:
     """Delete every Apple-imported sample, workout, ECG and route."""
     await samples.wipe_imported(session, principal.user.id)
     await audit.record(
