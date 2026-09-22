@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { listAppointments, listConditions, listTreatments } from '../api/care';
+import { RECORD_KEYS } from './useRecord';
 
 export const useConditions = () =>
   useQuery({ queryKey: ['conditions'], queryFn: listConditions });
@@ -18,6 +19,10 @@ export function useCareMutation<A>(
   const client = useQueryClient();
   return useMutation({
     mutationFn: fn,
-    onSuccess: () => void client.invalidateQueries({ queryKey: [key] }),
+    onSuccess: () => {
+      for (const name of [key, ...RECORD_KEYS]) {
+        void client.invalidateQueries({ queryKey: [name] });
+      }
+    },
   });
 }

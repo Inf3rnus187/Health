@@ -8,6 +8,7 @@ import {
   uploadMedicalDoc,
 } from '../api/medical';
 import type { MedicalDoc } from '../api/types';
+import { RECORD_KEYS } from './useRecord';
 
 const POLL_MS = 5000;
 
@@ -25,8 +26,10 @@ export function useMedicalDocs() {
     queryKey: ['medical'],
     queryFn: async () => {
       const docs = await listMedicalDocs();
-      // New values may feed the markers once a reading completes.
-      void client.invalidateQueries({ queryKey: ['evolution-markers'] });
+      // New values may feed the markers and the record once read.
+      for (const name of ['evolution-markers', ...RECORD_KEYS]) {
+        void client.invalidateQueries({ queryKey: [name] });
+      }
       return docs;
     },
     refetchInterval: (query) => (pending(query.state.data) ? POLL_MS : false),

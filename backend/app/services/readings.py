@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, time
 from typing import NamedTuple
 
 from sqlalchemy import select
@@ -41,14 +41,26 @@ async def latest(
     day_value = float(daily.value_num or 0.0)
     sample = await _newest_sample(session, user_id, metric.id)
     if sample is None:
-        return Reading(day_value, daily.recorded_at, daily.source)
+        return Reading(day_value, measured_at(daily), daily.source)
     value, at, unit, source = sample
     if metric.aggregation_hint == "sum" or value is None:
         return Reading(day_value, at, daily.source)
     explicit = daily.source not in SYNCED
-    if explicit and _aware(daily.recorded_at) > _aware(at):
-        return Reading(day_value, daily.recorded_at, daily.source)
+    if explicit and measured_at(daily) > _aware(at):
+        return Reading(day_value, measured_at(daily), daily.source)
     return Reading(convert(value, unit or "", metric.unit), at, source)
+
+
+def measured_at(daily: Measurement) -> datetime:
+    """When a daily value was measured, not when it was entered.
+
+    A lab result imported today for last week's blood test is dated by
+    its day; an entry typed on its own day keeps its time.
+    """
+    at = _aware(daily.recorded_at)
+    if at.date() == daily.date_key:
+        return at
+    return datetime.combine(daily.date_key, time(12), tzinfo=UTC)
 
 
 async def _newest_sample(

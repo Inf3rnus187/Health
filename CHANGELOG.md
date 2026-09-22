@@ -75,6 +75,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Reconcile** also aligns stored data with the catalog (labels,
   domains, numeric category events, HAE percentages) and folds the old
   stray keys into their canonical metric. It does not call any AI model.
+- **A real medical record (Dossier)** built from the documents
+  (`GET /medical/record`): diagnoses and medications the AI read in
+  reports and prescriptions but not yet declared are offered for
+  confirmation (never added silently; each links its documents); every
+  lab / FibroScan result with its latest and previous value, change,
+  history and the document it was read from; one chronology of
+  documents, diagnoses, treatment starts / stops and appointments.
+- **Suivi by condition** (`GET /care/overview`): each declared condition
+  with the indicators that follow it (e.g. hepatic steatosis → CAP,
+  stiffness, ALAT / ASAT / GGT, triglycerides, weight, waist; diabetes →
+  HbA1c, fasting glucose…; smoking → cigarettes, breath, SpO2), their
+  latest value, change and curve, and the documents mentioning it.
 - `GET /catalog/domains`: French name of every domain, used by the
   dashboard tabs (Apple Santé and the hub's own domains — tabac, PPC,
   biologie…).
@@ -94,6 +106,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   shared one target). The canonical metric is now created from its spec
   and the old rows folded into it; a manual entry or a query on an old key
   (`stairs.floors`, `sleep.spo2_avg`…) reads and writes the canonical one.
+- A lab value imported today for an older blood test was shown as
+  measured today, and could even hide newer Apple weigh-ins; a value is
+  now dated by its measurement day everywhere.
 
 ### Changed
 

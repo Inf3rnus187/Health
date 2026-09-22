@@ -11,12 +11,12 @@ Each call's answer length is capped; a failure is reported, not raised.
 
 from __future__ import annotations
 
-import unicodedata
 from typing import Any
 
 from app.core import ollama
 from app.services import document_prompt
 from app.services.document_text import DocContent
+from app.services.textfold import fold as _fold
 
 _VALUES_TOKENS = 1024
 _SUMMARY_TOKENS = 900
@@ -96,10 +96,3 @@ def _med(item: dict[str, Any]) -> dict[str, str]:
 def _list(value: Any) -> list[Any]:
     """A JSON list, or empty."""
     return value[:20] if isinstance(value, list) else []
-
-
-def _fold(text: str) -> str:
-    """Lowercase, accent-free, single-spaced text for containment tests."""
-    plain = unicodedata.normalize("NFKD", text)
-    plain = "".join(c for c in plain if not unicodedata.combining(c))
-    return " ".join(plain.lower().split())

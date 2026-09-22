@@ -1329,3 +1329,77 @@ a.tile {
 a.tile:hover {
   border-color: var(--color-primary);
 }
+
+/* Dossier: source documents, chronology; Suivi: indicators per condition */
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-primary);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  text-decoration: underline;
+}
+
+.doc-links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.timeline {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.timeline-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  border-left: 3px solid var(--color-primary);
+  padding-left: 10px;
+}
+
+.timeline-date {
+  font-variant-numeric: tabular-nums;
+  min-width: 88px;
+}
+
+.timeline-detail {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+}
+
+.follow-condition {
+  border-top: 1px solid var(--color-grid);
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.follow-condition h3 {
+  margin: 0 0 8px;
+}
+
+.follow-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 8px;
+}
+
+.follow-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 8px;
+  min-width: 0;
+}
