@@ -1,17 +1,29 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
 
 import { deletePhoto, reanalyzePhoto, type Photo } from '../../api/photos';
 import { usePhotoAnalysis } from '../../hooks/usePhotos';
 import { AuthImage } from './AuthImage';
 
+const REFRESH_DELAYS = [1500, 4000, 8000, 13000];
+
+function refreshLater(client: QueryClient, id: string): void {
+  for (const delay of REFRESH_DELAYS) {
+    setTimeout(() => {
+      void client.invalidateQueries({ queryKey: ['photos'] });
+      void client.invalidateQueries({ queryKey: ['photo-analysis', id] });
+    }, delay);
+  }
+}
+
 function ReanalyzeButton({ id }: { id: string }) {
   const client = useQueryClient();
   const mutation = useMutation({
     mutationFn: () => reanalyzePhoto(id),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ['photos'] });
-      void client.invalidateQueries({ queryKey: ['photo-analysis', id] });
-    },
+    onSuccess: () => refreshLater(client, id),
   });
   return (
     <button
