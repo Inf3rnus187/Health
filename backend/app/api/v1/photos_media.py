@@ -63,6 +63,16 @@ async def upload(
     return photo
 
 
+@router.post("/photos/{photo_id}/analyze", status_code=status.HTTP_202_ACCEPTED)
+async def reanalyze(
+    photo_id: str, principal: PrincipalDep, session: SessionDep
+) -> dict[str, str]:
+    """Re-queue the normalize + AI analysis for an existing photo."""
+    photo = await svc.get_photo(session, principal.user.id, photo_id)
+    await enqueue("analyze_photo", photo.id)
+    return {"status": "queued"}
+
+
 @router.get("/photos/{photo_id}/file")
 async def download(
     photo_id: str, principal: PrincipalDep, session: SessionDep

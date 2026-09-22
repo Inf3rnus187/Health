@@ -150,3 +150,13 @@ async def test_pipeline_handles_heic(
     served = await client.get(f"/api/v1/photos/{photo_id}/file", headers=auth)
     assert served.status_code == 200
     assert served.headers["content-type"].startswith("image/")
+
+
+async def test_reanalyze_requeues(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """Re-analyze re-queues the pipeline for an existing photo."""
+    photo_id = await _upload(client, auth, "2026-04-05")
+    resp = await client.post(f"/api/v1/photos/{photo_id}/analyze", headers=auth)
+    assert resp.status_code == 202
+    assert resp.json()["status"] == "queued"

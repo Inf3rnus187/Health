@@ -29,6 +29,10 @@ export function fetchAnalysis(id: string): Promise<PhotoAnalysis> {
   return api<PhotoAnalysis>(`/photos/${id}/analysis`);
 }
 
+export function reanalyzePhoto(id: string): Promise<{ status: string }> {
+  return api<{ status: string }>(`/photos/${id}/analyze`, { method: 'POST' });
+}
+
 export async function fetchPhotoBlob(id: string): Promise<string> {
   const token = getAccessToken();
   const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
