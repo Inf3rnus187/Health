@@ -21,6 +21,44 @@ export interface PhotoAnalysis {
   created_at: string;
 }
 
+// Method v2 `raw_output`: quality gate, blinded 0–10 scores per criterion
+// and counterbalanced paired comparisons (deltas in [-2, 2], < 0 = less
+// visible fat). Old v1 analyses have no `method` key.
+export interface PhotoQuality {
+  ok: boolean;
+  brightness?: number;
+  sharpness?: number;
+  width?: number;
+  height?: number;
+  issues?: string[];
+}
+
+export interface PhotoComparison {
+  horizon: string;
+  label: string;
+  ref_photo_id: string | null;
+  ref_date: string | null;
+  deltas: Record<string, number>;
+  consistent?: Record<string, boolean>;
+}
+
+export interface AnalysisV2 {
+  method: 'v2';
+  quality?: PhotoQuality;
+  scores?: Record<string, number>;
+  labels?: Record<string, string>;
+  confidence?: number | null;
+  pose_ok?: boolean | null;
+  remarks?: string | null;
+  comparisons?: PhotoComparison[];
+}
+
+export function asAnalysisV2(
+  raw: Record<string, unknown> | null | undefined,
+): AnalysisV2 | null {
+  return raw?.method === 'v2' ? (raw as unknown as AnalysisV2) : null;
+}
+
 export function listPhotos(angle?: string): Promise<Photo[]> {
   return api<Photo[]>(`/photos${angle ? `?angle=${angle}` : ''}`);
 }

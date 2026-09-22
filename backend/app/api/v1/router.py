@@ -17,6 +17,7 @@ from app.api.v1 import (
     conditions,
     dashboard,
     events,
+    evolution,
     export,
     health_records,
     imports,
@@ -60,6 +61,7 @@ api_router.include_router(biology.router)
 api_router.include_router(capture.router)
 api_router.include_router(photos.router)
 api_router.include_router(photos_media.router)
+api_router.include_router(evolution.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(trends.router)
 api_router.include_router(summary.router)

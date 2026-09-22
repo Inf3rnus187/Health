@@ -46,7 +46,6 @@ class Settings(BaseSettings):
     ollama_url: str = "http://host.docker.internal:11434"
     ollama_text_model: str = "llama3.1"
     ollama_vision_model: str = "llava"
-    photo_prompt_version: str = "v1"
     max_upload_mb: int = 15
     media_encryption_key: str | None = None
     mfa_issuer: str = "Phoenix Health Hub"

@@ -1,4 +1,4 @@
-import type { HTMLInputTypeAttribute } from 'react';
+import type { HTMLAttributes, HTMLInputTypeAttribute } from 'react';
 
 interface FieldProps {
   id: string;
@@ -6,6 +6,8 @@ interface FieldProps {
   value: string;
   onChange: (value: string) => void;
   type?: HTMLInputTypeAttribute;
+  placeholder?: string;
+  inputMode?: HTMLAttributes<HTMLInputElement>['inputMode'];
 }
 
 export function Field(props: FieldProps) {
@@ -17,6 +19,8 @@ export function Field(props: FieldProps) {
         className="input"
         type={props.type ?? 'text'}
         value={props.value}
+        placeholder={props.placeholder}
+        inputMode={props.inputMode}
         onChange={(event) => props.onChange(event.target.value)}
       />
     </>

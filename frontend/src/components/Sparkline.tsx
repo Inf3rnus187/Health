@@ -1,9 +1,11 @@
 const W = 120;
 const H = 28;
 
-function path(values: number[]): string {
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+type Domain = [number, number];
+
+function path(values: number[], domain?: Domain): string {
+  const min = domain ? domain[0] : Math.min(...values);
+  const max = domain ? domain[1] : Math.max(...values);
   const span = max - min || 1;
   const step = values.length > 1 ? W / (values.length - 1) : W;
   return values
@@ -15,19 +17,27 @@ function path(values: number[]): string {
     .join(' ');
 }
 
+/** `domain` pins the vertical scale; by default it fits the values. */
 export function Sparkline({
   values,
   color,
+  domain,
 }: {
   values: number[];
   color: string;
+  domain?: Domain;
 }) {
   if (values.length < 2) {
     return null;
   }
   return (
     <svg className="spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
-      <path d={path(values)} fill="none" stroke={color} strokeWidth={2} />
+      <path
+        d={path(values, domain)}
+        fill="none"
+        stroke={color}
+        strokeWidth={2}
+      />
     </svg>
   );
 }

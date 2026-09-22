@@ -4,9 +4,16 @@ import {
   type QueryClient,
 } from '@tanstack/react-query';
 
-import { deletePhoto, reanalyzePhoto, type Photo } from '../../api/photos';
+import {
+  asAnalysisV2,
+  deletePhoto,
+  reanalyzePhoto,
+  type Photo,
+} from '../../api/photos';
 import { usePhotoAnalysis } from '../../hooks/usePhotos';
+import { AnalysisV2View } from './AnalysisV2';
 import { AuthImage } from './AuthImage';
+import { angleLabel, STATUS_LABEL } from './labels';
 
 const REFRESH_DELAYS = [1500, 4000, 8000, 13000];
 
@@ -15,6 +22,7 @@ function refreshLater(client: QueryClient, id: string): void {
     setTimeout(() => {
       void client.invalidateQueries({ queryKey: ['photos'] });
       void client.invalidateQueries({ queryKey: ['photo-analysis', id] });
+      void client.invalidateQueries({ queryKey: ['evolution-trend'] });
     }, delay);
   }
 }
@@ -41,7 +49,10 @@ function DeleteButton({ id }: { id: string }) {
   const client = useQueryClient();
   const mutation = useMutation({
     mutationFn: () => deletePhoto(id),
-    onSuccess: () => void client.invalidateQueries({ queryKey: ['photos'] }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['photos'] });
+      void client.invalidateQueries({ queryKey: ['evolution-trend'] });
+    },
   });
   const onClick = () => {
     if (window.confirm('Supprimer cette photo ?')) {
@@ -60,20 +71,6 @@ function DeleteButton({ id }: { id: string }) {
   );
 }
 
-const ANGLE_LABEL: Record<string, string> = {
-  face: 'Face',
-  profil: 'Profil',
-  dos: 'Dos',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  received: 'Reçue',
-  normalized: 'Prête',
-  analyzed: 'Analysée',
-  ai_failed: 'IA indisponible',
-  error: 'Image illisible',
-};
-
 function present(value: unknown): string {
   if (value === null || value === undefined) {
     return '—';
@@ -84,15 +81,9 @@ function present(value: unknown): string {
   return String(value);
 }
 
-function Analysis({ id }: { id: string }) {
-  const { data, isError, isLoading } = usePhotoAnalysis(id);
-  if (isLoading) {
-    return <p className="muted">Analyse…</p>;
-  }
-  if (isError || !data) {
-    return <p className="muted">Analyse IA en attente.</p>;
-  }
-  const rows = Object.entries(data.raw_output ?? {});
+// v1 analyses (no `method` key): generic key/value dump.
+function GenericAnalysis({ raw }: { raw: Record<string, unknown> | null }) {
+  const rows = Object.entries(raw ?? {});
   return (
     <dl className="photo-analysis">
       {rows.map(([key, value]) => (
@@ -105,17 +96,32 @@ function Analysis({ id }: { id: string }) {
   );
 }
 
+function Analysis({ id }: { id: string }) {
+  const { data, isError, isLoading } = usePhotoAnalysis(id);
+  if (isLoading) {
+    return <p className="muted photo-pending">Analyse…</p>;
+  }
+  if (isError || !data) {
+    return <p className="muted photo-pending">Analyse IA en attente.</p>;
+  }
+  const v2 = asAnalysisV2(data.raw_output);
+  if (v2) {
+    return <AnalysisV2View data={v2} />;
+  }
+  return <GenericAnalysis raw={data.raw_output} />;
+}
+
 export function PhotoCard({ photo }: { photo: Photo }) {
   return (
     <div className="photo-card">
       <AuthImage id={photo.id} alt={photo.angle} />
       <div className="photo-meta">
-        <strong>{ANGLE_LABEL[photo.angle] ?? photo.angle}</strong>
+        <strong>{angleLabel(photo.angle)}</strong>
         <span className="muted">{photo.date_key}</span>
         {photo.linked_weight != null && (
           <span className="muted">{photo.linked_weight} kg</span>
         )}
-        <span className="badge">
+        <span className={`badge status-${photo.status}`}>
           {STATUS_LABEL[photo.status] ?? photo.status}
         </span>
       </div>

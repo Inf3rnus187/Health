@@ -52,6 +52,7 @@ CATALOG: list[dict[str, Any]] = [
     ),
     # Weight & photos
     _m("body.weight", "Poids du matin", "body", "float", unit="kg"),
+    _m("body.waist", "Tour de taille", "body", "float", unit="cm", agg="last"),
     _m("photo.face_done", "Photo face faite", "photo", "bool", agg="last"),
     _m("photo.profil_done", "Photo profil faite", "photo", "bool", agg="last"),
     _m(

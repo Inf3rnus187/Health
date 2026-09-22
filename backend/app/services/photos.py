@@ -67,19 +67,3 @@ async def get_analysis(
         .order_by(PhotoAnalysis.created_at.desc())
     )
     return result.scalars().first()
-
-
-async def latest_before(
-    session: AsyncSession, user_id: str, angle: str, before: datetime
-) -> Photo | None:
-    """Return the previous same-angle photo, for comparison."""
-    result = await session.execute(
-        select(Photo)
-        .where(
-            Photo.user_id == user_id,
-            Photo.angle == angle,
-            Photo.taken_at < before,
-        )
-        .order_by(Photo.taken_at.desc())
-    )
-    return result.scalars().first()

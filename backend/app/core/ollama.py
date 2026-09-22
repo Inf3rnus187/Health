@@ -6,6 +6,7 @@ functions so the pipeline runs without a live Ollama.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 from typing import Any
@@ -15,6 +16,14 @@ import httpx
 from app.core.config import get_settings
 
 _settings = get_settings()
+
+# Greedy decoding + a fixed seed: the same image and prompt always give
+# the same answer, so a re-analysis is reproducible (not a new dice roll).
+_DETERMINISTIC = {"temperature": 0, "seed": 42}
+# One request at a time: a local model serves requests sequentially, so
+# parallel worker jobs would only queue inside Ollama and hit timeouts
+# (e.g. while re-analysing a whole photo history).
+_GATE = asyncio.Semaphore(1)
 
 
 def _parse(text: str) -> dict[str, Any]:
@@ -36,8 +45,9 @@ async def vision_json(
         "images": [base64.b64encode(image).decode("ascii")],
         "stream": False,
         "format": "json",
+        "options": _DETERMINISTIC,
     }
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    async with _GATE, httpx.AsyncClient(timeout=180.0) as client:
         response = await client.post(
             f"{_settings.ollama_url}/api/generate", json=payload
         )

@@ -19,13 +19,20 @@ _log = get_logger("queue")
 
 async def enqueue(function: str, *args: Any) -> bool:
     """Enqueue ``function`` with ``args``; return whether it was queued."""
+    return await enqueue_many(function, [args]) == 1
+
+
+async def enqueue_many(function: str, calls: list[tuple[Any, ...]]) -> int:
+    """Enqueue one job per argument tuple over one connection; count them."""
+    queued = 0
     try:
         pool = await create_pool(
             RedisSettings.from_dsn(get_settings().redis_url)
         )
-        await pool.enqueue_job(function, *args)
+        for args in calls:
+            await pool.enqueue_job(function, *args)
+            queued += 1
         await pool.aclose()
     except Exception as exc:  # noqa: BLE001
         _log.warning("enqueue_failed", function=function, error=str(exc))
-        return False
-    return True
+    return queued

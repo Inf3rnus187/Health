@@ -6,7 +6,39 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Longitudinal photo method v2 (abdominal fat / liver / diabetes
+  follow-up)**. Replaces the single-photo free-text analysis, which could
+  not measure an evolution:
+  - *Protocol* shown in the Photos page (morning, fasting, same place /
+    light / distance, relaxed belly; waist tape measured weekly per WHO).
+  - *Deterministic quality control* (brightness, Laplacian sharpness,
+    resolution): unusable photos get status `low_quality`, are never sent
+    to the AI and never enter the statistics.
+  - *Blinded rating* per angle on anchored 0–10 scales (face: waist width,
+    belly volume; profil: belly protrusion, lower-belly sagging; dos: love
+    handles, back rolls). Ollama runs greedy with a fixed seed, so a
+    re-analysis is reproducible.
+  - *Paired comparisons* vs the baseline (first good photo) and the ~7 /
+    30 / 90-day photos: both images in one labelled picture, order never
+    revealed, asked twice with the order swapped to cancel position bias;
+    non-mirrored answers are flagged "peu fiable".
+  - *Long-term statistics* (`GET /evolution/trend`): daily median, 7-day
+    rolling median, Theil–Sen slope over 90 days, change vs baseline; a
+    trend is only reported with ≥ 8 days over ≥ 21 days.
+  - *Validated markers* (`GET /evolution/markers`): WHtR, BMI, Fatty Liver
+    Index, FIB-4 (age-adjusted), HbA1c, fasting glucose, TyG, with their
+    published bands, freshness date and missing inputs; waist / height /
+    birth year entered in the web form (`POST /evolution/profile`).
+  - `POST /evolution/reanalyze-all` re-runs the method over the whole
+    history (Ollama calls serialised so long runs don't time out).
+
 ### Changed
+
+- `PHOTO_PROMPT_VERSION` is gone: the method version is part of the code
+  (`v2`) and only v2 analyses feed the statistics. Older v1 analyses stay
+  readable. The `ai.silhouette_change` text metric is no longer written.
 
 - **Photo AI failure no longer marks the photo broken**: the pipeline now
   stores/normalises the image and analyses it in two isolated steps. If

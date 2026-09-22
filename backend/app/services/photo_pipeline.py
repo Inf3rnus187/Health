@@ -1,7 +1,14 @@
-"""Async photo pipeline: normalize → analyse (Ollama) → compare (§8)."""
+"""Async photo pipeline: normalize → quality → rate → compare (§8).
+
+Method v2 (see :mod:`photo_method`): deterministic quality control, a
+blinded rating of the photo on anchored 0-10 scales, then counterbalanced
+paired comparisons against the baseline and the ~7/30/90-day photos. The
+long-term statistics are computed on read by :mod:`photo_trend`.
+"""
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import Any
 
@@ -11,20 +18,16 @@ from app.core import ollama
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.models.photo import Photo, PhotoAnalysis
-from app.schemas.measurement import MeasurementIn
-from app.services import imaging, photo_storage, photos
-from app.services import measurements as measure
+from app.services import (
+    imaging,
+    photo_compare,
+    photo_method,
+    photo_quality,
+    photo_storage,
+)
 
 _log = get_logger("photo")
 _settings = get_settings()
-
-_PROMPT = (
-    "You are a fitness progress analyst. Look at the silhouette in this "
-    "photo and answer ONLY with a JSON object with keys: "
-    '"silhouette_change" (short French text vs a leaner/heavier trend), '
-    '"waist_estimate" (one of thin, medium, wide), '
-    '"posture" (short French text). No prose outside the JSON.'
-)
 
 
 async def process(session: AsyncSession, photo_id: str) -> None:
@@ -61,55 +64,87 @@ async def _normalize(session: AsyncSession, photo: Photo) -> bytes | None:
 async def _analyse(
     session: AsyncSession, photo: Photo, normalized: bytes
 ) -> None:
-    """Run the AI analysis; the photo stays viewable if the AI is down."""
+    """Quality-check, rate and compare; the photo stays viewable anyway."""
+    output: dict[str, Any] = {
+        "method": photo_method.METHOD,
+        "quality": photo_quality.assess(normalized),
+    }
+    if not output["quality"]["ok"]:
+        _store(session, photo, output)
+        photo.status = "low_quality"
+        return
     try:
-        result = await ollama.vision_json(_PROMPT, normalized)
-        ref = await photos.latest_before(
-            session, photo.user_id, photo.angle, photo.taken_at
-        )
-        _store(session, photo, result, ref.id if ref else None)
-        await _inject(session, photo, result)
-        photo.status = "analyzed"
+        output.update(await _rate(photo.angle, normalized))
     except Exception as exc:  # noqa: BLE001
         photo.status = "ai_failed"
         _log.warning("photo_ai_failed", photo_id=photo.id, error=str(exc))
+        return
+    output["comparisons"] = await _compare_all(session, photo, normalized)
+    _store(session, photo, output)
+    photo.status = "analyzed"
 
 
-def _store(
-    session: AsyncSession,
-    photo: Photo,
-    result: dict[str, Any],
-    comparison_ref: str | None,
-) -> None:
-    """Persist a versioned analysis row."""
+async def _rate(angle: str, image: bytes) -> dict[str, Any]:
+    """Blinded 0-10 rating of one photo on the angle's anchored scales."""
+    raw = await ollama.vision_json(photo_method.absolute_prompt(angle), image)
+    scores = photo_method.read_scores(raw, angle)
+    if not scores:
+        raise ValueError(f"no usable score in the model answer: {raw}")
+    return {
+        "scores": scores,
+        "labels": {c.key: c.label for c in photo_method.criteria_for(angle)},
+        "confidence": _confidence(raw.get("confidence")),
+        "pose_ok": raw.get("pose_ok") is not False,
+        "remarks": str(raw.get("remarks") or "")[:300],
+    }
+
+
+async def _compare_all(
+    session: AsyncSession, photo: Photo, image: bytes
+) -> list[dict[str, Any]]:
+    """Compare with each reference; a failed comparison is only skipped."""
+    out: list[dict[str, Any]] = []
+    for ref in await photo_compare.references(session, photo):
+        try:
+            result = await photo_compare.compare(photo.angle, ref.data, image)
+        except Exception as exc:  # noqa: BLE001
+            _log.warning("photo_compare_failed", error=str(exc))
+            continue
+        out.append(
+            {
+                "horizon": ref.horizon,
+                "label": ref.label,
+                "ref_photo_id": ref.photo.id,
+                "ref_date": ref.photo.date_key.isoformat(),
+                **result,
+            }
+        )
+    return out
+
+
+def _confidence(value: Any) -> float | None:
+    """Model self-reported confidence, clamped to [0, 1]."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return max(0.0, min(1.0, number)) if math.isfinite(number) else None
+
+
+def _store(session: AsyncSession, photo: Photo, output: dict[str, Any]) -> None:
+    """Persist a new versioned analysis row (history is never erased)."""
+    comparisons = output.get("comparisons", [])
+    baseline = next(
+        (c["ref_photo_id"] for c in comparisons if c["horizon"] == "baseline"),
+        None,
+    )
     session.add(
         PhotoAnalysis(
             photo_id=photo.id,
             model=_settings.ollama_vision_model,
-            prompt_version=_settings.photo_prompt_version,
-            raw_output=result,
-            derived_metrics=_derived(result),
-            comparison_ref=comparison_ref,
+            prompt_version=photo_method.METHOD,
+            raw_output=output,
+            derived_metrics=output.get("scores"),
+            comparison_ref=baseline,
         )
     )
-
-
-def _derived(result: dict[str, Any]) -> dict[str, Any]:
-    """Extract the derived-metric subset from a raw analysis."""
-    keys = ("silhouette_change", "waist_estimate", "posture")
-    return {k: result[k] for k in keys if k in result}
-
-
-async def _inject(
-    session: AsyncSession, photo: Photo, result: dict[str, Any]
-) -> None:
-    """Inject the AI silhouette change as a measurement (source=ai)."""
-    change = result.get("silhouette_change")
-    if not isinstance(change, str) or not change:
-        return
-    item = MeasurementIn(
-        metric_key="ai.silhouette_change",
-        date_key=photo.date_key,
-        value=change,
-    )
-    await measure.record_batch(session, photo.user_id, [item], source="ai")
