@@ -51,3 +51,34 @@ def ocr_pdf(data: bytes, *, lang: str = "fra+eng") -> str:
         pages.append(pytesseract.image_to_string(image, lang=lang))
     doc.close()
     return "\n".join(pages)
+
+
+def ocr_image(data: bytes, *, lang: str = "fra+eng") -> str:
+    """Return OCR text for a photographed / scanned image, or ''."""
+    try:
+        import pytesseract
+        from PIL import Image
+    except ImportError:
+        return ""
+    try:
+        with Image.open(io.BytesIO(data)) as image:
+            return str(pytesseract.image_to_string(image, lang=lang))
+    except Exception:
+        return ""
+
+
+def pdf_pages(data: bytes, *, dpi: int = 150, pages: int = 3) -> list[bytes]:
+    """First pages of a PDF rendered as PNG (for a vision model), or []."""
+    try:
+        import pymupdf
+    except ImportError:
+        return []
+    try:
+        doc: Any = pymupdf.open(  # type: ignore[no-untyped-call]
+            stream=data, filetype="pdf"
+        )
+    except Exception:
+        return []
+    images = [p.get_pixmap(dpi=dpi).tobytes("png") for p in list(doc)[:pages]]
+    doc.close()
+    return images

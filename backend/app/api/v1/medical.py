@@ -12,7 +12,7 @@ from app.core.errors import InvalidInputError
 from app.models.medical import MedicalDocument
 from app.schemas.common import Message
 from app.schemas.medical import MedicalDocOut, normalize_kind, parse_day
-from app.services import audit, medical
+from app.services import audit, document_ai, medical
 
 router = APIRouter(prefix="/medical", tags=["medical"])
 
@@ -53,6 +53,7 @@ async def upload(
         entity_id=doc.id,
     )
     await session.commit()
+    await document_ai.queue(session, doc)
     return doc
 
 

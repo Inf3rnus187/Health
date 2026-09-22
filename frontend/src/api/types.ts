@@ -247,6 +247,30 @@ export interface MedicalDoc {
   size_bytes: number;
   notes: string | null;
   created_at: string;
+  /** AI reading: null (never), queued, done or failed. */
+  analysis_status?: string | null;
+  analysis?: DocAnalysis | null;
+}
+
+export interface DocValue {
+  key: string;
+  label: string;
+  value: number;
+  unit: string;
+  date: string;
+  /** "lecture" = exact parser, "ia" = AI value proven by the text. */
+  origin: 'lecture' | 'ia';
+}
+
+export interface DocAnalysis {
+  model?: string | null;
+  document_type?: string | null;
+  summary?: string | null;
+  scanned?: boolean;
+  values?: DocValue[];
+  rejected?: number;
+  ai_error?: string | null;
+  error?: string;
 }
 
 export interface Report {

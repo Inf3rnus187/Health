@@ -8,6 +8,7 @@ the crypto layer); only metadata is stored here.
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Any
 
 from sqlalchemy import (
     Boolean,
@@ -21,7 +22,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, TimestampMixin, UUIDMixin
+from app.models.base import Base, JSONColumn, TimestampMixin, UUIDMixin
 
 
 class MedicalDocument(UUIDMixin, TimestampMixin, Base):
@@ -41,6 +42,14 @@ class MedicalDocument(UUIDMixin, TimestampMixin, Base):
     )
     size_bytes: Mapped[int] = mapped_column(Integer, default=0)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: AI reading of the document: None (never), queued, done or failed.
+    analysis_status: Mapped[str | None] = mapped_column(
+        String(16), nullable=True
+    )
+    #: Type, summary and the grounded values extracted (see document_ai).
+    analysis: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONColumn, nullable=True
+    )
 
     __table_args__ = (Index("ix_meddoc_user_created", "user_id", "created_at"),)
 

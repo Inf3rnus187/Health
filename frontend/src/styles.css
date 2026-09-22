@@ -476,6 +476,63 @@ progress {
   margin-left: auto;
 }
 
+.med-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.doc-analysis {
+  flex: 1 1 100%;
+  font-size: 13px;
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+
+.doc-summary {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.doc-values {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.doc-values li {
+  border: 0;
+  padding: 0;
+  gap: 6px;
+  overflow-wrap: anywhere;
+}
+
+.badge.doc-status-queued {
+  background: var(--color-warn-bg);
+  color: var(--color-warn);
+}
+
+.badge.doc-status-done,
+.badge.doc-origin-lecture {
+  background: var(--color-ok-bg);
+  color: var(--color-ok);
+}
+
+.badge.doc-status-failed {
+  background: var(--color-high-bg);
+  color: var(--color-high);
+}
+
+.badge.doc-origin-ia {
+  background: var(--color-grid);
+  color: var(--color-primary);
+}
+
 .import-list {
   list-style: none;
   margin: 12px 0 0;

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -35,6 +36,8 @@ class MedicalDocOut(BaseModel):
     size_bytes: int
     notes: str | None
     created_at: datetime
+    analysis_status: str | None = None
+    analysis: dict[str, Any] | None = None
 
 
 def normalize_kind(kind: str) -> str:

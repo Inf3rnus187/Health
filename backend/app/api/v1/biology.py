@@ -7,7 +7,8 @@ from typing import Any
 from fastapi import APIRouter, UploadFile
 
 from app.core.deps import SessionDep, UserDep
-from app.services import audit, biology, medical
+from app.models.medical import MedicalDocument
+from app.services import audit, biology, document_ai, medical
 
 router = APIRouter(prefix="/biology", tags=["biology"])
 
@@ -19,7 +20,7 @@ async def import_biology(
     """Parse a lab PDF into measurements and keep the source document."""
     data = await file.read()
     summary = await biology.import_pdf(session, principal.user.id, data)
-    await _keep(session, principal.user.id, file, data)
+    doc = await _keep(session, principal.user.id, file, data)
     await audit.record(
         session,
         action="import",
@@ -28,6 +29,8 @@ async def import_biology(
         payload={"added": summary["added"]},
     )
     await session.commit()
+    # The AI reader adds what the exact parser missed (e.g. odd layouts).
+    await document_ai.queue(session, doc)
     return summary
 
 
@@ -50,7 +53,7 @@ async def purge_biology(
 
 async def _keep(
     session: SessionDep, user_id: str, file: UploadFile, data: bytes
-) -> None:
+) -> MedicalDocument:
     """Store the uploaded lab PDF as a biologie medical document."""
     meta = {
         "kind": "biologie",
@@ -59,4 +62,4 @@ async def _keep(
         "notes": None,
         "media_type": file.content_type or "application/pdf",
     }
-    await medical.create_document(session, user_id, meta=meta, data=data)
+    return await medical.create_document(session, user_id, meta=meta, data=data)

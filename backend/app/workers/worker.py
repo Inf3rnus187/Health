@@ -31,6 +31,16 @@ async def analyze_photo(ctx: dict[str, Any], photo_id: str) -> str:
     return photo_id
 
 
+async def analyze_document(ctx: dict[str, Any], doc_id: str) -> str:
+    """Read a medical document into grounded values (document model)."""
+    from app.core.db import SessionFactory
+    from app.services import document_ai
+
+    async with SessionFactory() as session:
+        await document_ai.run(session, doc_id)
+    return doc_id
+
+
 async def import_apple_health_job(ctx: dict[str, Any], job_id: str) -> str:
     """Run a queued Apple Health import in a fresh session."""
     from app.core.db import SessionFactory
@@ -67,6 +77,7 @@ class WorkerSettings:
     functions = [
         ping,
         analyze_photo,
+        analyze_document,
         generate_report,
         import_apple_health_job,
     ]

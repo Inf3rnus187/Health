@@ -24,6 +24,7 @@ from app.api.v1 import (
     ingest,
     measurements,
     medical,
+    medical_ai,
     metrics,
     mfa,
     photos,
@@ -53,6 +54,7 @@ api_router.include_router(imports.router)
 api_router.include_router(health_records.router)
 api_router.include_router(waveforms.router)
 api_router.include_router(clinical.router)
+api_router.include_router(medical_ai.router)
 api_router.include_router(medical.router)
 api_router.include_router(conditions.router)
 api_router.include_router(treatments.router)

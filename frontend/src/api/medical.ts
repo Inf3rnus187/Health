@@ -38,3 +38,15 @@ export async function viewMedicalDoc(id: string): Promise<void> {
   const url = URL.createObjectURL(await res.blob());
   window.open(url, '_blank', 'noopener');
 }
+
+export function analyzeMedicalDoc(id: string): Promise<{ status: string }> {
+  return api<{ status: string }>(`/medical/documents/${id}/analyze`, {
+    method: 'POST',
+  });
+}
+
+export function analyzeAllMedicalDocs(): Promise<{ queued: number }> {
+  return api<{ queued: number }>('/medical/documents/analyze-all', {
+    method: 'POST',
+  });
+}

@@ -43,9 +43,9 @@ class Reading(NamedTuple):
     value: float
 
 
-def parse_text(text: str) -> list[Reading]:
+def parse_text(text: str, current: date | None = None) -> list[Reading]:
     """Parse a lab report's text into current + antériorité readings."""
-    current = _current_date(text)
+    current = current or sample_date(text) or date.today()
     out: list[Reading] = []
     pending: cat.Analyte | None = None
     ant_day: date | None = None
@@ -65,19 +65,33 @@ async def import_pdf(
     readings = parse_text(_extract(data))
     if not readings:
         return {"added": 0, "metrics": 0, "dates": []}
+    added = await store(session, user_id, readings, source="biology")
+    return _summary(readings, added)
+
+
+async def store(
+    session: AsyncSession,
+    user_id: str,
+    readings: list[Reading],
+    *,
+    source: str,
+) -> int:
+    """Record readings (metrics created on first use); count the values."""
     cache = MetricCache()
     deduped: dict[tuple[str, date], MeasurementIn] = {}
     for reading in readings:
+        domain = reading.key.split(".", 1)[0]
         spec = MetricSpec(
-            reading.key, reading.label, "biology", "float", reading.unit, "last"
+            reading.key, reading.label, domain, "float", reading.unit, "last"
         )
         await cache.id_for(session, spec)
         deduped[(reading.key, reading.day)] = MeasurementIn(
             metric_key=reading.key, date_key=reading.day, value=reading.value
         )
     items = list(deduped.values())
-    await measure.record_batch(session, user_id, items, source="biology")
-    return _summary(readings, len(items))
+    if items:
+        await measure.record_batch(session, user_id, items, source=source)
+    return len(items)
 
 
 async def purge(session: AsyncSession, user_id: str) -> dict[str, int]:
@@ -204,21 +218,21 @@ def _extract(data: bytes) -> str:
     return text if text.strip() else ocr.ocr_pdf(data)
 
 
-def _current_date(text: str) -> date:
-    """Find the sample date (prélevé/édité), else today."""
+def sample_date(text: str) -> date | None:
+    """The sample date printed on a lab report (prélevé / édité le)."""
     for label in ("[Pp]r[eé]lev[eé]", "[Ee]dit[eé]"):
         match = re.search(
-            rf"{label}\s+le\s+(\d{{2}}[-−]\d{{2}}[-−]\d{{4}})", text
+            rf"{label}\s+le\s+(\d{{2}}[-−/]\d{{2}}[-−/]\d{{4}})", text
         )
         found = _iso(match.group(1)) if match else None
         if found is not None:
             return found
-    return date.today()
+    return None
 
 
 def _iso(value: str) -> date | None:
     """Parse a ``DD-MM-YYYY`` (or ``−``) token into a date."""
-    match = re.search(r"(\d{2})[-−](\d{2})[-−](\d{4})", value)
+    match = re.search(r"(\d{2})[-−/](\d{2})[-−/](\d{4})", value)
     if match is None:
         return None
     return date(int(match.group(3)), int(match.group(2)), int(match.group(1)))
