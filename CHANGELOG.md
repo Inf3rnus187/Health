@@ -37,6 +37,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **HEIC/HEIF photo support**: Apple devices (and mirror cameras) capture
+  HEIC, which PIL and web browsers cannot read — so an uploaded HEIC showed
+  as a black "IMAGE ILLISIBLE" tile even though the file was fine. The
+  normalizer now registers `pillow-heif`, decodes HEIC/HEIF and re-encodes a
+  browser-safe JPEG, and intake accepts `image/heic` / `image/heif`.
+  Verified end to end (HEIC upload → normalized → served as an image).
 - **Photos tab**: a new "Photos" page shows the progress photos uploaded via
   `POST /ingest/photo` (mirror/device) as a grid — angle (Face/Profil/Dos)
   filter, date, linked weight, processing status, and the **AI (Ollama

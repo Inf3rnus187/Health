@@ -8,7 +8,13 @@ from __future__ import annotations
 
 import io
 
+import pillow_heif
 from PIL import Image, ImageOps
+
+# Apple devices (and mirror cameras) capture HEIC/HEIF, which PIL and web
+# browsers cannot read natively; registering the opener lets us decode it
+# and re-encode a browser-safe JPEG.
+pillow_heif.register_heif_opener()
 
 _MAX_SIDE = 1280
 

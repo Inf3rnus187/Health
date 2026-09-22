@@ -31,6 +31,7 @@ dependencies = [
     "pypdf>=5.0,<7.0",
     "pymupdf>=1.24,<2.0",
     "pytesseract>=0.3,<0.4",
+    "pillow-heif>=0.16,<2.0",
 ]
 
 [project.optional-dependencies]
@@ -86,7 +87,13 @@ disallow_untyped_decorators = false
 exclude = ["alembic/"]
 
 [[tool.mypy.overrides]]
-module = ["openpyxl.*", "defusedxml.*", "pymupdf.*", "pytesseract.*"]
+module = [
+    "openpyxl.*",
+    "defusedxml.*",
+    "pymupdf.*",
+    "pytesseract.*",
+    "pillow_heif.*",
+]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

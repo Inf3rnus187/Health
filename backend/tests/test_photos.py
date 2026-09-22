@@ -112,3 +112,41 @@ async def test_pipeline_survives_ai_failure(
     assert detail.json()["status"] == "ai_failed"
     served = await client.get(f"/api/v1/photos/{photo_id}/file", headers=auth)
     assert served.status_code == 200
+
+
+def _heic_bytes() -> bytes:
+    import pillow_heif
+
+    pillow_heif.register_heif_opener()
+    image = Image.new("RGB", (64, 96), (30, 120, 200))
+    buffer = io.BytesIO()
+    image.save(buffer, format="HEIF")
+    return buffer.getvalue()
+
+
+async def test_pipeline_handles_heic(
+    client: AsyncClient,
+    auth: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An Apple HEIC upload decodes, normalises and serves as an image."""
+
+    async def fake_vision(prompt: str, image: bytes, **_: object) -> dict:
+        return {"silhouette_change": "stable"}
+
+    monkeypatch.setattr(ollama, "vision_json", fake_vision)
+    resp = await client.post(
+        "/api/v1/ingest/photo",
+        files={"file": ("m.heic", _heic_bytes(), "image/heic")},
+        data={"angle": "face"},
+        headers=auth,
+    )
+    assert resp.status_code == 201
+    photo_id = resp.json()["id"]
+    async with SessionFactory() as session:
+        await process(session, photo_id)
+    detail = await client.get(f"/api/v1/photos/{photo_id}", headers=auth)
+    assert detail.json()["status"] == "analyzed"
+    served = await client.get(f"/api/v1/photos/{photo_id}/file", headers=auth)
+    assert served.status_code == 200
+    assert served.headers["content-type"].startswith("image/")
