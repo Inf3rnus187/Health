@@ -11,9 +11,12 @@ function withUnit(value: number | null | undefined, unit: string | null) {
   return unit ? `${frNumber(value, 2)} ${unit}` : frNumber(value, 2);
 }
 
-function when(iso: string | null): string {
+function when(iso: string | null, timed = true): string {
   if (!iso) {
     return '';
+  }
+  if (!timed) {
+    return ` · ${shortDate(iso)}`;
   }
   const at = new Date(iso);
   if (Number.isNaN(at.getTime())) {
@@ -34,7 +37,8 @@ function Headline({ view }: { view: MetricOverview }) {
     <div className="mp-head">
       <span className="mp-value">{withUnit(view.latest.value, view.unit)}</span>
       <span className="muted">
-        Dernier relevé{when(view.latest.at)} · {sourceLabel(view.latest.source)}
+        Dernier relevé{when(view.latest.at, view.latest.timed)} ·{' '}
+        {sourceLabel(view.latest.source)}
       </span>
     </div>
   );

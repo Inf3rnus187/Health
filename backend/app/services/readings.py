@@ -29,6 +29,8 @@ class Reading(NamedTuple):
     value: float
     at: datetime | None
     source: str
+    #: False when only the day is known (a lab value, a dated entry).
+    timed: bool = True
 
 
 async def latest(
@@ -41,14 +43,20 @@ async def latest(
     day_value = float(daily.value_num or 0.0)
     sample = await _newest_sample(session, user_id, metric.id)
     if sample is None:
-        return Reading(day_value, measured_at(daily), daily.source)
+        return _entry(day_value, daily)
     value, at, unit, source = sample
     if metric.aggregation_hint == "sum" or value is None:
         return Reading(day_value, at, daily.source)
     explicit = daily.source not in SYNCED
     if explicit and measured_at(daily) > _aware(at):
-        return Reading(day_value, measured_at(daily), daily.source)
+        return _entry(day_value, daily)
     return Reading(convert(value, unit or "", metric.unit), at, source)
+
+
+def _entry(value: float, daily: Measurement) -> Reading:
+    """A reading from a daily row, dated by its measurement day."""
+    timed = _aware(daily.recorded_at).date() == daily.date_key
+    return Reading(value, measured_at(daily), daily.source, timed)
 
 
 def measured_at(daily: Measurement) -> datetime:

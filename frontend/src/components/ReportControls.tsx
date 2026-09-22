@@ -1,6 +1,11 @@
 import { useState } from 'react';
 
 const TYPES = [
+  {
+    value: 'synthesis',
+    label:
+      'Synthèse clinique IA + PDF clinique (modèle médical, quelques minutes)',
+  },
   { value: 'clinical_pdf', label: 'PDF clinique' },
   { value: 'csv', label: 'CSV' },
   { value: 'json', label: 'JSON' },
@@ -14,7 +19,7 @@ interface ReportControlsProps {
 }
 
 export function ReportControls({ onCreate, busy }: ReportControlsProps) {
-  const [type, setType] = useState('clinical_pdf');
+  const [type, setType] = useState('synthesis');
   return (
     <div className="quick">
       <select

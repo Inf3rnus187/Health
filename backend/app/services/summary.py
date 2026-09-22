@@ -95,7 +95,8 @@ async def _tile(session: AsyncSession, user_id: str, key: str) -> Tile | None:
     if view["latest"] is None:
         return None
     series = [point["value"] for point in view["series"]]
-    at = view["latest"]["at"]
+    # A value known only by its day shows no (made-up) time.
+    at = view["latest"]["at"] if view["latest"]["timed"] else None
     return Tile(
         key=key,
         label=view["label"],

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from httpx import AsyncClient
 
 
@@ -22,7 +24,14 @@ async def test_summary_returns_latest(
     weight = next(t for t in tiles if t["key"] == "body.weight")
     assert weight["value"] == 80.0
     assert weight["date_key"] == "2026-01-10"
-    assert weight["at"]  # last-reading time (falls back to recorded_at)
+    # Entered later for a past day: only the day is known, no made-up time.
+    assert weight["at"] is None
+    today = datetime.now(UTC).date().isoformat()
+    body["items"][0]["date_key"] = today
+    await client.post("/api/v1/measurements", json=body, headers=auth)
+    tiles = (await client.get("/api/v1/summary", headers=auth)).json()
+    weight = next(t for t in tiles if t["key"] == "body.weight")
+    assert weight["at"]  # typed on its own day: the entry time
 
 
 async def test_summary_shows_habit_and_water_tiles(

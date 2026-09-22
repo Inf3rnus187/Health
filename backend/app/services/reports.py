@@ -15,8 +15,14 @@ from app.core.logging import get_logger
 from app.models.metric import MetricDefinition
 from app.models.report import Report
 from app.services import appointments as appts_svc
+from app.services import (
+    clinical_facts,
+    clinical_synthesis,
+    export,
+    export_formats,
+    reports_pdf,
+)
 from app.services import conditions as cond_svc
-from app.services import export, export_formats, reports_pdf
 from app.services import medical as med_svc
 from app.services import treatments as treat_svc
 
@@ -96,6 +102,9 @@ async def build(session: AsyncSession, report: Report) -> None:
         )
         meta = await _metric_meta(session, {r["metric_key"] for r in rows})
         care = await _care(session, report.user_id)
+        if report.type == "synthesis":
+            facts = await clinical_facts.gather(session, report.user_id)
+            report.summary = await clinical_synthesis.synthesize(facts)
         data, ext = _render(report, rows, meta, care)
         report.file_path = str(_write(report, ext, data))
         report.status = "ready"
@@ -124,8 +133,9 @@ def _render(
     care: dict[str, list[str]],
 ) -> tuple[bytes, str]:
     """Render the report body and its file extension."""
-    if report.type == "clinical_pdf":
-        return reports_pdf.clinical_pdf(report, rows, meta, care), "pdf"
+    if report.type in {"clinical_pdf", "synthesis"}:
+        pdf = reports_pdf.clinical_pdf(report, rows, meta, care, report.summary)
+        return pdf, "pdf"
     data, _media, ext = export_formats.render(report.type, rows, report.user_id)
     return data, ext
 

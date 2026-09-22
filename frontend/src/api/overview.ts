@@ -5,6 +5,8 @@ export interface OverviewLatest {
   value: number;
   at: string | null;
   source: string;
+  /** False when only the day is known (lab value, dated entry). */
+  timed?: boolean;
 }
 
 export interface MetricOverview {

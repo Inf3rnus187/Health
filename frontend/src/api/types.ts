@@ -297,6 +297,21 @@ export interface DocAnalysis {
   duration_s?: number;
 }
 
+export interface SynthesisItem {
+  text: string;
+  facts: string[];
+}
+
+export interface Synthesis {
+  model: string;
+  generated_at: string;
+  error: string | null;
+  sections: { key: string; title: string; items: SynthesisItem[] }[];
+  rejected: number;
+  rejected_items: { text: string; reason: string }[];
+  facts: { id: string; section: string; text: string }[];
+}
+
 export interface Report {
   id: string;
   type: string;
@@ -304,6 +319,8 @@ export interface Report {
   period_end: string | null;
   status: string;
   created_at: string;
+  /** AI clinical synthesis of a "synthesis" report. */
+  summary?: Synthesis | null;
 }
 
 export interface ApiToken {

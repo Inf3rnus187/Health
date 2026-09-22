@@ -12,24 +12,11 @@ from datetime import date
 from typing import Any, NamedTuple
 
 from fpdf import FPDF
-from fpdf.enums import XPos, YPos
 
 from app.models.report import Report
-
-#: Domain code -> section title (latin-1 safe: no oe ligature).
-_DOMAINS = {
-    "body": "Corps",
-    "heart": "Coeur",
-    "rest": "Repos",
-    "sleep": "Sommeil",
-    "activity": "Activite",
-    "fitness": "Forme",
-    "vitals": "Signes vitaux",
-    "nutrition": "Nutrition",
-    "workout": "Seances",
-    "biology": "Biologie",
-    "apple": "Autres (Apple)",
-}
+from app.services import domain_labels, reports_pdf_ai
+from app.services.pdf_text import latin as _latin
+from app.services.pdf_text import line as _line
 
 #: Doctor-relevant metrics highlighted in the recap and charted.
 _KEY_METRICS = (
@@ -60,17 +47,24 @@ def clinical_pdf(
     rows: list[dict[str, Any]],
     meta: dict[str, Any],
     care: dict[str, list[str]] | None = None,
+    synthesis: dict[str, Any] | None = None,
 ) -> bytes:
-    """Build a caregiver summary: recap, care record, charts, tables."""
+    """Build a caregiver summary: recap, care record, charts, tables.
+
+    With ``synthesis`` (the AI clinical synthesis) it comes first and its
+    numbered facts are appended at the end.
+    """
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     _header(pdf, report)
+    reports_pdf_ai.synthesis(pdf, synthesis)
     series = _series(rows)
     _recap(pdf, series, meta)
     _care_sections(pdf, care)
     _charts(pdf, series, meta)
     _tables(pdf, series, meta)
+    reports_pdf_ai.facts(pdf, synthesis)
     return bytes(pdf.output())
 
 
@@ -87,18 +81,6 @@ def _care_sections(pdf: FPDF, care: dict[str, list[str]] | None) -> None:
         for text in lines:
             _line(pdf, 6, text)
         pdf.ln(1)
-
-
-def _latin(text: str) -> str:
-    """Coerce text to latin-1 (core font can't encode more)."""
-    return text.encode("latin-1", "replace").decode("latin-1")
-
-
-def _line(pdf: FPDF, height: float, text: str) -> None:
-    """Write one full-width line at the left margin."""
-    pdf.multi_cell(
-        pdf.epw, height, _latin(text), new_x=XPos.LMARGIN, new_y=YPos.NEXT
-    )
 
 
 def _header(pdf: FPDF, report: Report) -> None:
@@ -223,7 +205,7 @@ def _domain(
 ) -> None:
     """Write one domain section with a line per metric."""
     pdf.set_font("Helvetica", "B", 12)
-    _line(pdf, 9, _DOMAINS.get(domain, domain.capitalize()))
+    _line(pdf, 9, domain_labels.label(domain))
     pdf.set_font("Helvetica", size=10)
     for label, unit, stat in items:
         _line(pdf, 6, _metric_line(label, unit, stat))

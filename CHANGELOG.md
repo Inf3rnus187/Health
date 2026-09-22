@@ -87,6 +87,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   stiffness, ALAT / ASAT / GGT, triglycerides, weight, waist; diabetes →
   HbA1c, fasting glucose…; smoking → cigarettes, breath, SpO2), their
   latest value, change and curve, and the documents mentioning it.
+- **AI clinical synthesis report** (report type `synthesis`): the whole
+  record becomes numbered facts (conditions, treatments, markers with
+  their bands, lab / FibroScan results with their previous value,
+  weight changes and loss from peak, key Apple Health indicators over
+  the last 30 days vs the 30 before and a year ago, photo trend,
+  documents); the text model (e.g. MedGemma 27B) writes the synthesis,
+  evolutions, points of attention, items to discuss and missing data,
+  citing a fact for every sentence. A sentence without a reference, or
+  with a number or code (S3, HbA1c…) absent from the facts it cites, is
+  removed and listed with the reason. Shown on the Rapports page (hover
+  a reference to read the fact) and at the top of the clinical PDF, with
+  the facts in an annex. A model failure is reported, never hidden.
 - `GET /catalog/domains`: French name of every domain, used by the
   dashboard tabs (Apple Santé and the hub's own domains — tabac, PPC,
   biologie…).
@@ -108,7 +120,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`stairs.floors`, `sleep.spo2_avg`…) reads and writes the canonical one.
 - A lab value imported today for an older blood test was shown as
   measured today, and could even hide newer Apple weigh-ins; a value is
-  now dated by its measurement day everywhere.
+  now dated by its measurement day everywhere, and shown without a
+  made-up time when only the day is known.
+- PDF reports printed "?" for œ, typographic quotes or dashes; domain
+  titles now use the shared French names.
 
 ### Changed
 

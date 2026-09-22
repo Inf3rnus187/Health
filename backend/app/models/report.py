@@ -25,3 +25,7 @@ class Report(UUIDMixin, TimestampMixin, Base):
     params: Mapped[dict[str, Any]] = mapped_column(JSONColumn, default=dict)
     file_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="pending")
+    #: AI clinical synthesis (sections, facts, rejected) of a synthesis.
+    summary: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONColumn, nullable=True
+    )

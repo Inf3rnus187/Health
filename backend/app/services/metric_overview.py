@@ -47,6 +47,7 @@ async def overview(
             "value": round(reading.value, 2),
             "at": reading.at.isoformat() if reading.at else None,
             "source": reading.source,
+            "timed": reading.timed,
         },
         day={"date": last.isoformat(), "value": rows[-1][1]},
         **_stats(rows, last),
