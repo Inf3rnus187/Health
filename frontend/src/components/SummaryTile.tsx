@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 import type { SummaryTile as Tile } from '../api/types';
 import { colorForMetric } from '../theme/palette';
 import { Sparkline } from './Sparkline';
@@ -38,10 +40,16 @@ function Evolution({ delta }: { delta: number | null }) {
   );
 }
 
+// The water tile shows litres computed from the bottle counter.
+const DETAIL_KEY: Record<string, string> = {
+  'hydration.liters': 'water.bottles_1_5',
+};
+
 export function SummaryTile({ tile }: { tile: Tile }) {
   const avg = tile.avg7 !== null ? ` · moy7 ${tile.avg7}` : '';
+  const detail = DETAIL_KEY[tile.key] ?? tile.key;
   return (
-    <div className="tile">
+    <Link className="tile" to={`/donnees?metric=${encodeURIComponent(detail)}`}>
       <span className="tile-label muted">{tile.label}</span>
       <span className="tile-value">
         {fmtValue(tile)}
@@ -53,6 +61,6 @@ export function SummaryTile({ tile }: { tile: Tile }) {
         {timeOf(tile.at)}
         {avg}
       </span>
-    </div>
+    </Link>
   );
 }

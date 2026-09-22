@@ -28,6 +28,7 @@ from app.api.v1 import (
     medical_ai,
     metrics,
     mfa,
+    overview,
     photos,
     photos_media,
     reports,
@@ -45,6 +46,7 @@ api_router.include_router(auth.router)
 api_router.include_router(mfa.router)
 api_router.include_router(account.router)
 api_router.include_router(tokens.router)
+api_router.include_router(overview.router)
 api_router.include_router(metrics.router)
 api_router.include_router(catalog.router)
 api_router.include_router(measurements.router)

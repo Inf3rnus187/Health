@@ -1,12 +1,12 @@
-import { TrendChart } from './TrendChart';
+import { MetricPanel } from './metric/MetricPanel';
 
-const VITALS: { key: string; label: string }[] = [
-  { key: 'heart.rate', label: 'Fréquence cardiaque (bpm)' },
-  { key: 'rest.hr', label: 'FC de repos (bpm)' },
-  { key: 'heart.hrv', label: 'VFC — SDNN (ms)' },
-  { key: 'body.spo2', label: 'SpO2 (%)' },
-  { key: 'body.resp_rate', label: 'Fréquence respiratoire' },
-  { key: 'sleep.asleep', label: 'Sommeil (min)' },
+const VITALS = [
+  'heart.rate',
+  'rest.hr',
+  'heart.hrv',
+  'body.spo2',
+  'body.resp_rate',
+  'sleep.asleep',
 ];
 
 export function VitalsSection() {
@@ -14,11 +14,8 @@ export function VitalsSection() {
     <section className="card">
       <h2>Signes vitaux — tendances</h2>
       <div className="dash-grid">
-        {VITALS.map((vital) => (
-          <div className="dash-card" key={vital.key}>
-            <h3 className="dash-title">{vital.label}</h3>
-            <TrendChart metricKey={vital.key} label={vital.label} />
-          </div>
+        {VITALS.map((key) => (
+          <MetricPanel key={key} metricKey={key} compact />
         ))}
       </div>
     </section>

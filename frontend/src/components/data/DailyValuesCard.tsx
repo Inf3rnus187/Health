@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import type { Measurement } from '../../api/types';
 import { useDailyValues } from '../../hooks/useData';
 import { shortDate } from '../../utils/format';
+import { MetricPanel } from '../metric/MetricPanel';
 import { MetricSelect } from '../MetricSelect';
 import { sourceLabel } from './sources';
 
@@ -51,16 +53,18 @@ function Values({ rows }: { rows: Measurement[] }) {
 }
 
 export function DailyValuesCard() {
-  const [key, setKey] = useState('');
+  const [params] = useSearchParams();
+  const [key, setKey] = useState(params.get('metric') ?? '');
   const { data, isLoading } = useDailyValues(key);
   return (
     <section className="card">
-      <h2>Valeurs journalières (toutes sources)</h2>
+      <h2>Une mesure en détail (toutes sources)</h2>
       <p className="muted">
         Ce que lisent les graphiques, l’accueil et les rapports : saisies,
         prises de sang, documents, raccourcis et Apple Santé confondus.
       </p>
       <MetricSelect value={key} onChange={setKey} />
+      {key && <MetricPanel metricKey={key} />}
       {key && isLoading && <p className="muted">Chargement…</p>}
       {key && data && <Values rows={data} />}
     </section>
