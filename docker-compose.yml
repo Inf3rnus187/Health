@@ -42,6 +42,10 @@ services:
       REDIS_URL: redis://redis:6379/0
       # Spool large multipart uploads onto the durable volume, not /tmp.
       TMPDIR: /data/exports/tmp
+    # Reach Ollama running on the Docker host (Linux needs this mapping so
+    # OLLAMA_URL=http://host.docker.internal:11434 resolves).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db: {condition: service_healthy}
       redis: {condition: service_healthy}
@@ -72,6 +76,9 @@ services:
       DATABASE_URL: *db_url
       REDIS_URL: redis://redis:6379/0
       RUN_MIGRATIONS: "false"
+    # The worker runs the photo AI analysis; let it reach the host's Ollama.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db: {condition: service_healthy}
       redis: {condition: service_healthy}
