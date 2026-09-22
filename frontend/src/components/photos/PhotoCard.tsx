@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { reanalyzePhoto, type Photo } from '../../api/photos';
+import { deletePhoto, reanalyzePhoto, type Photo } from '../../api/photos';
 import { usePhotoAnalysis } from '../../hooks/usePhotos';
 import { AuthImage } from './AuthImage';
 
@@ -21,6 +21,29 @@ function ReanalyzeButton({ id }: { id: string }) {
       onClick={() => mutation.mutate()}
     >
       {mutation.isPending ? 'Relance…' : 'Relancer l’analyse'}
+    </button>
+  );
+}
+
+function DeleteButton({ id }: { id: string }) {
+  const client = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: () => deletePhoto(id),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['photos'] }),
+  });
+  const onClick = () => {
+    if (window.confirm('Supprimer cette photo ?')) {
+      mutation.mutate();
+    }
+  };
+  return (
+    <button
+      className="btn btn-danger"
+      type="button"
+      disabled={mutation.isPending}
+      onClick={onClick}
+    >
+      Supprimer
     </button>
   );
 }
@@ -87,6 +110,7 @@ export function PhotoCard({ photo }: { photo: Photo }) {
       <Analysis id={photo.id} />
       <div className="photo-actions">
         <ReanalyzeButton id={photo.id} />
+        <DeleteButton id={photo.id} />
       </div>
     </div>
   );

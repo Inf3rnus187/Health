@@ -19,7 +19,7 @@ from app.core.deps import (
 from app.core.scopes import INGEST_PHOTO
 from app.models.photo import Photo
 from app.schemas.photo import PhotoOut
-from app.services import audit, photo_intake, photo_storage
+from app.services import audit, photo_delete, photo_intake, photo_storage
 from app.services import photos as svc
 from app.workers.queue import enqueue
 
@@ -71,6 +71,40 @@ async def reanalyze(
     photo = await svc.get_photo(session, principal.user.id, photo_id)
     await enqueue("analyze_photo", photo.id)
     return {"status": "queued"}
+
+
+@router.delete("/photos", status_code=status.HTTP_200_OK)
+async def remove_all(
+    principal: PrincipalDep, session: SessionDep
+) -> dict[str, int]:
+    """Delete every photo of the caller (files + analyses + rows)."""
+    count = await photo_delete.delete_all(session, principal.user.id)
+    await audit.record(
+        session,
+        action="delete",
+        entity="photo",
+        user_id=principal.user.id,
+        payload={"deleted": count},
+    )
+    await session.commit()
+    return {"deleted": count}
+
+
+@router.delete("/photos/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove(
+    photo_id: str, principal: PrincipalDep, session: SessionDep
+) -> Response:
+    """Delete one of the caller's photos."""
+    await photo_delete.delete_one(session, principal.user.id, photo_id)
+    await audit.record(
+        session,
+        action="delete",
+        entity="photo",
+        user_id=principal.user.id,
+        entity_id=photo_id,
+    )
+    await session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/photos/{photo_id}/file")

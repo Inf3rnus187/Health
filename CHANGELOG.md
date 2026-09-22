@@ -37,6 +37,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Delete photos**: a "Supprimer" button on each photo (`DELETE
+  /photos/{id}`) and a "Tout supprimer" button on the Photos tab (`DELETE
+  /photos`) remove the row, its analyses and the on-disk files.
+- **Re-run a photo analysis**: `POST /photos/{id}/analyze` and a "Relancer
+  l'analyse" button re-queue the normalize + AI pipeline for an existing
+  photo (e.g. one stuck from an earlier Ollama outage), without
+  re-uploading.
 - **HEIC/HEIF photo support**: Apple devices (and mirror cameras) capture
   HEIC, which PIL and web browsers cannot read — so an uploaded HEIC showed
   as a black "IMAGE ILLISIBLE" tile even though the file was fine. The

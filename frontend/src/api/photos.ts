@@ -33,6 +33,14 @@ export function reanalyzePhoto(id: string): Promise<{ status: string }> {
   return api<{ status: string }>(`/photos/${id}/analyze`, { method: 'POST' });
 }
 
+export function deletePhoto(id: string): Promise<void> {
+  return api<void>(`/photos/${id}`, { method: 'DELETE' });
+}
+
+export function deleteAllPhotos(): Promise<{ deleted: number }> {
+  return api<{ deleted: number }>('/photos', { method: 'DELETE' });
+}
+
 export async function fetchPhotoBlob(id: string): Promise<string> {
   const token = getAccessToken();
   const headers = token ? { Authorization: `Bearer ${token}` } : undefined;

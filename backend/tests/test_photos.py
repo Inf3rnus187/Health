@@ -160,3 +160,27 @@ async def test_reanalyze_requeues(
     resp = await client.post(f"/api/v1/photos/{photo_id}/analyze", headers=auth)
     assert resp.status_code == 202
     assert resp.json()["status"] == "queued"
+
+
+async def test_delete_one_photo(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """Deleting a photo removes it from the list."""
+    photo_id = await _upload(client, auth, "2026-04-06")
+    resp = await client.delete(f"/api/v1/photos/{photo_id}", headers=auth)
+    assert resp.status_code == 204
+    listed = await client.get("/api/v1/photos", headers=auth)
+    assert all(p["id"] != photo_id for p in listed.json())
+
+
+async def test_delete_all_photos(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """Deleting all clears the whole list."""
+    await _upload(client, auth, "2026-04-07")
+    await _upload(client, auth, "2026-04-08")
+    resp = await client.delete("/api/v1/photos", headers=auth)
+    assert resp.status_code == 200
+    assert resp.json()["deleted"] >= 2
+    listed = await client.get("/api/v1/photos", headers=auth)
+    assert listed.json() == []
