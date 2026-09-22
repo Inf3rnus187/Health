@@ -118,3 +118,58 @@ async def test_profile_rejects_absurd_values(
         "/api/v1/evolution/profile", json={"waist_cm": 5}, headers=auth
     )
     assert resp.status_code == 422
+
+
+async def test_fibroscan_outranks_indirect_scores(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    resp = await client.post(
+        "/api/v1/evolution/profile",
+        json={"cap_db_m": 356, "lsm_kpa": 5.2, "date_key": "2026-09-15"},
+        headers=auth,
+    )
+    assert resp.status_code == 200
+    markers = _by_key(resp.json())
+    assert markers["cap"]["level"] == "high"
+    assert markers["cap"]["interpretation"].startswith("S3")
+    assert markers["cap"]["date"] == "2026-09-15"
+    assert markers["lsm"]["level"] == "ok"
+    assert "FibroScan du 15/09/2026" in markers["fli"]["note"]
+    assert "FibroScan" in markers["fib4"]["note"]
+    assert markers["tyg"]["note"] is None
+    assert resp.json()["profile"]["cap_db_m"] == 356
+
+
+_HISTORY = [
+    "Preleve le 11-09-2026 08:00 au laboratoire",
+    "Intervalle de reference Anteriorites",
+    "15-01-2025",
+    "HBA1c - Hemoglobine glyquee (NGSP) [AC] 7,9 % (4,0-6,0) 6,3",
+    "Triglycerides [AC] 3,93 g/L (< 1,50) 2,10",
+    "Glycemie a jeun [AC] 1,61 g/L (0,70-1,10) 1,20",
+]
+
+
+async def test_marker_history_uses_previous_results(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", size=11)
+    for line in _HISTORY:
+        pdf.cell(0, 6, line, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    await client.post(
+        "/api/v1/biology/import",
+        files={"file": ("lab.pdf", bytes(pdf.output()), "application/pdf")},
+        headers=auth,
+    )
+    resp = await client.get("/api/v1/evolution/markers", headers=auth)
+    markers = _by_key(resp.json())
+    hba1c = markers["hba1c"]["history"]
+    assert [(p["date"], p["value"]) for p in hba1c] == [
+        ("2025-01-15", 6.3),
+        ("2026-09-11", 7.9),
+    ]
+    assert [p["level"] for p in hba1c] == ["warn", "high"]
+    tyg = markers["tyg"]["history"]
+    assert [p["date"] for p in tyg] == ["2025-01-15", "2026-09-11"]

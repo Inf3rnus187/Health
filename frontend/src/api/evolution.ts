@@ -77,6 +77,10 @@ export interface AngleTrend {
 
 export interface EvolutionTrend {
   method_version: string;
+  /** Vision model whose scores are shown. */
+  model: string;
+  /** Photos only scored by another model (excluded until re-analysed). */
+  other_model_photos: number;
   weight: WeightTrend | null;
   angles: AngleTrend[];
 }
@@ -93,6 +97,16 @@ export interface Marker {
   missing: string[];
   /** Values actually used by the formula (label, value, unit, date). */
   inputs?: MarkerInput[];
+  /** e.g. a FibroScan outranking this indirect score. */
+  note?: string | null;
+  /** The marker at each past lab / FibroScan date, oldest first. */
+  history?: MarkerPoint[];
+}
+
+export interface MarkerPoint {
+  date: string;
+  value: number;
+  level: MarkerLevel;
 }
 
 export interface MarkerInput {
@@ -108,6 +122,8 @@ export interface MarkerProfile {
   height_cm: number | null;
   weight_kg: number | null;
   birth_year: number | null;
+  cap_db_m: number | null;
+  lsm_kpa: number | null;
 }
 
 export interface MarkersResponse {
@@ -119,6 +135,8 @@ export interface ProfileInput {
   waist_cm?: number;
   height_cm?: number;
   birth_year?: number;
+  cap_db_m?: number;
+  lsm_kpa?: number;
   date_key?: string;
 }
 

@@ -1,6 +1,9 @@
 """Long-term evolution of the photo scores, per angle and criterion.
 
-Only method-v2 analyses of photos that passed quality control count.
+Only method-v2 analyses made by the CURRENT vision model, of photos that
+passed quality control, count: two models do not score on the same
+scale, so mixing them would fake a trend (re-analyse the history after
+switching model).
 Several photos on one day collapse to their median; the displayed curve
 is a 7-day rolling median and the trend is a Theil-Sen slope over the
 last 90 days, reported only with enough data (≥ 8 days over ≥ 21 days):
@@ -15,6 +18,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models.photo import Photo, PhotoAnalysis
 from app.services import photo_method, robust_stats, weight_trend
 from app.services.robust_stats import Point
@@ -32,11 +36,14 @@ Row = tuple[Photo, dict[str, Any]]
 
 async def trend(session: AsyncSession, user_id: str) -> dict[str, Any]:
     """Return the per-angle, per-criterion long-term evolution."""
-    rows = await _valid_rows(session, user_id)
+    model = get_settings().ollama_vision_model
+    rows, other_model = await _valid_rows(session, user_id, model)
     totals = await _totals(session, user_id)
     weights = await weight_trend.series(session, user_id)
     return {
         "method_version": photo_method.METHOD,
+        "model": model,
+        "other_model_photos": other_model,
         "weight": weight_trend.summary(weights),
         "angles": [
             _angle(angle, rows.get(angle, []), totals.get(angle, 0), weights)
@@ -46,9 +53,12 @@ async def trend(session: AsyncSession, user_id: str) -> dict[str, Any]:
 
 
 async def _valid_rows(
-    session: AsyncSession, user_id: str
-) -> dict[str, list[Row]]:
-    """Latest v2 analysis per photo, quality-passed and scored, by angle."""
+    session: AsyncSession, user_id: str, model: str
+) -> tuple[dict[str, list[Row]], int]:
+    """Latest v2 analysis per photo by ``model``, grouped by angle.
+
+    Also returns how many photos were analysed only by another model.
+    """
     result = await session.execute(
         select(Photo, PhotoAnalysis)
         .join(PhotoAnalysis, PhotoAnalysis.photo_id == Photo.id)
@@ -58,13 +68,23 @@ async def _valid_rows(
         )
         .order_by(PhotoAnalysis.created_at)
     )
-    newest = {photo.id: (photo, a.raw_output) for photo, a in result.all()}
+    analysed: set[str] = set()
+    newest: dict[str, Row] = {}
+    for photo, analysis in result.all():
+        analysed.add(photo.id)
+        if analysis.model == model:
+            newest[photo.id] = (photo, analysis.raw_output)
+    return _group(list(newest.values())), len(analysed - newest.keys())
+
+
+def _group(rows: list[Row]) -> dict[str, list[Row]]:
+    """Quality-passed, scored rows by angle, in date order."""
     grouped: dict[str, list[Row]] = {}
-    for photo, output in newest.values():
+    for photo, output in rows:
         if output.get("quality", {}).get("ok") and output.get("scores"):
             grouped.setdefault(photo.angle, []).append((photo, output))
-    for rows in grouped.values():
-        rows.sort(key=lambda row: (row[0].date_key, row[0].taken_at))
+    for group in grouped.values():
+        group.sort(key=lambda row: (row[0].date_key, row[0].taken_at))
     return grouped
 
 

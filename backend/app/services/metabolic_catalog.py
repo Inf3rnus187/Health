@@ -37,6 +37,8 @@ class Spec(NamedTuple):
     reference: str
     digits: int
     senior_bands: tuple[Band, ...] | None = None
+    #: Input whose direct measurement outranks this indirect score.
+    superseded_by: str | None = None
 
 
 def age(birth_year: float) -> float:
@@ -44,8 +46,24 @@ def age(birth_year: float) -> float:
     return float(date.today().year - int(birth_year))
 
 
+_SENIOR_AGE = 65.0
+
+
+def band_for(spec: Spec, values: dict[str, float], value: float) -> Band:
+    """Reference band containing ``value`` (age-adjusted when defined)."""
+    senior = "birth_year" in values and age(values["birth_year"]) >= _SENIOR_AGE
+    bands = spec.senior_bands if spec.senior_bands and senior else spec.bands
+    return next(band for band in bands if value < band.below)
+
+
+#: FibroScan (transient elastography) metric keys.
+CAP_KEY = "liver.cap"
+LSM_KEY = "liver.lsm"
+
 #: Inputs → metric keys (first match by most recent date wins).
 SOURCES: dict[str, tuple[str, ...]] = {
+    "cap": (CAP_KEY,),
+    "lsm": (LSM_KEY,),
     "waist": ("body.waist", "apple.waist_circumference"),
     "height": ("body.height",),
     "weight": ("body.weight",),
@@ -61,6 +79,8 @@ SOURCES: dict[str, tuple[str, ...]] = {
 
 #: Display unit of each input (after unit normalization).
 UNITS = {
+    "cap": "dB/m",
+    "lsm": "kPa",
     "waist": "cm",
     "height": "cm",
     "weight": "kg",
@@ -77,7 +97,30 @@ UNITS = {
 #: Inputs that do not go stale (not used for the marker's date).
 STATIC = frozenset({"height", "birth_year"})
 
+#: Inputs whose dates are events worth a history point (a lab report, a
+#: FibroScan, a tape measure) — weight is daily, so only looked up.
+EVENTS = frozenset(
+    {
+        "waist",
+        "tg",
+        "ggt",
+        "ast",
+        "alt",
+        "platelets",
+        "glucose",
+        "hba1c",
+        "cap",
+        "lsm",
+    }
+)
+
+#: How old a looked-up input may be for a past marker value (days).
+MAX_AGE = {"weight": 30, "waist": 120}
+DEFAULT_MAX_AGE = 400
+
 LABELS = {
+    "cap": "CAP FibroScan",
+    "lsm": "Élasticité FibroScan",
     "waist": "Tour de taille",
     "height": "Taille",
     "weight": "Poids",
@@ -97,9 +140,33 @@ PROFILE: dict[str, MetricSpec] = {
     "waist_cm": MetricSpec("body.waist", "Tour de taille", "body", "float", "cm", "last"),
     "height_cm": MetricSpec("body.height", "Taille", "body", "float", "cm", "last"),
     "birth_year": MetricSpec("profile.birth_year", "Année de naissance", "profile", "int", None, "last"),
+    "cap_db_m": MetricSpec(CAP_KEY, "CAP FibroScan (graisse du foie)", "liver", "float", "dB/m", "last"),
+    "lsm_kpa": MetricSpec(LSM_KEY, "Élasticité FibroScan (fibrose)", "liver", "float", "kPa", "last"),
 }
 
 SPECS: tuple[Spec, ...] = (
+    Spec(
+        "cap", "FibroScan — CAP (graisse du foie)", "dB/m", ("cap",),
+        lambda v: v["cap"],
+        (
+            Band(248, "ok", "S0 : pas de stéatose significative"),
+            Band(268, "warn", "S1 : stéatose légère"),
+            Band(280, "high", "S2 : stéatose modérée"),
+            Band(_INF, "high", "S3 : stéatose sévère"),
+        ),
+        "Mesure directe · S1 ≥ 248 · S2 ≥ 268 · S3 ≥ 280 dB/m (Karlas 2017)", 0,
+    ),
+    Spec(
+        "lsm", "FibroScan — élasticité (fibrose)", "kPa", ("lsm",),
+        lambda v: v["lsm"],
+        (
+            Band(8, "ok", "Fibrose avancée peu probable"),
+            Band(12, "warn", "Zone grise : avis hépatologique"),
+            Band(15, "high", "Fibrose avancée probable"),
+            Band(_INF, "high", "Maladie chronique avancée du foie possible"),
+        ),
+        "Mesure directe · < 8 exclut · 8–12 intermédiaire · ≥ 12 fibrose avancée probable · ≥ 15 maladie avancée (EASL 2024, Baveno VII) · sonde XL si IMC ≥ 30", 1,
+    ),
     Spec(
         "whtr", "Tour de taille / taille (WHtR)", "", ("waist", "height"),
         lambda v: score.whtr(v["waist"], v["height"]),
@@ -130,6 +197,7 @@ SPECS: tuple[Spec, ...] = (
             Band(_INF, "high", "Stéatose hépatique probable"),
         ),
         "< 30 exclut · 30–60 indéterminé · ≥ 60 probable (Bedogni 2006)", 0,
+        superseded_by="cap",
     ),
     Spec(
         "fib4", "FIB-4 (fibrose du foie)", "", ("birth_year", "ast", "alt", "platelets"),
@@ -145,6 +213,7 @@ SPECS: tuple[Spec, ...] = (
             Band(2.67, "warn", "Zone grise : FibroScan / avis médical conseillé"),
             Band(_INF, "high", "Fibrose avancée possible : avis hépatologique"),
         ),
+        superseded_by="lsm",
     ),
     Spec(
         "hba1c", "Hémoglobine glyquée (HbA1c)", "%", ("hba1c",),

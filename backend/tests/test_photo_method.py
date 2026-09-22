@@ -8,6 +8,7 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from app.core import ollama
+from app.core.config import get_settings
 from app.core.db import SessionFactory
 from app.models.photo import Photo, PhotoAnalysis
 from app.models.user import User
@@ -197,7 +198,7 @@ async def _seed_scores(scores: list[float]) -> None:
 def _analysis(photo_id: str, score: float) -> PhotoAnalysis:
     return PhotoAnalysis(
         photo_id=photo_id,
-        model="test",
+        model=get_settings().ollama_vision_model,
         prompt_version="v2",
         raw_output={
             "method": "v2",

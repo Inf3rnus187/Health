@@ -1,4 +1,9 @@
-import type { Marker, MarkerInput, MarkerLevel } from '../../api/evolution';
+import type {
+  Marker,
+  MarkerInput,
+  MarkerLevel,
+  MarkerPoint,
+} from '../../api/evolution';
 import { useMarkers } from '../../hooks/useEvolution';
 import { frNumber, shortDate } from '../../utils/format';
 import { ProfileForm } from './ProfileForm';
@@ -37,6 +42,28 @@ function MarkerInputs({ inputs }: { inputs?: MarkerInput[] }) {
   );
 }
 
+function pointText(point: MarkerPoint): string {
+  return `${shortDate(point.date)} : ${frNumber(point.value, 2)}`;
+}
+
+/** Past values (from previous lab results / FibroScans), oldest first. */
+function MarkerHistory({ history }: { history?: MarkerPoint[] }) {
+  if (!history || history.length < 2) {
+    return null;
+  }
+  return (
+    <span className="marker-small marker-history">
+      Historique :{' '}
+      {history.map((point, index) => (
+        <span key={point.date} className={`hist hist-${point.level}`}>
+          {index > 0 ? ' → ' : ''}
+          {pointText(point)}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 function MarkerFoot({ marker }: { marker: Marker }) {
   const missing = marker.missing ?? [];
   return (
@@ -62,7 +89,9 @@ function MarkerItem({ marker }: { marker: Marker }) {
       </div>
       <span className="marker-value">{formatValue(marker)}</span>
       {marker.interpretation && <span>{marker.interpretation}</span>}
+      {marker.note && <span className="marker-note">{marker.note}</span>}
       <MarkerInputs inputs={marker.inputs} />
+      <MarkerHistory history={marker.history} />
       {marker.reference && (
         <span className="marker-small muted">{marker.reference}</span>
       )}

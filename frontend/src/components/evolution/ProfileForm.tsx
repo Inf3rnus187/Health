@@ -5,10 +5,16 @@ import { useSaveProfile } from '../../hooks/useEvolution';
 import { frNumber, localToday, shortDate } from '../../utils/format';
 import { Field } from '../Field';
 
-type Key = 'waist_cm' | 'height_cm' | 'birth_year';
+type Key = 'waist_cm' | 'height_cm' | 'birth_year' | 'cap_db_m' | 'lsm_kpa';
 type Values = Record<Key, string>;
 
-const EMPTY: Values = { waist_cm: '', height_cm: '', birth_year: '' };
+const EMPTY: Values = {
+  waist_cm: '',
+  height_cm: '',
+  birth_year: '',
+  cap_db_m: '',
+  lsm_kpa: '',
+};
 
 interface FieldSpec {
   key: Key;
@@ -41,6 +47,20 @@ const FIELDS: FieldSpec[] = [
     max: 2100,
     integer: true,
   },
+  {
+    key: 'cap_db_m',
+    label: 'FibroScan CAP (dB/m)',
+    min: 100,
+    max: 400,
+    integer: false,
+  },
+  {
+    key: 'lsm_kpa',
+    label: 'FibroScan élasticité E (kPa)',
+    min: 1.5,
+    max: 75,
+    integer: false,
+  },
 ];
 
 function parse(raw: string): number | undefined {
@@ -72,7 +92,7 @@ function validate(values: Values): string | null {
 }
 
 /** Only the filled fields are sent; null when nothing was entered. */
-function toBody(values: Values): ProfileInput | null {
+function toBody(values: Values, day: string): ProfileInput | null {
   const body: ProfileInput = {};
   for (const { key } of FIELDS) {
     const value = parse(values[key]);
@@ -83,7 +103,7 @@ function toBody(values: Values): ProfileInput | null {
   if (Object.keys(body).length === 0) {
     return null;
   }
-  return { ...body, date_key: localToday() };
+  return { ...body, date_key: day || localToday() };
 }
 
 function placeholder(profile: MarkerProfile | undefined, key: Key): string {
@@ -146,6 +166,7 @@ function SaveStatus({ error, saved }: { error?: string; saved: boolean }) {
 
 function useProfileForm() {
   const [values, setValues] = useState<Values>(EMPTY);
+  const [day, setDay] = useState(localToday);
   const [invalid, setInvalid] = useState<string | null>(null);
   const mutation = useSaveProfile();
   const onChange = (key: Key, value: string) =>
@@ -154,20 +175,30 @@ function useProfileForm() {
     event.preventDefault();
     const problem = validate(values);
     setInvalid(problem);
-    const body = problem ? null : toBody(values);
+    const body = problem ? null : toBody(values, day);
     if (body) {
       mutation.mutate(body, { onSuccess: () => setValues(EMPTY) });
     }
   };
   const error = invalid ?? mutation.error?.message;
-  return { values, onChange, submit, error, mutation };
+  return { values, onChange, submit, error, mutation, day, setDay };
 }
 
 export function ProfileForm({ profile }: { profile?: MarkerProfile }) {
-  const { values, onChange, submit, error, mutation } = useProfileForm();
+  const form = useProfileForm();
+  const { values, onChange, submit, error, mutation } = form;
   return (
     <form className="profile-form" onSubmit={submit} noValidate>
       <ProfileInputs values={values} profile={profile} onChange={onChange} />
+      <div className="profile-field profile-date">
+        <Field
+          id="profile-date"
+          label="Date de la mesure (FibroScan, tour de taille…)"
+          type="date"
+          value={form.day}
+          onChange={form.setDay}
+        />
+      </div>
       <div className="profile-actions">
         <button className="btn" type="submit" disabled={mutation.isPending}>
           {mutation.isPending ? 'Enregistrement…' : 'Enregistrer'}

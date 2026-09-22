@@ -1,4 +1,4 @@
-import type { AngleTrend } from '../../api/evolution';
+import type { AngleTrend, EvolutionTrend } from '../../api/evolution';
 import { useTrend } from '../../hooks/useEvolution';
 import { shortDate } from '../../utils/format';
 import { angleLabel } from '../photos/labels';
@@ -39,6 +39,23 @@ function AngleBlock({ trend }: { trend: AngleTrend }) {
   );
 }
 
+function ModelNotice({ data }: { data: EvolutionTrend }) {
+  return (
+    <>
+      <p className="muted trend-method">
+        Méthode {data.method_version} · modèle {data.model}
+      </p>
+      {data.other_model_photos > 0 && (
+        <p className="marker-missing">
+          {data.other_model_photos} photo(s) notée(s) avec un autre modèle :
+          exclues (échelles non comparables). « Réanalyser tout l’historique »
+          pour les inclure.
+        </p>
+      )}
+    </>
+  );
+}
+
 function TrendBody() {
   const { data, isLoading, error } = useTrend();
   if (isLoading) {
@@ -50,7 +67,7 @@ function TrendBody() {
   }
   return (
     <>
-      <p className="muted trend-method">Méthode {data.method_version}</p>
+      <ModelNotice data={data} />
       {data.angles.map((trend) => (
         <AngleBlock key={trend.angle} trend={trend} />
       ))}

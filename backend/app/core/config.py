@@ -44,8 +44,13 @@ class Settings(BaseSettings):
     default_unit_system: str = "metric"
 
     ollama_url: str = "http://host.docker.internal:11434"
+    # Clinical reasoning / synthesis (text), e.g. medgemma:27b.
     ollama_text_model: str = "llama3.1"
+    # Photos (image), e.g. medgemma1.5 (MedGemma 1.5 4B multimodal).
     ollama_vision_model: str = "llava"
+    # Reading medical documents (lab reports, FibroScan…); empty = the
+    # vision model, which also reads scanned pages.
+    ollama_document_model: str = ""
     max_upload_mb: int = 15
     media_encryption_key: str | None = None
     mfa_issuer: str = "Phoenix Health Hub"

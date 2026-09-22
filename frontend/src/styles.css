@@ -998,6 +998,23 @@ progress {
   overflow-wrap: anywhere;
 }
 
+.marker-note {
+  font-size: 12px;
+  color: var(--color-primary);
+}
+.marker-history {
+  overflow-wrap: anywhere;
+}
+.hist-ok {
+  color: var(--color-ok);
+}
+.hist-warn {
+  color: var(--color-warn);
+}
+.hist-high {
+  color: var(--color-high);
+}
+
 /* Weight. */
 .weight-head {
   display: flex;
