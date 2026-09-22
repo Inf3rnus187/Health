@@ -120,31 +120,54 @@ async def test_later_manual_weigh_in_is_kept(
 async def test_alias_rows_merge_into_canonical_key(
     client: AsyncClient, auth: dict[str, str]
 ) -> None:
+    """Rows stored under an alias before it was mapped fold into the key."""
     alias = MetricSpec(
         "sleep.spo2_avg", "SpO2 nuit", "sleep", "float", "%", "avg"
     )
     target = QUANTITY_SPECS["HKQuantityTypeIdentifierOxygenSaturation"]
+    user_id = await _user_id()
     async with SessionFactory() as session:
-        await MetricCache().id_for(session, alias)
+        alias_id = await MetricCache().id_for(session, alias)
         target_id = await MetricCache().id_for(session, target)
+        session.add(
+            Measurement(
+                user_id=user_id,
+                metric_id=alias_id,
+                recorded_at=utcnow(),
+                date_key=date(2026, 6, 3),
+                value_num=0.97,
+                source="manual",
+            )
+        )
         await session.commit()
-    await client.post(
-        "/api/v1/measurements",
-        json={
-            "items": [
-                {
-                    "metric_key": "sleep.spo2_avg",
-                    "date_key": "2026-06-03",
-                    "value": 0.97,
-                }
-            ]
-        },
-        headers=auth,
-    )
     report = await _reconcile()
     assert report["merged"] == {"sleep.spo2_avg": 1}
     row = (await _daily(target_id))[date(2026, 6, 3)]
     assert row.value_num == pytest.approx(97.0)
+    listed = await client.get(
+        "/api/v1/measurements",
+        params={"metric_key": "sleep.spo2_avg"},
+        headers=auth,
+    )
+    assert listed.json()[0]["value_num"] == pytest.approx(97.0)
+
+
+async def test_alias_key_writes_land_on_canonical_metric(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    item = {"metric_key": "stairs.floors", "date_key": "2026-06-03"}
+    resp = await client.post(
+        "/api/v1/measurements",
+        json={"items": [{**item, "value": 7}]},
+        headers=auth,
+    )
+    assert resp.status_code == 201
+    listed = await client.get(
+        "/api/v1/measurements",
+        params={"metric_key": "activity.flights"},
+        headers=auth,
+    )
+    assert [r["value_num"] for r in listed.json()] == [7]
 
 
 async def test_mapped_ingest_lands_on_canonical_key(

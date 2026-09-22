@@ -20,8 +20,13 @@ from app.models.health_raw import HealthSample
 from app.models.measurement import Measurement
 from app.models.metric import MetricDefinition
 from app.services.apple_health.metrics_cache import MetricCache
-from app.services.apple_health.spec import QUANTITY_SPECS, MetricSpec
+from app.services.apple_health.spec import (
+    QUANTITY_SPECS,
+    MetricSpec,
+    synth_spec,
+)
 from app.services.apple_health.units import convert
+from app.services.hae_names import HAE_MAP
 
 #: Legacy / alternative key → canonical key.
 ALIASES: dict[str, str] = {
@@ -37,38 +42,79 @@ ALIASES: dict[str, str] = {
 }
 
 
+def _hae_legacy() -> dict[str, str]:
+    """Keys created from Health Auto Export names before they were mapped.
+
+    An unmapped name (e.g. ``walking_running_distance``) used to become
+    ``apple.<name>``; it now resolves to the HealthKit type's metric.
+    """
+    out: dict[str, str] = {}
+    for name, hk_type in HAE_MAP.items():
+        legacy = f"apple.{name}"
+        target = synth_spec(hk_type, None).key
+        if legacy != target:
+            out[legacy] = target
+    return out
+
+
+ALIASES.update(_hae_legacy())
+
+
 def canonical(key: str) -> str:
     """The canonical key for ``key`` (itself when already canonical)."""
     return ALIASES.get(key, key)
 
 
 async def merge(session: AsyncSession, user_id: str) -> dict[str, int]:
-    """Move this user's alias rows onto canonical metrics; count moves."""
+    """Move this user's alias rows onto canonical metrics; count moves.
+
+    A missing canonical metric is created from its spec (never by renaming
+    the alias: several aliases can share one target, and definitions are
+    shared by every user). Alias definitions left empty are dropped.
+    """
     moved: dict[str, int] = {}
+    cache = MetricCache()
     for alias, target in ALIASES.items():
-        pair = await _pair(session, alias, target)
-        if pair is None:
-            continue
-        count = await _move(session, user_id, *pair)
+        count = await _merge_one(session, user_id, alias, target, cache)
         if count:
             moved[alias] = count
     await session.flush()
     return moved
 
 
-async def _pair(
+async def _merge_one(
+    session: AsyncSession,
+    user_id: str,
+    alias: str,
+    target: str,
+    cache: MetricCache,
+) -> int:
+    """Fold one alias metric into its target; count the moved rows."""
+    found = await _found(session, alias, target)
+    source = found.get(alias)
+    if source is None:
+        return 0
+    if target not in found:
+        if not await _used(session, source.id, user_id):
+            return 0
+        await cache.id_for(session, _spec_for(target, source))
+        found = await _found(session, alias, target)
+    count = await _move(session, user_id, source, found[target])
+    if not await _used(session, source.id, None):
+        await session.delete(source)
+    return count
+
+
+async def _found(
     session: AsyncSession, alias: str, target: str
-) -> tuple[MetricDefinition, MetricDefinition] | None:
-    """The alias metric and its target, when both exist."""
+) -> dict[str, MetricDefinition]:
+    """The alias and target metric definitions that exist, by key."""
     result = await session.execute(
         select(MetricDefinition).where(
             MetricDefinition.key.in_([alias, target])
         )
     )
-    found = {m.key: m for m in result.scalars().all()}
-    if alias not in found or target not in found:
-        return None
-    return found[alias], found[target]
+    return {m.key: m for m in result.scalars().all()}
 
 
 async def _move(
@@ -141,11 +187,51 @@ async def _days(
     return set(result.scalars().all())
 
 
+async def _used(
+    session: AsyncSession, metric_id: str, user_id: str | None
+) -> bool:
+    """Whether a metric still holds rows (for one user, or anyone)."""
+    for model in (HealthSample, Measurement):
+        query = select(model.id).where(model.metric_id == metric_id)
+        if user_id is not None:
+            query = query.where(model.user_id == user_id)
+        if (await session.execute(query.limit(1))).first() is not None:
+            return True
+    return False
+
+
+def _target_specs() -> dict[str, MetricSpec]:
+    """Canonical key → spec, for creating a missing canonical metric."""
+    specs = {spec.key: spec for spec in QUANTITY_SPECS.values()}
+    for hk_type in HAE_MAP.values():
+        spec = synth_spec(hk_type, None)
+        specs.setdefault(spec.key, spec)
+    return specs
+
+
+_SPECS = _target_specs()
+
+
+def _spec_for(target: str, alias: MetricDefinition) -> MetricSpec:
+    """The spec of a canonical key (else modelled on the alias metric)."""
+    known = _SPECS.get(target)
+    if known is not None:
+        return known
+    return MetricSpec(
+        target,
+        alias.label,
+        target.split(".", 1)[0],
+        alias.data_type,
+        alias.unit,
+        alias.aggregation_hint or "avg",
+    )
+
+
 async def ensure(
     session: AsyncSession, key: str, cache: MetricCache
 ) -> MetricSpec | None:
-    """Create a canonical metric from its curated spec if it is missing."""
-    spec = next((s for s in QUANTITY_SPECS.values() if s.key == key), None)
+    """Create a canonical metric from its known spec if it is missing."""
+    spec = _SPECS.get(key)
     if spec is not None:
         await cache.id_for(session, spec)
     return spec

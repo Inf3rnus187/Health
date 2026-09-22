@@ -1,8 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { fetchMetrics } from '../api/metrics';
+import { fetchDomainLabels, fetchMetrics } from '../api/metrics';
 
-const PREFERRED = ['body', 'sleep', 'ppc', 'workout', 'walk', 'habit', 'state'];
+const PREFERRED = [
+  'body',
+  'heart',
+  'vitals',
+  'bio',
+  'activity',
+  'sleep',
+  'ppc',
+  'habit',
+  'symptom',
+];
 
 function ordered(domains: Set<string>): string[] {
   const known = PREFERRED.filter((d) => domains.has(d));
@@ -19,4 +29,14 @@ export function useDomains(): string[] {
   }
   const result = ordered(domains);
   return result.length > 0 ? result : PREFERRED;
+}
+
+/** Domain code → French name (the code itself while loading / unknown). */
+export function useDomainLabel(): (domain: string) => string {
+  const { data } = useQuery({
+    queryKey: ['domain-labels'],
+    queryFn: fetchDomainLabels,
+    staleTime: Infinity,
+  });
+  return (domain) => data?.[domain] ?? domain;
 }

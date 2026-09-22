@@ -20,6 +20,8 @@ from app.models.metric import MetricDefinition
 from app.models.user import User
 from app.seed.catalog import CATALOG
 from app.seed.mappings import DEFAULT_MAPPINGS
+from app.services import canonical
+from app.services.apple_health.metrics_cache import MetricCache
 
 _log = get_logger("seed")
 
@@ -65,10 +67,13 @@ async def _seed_catalog(session: AsyncSession) -> int:
     existing = {row[0] for row in result.all()}
     added = 0
     for entry in CATALOG:
-        if entry["key"] in existing:
-            continue
-        session.add(MetricDefinition(**entry))
-        added += 1
+        key = canonical.canonical(entry["key"])
+        if key != entry["key"]:  # an alias: seed its canonical metric
+            added += key not in existing
+            await canonical.ensure(session, key, MetricCache())
+        elif key not in existing:
+            session.add(MetricDefinition(**entry))
+            added += 1
     return added
 
 

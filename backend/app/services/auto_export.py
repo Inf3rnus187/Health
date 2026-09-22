@@ -27,41 +27,17 @@ from app.models.base import new_uuid, utcnow
 from app.models.health_raw import HealthSample
 from app.models.metric import MetricDefinition
 from app.schemas.ingest import IngestResult
-from app.services import daily_rollup
+from app.services import daily_rollup, hae_names
 from app.services.apple_health.metrics_cache import MetricCache
 from app.services.apple_health.spec import MetricSpec, synth_spec
+from app.services.apple_health.units import PERCENT_0_100
 
 _SOURCE = "auto-export"
 _RAW_CHUNK = 2000
 _ROLLUP_CHUNK = 400
-
-#: Health Auto Export metric name -> HealthKit identifier (so it resolves
-#: to the same canonical key a native Apple export would create).
-HAE_MAP: dict[str, str] = {
-    "step_count": "HKQuantityTypeIdentifierStepCount",
-    "distance_walking_running": (
-        "HKQuantityTypeIdentifierDistanceWalkingRunning"
-    ),
-    "flights_climbed": "HKQuantityTypeIdentifierFlightsClimbed",
-    "active_energy": "HKQuantityTypeIdentifierActiveEnergyBurned",
-    "basal_energy_burned": "HKQuantityTypeIdentifierBasalEnergyBurned",
-    "apple_exercise_time": "HKQuantityTypeIdentifierAppleExerciseTime",
-    "apple_stand_time": "HKQuantityTypeIdentifierAppleStandTime",
-    "heart_rate": "HKQuantityTypeIdentifierHeartRate",
-    "resting_heart_rate": "HKQuantityTypeIdentifierRestingHeartRate",
-    "walking_heart_rate_average": (
-        "HKQuantityTypeIdentifierWalkingHeartRateAverage"
-    ),
-    "heart_rate_variability": (
-        "HKQuantityTypeIdentifierHeartRateVariabilitySDNN"
-    ),
-    "respiratory_rate": "HKQuantityTypeIdentifierRespiratoryRate",
-    "blood_oxygen_saturation": "HKQuantityTypeIdentifierOxygenSaturation",
-    "oxygen_saturation": "HKQuantityTypeIdentifierOxygenSaturation",
-    "weight_body_mass": "HKQuantityTypeIdentifierBodyMass",
-    "body_mass_index": "HKQuantityTypeIdentifierBodyMassIndex",
-    "height": "HKQuantityTypeIdentifierHeight",
-    "vo2_max": "HKQuantityTypeIdentifierVO2Max",
+_BLOOD_PRESSURE = {
+    "systolic": "HKQuantityTypeIdentifierBloodPressureSystolic",
+    "diastolic": "HKQuantityTypeIdentifierBloodPressureDiastolic",
 }
 
 
@@ -115,26 +91,49 @@ def _parse(metrics: list[dict[str, Any]]) -> tuple[list[_Raw], list[str]]:
     skipped: list[str] = []
     for metric in metrics:
         name = str(metric.get("name") or "")
-        hk_type = HAE_MAP.get(name) or name
-        unit = str(metric["units"]) if metric.get("units") else None
+        unit = _unit(metric.get("units"))
         for point in metric.get("data") or []:
-            entry = _entry(hk_type, unit, point)
-            if entry is None:
+            entries = _entries(name, unit, point)
+            if not entries:
                 skipped.append(name or "?")
-            else:
-                raw.append(entry)
+            raw.extend(entries)
     return raw, skipped
 
 
-def _entry(hk_type: str, unit: str | None, point: Any) -> _Raw | None:
-    """Build one raw entry from a metric point (``qty`` or ``Avg``)."""
-    if not isinstance(point, dict) or not hk_type:
-        return None
-    num = _num(point.get("qty", point.get("Avg")))
+def _entries(name: str, unit: str | None, point: Any) -> list[_Raw]:
+    """Raw entries of one point (blood pressure and sleep split up)."""
+    if not isinstance(point, dict):
+        return []
     ts = _ts(point.get("date"))
-    if num is None or ts is None:
+    if ts is None:
+        return []
+    if name == "blood_pressure":
+        return _fields(point, ts, "mmHg", _BLOOD_PRESSURE)
+    if name == "sleep_analysis":
+        return _fields(point, ts, "hr", hae_names.SLEEP_FIELDS)
+    hk_type = hae_names.HAE_MAP.get(name) or name
+    num = _num(point.get("qty", point.get("Avg")))
+    return [_Raw(hk_type, unit, ts, num)] if num is not None and name else []
+
+
+def _fields(
+    point: dict[str, Any], ts: datetime, unit: str, fields: dict[str, str]
+) -> list[_Raw]:
+    """One raw entry per numeric field of a multi-value point."""
+    out: list[_Raw] = []
+    for field, target in fields.items():
+        num = _num(point.get(field))
+        if num is not None:
+            out.append(_Raw(target, unit, ts, num))
+    return out
+
+
+def _unit(units: Any) -> str | None:
+    """The payload unit; Health Auto Export percentages are 0-100."""
+    if not units:
         return None
-    return _Raw(hk_type, unit, ts, num)
+    text = str(units)
+    return PERCENT_0_100 if text == "%" else text
 
 
 async def _resolve(
@@ -146,7 +145,7 @@ async def _resolve(
     for entry in raw:
         spec = specs.get(entry.hk_type)
         if spec is None:
-            spec = synth_spec(entry.hk_type, entry.unit)
+            spec = _spec(entry.hk_type, entry.unit)
             specs[entry.hk_type] = spec
         metric_id = await cache.id_for(session, spec)
         out.append(_Point(metric_id, spec, entry.unit, entry.ts, entry.value))
@@ -220,6 +219,13 @@ async def _store_rollups(
     for metric in metrics.scalars().all():
         total += await daily_rollup.rebuild(session, user_id, metric, tz, since)
     return total
+
+
+def _spec(hk_type: str, unit: str | None) -> MetricSpec:
+    """Spec of a HealthKit type, or of a sleep metric key (sleep fields)."""
+    if hk_type.startswith("sleep."):
+        return MetricSpec(hk_type, hk_type, "sleep", "duration", "min", "avg")
+    return synth_spec(hk_type, unit)
 
 
 def _num(value: Any) -> float | None:

@@ -11,6 +11,8 @@ from __future__ import annotations
 import re
 from typing import NamedTuple
 
+from app.services.apple_health import hk_catalog
+
 
 class MetricSpec(NamedTuple):
     """Target metric for a HealthKit type."""
@@ -366,6 +368,16 @@ def synth_spec(hk_type: str, unit: str | None) -> MetricSpec:
     if curated is not None:
         return curated
     slug = _slug(hk_type)
+    known = hk_catalog.TYPES.get(hk_type)
+    if known is not None:
+        return MetricSpec(
+            f"apple.{slug}",
+            known.label,
+            known.domain,
+            "float",
+            known.unit,
+            known.agg,
+        )
     return MetricSpec(
         f"apple.{slug}", _title(slug), "apple", "float", unit, "avg"
     )

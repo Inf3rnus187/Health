@@ -17,6 +17,7 @@ from app.schemas.measurement import MeasurementIn
 from app.services import measurement_values as values
 from app.services import metrics as metrics_service
 from app.services.aggregation import rolling
+from app.services.canonical import canonical
 
 
 async def record_batch(
@@ -111,7 +112,7 @@ def _resolve(
     catalog: dict[str, MetricDefinition], key: str
 ) -> MetricDefinition:
     """Return an active, writable metric from the preloaded catalog."""
-    metric = catalog.get(key)
+    metric = catalog.get(canonical(key))
     if metric is None:
         raise NotFoundError(f"Unknown metric: {key}")
     if not metric.is_active:
@@ -126,7 +127,9 @@ async def _load_metrics(
 ) -> dict[str, MetricDefinition]:
     """Preload the metrics referenced by a batch in one query."""
     result = await session.execute(
-        select(MetricDefinition).where(MetricDefinition.key.in_(keys))
+        select(MetricDefinition).where(
+            MetricDefinition.key.in_({canonical(k) for k in keys})
+        )
     )
     return {m.key: m for m in result.scalars().all()}
 

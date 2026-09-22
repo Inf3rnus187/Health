@@ -19,6 +19,7 @@ from app.models.health_raw import HealthSample, Workout
 from app.schemas.measurement import MeasurementIn
 from app.services import measurements as measure
 from app.services.apple_health.accumulator import DailyAggregator
+from app.services.apple_health.hk_values import category_value
 from app.services.apple_health.metrics_cache import MetricCache
 from app.services.apple_health.parser import (
     Item,
@@ -77,7 +78,7 @@ async def run_records(
 def _sample_row(
     user_id: str, metric_id: str, rec: RawRecord, start: Any, num: float | None
 ) -> dict[str, Any]:
-    """Build one health_samples insert row."""
+    """Build one health_samples insert row (category label kept)."""
     return {
         "id": new_uuid(),
         "user_id": user_id,
@@ -85,7 +86,7 @@ def _sample_row(
         "start_at": start,
         "end_at": to_dt(rec.end),
         "value_num": num,
-        "value_text": None if num is not None else rec.value,
+        "value_text": None if to_float(rec.value) is not None else rec.value,
         "unit": rec.unit,
         "source": "apple",
         "device": rec.device,
@@ -176,6 +177,8 @@ class _RawImporter:
         spec = SLEEP_RAW if is_sleep else self._spec(rec.hk_type, rec.unit)
         metric_id = await self.cache.id_for(self.session, spec)
         num = to_float(rec.value)
+        if num is None and not is_sleep:
+            num = category_value(rec.hk_type, rec.value, start, to_dt(rec.end))
         self._samples.append(
             _sample_row(self.user_id, metric_id, rec, start, num)
         )

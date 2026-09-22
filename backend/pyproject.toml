@@ -70,6 +70,8 @@ ignore = ["D203", "D213", "ANN401", "ANN101", "ANN102", "PLC0415"]
 "app/seed/catalog.py" = ["E501"]
 "app/services/metabolic_catalog.py" = ["E501"]
 "app/services/photo_method.py" = ["E501"]
+"app/services/apple_health/hk_catalog.py" = ["E501"]
+"app/services/hae_names.py" = ["E501"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10

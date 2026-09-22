@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import ConflictError, NotFoundError
 from app.models.metric import MetricDefinition
 from app.schemas.metric import MetricCreate, MetricUpdate
+from app.services.canonical import canonical
 
 
 async def list_metrics(
@@ -30,9 +31,9 @@ async def list_metrics(
 
 
 async def get_metric(session: AsyncSession, key: str) -> MetricDefinition:
-    """Return one metric by key or raise :class:`NotFoundError`."""
+    """Return one metric by key (aliases resolve to their canonical)."""
     result = await session.execute(
-        select(MetricDefinition).where(MetricDefinition.key == key)
+        select(MetricDefinition).where(MetricDefinition.key == canonical(key))
     )
     metric = result.scalar_one_or_none()
     if metric is None:

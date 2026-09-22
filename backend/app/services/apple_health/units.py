@@ -27,11 +27,29 @@ _FACTORS: dict[tuple[str, str], float] = {
     ("hr", "min"): 60.0,
     ("mg/dL", "g/L"): 0.01,
     ("mmol/L", "g/L"): 0.18,  # glucose (180.16 g/mol)
+    ("m/s", "km/hr"): 3.6,
+    ("mi/hr", "km/hr"): 1.609344,
+    ("ft/s", "m/s"): 0.3048,
+    ("yd", "m"): 0.9144,
+    ("ft", "m"): 0.3048,
+    ("in", "m"): 0.0254,
+    ("count/s", "count/min"): 60.0,
+    ("Cal", "kcal"): 1.0,
+    ("S", "mcS"): 1_000_000.0,
+    ("fl_oz_us", "mL"): 29.5735,
+    ("L", "mL"): 1000.0,
+    ("s", "min"): 1 / 60,
 }
+
+#: Percentages already on a 0-100 scale (Health Auto Export); the Apple
+#: export writes them as fractions (0.97), which are scaled to %.
+PERCENT_0_100 = "pct"
 
 
 def convert(value: float, src: str, dst: str | None) -> float:
     """Return ``value`` expressed in the destination unit."""
+    if src == PERCENT_0_100:
+        return value
     if dst == "%" and 0.0 < value <= 1.0:
         return value * 100.0
     src = _MOLAR_MASS.sub("", src)

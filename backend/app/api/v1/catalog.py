@@ -15,6 +15,7 @@ from fastapi import APIRouter, Query
 from app.core.deps import PrincipalDep, SessionDep
 from app.models.metric import MetricDefinition
 from app.schemas.metric import MetricOut
+from app.services import domain_labels
 from app.services import metrics as svc
 
 router = APIRouter(tags=["metrics"])
@@ -32,3 +33,9 @@ async def catalog(
     return await svc.list_metrics(
         session, domain=domain, source=source, active=active
     )
+
+
+@router.get("/catalog/domains")
+async def domains(principal: PrincipalDep) -> dict[str, str]:
+    """French name of every metric domain (tabs, reports, MCP)."""
+    return domain_labels.LABELS

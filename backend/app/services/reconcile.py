@@ -1,6 +1,8 @@
 """Make every page agree: one key per concept, daily values from raw data.
 
 Run after each Apple import (and on demand from the web page):
+0. stored data is aligned with the HealthKit catalog (French labels,
+   domains, numeric category events, Health Auto Export percentages);
 1. alias metrics are merged into their canonical metric (units
    converted), so e.g. SpO2 no longer lives under two keys;
 2. every metric with raw samples gets its daily values recomputed with
@@ -19,13 +21,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.logging import get_logger
 from app.models.health_raw import HealthSample
 from app.models.metric import MetricDefinition
-from app.services import canonical, daily_rollup
+from app.services import canonical, catalog_sync, daily_rollup
 
 _log = get_logger("reconcile")
 
 
 async def run(session: AsyncSession, user_id: str) -> dict[str, Any]:
     """Merge aliases, then rebuild every sampled metric; report counts."""
+    catalog = await _catalog(session, user_id)
     merged = await canonical.merge(session, user_id)
     await session.commit()
     tz = await daily_rollup.user_zone(session, user_id)
@@ -34,8 +37,24 @@ async def run(session: AsyncSession, user_id: str) -> dict[str, Any]:
     for metric in metrics:
         days += await daily_rollup.rebuild(session, user_id, metric, tz)
         await session.commit()
-    report = {"merged": merged, "metrics": len(metrics), "days": days}
+    report = {
+        "merged": merged,
+        "metrics": len(metrics),
+        "days": days,
+        **catalog,
+    }
     _log.info("reconciled", user_id=user_id, **report)
+    return report
+
+
+async def _catalog(session: AsyncSession, user_id: str) -> dict[str, int]:
+    """Align stored data with the HealthKit catalog (see catalog_sync)."""
+    report = {
+        "definitions": await catalog_sync.sync_definitions(session),
+        "categories": await catalog_sync.backfill_categories(session, user_id),
+        "percentages": await catalog_sync.tag_percentages(session, user_id),
+    }
+    await session.commit()
     return report
 
 

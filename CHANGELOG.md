@@ -60,6 +60,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **One Ollama model per task** (`OLLAMA_VISION_MODEL`,
   `OLLAMA_DOCUMENT_MODEL`, `OLLAMA_TEXT_MODEL`); the photo trend only
   mixes scores of the current vision model.
+- **Complete Apple Health catalog (HealthKit SDK, iOS 26)**: all 121
+  quantity and 72 category types have a French label, a Health-app domain,
+  a unit and a daily rule, so a full Apple export, Health Auto Export and
+  lab / document imports write the *same* metric for the same concept.
+  Category events (symptoms with their severity, stand hours, heart-rate
+  notifications, mindfulness minutes, cycle tracking…) now get a numeric
+  value and chart like any other metric.
+- **Health Auto Export names**: every spelling the app has used maps to
+  the HealthKit type (e.g. `walking_running_distance`, previously stored
+  under a stray `apple.*` key); blood pressure is split into systolic /
+  diastolic, `sleep_analysis` into its sleep stages; its percentages
+  (already 0-100) are never scaled twice.
+- **Reconcile** also aligns stored data with the catalog (labels,
+  domains, numeric category events, HAE percentages) and folds the old
+  stray keys into their canonical metric. It does not call any AI model.
+- `GET /catalog/domains`: French name of every domain, used by the
+  dashboard tabs (Apple Santé and the hub's own domains — tabac, PPC,
+  biologie…).
 
 ### Fixed
 
@@ -71,6 +89,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Markers never found imported lab values: the blood-test import stores
   them as `bio.<analyte>` but the markers looked up bare keys. Both now
   use one shared key helper, and a test imports a real lab PDF end to end.
+- Merging duplicate keys renamed a shared metric definition when its
+  canonical metric was missing (a unique-key failure when two old keys
+  shared one target). The canonical metric is now created from its spec
+  and the old rows folded into it; a manual entry or a query on an old key
+  (`stairs.floors`, `sleep.spo2_avg`…) reads and writes the canonical one.
 
 ### Changed
 
