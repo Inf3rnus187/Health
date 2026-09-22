@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import date
 
 import pytest
@@ -42,8 +43,14 @@ def test_grounding_keeps_only_proven_values() -> None:
     ]
     accepted, rejected = grounding.ground(items, _TEXT, _UNITS)
     assert accepted == [grounding.Grounded("bio.hba1c", 7.9, date(2026, 9, 12))]
-    assert rejected == 5
-    assert grounding.ground("not a list", _TEXT, _UNITS) == ([], 0)
+    assert [r["reason"] for r in rejected] == [
+        "nombre absent du document",
+        "date absente du document",
+        "unité différente (attendu %)",
+        "mesure inconnue",
+        "format invalide",
+    ]
+    assert grounding.ground("not a list", _TEXT, _UNITS) == ([], [])
 
 
 def test_fibroscan_reader() -> None:
@@ -57,6 +64,31 @@ def test_fibroscan_reader() -> None:
         ("liver.lsm", 5.2, date(2026, 9, 15)),
     ]
     assert fibroscan.parse("no elastography here", date(2026, 1, 1)) == []
+
+
+# Layout of a real Echosens report (identity replaced): English page with
+# a US exam date after the birth date, then the French measurement page.
+_ECHOSENS = (
+    "Exam Interpretation FibroScan\n"
+    "PATIENT Jean DUPONT Date of Birth: 04/11/1985 Gender: Male\n"
+    "VCTE Liver examination date: 09/16/2026\n"
+    "CAP = 376 dB/m E = 5,7 kPa\n"
+    "STEATOSIS GRADE S0 S1-S2-S3 376 FIBROSIS STAGE F0-F1 F2 5,7\n"
+    "FibroScan DUPONT Jean M 04/11/1985 16/09/2026 09:20:46\n"
+    "Taille: 176 cm Poids: 106,6 kg\n"
+    "CAP (dB/m) E (kPa) SD MOYENNE MEDIANE IQR/med 9 376 5,7 11 %\n"
+)
+
+
+def test_fibroscan_reader_on_a_real_layout() -> None:
+    """Exam date (not the birth date), US format, ``E = 5,7 kPa``."""
+    exam = date(2026, 9, 16)
+    assert fibroscan.parse(_ECHOSENS, date(2020, 1, 1)) == [
+        ("liver.cap", 376.0, exam),
+        ("liver.lsm", 5.7, exam),
+        ("body.weight", 106.6, exam),
+        ("body.height", 176.0, exam),
+    ]
 
 
 async def _upload(
@@ -142,6 +174,9 @@ async def test_ai_values_are_grounded_before_storage(
         ("bio.hba1c", "ia")
     ]
     assert analysis["rejected"] == 1
+    assert analysis["rejected_items"][0]["reason"] == (
+        "nombre absent du document"
+    )
     ggt = await client.get(
         "/api/v1/measurements", params={"metric_key": "bio.ggt"}, headers=auth
     )
@@ -180,3 +215,64 @@ async def test_analyze_endpoints(
     )
     assert every.status_code == 202
     assert isinstance(every.json()["queued"], int)
+
+
+async def test_summary_keeps_only_named_medications(
+    client: AsyncClient,
+    auth: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Medications / diagnoses the document never names are dropped."""
+    lines = ["Ordonnance du 27/06/2024", "Metformine 1000 mg matin et soir"]
+
+    async def fake(prompt: str, model: str, **_: object) -> dict:
+        if "VALEURS" not in prompt:
+            return {"values": []}
+        return {
+            "document_type": "ordonnance",
+            "summary": "Ordonnance de metformine.",
+            "medications": [
+                {"name": "Metformine", "dose": "1000 mg", "frequency": "2/j"},
+                {"name": "Insuline", "dose": "10 UI", "frequency": "soir"},
+            ],
+            "conditions": ["Diabète"],
+        }
+
+    monkeypatch.setattr(ollama, "generate_json", fake)
+    doc_id = await _upload(client, auth, lines, "autre")
+    async with SessionFactory() as session:
+        await document_ai.run(session, doc_id)
+    docs = (await client.get("/api/v1/medical/documents", headers=auth)).json()
+    doc = next(d for d in docs if d["id"] == doc_id)
+    assert doc["kind"] == "ordonnance"
+    assert [m["name"] for m in doc["analysis"]["medications"]] == ["Metformine"]
+    assert doc["analysis"]["conditions"] == []
+    assert doc["analysis"]["summary"] == "Ordonnance de metformine."
+
+
+async def test_timeout_marks_the_reading_failed(
+    client: AsyncClient,
+    auth: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def slow(prompt: str, model: str, **_: object) -> dict:
+        await asyncio.sleep(5)
+        return {}
+
+    monkeypatch.setattr(ollama, "generate_json", slow)
+    monkeypatch.setattr(document_ai, "_TIME_LIMIT", 0.001)
+    doc_id = await _upload(client, auth, [_TEXT], "autre")
+    async with SessionFactory() as session:
+        await document_ai.run(session, doc_id)
+    docs = (await client.get("/api/v1/medical/documents", headers=auth)).json()
+    doc = next(d for d in docs if d["id"] == doc_id)
+    assert doc["analysis_status"] == "failed"
+    assert doc["analysis"]["error"] == "délai dépassé"
+
+
+async def test_stale_readings_are_requeued(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    await _upload(client, auth, [_TEXT], "autre")
+    async with SessionFactory() as session:
+        assert await document_ai.requeue_stale(session) >= 0

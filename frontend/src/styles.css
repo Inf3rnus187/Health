@@ -512,6 +512,7 @@ progress {
   overflow-wrap: anywhere;
 }
 
+.badge.doc-status-running,
 .badge.doc-status-queued {
   background: var(--color-warn-bg);
   color: var(--color-warn);
@@ -1275,4 +1276,22 @@ progress {
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+.doc-line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.doc-findings {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.doc-rejected summary {
+  cursor: pointer;
+}
+.doc-rejected ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }

@@ -3,7 +3,8 @@
 A language model can misread or invent numbers. A proposed value is kept
 only when its metric is a known one, its unit is that metric's unit and
 BOTH its number and its date are printed in the document text (OCR text
-for scanned pages). Anything else is rejected, never stored.
+for scanned pages). Anything else is rejected — with the reason, shown
+to the user — and never stored.
 """
 
 from __future__ import annotations
@@ -13,7 +14,9 @@ import re
 from datetime import date
 from typing import Any, NamedTuple
 
-_DATE_FORMATS = ("%d/%m/%Y", "%d-%m-%Y", "%d.%m.%Y", "%Y-%m-%d", "%d/%m/%y")
+from app.services import doc_dates
+
+_MAX_REJECTED = 30
 
 
 class Grounded(NamedTuple):
@@ -26,40 +29,70 @@ class Grounded(NamedTuple):
 
 def ground(
     items: Any, text: str, units: dict[str, str]
-) -> tuple[list[Grounded], int]:
-    """Split proposed values into proven ones and a rejected count."""
+) -> tuple[list[Grounded], list[dict[str, Any]]]:
+    """Split proposed values into proven ones and rejections (+ reason)."""
     flat = " ".join(text.split())
     accepted: list[Grounded] = []
-    rejected = 0
+    rejected: list[dict[str, Any]] = []
     for item in items if isinstance(items, list) else []:
-        found = _check(item, flat, units)
-        if found is None:
-            rejected += 1
-        else:
+        found, reason = _check(item, flat, units)
+        if found is not None:
             accepted.append(found)
+        elif len(rejected) < _MAX_REJECTED:
+            rejected.append(_rejection(item, reason))
     return accepted, rejected
 
 
 def date_in(day: date, text: str) -> bool:
     """Whether ``day`` is printed in ``text`` in a usual format."""
-    flat = " ".join(text.split())
-    return any(day.strftime(fmt) in flat for fmt in _DATE_FORMATS)
+    return doc_dates.printed(day, text)
 
 
-def _check(item: Any, text: str, units: dict[str, str]) -> Grounded | None:
+def _check(
+    item: Any, text: str, units: dict[str, str]
+) -> tuple[Grounded | None, str]:
     """One proposed value, if every part of it is proven."""
     if not isinstance(item, dict):
-        return None
+        return None, "format invalide"
     key = str(item.get("key", ""))
     value = _number(item.get("value"))
     day = _day(item.get("date"))
-    if key not in units or value is None or day is None:
-        return None
-    if _unit(item.get("unit")) != _unit(units[key]):
-        return None
-    if not (_printed(value, text) and date_in(day, text)):
-        return None
-    return Grounded(key, value, day)
+    if value is None or day is None:
+        return None, "valeur ou date illisible"
+    reason = _problem(key, value, day, item.get("unit"), text, units)
+    return (None, reason) if reason else (Grounded(key, value, day), "")
+
+
+def _problem(
+    key: str,
+    value: float,
+    day: date,
+    unit: Any,
+    text: str,
+    units: dict[str, str],
+) -> str:
+    """Why a proposal is not proven by the document ('' when it is)."""
+    if key not in units:
+        return "mesure inconnue"
+    if _unit(unit) != _unit(units[key]):
+        return f"unité différente (attendu {units[key] or 'aucune'})"
+    if not _printed(value, text):
+        return "nombre absent du document"
+    if not doc_dates.printed(day, text):
+        return "date absente du document"
+    return ""
+
+
+def _rejection(item: Any, reason: str) -> dict[str, Any]:
+    """A rejected proposal as shown to the user."""
+    data = item if isinstance(item, dict) else {"value": str(item)[:40]}
+    return {
+        "key": str(data.get("key", ""))[:40],
+        "value": str(data.get("value", ""))[:20],
+        "unit": str(data.get("unit", ""))[:15],
+        "date": str(data.get("date", ""))[:10],
+        "reason": reason,
+    }
 
 
 def _printed(value: float, text: str) -> bool:

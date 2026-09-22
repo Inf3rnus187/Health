@@ -32,9 +32,11 @@ async function run(form: HTMLFormElement, sink: Sink): Promise<void> {
 function Intro() {
   return (
     <p className="muted">
-      Les valeurs et leurs antériorités sont extraites et ajoutées aux courbes
-      suivies (domaine Biologie). PDF texte uniquement — un PDF scanné (image)
-      est conservé mais pas encore analysé.
+      Les valeurs et leurs antériorités sont extraites immédiatement et ajoutées
+      aux courbes (mêmes champs que partout : marqueurs, graphiques, rapports).
+      Le document est ensuite relu par l’IA (PDF scanné compris, via OCR) pour
+      compléter ce qui manque — chaque valeur proposée par l’IA doit être
+      imprimée dans le document pour être gardée.
     </p>
   );
 }

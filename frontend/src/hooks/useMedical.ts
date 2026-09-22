@@ -12,7 +12,10 @@ import type { MedicalDoc } from '../api/types';
 const POLL_MS = 5000;
 
 function pending(docs: MedicalDoc[] | undefined): boolean {
-  return (docs ?? []).some((doc) => doc.analysis_status === 'queued');
+  return (docs ?? []).some(
+    (doc) =>
+      doc.analysis_status === 'queued' || doc.analysis_status === 'running',
+  );
 }
 
 /** Documents; polls while an AI reading is queued so results appear. */

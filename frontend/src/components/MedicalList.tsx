@@ -21,12 +21,8 @@ function Actions({ doc, onDelete, onAnalyze }: RowProps) {
       <button className="btn ghost" onClick={() => void viewMedicalDoc(doc.id)}>
         Voir
       </button>
-      <button
-        className="btn ghost"
-        disabled={doc.analysis_status === 'queued'}
-        onClick={() => onAnalyze(doc.id)}
-      >
-        Analyser (IA)
+      <button className="btn ghost" onClick={() => onAnalyze(doc.id)}>
+        {doc.analysis_status ? 'Réanalyser (IA)' : 'Analyser (IA)'}
       </button>
       <button className="btn ghost" onClick={() => onDelete(doc.id)}>
         Supprimer

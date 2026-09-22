@@ -45,21 +45,41 @@ async def vision_json(
     )
 
 
-async def text_json(prompt: str, *, model: str | None = None) -> dict[str, Any]:
+def text_model() -> str:
+    """Model used for clinical reasoning and summaries."""
+    return _settings.ollama_text_model
+
+
+async def text_json(
+    prompt: str, *, model: str | None = None, max_tokens: int | None = None
+) -> dict[str, Any]:
     """Return a strict-JSON answer from the text (reasoning) model."""
-    return await generate_json(prompt, model or _settings.ollama_text_model)
+    return await generate_json(
+        prompt, model or text_model(), max_tokens=max_tokens
+    )
 
 
 async def generate_json(
-    prompt: str, model: str, *, images: Sequence[bytes] = ()
+    prompt: str,
+    model: str,
+    *,
+    images: Sequence[bytes] = (),
+    max_tokens: int | None = None,
 ) -> dict[str, Any]:
-    """Run one deterministic JSON generation (optionally with images)."""
+    """Run one deterministic JSON generation (optionally with images).
+
+    ``max_tokens`` bounds the answer so a model looping in JSON mode
+    cannot keep the (single) Ollama slot busy for minutes.
+    """
+    options = dict(_OPTIONS)
+    if max_tokens is not None:
+        options["num_predict"] = max_tokens
     payload: dict[str, Any] = {
         "model": model,
         "prompt": prompt,
         "stream": False,
         "format": "json",
-        "options": _OPTIONS,
+        "options": options,
     }
     if images:
         payload["images"] = [

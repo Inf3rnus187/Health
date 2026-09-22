@@ -262,15 +262,39 @@ export interface DocValue {
   origin: 'lecture' | 'ia';
 }
 
+export interface DocMedication {
+  name: string;
+  dose: string;
+  frequency: string;
+}
+
+export interface DocRejected {
+  key: string;
+  value: string;
+  unit: string;
+  date: string;
+  reason: string;
+}
+
 export interface DocAnalysis {
+  /** Model that extracted the values (document model). */
   model?: string | null;
+  /** Model that wrote the summary (text / reasoning model). */
+  summary_model?: string | null;
   document_type?: string | null;
   summary?: string | null;
+  findings?: string[];
+  medications?: DocMedication[];
+  conditions?: string[];
   scanned?: boolean;
   values?: DocValue[];
   rejected?: number;
+  rejected_items?: DocRejected[];
   ai_error?: string | null;
   error?: string;
+  started_at?: string;
+  finished_at?: string;
+  duration_s?: number;
 }
 
 export interface Report {

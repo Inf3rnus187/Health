@@ -1,8 +1,14 @@
-import type { DocAnalysis as Analysis, DocValue } from '../api/types';
+import type {
+  DocAnalysis as Analysis,
+  DocMedication,
+  DocRejected,
+  DocValue,
+} from '../api/types';
 import { frNumber, shortDate } from '../utils/format';
 
 const STATUS: Record<string, string> = {
-  queued: 'Lecture IA en cours…',
+  queued: 'En file d’attente…',
+  running: 'Lecture IA en cours…',
   done: 'Lu',
   failed: 'Échec de lecture',
 };
@@ -30,20 +36,23 @@ function Values({ values }: { values: DocValue[] }) {
   );
 }
 
-function Notes({ analysis }: { analysis: Analysis }) {
-  const rejected = analysis.rejected ?? 0;
+function medText(med: DocMedication): string {
+  return [med.name, med.dose, med.frequency].filter(Boolean).join(' · ');
+}
+
+function Lists({ analysis }: { analysis: Analysis }) {
+  const meds = analysis.medications ?? [];
+  const conditions = analysis.conditions ?? [];
   return (
     <>
-      {analysis.ai_error && (
-        <p className="marker-missing">
-          IA indisponible ({analysis.ai_error}) : seules les lectures exactes
-          ont été enregistrées.
+      {meds.length > 0 && (
+        <p className="doc-line">
+          <strong>Médicaments :</strong> {meds.map(medText).join(' ; ')}
         </p>
       )}
-      {rejected > 0 && (
-        <p className="muted">
-          {rejected} valeur(s) proposée(s) par l’IA rejetée(s) : nombre, date ou
-          unité absents du document.
+      {conditions.length > 0 && (
+        <p className="doc-line">
+          <strong>Diagnostics mentionnés :</strong> {conditions.join(' ; ')}
         </p>
       )}
     </>
@@ -54,11 +63,66 @@ function Summary({ analysis }: { analysis: Analysis }) {
   if (!analysis.summary) {
     return null;
   }
-  const model = analysis.model ? ` (${analysis.model})` : '';
+  const model = analysis.summary_model ? ` — ${analysis.summary_model}` : '';
   return (
-    <p className="doc-summary">
-      <strong>Résumé IA{model} :</strong> {analysis.summary}
-    </p>
+    <div className="doc-summary">
+      <strong>Résumé IA (non vérifié{model}) :</strong> {analysis.summary}
+      {(analysis.findings ?? []).length > 0 && (
+        <ul className="doc-findings">
+          {(analysis.findings ?? []).map((finding) => (
+            <li key={finding}>{finding}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function rejectedText(item: DocRejected): string {
+  const what = [item.key, item.value, item.unit, item.date]
+    .filter(Boolean)
+    .join(' ');
+  return `${what} → ${item.reason}`;
+}
+
+function Rejected({ analysis }: { analysis: Analysis }) {
+  const items = analysis.rejected_items ?? [];
+  if ((analysis.rejected ?? 0) === 0) {
+    return null;
+  }
+  return (
+    <details className="doc-rejected">
+      <summary className="muted">
+        {analysis.rejected} proposition(s) de l’IA rejetée(s) (non prouvées par
+        le document)
+      </summary>
+      <ul>
+        {items.map((item, index) => (
+          <li key={index}>{rejectedText(item)}</li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+function Meta({ analysis }: { analysis: Analysis }) {
+  const parts = [
+    analysis.model ? `valeurs : ${analysis.model}` : '',
+    analysis.duration_s != null ? `${analysis.duration_s} s` : '',
+    analysis.scanned ? 'scanné (OCR)' : '',
+  ].filter(Boolean);
+  return (
+    <>
+      {analysis.ai_error && (
+        <p className="marker-missing">
+          IA partiellement indisponible ({analysis.ai_error}) : les lectures
+          exactes sont enregistrées.
+        </p>
+      )}
+      {parts.length > 0 && (
+        <p className="muted doc-line">{parts.join(' · ')}</p>
+      )}
+    </>
   );
 }
 
@@ -66,9 +130,11 @@ function Body({ analysis }: { analysis: Analysis }) {
   return (
     <>
       {analysis.error && <p className="error">{analysis.error}</p>}
-      <Summary analysis={analysis} />
       {analysis.values && <Values values={analysis.values} />}
-      <Notes analysis={analysis} />
+      <Summary analysis={analysis} />
+      <Lists analysis={analysis} />
+      <Rejected analysis={analysis} />
+      <Meta analysis={analysis} />
     </>
   );
 }
