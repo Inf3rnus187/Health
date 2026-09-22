@@ -86,7 +86,7 @@ async def purge(session: AsyncSession, user_id: str) -> dict[str, int]:
         (
             await session.execute(
                 select(MetricDefinition.id).where(
-                    MetricDefinition.key.like("bio.%")
+                    MetricDefinition.key.like(f"{cat.KEY_PREFIX}%")
                 )
             )
         ).scalars()
@@ -131,7 +131,7 @@ def _readings(
     ant: float | None,
 ) -> list[Reading]:
     """Build the current and antériorité readings for one analyte."""
-    key = f"bio.{analyte.key}"
+    key = cat.metric_key(analyte.key)
     out = [Reading(key, analyte.label, analyte.unit, current, value)]
     if ant is not None and ant_day is not None:
         out.append(Reading(key, analyte.label, analyte.unit, ant_day, ant))

@@ -1,6 +1,6 @@
 import type { AngleTrend, DatedPhoto } from '../../api/evolution';
 import { useTrend } from '../../hooks/useEvolution';
-import { shortDate } from '../../utils/format';
+import { frNumber, shortDate } from '../../utils/format';
 import { AuthImage } from '../photos/AuthImage';
 import { angleLabel } from '../photos/labels';
 
@@ -22,7 +22,8 @@ function pairsOf(angles: AngleTrend[]): Pair[] {
 }
 
 function Shot({ photo, caption }: { photo: DatedPhoto; caption: string }) {
-  const text = `${caption} ${shortDate(photo.date)}`;
+  const kg = photo.weight == null ? '' : ` · ${frNumber(photo.weight)} kg`;
+  const text = `${caption} ${shortDate(photo.date)}${kg}`;
   return (
     <figure className="ba-shot">
       <AuthImage id={photo.photo_id} alt={text} />

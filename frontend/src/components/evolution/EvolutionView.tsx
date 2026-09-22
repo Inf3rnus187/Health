@@ -3,6 +3,7 @@ import { MarkersCard } from './MarkersCard';
 import { ProtocolCard } from './ProtocolCard';
 import { ReanalyzeAllButton } from './ReanalyzeAllButton';
 import { TrendCard } from './TrendCard';
+import { WeightCard } from './WeightCard';
 
 function MethodCard() {
   return (
@@ -23,6 +24,7 @@ export function EvolutionView() {
     <>
       <ProtocolCard />
       <MarkersCard />
+      <WeightCard />
       <TrendCard />
       <BeforeAfter />
       <MethodCard />

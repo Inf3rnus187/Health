@@ -25,6 +25,15 @@ class Analyte(NamedTuple):
     aliases: tuple[str, ...]
 
 
+#: Every lab value is stored under the metric ``bio.<analyte key>``.
+KEY_PREFIX = "bio."
+
+
+def metric_key(analyte_key: str) -> str:
+    """Metric key under which an analyte's values are stored."""
+    return f"{KEY_PREFIX}{analyte_key}"
+
+
 def _a(
     key: str,
     label: str,

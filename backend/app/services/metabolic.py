@@ -98,14 +98,15 @@ def _normalize(name: str, value: Value) -> Value:
     return Value(x, value.day)
 
 
-def _blank(spec: cat.Spec, missing: list[str]) -> dict[str, Any]:
-    """A marker without a value (inputs missing or inconsistent)."""
+def _blank(spec: cat.Spec, inputs: dict[str, Value]) -> dict[str, Any]:
+    """A marker without a value, listing what was found and what lacks."""
     return {
         "key": spec.key,
         "label": spec.label,
         "unit": spec.unit,
         "reference": spec.reference,
-        "missing": missing,
+        "missing": [cat.LABELS[n] for n in spec.needs if n not in inputs],
+        "inputs": [_used(n, inputs[n]) for n in spec.needs if n in inputs],
         "value": None,
         "date": None,
         "level": "missing",
@@ -113,11 +114,20 @@ def _blank(spec: cat.Spec, missing: list[str]) -> dict[str, Any]:
     }
 
 
+def _used(name: str, found: Value) -> dict[str, Any]:
+    """One input value as used in a formula (shown for transparency)."""
+    return {
+        "label": cat.LABELS[name],
+        "value": round(found.value, 2),
+        "unit": cat.UNITS[name],
+        "date": None if name in cat.STATIC else found.day.isoformat(),
+    }
+
+
 def _build(spec: cat.Spec, inputs: dict[str, Value]) -> dict[str, Any]:
     """Compute one marker, or report what is missing."""
-    missing = [cat.LABELS[name] for name in spec.needs if name not in inputs]
-    out = _blank(spec, missing)
-    if missing:
+    out = _blank(spec, inputs)
+    if out["missing"]:
         return out
     values = {name: inputs[name].value for name in spec.needs}
     try:

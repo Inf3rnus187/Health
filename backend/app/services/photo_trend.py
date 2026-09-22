@@ -16,7 +16,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.photo import Photo, PhotoAnalysis
-from app.services import photo_method, robust_stats
+from app.services import photo_method, robust_stats, weight_trend
 from app.services.robust_stats import Point
 
 ANGLES = ("face", "profil", "dos")
@@ -34,10 +34,12 @@ async def trend(session: AsyncSession, user_id: str) -> dict[str, Any]:
     """Return the per-angle, per-criterion long-term evolution."""
     rows = await _valid_rows(session, user_id)
     totals = await _totals(session, user_id)
+    weights = await weight_trend.series(session, user_id)
     return {
         "method_version": photo_method.METHOD,
+        "weight": weight_trend.summary(weights),
         "angles": [
-            _angle(angle, rows.get(angle, []), totals.get(angle, 0))
+            _angle(angle, rows.get(angle, []), totals.get(angle, 0), weights)
             for angle in ANGLES
         ],
     }
@@ -76,12 +78,14 @@ async def _totals(session: AsyncSession, user_id: str) -> dict[str, int]:
     return {angle: int(count) for angle, count in result.all()}
 
 
-def _angle(angle: str, rows: list[Row], total: int) -> dict[str, Any]:
+def _angle(
+    angle: str, rows: list[Row], total: int, weights: list[Point]
+) -> dict[str, Any]:
     """Summary block for one angle."""
     return {
         "angle": angle,
-        "baseline": _ref(rows[0][0]) if rows else None,
-        "latest": _ref(rows[-1][0]) if rows else None,
+        "baseline": _ref(rows[0][0], weights) if rows else None,
+        "latest": _ref(rows[-1][0], weights) if rows else None,
         "photos_total": total,
         "photos_valid": len(rows),
         "criteria": [
@@ -148,9 +152,16 @@ def _status(slope: float | None) -> str:
     return "stable"
 
 
-def _ref(photo: Photo) -> dict[str, str]:
-    """Photo reference for the before/after view."""
-    return {"photo_id": photo.id, "date": photo.date_key.isoformat()}
+def _ref(photo: Photo, weights: list[Point]) -> dict[str, Any]:
+    """Photo reference for the before/after view, with that day's weight."""
+    weight = photo.linked_weight
+    if weight is None:
+        weight = weight_trend.nearest(weights, photo.date_key)
+    return {
+        "photo_id": photo.id,
+        "date": photo.date_key.isoformat(),
+        "weight": None if weight is None else round(weight, 1),
+    }
 
 
 def _serial(points: list[Point]) -> list[dict[str, Any]]:

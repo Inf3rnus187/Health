@@ -10,6 +10,7 @@ from collections.abc import Callable
 from datetime import date
 from typing import NamedTuple
 
+from app.services import biology_catalog as bio
 from app.services import metabolic_scores as score
 from app.services.apple_health.spec import MetricSpec
 
@@ -49,13 +50,28 @@ SOURCES: dict[str, tuple[str, ...]] = {
     "height": ("body.height",),
     "weight": ("body.weight",),
     "birth_year": ("profile.birth_year",),
-    "tg": ("triglycerides",),
-    "ggt": ("ggt",),
-    "ast": ("asat",),
-    "alt": ("alat",),
-    "platelets": ("plaquettes",),
-    "glucose": ("glycemie",),
-    "hba1c": ("hba1c",),
+    "tg": (bio.metric_key("triglycerides"),),
+    "ggt": (bio.metric_key("ggt"),),
+    "ast": (bio.metric_key("asat"),),
+    "alt": (bio.metric_key("alat"),),
+    "platelets": (bio.metric_key("plaquettes"),),
+    "glucose": (bio.metric_key("glycemie"),),
+    "hba1c": (bio.metric_key("hba1c"),),
+}
+
+#: Display unit of each input (after unit normalization).
+UNITS = {
+    "waist": "cm",
+    "height": "cm",
+    "weight": "kg",
+    "birth_year": "",
+    "tg": "g/L",
+    "ggt": "U/L",
+    "ast": "U/L",
+    "alt": "U/L",
+    "platelets": "G/L",
+    "glucose": "g/L",
+    "hba1c": "%",
 }
 
 #: Inputs that do not go stale (not used for the marker's date).

@@ -9,6 +9,44 @@ export type MarkerLevel = 'ok' | 'warn' | 'high' | 'missing' | 'info';
 export interface DatedPhoto {
   photo_id: string;
   date: string;
+  /** Weight that day (photo form, else the closest weigh-in ±3 days). */
+  weight?: number | null;
+}
+
+export interface DatedValue {
+  value: number;
+  date: string;
+}
+
+export type WeightStatus = 'insufficient' | 'stable' | 'losing' | 'gaining';
+
+export interface WeightChange {
+  label: string;
+  delta: number | null;
+  percent: number | null;
+}
+
+export interface WeightMilestone {
+  percent: number;
+  label: string;
+  reached: boolean;
+}
+
+export interface WeightTrend {
+  latest: DatedValue;
+  first: DatedValue;
+  /** 7-day rolling median, kg. */
+  current: number;
+  points: TrendPoint[];
+  smoothed: TrendPoint[];
+  n: number;
+  span_days: number;
+  slope_30d: number | null;
+  status: WeightStatus;
+  changes: WeightChange[];
+  peak: DatedValue;
+  loss_from_peak_pct: number;
+  milestones: WeightMilestone[];
 }
 
 export interface TrendPoint {
@@ -39,6 +77,7 @@ export interface AngleTrend {
 
 export interface EvolutionTrend {
   method_version: string;
+  weight: WeightTrend | null;
   angles: AngleTrend[];
 }
 
@@ -52,6 +91,15 @@ export interface Marker {
   reference: string;
   date: string | null;
   missing: string[];
+  /** Values actually used by the formula (label, value, unit, date). */
+  inputs?: MarkerInput[];
+}
+
+export interface MarkerInput {
+  label: string;
+  value: number;
+  unit: string;
+  date: string | null;
 }
 
 export interface MarkerProfile {

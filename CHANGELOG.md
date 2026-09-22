@@ -33,6 +33,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
     birth year entered in the web form (`POST /evolution/profile`).
   - `POST /evolution/reanalyze-all` re-runs the method over the whole
     history (Ollama calls serialised so long runs don't time out).
+  - *Weight follow-up* in the Évolution view: every weigh-in (Apple Health,
+    Health Auto Export, web form) → latest, 7-day median, 12-month curve,
+    Theil–Sen slope, changes over 1 / 3 / 12 months, loss from the
+    12-month peak vs the 5 / 7 / 10 % (EASL MASLD) and 15 % (DiRECT)
+    milestones; each before/after photo shows that day's weight.
+  - Each marker lists the exact values (and dates) used by its formula.
+
+### Fixed
+
+- Markers never found imported lab values: the blood-test import stores
+  them as `bio.<analyte>` but the markers looked up bare keys. Both now
+  use one shared key helper, and a test imports a real lab PDF end to end.
 
 ### Changed
 

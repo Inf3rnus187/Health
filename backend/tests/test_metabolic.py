@@ -2,18 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import date
-
 import pytest
-from app.core.db import SessionFactory
-from app.models.user import User
-from app.schemas.measurement import MeasurementIn
-from app.services import measurements as measure
+from app.services import biology_catalog as bio
+from app.services import metabolic_catalog as mcat
 from app.services import metabolic_scores as score
-from app.services.apple_health.metrics_cache import MetricCache
-from app.services.apple_health.spec import MetricSpec
+from fpdf import FPDF
+from fpdf.enums import XPos, YPos
 from httpx import AsyncClient
-from sqlalchemy import select
 
 
 def test_formulas_match_published_definitions() -> None:
@@ -24,23 +19,37 @@ def test_formulas_match_published_definitions() -> None:
     assert score.tyg(1.5, 1.0) == pytest.approx(8.923, abs=0.001)
 
 
-async def _record_bio(values: dict[str, float]) -> None:
-    """Store lab values the way the biology import does."""
-    async with SessionFactory() as session:
-        user = (await session.execute(select(User))).scalars().first()
-        assert user is not None
-        cache = MetricCache()
-        items = []
-        for key, value in values.items():
-            spec = MetricSpec(key, key, "biology", "float", None, "last")
-            await cache.id_for(session, spec)
-            items.append(
-                MeasurementIn(
-                    metric_key=key, date_key=date(2026, 9, 1), value=value
-                )
-            )
-        await measure.record_batch(session, user.id, items, source="biology")
-        await session.commit()
+_LAB = [
+    "Preleve le 01-09-2026 08:00 au laboratoire",
+    "Plaquettes [AC] 250 G/L (150-400)",
+    "ASAT [AC] 30 U/L (< 50)",
+    "ALAT [AC] 40 U/L (< 50)",
+    "GGT [AC] 50 U/L (12-64)",
+    "Glycemie a jeun [AC] 1,00 g/L (0,70-1,10)",
+    "HBA1c - Hemoglobine glyquee (NGSP) [AC] 6,0 % (4,0-6,0)",
+    "Triglycerides [AC] 1,50 g/L (< 1,50)",
+]
+
+
+def _lab_pdf() -> bytes:
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", size=11)
+    for line in _LAB:
+        pdf.cell(0, 6, line, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    return bytes(pdf.output())
+
+
+def test_marker_lab_keys_are_the_ones_the_import_writes() -> None:
+    known = {bio.metric_key(a.key) for a in bio.ANALYTES}
+    lab_keys = {
+        key
+        for keys in mcat.SOURCES.values()
+        for key in keys
+        if key.startswith(bio.KEY_PREFIX)
+    }
+    assert lab_keys
+    assert lab_keys <= known
 
 
 def _by_key(body: dict) -> dict[str, dict]:
@@ -73,17 +82,12 @@ async def test_markers_from_profile_and_labs(
         },
         headers=auth,
     )
-    await _record_bio(
-        {
-            "triglycerides": 1.5,
-            "ggt": 50,
-            "asat": 30,
-            "alat": 40,
-            "plaquettes": 250,
-            "glycemie": 100,  # mg/dL → converted to 1.00 g/L
-            "hba1c": 6.0,
-        }
+    imported = await client.post(
+        "/api/v1/biology/import",
+        files={"file": ("lab.pdf", _lab_pdf(), "application/pdf")},
+        headers=auth,
     )
+    assert imported.status_code == 200
     resp = await client.post(
         "/api/v1/evolution/profile",
         json={"waist_cm": 100, "height_cm": 180, "birth_year": 1980},
@@ -98,6 +102,10 @@ async def test_markers_from_profile_and_labs(
     assert markers["fib4"]["level"] == "ok"
     assert markers["hba1c"]["level"] == "warn"
     assert markers["glycemie"]["value"] == pytest.approx(1.0)
+    used = {i["label"]: i for i in markers["fib4"]["inputs"]}
+    assert used["ASAT"]["value"] == 30
+    assert used["Plaquettes"]["unit"] == "G/L"
+    assert used["ASAT"]["date"] == "2026-09-01"
     assert markers["glycemie"]["level"] == "ok"
     assert markers["tyg"]["level"] == "high"
     assert resp.json()["profile"]["waist_cm"] == 100

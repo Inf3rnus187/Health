@@ -1,4 +1,4 @@
-import type { Marker, MarkerLevel } from '../../api/evolution';
+import type { Marker, MarkerInput, MarkerLevel } from '../../api/evolution';
 import { useMarkers } from '../../hooks/useEvolution';
 import { frNumber, shortDate } from '../../utils/format';
 import { ProfileForm } from './ProfileForm';
@@ -17,6 +17,24 @@ function formatValue(marker: Marker): string {
   }
   const num = frNumber(marker.value, 2);
   return marker.unit ? `${num} ${marker.unit}` : num;
+}
+
+function inputText(input: MarkerInput): string {
+  const unit = input.unit ? ` ${input.unit}` : '';
+  const when = input.date ? ` (${shortDate(input.date)})` : '';
+  return `${input.label} ${frNumber(input.value, 2)}${unit}${when}`;
+}
+
+/** The exact values fed into the formula, so every number is traceable. */
+function MarkerInputs({ inputs }: { inputs?: MarkerInput[] }) {
+  if (!inputs || inputs.length === 0) {
+    return null;
+  }
+  return (
+    <span className="marker-small marker-inputs">
+      Valeurs utilisées : {inputs.map(inputText).join(' · ')}
+    </span>
+  );
 }
 
 function MarkerFoot({ marker }: { marker: Marker }) {
@@ -44,6 +62,7 @@ function MarkerItem({ marker }: { marker: Marker }) {
       </div>
       <span className="marker-value">{formatValue(marker)}</span>
       {marker.interpretation && <span>{marker.interpretation}</span>}
+      <MarkerInputs inputs={marker.inputs} />
       {marker.reference && (
         <span className="marker-small muted">{marker.reference}</span>
       )}
