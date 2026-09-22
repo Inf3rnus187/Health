@@ -15,6 +15,7 @@ venv/
 coverage.xml
 htmlcov/
 *.db
+*.db-journal
 .pytest_media/
 .pytest_exports/
 
