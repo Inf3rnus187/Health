@@ -219,8 +219,28 @@ export interface DayContext {
     that_weekday: string | null;
     overall: string | null;
   };
+  /** The day's other sessions (a lone half to merge, a bound). */
+  others: OtherSession[];
+}
+
+export interface OtherSession {
+  id: string;
+  start: string | null;
+  end: string | null;
+  place: string;
+  /** "09:02 → 19:12": the one session both would make (same place). */
+  merged: string | null;
+  /** Local ISO time the missing half may not cross (end or start). */
+  free: string | null;
 }
 
 export type IncompleteDay = WorkSession & { context: DayContext };
 
 export const fetchIncomplete = () => api<IncompleteDay[]>('/work/incomplete');
+
+/** Make another session part of this one (first in → last out). */
+export const mergeSession = (a: { id: string; other: string }) =>
+  api<WorkSession>(
+    `/work/sessions/${a.id}/merge`,
+    json('POST', { other_id: a.other }),
+  );

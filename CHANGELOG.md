@@ -8,6 +8,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Overlaps no longer block a day to complete.** Each card lists the
+  day's other sessions (« 09:02 → ? — embauche seule »); « Réunir :
+  09:02 → 19:12 » makes a lone clock-in and a lone clock-out one session
+  (`POST /work/sessions/{id}/merge`, MCP `merge_work_sessions`; same
+  place, the note keeps what the other held); a session completed
+  around a lone clock-in or clock-out of the same place takes it in; a
+  whole session before or after offers its end or start as the limit.
+  The overlap error names the session (« Chevauche la session du
+  02/03/2026 09:02 → 12:30 : … »).
+
 - **Delete many items at once**: proofs and traces, work sessions,
   absences and Journal meals. Tick items or « Tout sélectionner » (every
   item the period and filters show, all pages), then « Supprimer la

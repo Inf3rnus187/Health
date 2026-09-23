@@ -56,3 +56,9 @@ class WorkSessionOut(BaseModel):
     note: str
     #: site or remote.
     place: str = "site"
+
+
+class MergeIn(BaseModel):
+    """The other session to make one with (it is deleted)."""
+
+    other_id: str = Field(min_length=1, max_length=64)

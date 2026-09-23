@@ -3,8 +3,9 @@
 For each session with a missing half: the traces and proofs of the day
 (and of the next morning for a missing clock-out), the wake-up that
 morning and the bedtime that night, the first and last steps of the day,
-and your usual clock-in / clock-out for that weekday. Facts to choose
-from — the hub never fills a time by itself.
+your usual clock-in / clock-out for that weekday, and the day's other
+sessions (a lone clock-in to merge with, a session to clock in after).
+Facts to choose from — the hub never fills a time by itself.
 """
 
 from __future__ import annotations
@@ -63,6 +64,8 @@ async def incomplete(
         context = await _context(
             session, user_id, view, (items, nights, usual), tz
         )
+        day = [v for v in views if v["date_key"] == view["date_key"]]
+        context["others"] = [_other(view, o, tz) for o in day if o is not view]
         out.append({**view, "context": context})
     return out
 
@@ -134,6 +137,45 @@ def _item(item: Evidence, at: datetime, end: datetime | None) -> dict[str, Any]:
         "sort": at.isoformat(),
         **{k: getattr(item, k) for k in _SHOWN},
     }
+
+
+def _other(
+    view: dict[str, Any], other: dict[str, Any], tz: ZoneInfo
+) -> dict[str, Any]:
+    """Another session of the day: its times, the one both would make.
+
+    ``merged``: the first clock-in → the last clock-out of the two (same
+    place). ``free``: for a missing clock-in, the end of a session before
+    (clock in after it); for a missing clock-out, the start of a session
+    after (clock out before it).
+    """
+    starts = [v["start_at"] for v in (view, other) if v["start_at"]]
+    ends = [v["end_at"] for v in (view, other) if v["end_at"]]
+    whole = bool(starts and ends) and min(starts) < max(ends)
+    same = view["place"] == other["place"]
+    return {
+        "id": other["id"],
+        "start": _clock(other["start_at"], tz),
+        "end": _clock(other["end_at"], tz),
+        "place": other["place"],
+        "merged": f"{_clock(min(starts), tz)} → {_clock(max(ends), tz)}"
+        if whole and same
+        else None,
+        "free": _free(view, other, tz),
+    }
+
+
+def _free(
+    view: dict[str, Any], other: dict[str, Any], tz: ZoneInfo
+) -> str | None:
+    """Where the missing half may go, bounded by a whole other session."""
+    if not (other["start_at"] and other["end_at"]):
+        return None  # a lone time: rather merge with it
+    if view["end_at"] and other["end_at"] <= view["end_at"]:
+        return utc(other["end_at"]).astimezone(tz).isoformat()
+    if view["start_at"] and other["start_at"] >= view["start_at"]:
+        return utc(other["start_at"]).astimezone(tz).isoformat()
+    return None
 
 
 async def _activity(

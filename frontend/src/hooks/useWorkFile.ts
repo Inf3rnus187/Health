@@ -9,6 +9,7 @@ import {
   fetchIncomplete,
   fetchNights,
   fetchWorkHealth,
+  mergeSession,
   saveAbsence,
   updateAbsence,
   updateSession,
@@ -51,6 +52,7 @@ export const useDeleteAbsence = () => useFileAction(deleteAbsence);
 export const useUpdateAbsence = () => useFileAction(updateAbsence);
 export const useDeleteEvidence = () => useFileAction(deleteEvidence);
 export const useAddNight = () => useFileAction(addNight);
+export const useMergeSession = () => useFileAction(mergeSession);
 export const useCompleteSession = () =>
   useFileAction((a: { id: string; body: Record<string, string | null> }) =>
     updateSession(a.id, a.body),

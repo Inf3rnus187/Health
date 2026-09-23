@@ -308,3 +308,10 @@ async def test_many_items_go_at_once() -> None:
     assert json.loads(seen[0].content) == {"ids": ["a", "b"], "meals": True}
     assert seen[1].url.path == "/api/v1/work/sessions/delete"
     assert json.loads(seen[1].content) == {"ids": ["c"]}
+
+
+async def test_two_halves_are_merged() -> None:
+    seen = _capture()
+    await tools_work.merge_work_sessions("keep", "other")
+    assert seen[0].url.path == "/api/v1/work/sessions/keep/merge"
+    assert json.loads(seen[0].content) == {"other_id": "other"}

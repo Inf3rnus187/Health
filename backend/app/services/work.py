@@ -161,7 +161,47 @@ async def _apply(
             raise InvalidInputError(
                 "La débauche doit suivre l'embauche, 72 h au plus."
             )
+    await _absorb(session, row, tz)
     await _no_overlap(session, row, tz)
+
+
+async def _absorb(
+    session: AsyncSession, row: WorkSession, tz: ZoneInfo
+) -> None:
+    """A lone clock-in or clock-out inside the session is the same work.
+
+    Completing "? → 19:12" from 08:55 takes in the lone clock-in of 09:02
+    of the same place (never paired): it is deleted, its time noted.
+    """
+    if row.start_at is None or row.end_at is None:
+        return
+    start, end = utc(row.start_at), utc(row.end_at)
+    found = await session.execute(
+        select(WorkSession).where(
+            WorkSession.user_id == row.user_id,
+            WorkSession.id != row.id,
+            WorkSession.place == row.place,
+            (WorkSession.start_at.is_(None)
+             & WorkSession.end_at.between(start, end))
+            | (WorkSession.end_at.is_(None)
+               & WorkSession.start_at.between(start, end)),
+        )
+    )  # fmt: skip
+    days = set()
+    for lone in found.scalars():
+        at = utc(lone.start_at or lone.end_at or start).astimezone(tz)
+        what = "embauche" if lone.start_at else "débauche"
+        row.note = _noted(row.note, f"{what} seule de {at:%H:%M} réunie")
+        days.add(_day(lone, tz))
+        await session.delete(lone)
+    if days:
+        await session.flush()
+        await work_days.refresh(session, row.user_id, days, tz)
+
+
+def _noted(note: str | None, text: str) -> str:
+    """A note with one more remark (200 characters at most)."""
+    return " · ".join(p for p in (note or "", text) if p)[:200]
 
 
 async def _no_overlap(
@@ -181,10 +221,23 @@ async def _no_overlap(
     for other in others.scalars():
         theirs = _span(other)
         if mine[0] < theirs[1] and theirs[0] < mine[1] or mine == theirs:
-            begun = theirs[0].astimezone(tz)
             raise InvalidInputError(
-                f"Chevauche la session du {begun:%d/%m/%Y %H:%M}."
+                f"Chevauche la session du {_said(other, tz)} : choisis une "
+                "heure en dehors, ou réunis les deux sessions."
             )
+
+
+def _said(row: WorkSession, tz: ZoneInfo) -> str:
+    """A session as "02/03/2026 09:02 → 12:30" ("?": a missing half)."""
+    start, end = (
+        utc(at).astimezone(tz) if at else None
+        for at in (row.start_at, row.end_at)
+    )
+    day = f"{(start or end or utcnow()):%d/%m/%Y}"
+    first = f"{start:%H:%M}" if start else "?"
+    last = f"{end:%H:%M}" if end else "?"
+    remote = " (à distance)" if row.place == "remote" else ""
+    return f"{day} {first} → {last}{remote}"
 
 
 def _span(row: WorkSession) -> tuple[datetime, datetime]:

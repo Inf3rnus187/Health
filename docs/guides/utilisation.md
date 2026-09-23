@@ -242,6 +242,26 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
   **d'où vient l'heure**, puis « Compléter ». Le hub ne choisit jamais
   seul. La session est marquée « corrigée à la main » (le rapport dit
   quelles heures ont été saisies).
+- **Autres sessions du jour et chevauchements** : en tête de chaque fiche,
+  « Autres sessions ce jour-là » montre ce que la journée contient déjà
+  (« 09:02 → ? — embauche seule », « 09:02 → 12:30 »), car une heure ne
+  peut pas chevaucher une autre session.
+  - Une **embauche seule** et une **débauche seule** du même jour (jamais
+    appariées, par exemple quand la débauche a été enregistrée avant
+    l'embauche) : « **Réunir : 09:02 → 19:12** » en fait une seule
+    session (première embauche → dernière débauche), l'autre est
+    supprimée et la note garde ce qu'elle contenait (« réunie avec 09:02
+    → ? »). Même lieu seulement (sur place avec sur place).
+  - Compléter une session en englobant une embauche ou une débauche seule
+    du même lieu la **réunit d'office** (« ? → 19:12 » complétée à 08:55
+    avec une embauche seule à 09:02 : 08:55 → 19:12, note « embauche
+    seule de 09:02 réunie »).
+  - Une session complète avant (le matin 09:02 → 12:30) : « **Embauche
+    après elle : 12:30** » pré-remplit la limite ; « Réunir » en fait une
+    seule session sans pause si la coupure n'en était pas une.
+  - Le message d'erreur nomme la session gênante : « Chevauche la
+    session du 02/03/2026 09:02 → 12:30 : choisis une heure en dehors, ou
+    réunis les deux sessions ».
 - **Une erreur se corrige** : sous les journées à compléter, « **Corrigées
   à la main** » liste toutes les sessions complétées ou modifiées après
   coup ; « Modifier » rouvre l'embauche, la débauche, le lieu (sur place /

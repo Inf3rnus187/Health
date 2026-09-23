@@ -89,11 +89,27 @@ async def work_incomplete() -> Any:
     Each comes with its context to help the user choose a time: the
     day's proofs and traces (taxi, parking, receipts; the next morning
     too for a missing clock-out), wake-up and bedtime, first and last
-    steps, the usual time for that weekday and overall. Suggest, never
-    decide: once the user picks a time, fix it with save_work_session
-    (``session_id``) and a note saying where the time comes from.
+    steps, the usual time for that weekday and overall, and the day's
+    other sessions (``others``: a lone half with ``merged``, the one
+    session both would make; ``free``, a time the missing half may not
+    cross). Suggest, never decide: once the user picks a time, fix it
+    with save_work_session (``session_id``) and a note saying where the
+    time comes from; a lone clock-in or clock-out inside the completed
+    session is taken in. Two halves never paired: merge_work_sessions.
     """
     return await client.get("/work/incomplete")
+
+
+@mcp.tool()
+async def merge_work_sessions(session_id: str, other_id: str) -> Any:
+    """Make two sessions of the same place one (ask the user first).
+
+    Keeps ``session_id`` with the first clock-in and the last clock-out
+    of the two (a lone embauche 09:02 + a lone débauche 19:12 → 09:02 →
+    19:12); ``other_id`` is deleted, the note says what it held.
+    """
+    body = {"other_id": other_id}
+    return await client.post(f"/work/sessions/{session_id}/merge", body)
 
 
 @mcp.tool()

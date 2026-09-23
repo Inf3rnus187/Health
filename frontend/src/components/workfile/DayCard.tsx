@@ -6,6 +6,7 @@ import { useCompleteSession } from '../../hooks/useWorkFile';
 import { shortDate } from '../../utils/format';
 import { clockTime } from '../work/format';
 import { Landmarks, ProofBadge, ProofTable } from './DayHints';
+import { DayOthers } from './DayOthers';
 import { Input } from './fields';
 
 function Missing() {
@@ -62,29 +63,42 @@ function Save(props: { row: IncompleteDay; at: string; note: string }) {
   );
 }
 
-/** One day to complete: what is known, the proofs, the landmarks. */
-export function DayCard({ row }: { row: IncompleteDay }) {
-  const [at, setAt] = useState('');
+function Kept(props: {
+  row: IncompleteDay;
+  at: string;
+  setAt: (at: string) => void;
+}) {
   const [note, setNote] = useState('');
-  const label = row.context.missing === 'start' ? 'Embauche' : 'Débauche';
+  const label = props.row.context.missing === 'start' ? 'Embauche' : 'Débauche';
   return (
-    <li className="day-card">
-      <Head row={row} />
-      <h4>Preuves et traces (le lendemain matin compris)</h4>
-      <ProofTable row={row} pick={setAt} />
-      <h4>Repères</h4>
-      <Landmarks row={row} pick={setAt} />
+    <>
       <h4>{label} retenue</h4>
       <div className="quick">
         <Input
           label={label}
           type="datetime-local"
-          value={at}
-          onChange={setAt}
+          value={props.at}
+          onChange={props.setAt}
         />
         <Input label="D’où vient l’heure" value={note} onChange={setNote} />
-        <Save row={row} at={at} note={note} />
+        <Save row={props.row} at={props.at} note={note} />
       </div>
+    </>
+  );
+}
+
+/** One day to complete: what is known, the proofs, the landmarks. */
+export function DayCard({ row }: { row: IncompleteDay }) {
+  const [at, setAt] = useState('');
+  return (
+    <li className="day-card">
+      <Head row={row} />
+      <DayOthers row={row} pick={setAt} />
+      <h4>Preuves et traces (le lendemain matin compris)</h4>
+      <ProofTable row={row} pick={setAt} />
+      <h4>Repères</h4>
+      <Landmarks row={row} pick={setAt} />
+      <Kept row={row} at={at} setAt={setAt} />
     </li>
   );
 }
