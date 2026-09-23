@@ -12,11 +12,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   invalides ».** The 15-minute access token was never renewed: every
   call then failed until a reload. The web app now renews it every 12
   minutes while the tab is visible and on the first 401 (once for all
-  the calls waiting at the
-  same time, another tab's renewal taken into account) and replays the
-  call; files, uploads and imports go through the same path. A session
-  that cannot be renewed any more leads to the login page, which says
-  « Session expirée : reconnecte-toi ».
+  the calls waiting at the same time, another tab's renewal taken into
+  account) and replays the call; files, uploads and imports go through
+  the same path. A session that cannot be renewed any more leads to the
+  login page, which says « Session expirée : reconnecte-toi ».
 
 ### Added
 
