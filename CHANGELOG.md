@@ -141,6 +141,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Home tiles for pee and distance walked.** « Pipi » (count of the day,
+  time of the last one) and « Distance marche/course » (km of the day)
+  sit on the home page with cigarettes and coffee; a count prints bare
+  (« 5 », not « 5 count »).
+- **Backend tests: ~30 s instead of tens of minutes.** Without Redis,
+  every queued job (import, AI reading, report) waited ~5 s of arq
+  reconnections; tests now fail a queueing at once. The database is
+  seeded once per run and copied for each test instead of re-seeded
+  200 times.
 - **One rule for every iPhone Shortcut.** A pee needed its own route
   (`/journal/urination`) while a bottle, a coffee or a cigarette went
   through `/sync/tally`. Now every one-tap count uses `POST /sync/tally`

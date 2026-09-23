@@ -26,6 +26,15 @@ moyennes 7 / 30 jours, sources).
 Tuiles des mesures clés (dernière valeur, moyenne 7 j, évolution) — un clic
 ouvre la mesure dans **Données** avec son graphique. Saisie rapide du poids.
 
+Tuiles, dans l'ordre (une mesure sans aucune donnée n'apparaît pas) :
+poids, pas, **km marchés / courus** (`activity.distance`, total du jour),
+FC au repos, fréquence cardiaque, VFC, sommeil, SpO2, fréquence
+respiratoire, énergie active, minutes d'exercice, cigarettes, cafés,
+**pipi** (`elimination.urination` : nombre du jour et heure du dernier),
+eau (litres = bouteilles × 1,5). Une tuile montre le dernier jour qui a une
+valeur, avec sa date. La liste est `HEADLINE_KEYS` dans
+`backend/app/services/summary.py`.
+
 ## Tableaux de bord
 
 Un onglet par domaine (Mesures corporelles, Cœur, Biologie, Activité,

@@ -19,6 +19,7 @@ from app.services import metric_overview
 HEADLINE_KEYS = (
     "body.weight",
     "activity.steps",
+    "activity.distance",
     "rest.hr",
     "heart.rate",
     "heart.hrv",
@@ -29,7 +30,11 @@ HEADLINE_KEYS = (
     "activity.exercise_min",
     "habit.cigarettes",
     "habit.coffee",
+    "elimination.urination",
 )
+
+#: Units not worth printing next to a number ("5", not "5 count").
+_BARE_UNITS = {"count"}
 
 #: The stored bottle counter and the litres it represents (1 bottle = 1.5 L).
 _WATER_KEY = "water.bottles_1_5"
@@ -100,7 +105,7 @@ async def _tile(session: AsyncSession, user_id: str, key: str) -> Tile | None:
     return Tile(
         key=key,
         label=view["label"],
-        unit=view["unit"],
+        unit=None if view["unit"] in _BARE_UNITS else view["unit"],
         value=view["latest"]["value"],
         date_key=date.fromisoformat(view["day"]["date"]),
         at=datetime.fromisoformat(at) if at else None,

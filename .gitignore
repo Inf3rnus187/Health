@@ -18,6 +18,7 @@ htmlcov/
 *.db-journal
 .pytest_media/
 .pytest_exports/
+*.db.seeded
 
 # Node / frontend
 node_modules/

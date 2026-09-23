@@ -97,3 +97,27 @@ async def test_summary_prefers_latest_reading_for_instant_metric(
     tiles = (await client.get("/api/v1/summary", headers=auth)).json()
     hr = next(t for t in tiles if t["key"] == "heart.rate")
     assert hr["value"] == 80
+
+
+async def test_home_shows_pee_and_distance_walked(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """Pee and km walked are home tiles; a count prints bare ("2")."""
+    for _ in range(2):
+        await client.post(
+            "/api/v1/sync/tally",
+            json={"metric": "elimination.urination"},
+            headers=auth,
+        )
+    item = {"metric_key": "activity.distance", "value": 6.4}
+    item["date_key"] = datetime.now(UTC).date().isoformat()
+    await client.post(
+        "/api/v1/measurements", json={"items": [item]}, headers=auth
+    )
+    tiles = (await client.get("/api/v1/summary", headers=auth)).json()
+    by_key = {t["key"]: t for t in tiles}
+    pee = by_key["elimination.urination"]
+    assert (pee["value"], pee["unit"]) == (2.0, None)
+    assert pee["at"]  # the time of the last pee
+    walked = by_key["activity.distance"]
+    assert (walked["value"], walked["unit"]) == (6.4, "km")
