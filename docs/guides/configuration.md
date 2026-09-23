@@ -17,9 +17,46 @@ Ouvrir `http://<machine>:8082` (port `WEB_PORT`) et se connecter avec
 ## Mettre à jour
 
 ```bash
-git pull
-docker compose up -d --build     # les migrations s'appliquent au démarrage de l'API
+./update.sh      # git pull, puis ne reconstruit que ce qui a changé
 ```
+
+`update.sh` remplace `git pull && docker compose up -d --build && docker
+compose --profile mcp up -d --build mcp` :
+
+- `git pull --ff-only` : une modification locale ou un historique divergent
+  **arrête** la mise à jour, rien n'est écrasé (le message dit de regarder
+  `git status`) ; `.env` et les volumes de données ne sont jamais touchés ;
+- ne reconstruit que les parties changées : `backend/` → `api` et `worker`
+  (les migrations s'appliquent au démarrage de l'API), `frontend/` ou
+  `nginx/` → `web`, `mcp/` → `mcp` (s'il tourne), `docker-compose.yml` →
+  tout ; documentation seule → rien ;
+- `./update.sh --check` dit seulement ce qu'une mise à jour apporterait.
+
+**Notification dans la page.** Toutes les 5 minutes, la page compare sa
+version à celle installée (`/version.json`, une par construction de
+l'interface) : après une mise à jour, « **Nouvelle version installée —
+Recharger** ». Pour être prévenu **avant**, et installer d'un clic :
+
+```bash
+./update.sh --install-cron     # une fois ; ajoute à la crontab de l'utilisateur :
+# * * * * * cd <dossier> && ./update.sh --cron >> run/update.log 2>&1
+```
+
+Chaque minute, le cron exécute une mise à jour demandée depuis la page ; une
+fois par heure, il regarde GitHub (`git fetch`). La page affiche alors
+« **Mise à jour disponible** : 3 changements — à reconstruire sur l'hôte :
+interface web, API et worker » (ou « rien à reconstruire, documentation
+seulement »), la liste des changements, « **Installer** » et « Plus tard ».
+Sans le cron, la page donne la commande à lancer sur l'hôte.
+
+Sécurité : la page ne pilote jamais Docker (pas de `docker.sock` dans un
+conteneur, qui donnerait la main sur l'hôte). « Installer » dépose seulement
+un fichier de demande dans `run/` (monté dans l'API en `/data/update`, créé
+par `install.sh` et `update.sh`, droits `1777`) ; c'est le cron de l'hôte,
+avec vos droits, qui fait `git pull` et reconstruit. Pendant la
+reconstruction, l'API redémarre : la page est indisponible une à deux
+minutes, puis propose de recharger. Suivi : `run/update.log`,
+`run/status.json`.
 
 Puis, si la mise à jour touche les données (voir le CHANGELOG) :
 
@@ -38,7 +75,7 @@ Puis, si la mise à jour touche les données (voir le CHANGELOG) :
 |---------|------|
 | `db` | PostgreSQL (volume `pgdata`). |
 | `redis` | File des tâches de fond. |
-| `api` | FastAPI (`/api/v1`), applique les migrations au démarrage. |
+| `api` | FastAPI (`/api/v1`), applique les migrations au démarrage ; lit `run/` (état des mises à jour). |
 | `worker` | Tâches longues : imports Apple, lecture IA des documents, photos, rapports, réconciliation. |
 | `web` | Nginx + interface React, port `WEB_PORT`. |
 | `mcp` | Serveur MCP (optionnel, profil `mcp`) — voir le [guide MCP](mcp.md). |

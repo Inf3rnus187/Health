@@ -26,6 +26,10 @@ if [ ! -f .env ]; then
     info "Generated a random SECRET_KEY. Review .env and set your passwords."
 fi
 
+# Where ./update.sh and the web page exchange update status and requests
+# (the API runs as uid 10001: the folder is writable by all, sticky).
+mkdir -p run && chmod 1777 run
+
 # 2. Build all images.
 info "Building images"
 docker compose build
@@ -44,3 +48,4 @@ docker compose up -d
 
 WEB_PORT="$(grep -E '^WEB_PORT=' .env | cut -d= -f2 || true)"
 info "Ready. Open http://localhost:${WEB_PORT:-8082}  (API docs at /api/v1/docs)"
+info "Updates: ./update.sh (now) ; ./update.sh --install-cron (the page's « Installer » button)"

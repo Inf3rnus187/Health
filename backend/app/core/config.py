@@ -39,6 +39,8 @@ class Settings(BaseSettings):
 
     media_dir: str = "/data/media"
     exports_dir: str = "/data/exports"
+    #: Shared with ./update.sh on the host (update status, requests).
+    update_dir: str = "/data/update"
 
     default_timezone: str = "Europe/Paris"
     default_unit_system: str = "metric"

@@ -34,6 +34,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Update notice and `./update.sh`.** The page compares its build with
+  the one installed (`/version.json`, written at each web build; nginx
+  revalidates it and `index.html`) and offers « Recharger » after an
+  update. `./update.sh` replaces the manual `git pull && docker compose up
+  -d --build …`: fast-forward pull only (local changes stop it, nothing
+  overwritten), rebuilds only the parts changed (api + worker, web, mcp if
+  running; docs only: nothing), writes its status to `run/`. With
+  `./update.sh --install-cron`, the host checks GitHub hourly and the page
+  shows « Mise à jour disponible » (changes, parts to rebuild) with
+  « Installer »: the API only drops a request file in `run/` (mounted at
+  `/data/update`), the host's cron runs the update — no Docker socket in
+  any container. `GET`/`POST /system/update`.
+
 - **« Réunir » from a session's editor.** The sessions the typed times
   overlap show live, with their note, and « Réunir : 02/04 12:01 →
   03/04 21:22 » makes one session of both, keeping the times typed

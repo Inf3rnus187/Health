@@ -52,6 +52,9 @@ services:
     volumes:
       - media:/data/media
       - exports:/data/exports
+      # Update notice: ./update.sh (host) writes what an update would
+      # bring here; the page's « Installer » only drops a request file.
+      - ./run:/data/update
       # (Optional) drop an unzipped export here for the CLI importer, then:
       #   docker compose exec api \
       #     python -m app.cli.import_apple_health /import/export.xml
