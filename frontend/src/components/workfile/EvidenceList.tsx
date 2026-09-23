@@ -9,6 +9,7 @@ import { useDeleteEvidence, useEvidence } from '../../hooks/useWorkFile';
 import { useRange } from '../../utils/range';
 import { DateRange } from '../DateRange';
 import { usePaging } from '../Paging';
+import { EvidenceFile } from '../FileButtons';
 import { EvidenceViewer } from './EvidenceViewer';
 import { span, viewable } from './evidenceView';
 import { Choice } from './fields';
@@ -52,8 +53,9 @@ function Item({ item }: { item: EvidenceItem }) {
   return (
     <li>
       <Details item={item} />{' '}
+      <EvidenceFile id={item.id} name={item.file_name} />
       <button className="btn ghost" onClick={() => setOpen(true)}>
-        Voir
+        Détails
       </button>
       <button className="btn ghost" onClick={drop}>
         Supprimer

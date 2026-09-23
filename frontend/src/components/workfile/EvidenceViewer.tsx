@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 import { useFileUrl } from '../../hooks/useFileUrl';
 import { money } from '../../utils/format';
-import { DownloadButton } from '../DownloadButton';
+import { EvidenceFile } from '../FileButtons';
 
 /** What the viewer shows of a proof or a trace. */
 export interface Viewable {
@@ -19,29 +19,14 @@ export interface Viewable {
 }
 
 function Preview({ item }: { item: Viewable }) {
-  const path = item.file_name ? `/evidence/${item.id}/file` : null;
+  const image = (item.media_type ?? '').startsWith('image/');
+  const path = item.file_name && image ? `/evidence/${item.id}/file` : null;
   const { url, error } = useFileUrl(path);
-  if (!path) return <p className="muted">Pas de fichier joint.</p>;
+  if (!item.file_name) return <p className="muted">Pas de fichier joint.</p>;
+  if (!image) return null;
   if (error) return <p className="error">{error}</p>;
-  if (!url) return <p className="muted">Chargement du fichier…</p>;
-  const media = item.media_type ?? '';
-  if (media.startsWith('image/')) {
-    return <img className="viewer-file" src={url} alt={item.title} />;
-  }
-  if (media === 'application/pdf') {
-    return (
-      <>
-        <button
-          className="btn ghost"
-          onClick={() => window.open(url, '_blank', 'noopener')}
-        >
-          Ouvrir le PDF dans un onglet
-        </button>
-        <iframe className="viewer-file" src={url} title={item.title} />
-      </>
-    );
-  }
-  return <p className="muted">Aperçu impossible : téléchargez le fichier.</p>;
+  if (!url) return <p className="muted">Chargement de l’image…</p>;
+  return <img className="viewer-file" src={url} alt={item.title} />;
 }
 
 function Facts({ item }: { item: Viewable }) {
@@ -92,13 +77,10 @@ export function EvidenceViewer(props: { item: Viewable; onClose: () => void }) {
         </div>
         <Facts item={item} />
         {item.description && <p className="viewer-text">{item.description}</p>}
+        <div className="quick">
+          <EvidenceFile id={item.id} name={item.file_name ?? null} />
+        </div>
         <Preview item={item} />
-        {item.file_name && (
-          <DownloadButton
-            path={`/evidence/${item.id}/file`}
-            filename={item.file_name}
-          />
-        )}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { EVIDENCE_KINDS, type EvidenceItem } from '../../api/workfile';
 import { useEvidence } from '../../hooks/useWorkFile';
 import { localStamp } from '../../utils/datetime';
+import { EvidenceFile } from '../FileButtons';
 import { EvidenceViewer } from './EvidenceViewer';
 import { span, viewable } from './evidenceView';
 
@@ -37,8 +38,9 @@ function Line(props: { item: EvidenceItem; view: () => void; pick: Pick }) {
   return (
     <li>
       <strong>{kind}</strong> {span(item)} {item.title}{' '}
+      <EvidenceFile id={item.id} name={item.file_name} />
       <button className="btn ghost" onClick={props.view}>
-        Voir
+        Détails
       </button>
       <Take item={item} pick={props.pick} />
     </li>

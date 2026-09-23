@@ -281,6 +281,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Work documents downloaded instead of opening: like medical documents,
+  « Voir » now opens every proof and trace file and every PDF report in
+  a new tab (a blob, the type guessed from the name when the server
+  sends none), with « Télécharger » beside it; « Détails » shows what
+  was read.
 - Exporting sessions failed on a session whose clock-in is missing.
 - CSV files whose quoted cells contain doubled quotes (a ticket comment)
   were split into wrong rows: doubled quotes are now always read as one.

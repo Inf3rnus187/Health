@@ -199,9 +199,10 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
     montant) ; pour une débauche manquante, aussi celles du **lendemain
     matin** (le taxi de 03:47) ; un séjour qui couvre le jour (hôtel,
     parking de plusieurs jours) propose aussi sa fin. **« Voir »** ouvre
-    la preuve par-dessus la page — le reçu ou la facture (PDF, aussi dans
-    un onglet), la capture, le lieu, le montant, le détail — pour
-    vérifier par exemple d'où partait le VTC avant de choisir ;
+    le reçu, la facture ou la capture **dans un nouvel onglet** (jamais
+    en téléchargement), pour vérifier par exemple d'où partait le VTC
+    avant de choisir ; « Télécharger » à côté l'enregistre ; « Détails »
+    montre ce qui a été lu (lieu, montant, texte de la facture) ;
     « Prendre 23:52 » / « Prendre la fin » reprennent son heure ;
   - le **réveil** et les **premiers pas** du jour (embauche manquante),
     les **derniers pas** et le **coucher** (débauche manquante) ;
@@ -285,6 +286,12 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
   absence ; supprimer demande confirmation. Le rapport
   liste pour chacun le **travail pointé pendant l'arrêt** et les **preuves
   datées pendant l'arrêt** (appels, dont le dimanche).
+- **Documents : une seule règle**, comme les documents du Dossier
+  médical : « **Voir** » ouvre le fichier dans un nouvel onglet (PDF,
+  image), « **Télécharger** » l'enregistre — pour chaque preuve et trace
+  (liste, journées à compléter, correction d'une session) et pour les
+  rapports PDF (page Rapports). Les exports de données (CSV, Excel,
+  JSON) se téléchargent.
 - **Preuves et traces**. Preuves : appel, SMS, mail, capture d'écran,
   note, document — date et heure, **nombre** (« 12 appels » sur une même
   capture), titre, description, fichier (30 Mo au plus, chiffré au repos

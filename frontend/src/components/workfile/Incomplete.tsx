@@ -28,10 +28,11 @@ function Help() {
     <p className="muted">
       Embauche ou débauche non pointée (montre sans batterie, GPS muet). Pour
       chaque journée : les preuves et traces du jour — « Voir » ouvre le reçu,
-      la facture ou la capture pour vérifier le lieu avant de choisir —, «
-      Prendre » reprend leur heure ; les repères (réveil, premiers / derniers
-      pas, heure habituelle) aussi. Ajustez, notez d’où vient l’heure, puis «
-      Compléter ». Une erreur se corrige plus bas, dans « Corrigées à la main ».
+      la facture ou la capture dans un onglet pour vérifier le lieu avant de
+      choisir, « Détails » montre tout ce qui a été lu —, « Prendre » reprend
+      leur heure ; les repères (réveil, premiers / derniers pas, heure
+      habituelle) aussi. Ajustez, notez d’où vient l’heure, puis « Compléter ».
+      Une erreur se corrige plus bas, dans « Corrigées à la main ».
     </p>
   );
 }

@@ -2,6 +2,7 @@ import type { Report } from '../api/types';
 import { shortDateTime } from '../utils/datetime';
 import { shortDate } from '../utils/format';
 import { DownloadButton } from './DownloadButton';
+import { FileButtons } from './FileButtons';
 
 const EXT: Record<string, string> = {
   synthesis: 'pdf',
@@ -47,7 +48,13 @@ export function ReportRow({ report }: { report: Report }) {
       <td className="muted">{period(report)}</td>
       <td className="metric-type">{STATUS[report.status] ?? report.status}</td>
       <td>
-        {report.status === 'ready' && (
+        {report.status === 'ready' && ext === 'pdf' && (
+          <FileButtons
+            path={`/reports/${report.id}/file`}
+            filename={`rapport_${report.id}.pdf`}
+          />
+        )}
+        {report.status === 'ready' && ext !== 'pdf' && (
           <DownloadButton
             path={`/reports/${report.id}/file`}
             filename={`rapport_${report.id}.${ext}`}

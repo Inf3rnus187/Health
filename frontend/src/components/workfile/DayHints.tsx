@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import type { DayContext, IncompleteDay } from '../../api/workfile';
 import { money } from '../../utils/format';
+import { EvidenceFile } from '../FileButtons';
 import { clockHints } from './dayHints';
 import { EvidenceViewer, type Viewable } from './EvidenceViewer';
 
@@ -48,8 +49,9 @@ function ProofRow(props: { p: Proof; pick: Pick; view: (p: Proof) => void }) {
       <td className="nowrap">{p.time}</td>
       <td>{detail(p)}</td>
       <td className="quick">
+        <EvidenceFile id={p.id} name={p.file_name} />
         <button className="btn ghost" onClick={() => props.view(p)}>
-          Voir
+          Détails
         </button>
         <Take at={p.at} label="Prendre" pick={pick} />
         <Take at={p.end_at} label="Prendre la fin" pick={pick} />
