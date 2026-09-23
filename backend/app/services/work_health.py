@@ -51,7 +51,7 @@ async def gather(
         session, user_id, first, last + timedelta(days=1), tz
     )
     leaves = await absences.list_absences(session, user_id, first, last)
-    items = await evidence.list_items(session, user_id, first, last)
+    items = await evidence.list_items(session, user_id, first, last, tz)
     health = await _health(session, user_id, first, last)
     marks = work_traces.per_day(items, tz)
     table = _rows(first, last, (rows, days, nights, health, leaves, marks), tz)

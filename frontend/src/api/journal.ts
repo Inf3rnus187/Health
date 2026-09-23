@@ -1,3 +1,4 @@
+import type { Range } from '../utils/range';
 import { api, getAccessToken } from './client';
 
 export interface UrinationDay {
@@ -70,8 +71,8 @@ export const logUrination = (at?: string) =>
 export const deleteUrination = (id: string) =>
   api<{ detail: string }>(`/journal/urination/${id}`, json('DELETE'));
 
-export const fetchMeals = (start: string, end: string) =>
-  api<Meal[]>(`/meals?start=${start}&end=${end}`);
+export const fetchMeals = (range: Range) =>
+  api<Meal[]>(`/meals?start=${range.start || '2000-01-01'}&end=${range.end}`);
 export const analyzeMeal = (id: string) =>
   api<{ status: string }>(`/meals/${id}/analyze`, json('POST'));
 export const deleteMeal = (id: string) =>

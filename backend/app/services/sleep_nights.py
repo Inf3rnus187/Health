@@ -24,7 +24,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Any, NamedTuple
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.health_raw import HealthSample
@@ -84,6 +84,26 @@ async def nights(
             found[day] = night
     await _daily_only(session, user_id, first, last, found)
     return dict(sorted(found.items()))
+
+
+async def first_day(
+    session: AsyncSession, user_id: str, tz: ZoneInfo
+) -> date | None:
+    """The wake-up day of the first night known (samples or daily)."""
+    metric = await timed_entries.metric_for(session, SLEEP_RAW)
+    raw = await session.execute(
+        select(func.min(HealthSample.end_at)).where(
+            HealthSample.user_id == user_id,
+            HealthSample.metric_id == metric.id,
+        )
+    )
+    first = raw.scalar_one_or_none()
+    days = [utc(first).astimezone(tz).date()] if first else []
+    daily = await measurements.query(
+        session, user_id, metric_key="sleep.asleep"
+    )
+    days += [row.date_key for row in daily[:1]]
+    return min(days) if days else None
 
 
 def read_night(

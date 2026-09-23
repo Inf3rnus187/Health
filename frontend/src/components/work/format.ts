@@ -1,5 +1,3 @@
-import { localToday } from '../../utils/format';
-
 /** Hours as ``8 h 49``. */
 export function hm(hours: number | null | undefined): string {
   if (hours === null || hours === undefined) {
@@ -19,13 +17,6 @@ export function clockTime(iso: string | null): string {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
-
-/** The local day ``days`` before today (``YYYY-MM-DD``). */
-export function daysAgo(days: number): string {
-  const day = new Date(`${localToday()}T12:00:00`);
-  day.setDate(day.getDate() - days);
-  return day.toISOString().slice(0, 10);
 }
 
 const CONTRACT_KEY = 'work-contract-hours';

@@ -195,3 +195,58 @@ async def test_work_health_report_is_a_pdf(
         f"/api/v1/reports/{report.json()['id']}/file", headers=auth
     )
     assert pdf.content[:5] == b"%PDF-"
+
+
+async def test_days_to_complete_come_with_their_context(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    for day in ("02", "09"):  # two Mondays, 09:00-18:00: the usual times
+        await client.post(
+            "/api/v1/work/sessions",
+            json={
+                "start_at": f"2026-03-{day}T09:00",
+                "end_at": f"2026-03-{day}T18:00",
+            },
+            headers=auth,
+        )
+    await client.post(
+        "/api/v1/work/sessions",
+        json={"start_at": "2026-03-16T09:10"},  # a Monday, never closed
+        headers=auth,
+    )
+    await client.post(
+        "/api/v1/evidence",
+        data={"occurred_at": "2026-03-17T02:40", "kind": "taxi",
+              "place": "Bureau", "amount": "30"},
+        headers=auth,
+    )  # fmt: skip
+    todo = (await client.get("/api/v1/work/incomplete", headers=auth)).json()
+    (day,) = todo
+    context = day["context"]
+    assert day["status"] == "missing_end" and context["missing"] == "end"
+    assert context["has_proof"]
+    assert context["evidence"][0]["time"] == "17/03 02:40"  # the next night
+    assert context["usual"] == {
+        "weekday": "lundi", "that_weekday": "18:00", "overall": "18:00",
+    }  # fmt: skip
+    stats = await client.get(
+        "/api/v1/work/stats?start=2026-03-16&end=2026-03-16", headers=auth
+    )
+    assert stats.json()["open"] is None  # a forgotten clock-in: not "at work"
+
+
+async def test_nights_since_the_first_one_known(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    async with SessionFactory() as session:
+        user = (await session.execute(select(User))).scalar_one()
+    await _sleep(
+        user.id,
+        [("2025-01-09T23:00+01:00", "2025-01-10T07:00+01:00", "asleepCore")],
+    )
+    listed = await client.get(
+        "/api/v1/sleep/nights", params={"missing": "false"}, headers=auth
+    )
+    assert [n["wake_day"] for n in listed.json()] == ["2025-01-10"]
+    everything = await client.get("/api/v1/sleep/nights", headers=auth)
+    assert everything.json()[-1]["wake_day"] == "2025-01-10"  # not 30 days

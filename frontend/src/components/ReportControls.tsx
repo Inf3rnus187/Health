@@ -1,5 +1,8 @@
 import { useState } from 'react';
 
+import { type Range, useRange } from '../utils/range';
+import { DateRange } from './DateRange';
+
 const TYPES = [
   {
     value: 'synthesis',
@@ -7,7 +10,8 @@ const TYPES = [
       'Synthèse clinique IA + PDF clinique (modèle médical, quelques minutes)',
   },
   { value: 'clinical_pdf', label: 'PDF clinique' },
-  { value: 'work', label: 'Heures travaillées (PDF, 1 an)' },
+  { value: 'work', label: 'Heures travaillées (PDF)' },
+  { value: 'work_health', label: 'Dossier travail ↔ santé (PDF)' },
   { value: 'csv', label: 'CSV' },
   { value: 'json', label: 'JSON' },
   { value: 'xlsx', label: 'Excel (XLSX)' },
@@ -15,28 +19,43 @@ const TYPES = [
 ];
 
 interface ReportControlsProps {
-  onCreate: (type: string) => void;
+  onCreate: (type: string, range: Range) => void;
   busy: boolean;
 }
 
+function TypeSelect(props: { value: string; onChange: (v: string) => void }) {
+  return (
+    <select
+      className="input"
+      value={props.value}
+      onChange={(event) => props.onChange(event.target.value)}
+    >
+      {TYPES.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+/** A report type and its period ("Tout" by default), then "Générer". */
 export function ReportControls({ onCreate, busy }: ReportControlsProps) {
   const [type, setType] = useState('synthesis');
+  const [range, setRange] = useRange(null);
   return (
-    <div className="quick">
-      <select
-        className="input"
-        value={type}
-        onChange={(event) => setType(event.target.value)}
-      >
-        {TYPES.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <button className="btn" disabled={busy} onClick={() => onCreate(type)}>
-        Générer
-      </button>
-    </div>
+    <>
+      <DateRange value={range} onChange={setRange} />
+      <div className="quick">
+        <TypeSelect value={type} onChange={setType} />
+        <button
+          className="btn"
+          disabled={busy}
+          onClick={() => onCreate(type, range)}
+        >
+          Générer
+        </button>
+      </div>
+    </>
   );
 }

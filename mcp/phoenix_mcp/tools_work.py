@@ -54,6 +54,20 @@ async def save_work_session(
 
 
 @mcp.tool()
+async def work_incomplete() -> Any:
+    """Days to complete: sessions with a clock-in or clock-out missing.
+
+    Each comes with its context to help the user choose a time: the
+    day's proofs and traces (taxi, parking, receipts; the next morning
+    too for a missing clock-out), wake-up and bedtime, first and last
+    steps, the usual time for that weekday and overall. Suggest, never
+    decide: once the user picks a time, fix it with save_work_session
+    (``session_id``) and a note saying where the time comes from.
+    """
+    return await client.get("/work/incomplete")
+
+
+@mcp.tool()
 async def delete_work_session(session_id: str) -> Any:
     """Delete one work session (ask the user first)."""
     return await client.request("DELETE", f"/work/sessions/{session_id}")

@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-82 outils.
+83 outils.
 
 ## Données et métriques
 
@@ -331,6 +331,17 @@ two may be missing (completed later). Overlaps and sessions over
 
 Paramètres : `start_at` (string | null, défaut `None`), `end_at` (string | null, défaut `None`), `note` (string, défaut ``), `session_id` (string | null, défaut `None`)
 
+### `work_incomplete`
+
+Days to complete: sessions with a clock-in or clock-out missing.
+
+Each comes with its context to help the user choose a time: the
+day's proofs and traces (taxi, parking, receipts; the next morning
+too for a missing clock-out), wake-up and bedtime, first and last
+steps, the usual time for that weekday and overall. Suggest, never
+decide: once the user picks a time, fix it with save_work_session
+(``session_id``) and a note saying where the time comes from.
+
 ### `delete_work_session`
 
 Delete one work session (ask the user first).
@@ -402,7 +413,7 @@ Paramètres : `absence_id`* (string)
 
 ### `list_evidence`
 
-Evidence (calls, mails, screenshots…) with their SHA-256.
+Proofs and traces between two local days, with their SHA-256.
 
 Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`)
 
@@ -440,11 +451,13 @@ Paramètres : `item_id`* (string)
 
 ### `sleep_nights`
 
-Nights by wake-up day: asleep, awakenings, blocks, bed / wake times.
+Nights by wake-up day, newest first: asleep, awakenings, blocks.
 
-Days without any sleep data are listed as missing (watch not worn).
+Default: every night since the first one known. Days without any
+sleep data are listed as missing (watch not worn) unless
+``missing`` is false.
 
-Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`)
+Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`), `missing` (boolean, défaut `True`)
 
 ### `add_sleep_night`
 

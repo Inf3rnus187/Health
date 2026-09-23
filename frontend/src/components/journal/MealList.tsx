@@ -1,15 +1,10 @@
 import type { Meal } from '../../api/journal';
 import { useMeals } from '../../hooks/useJournal';
-import { frNumber, localToday, shortDate } from '../../utils/format';
+import { frNumber, shortDate } from '../../utils/format';
+import { useRange } from '../../utils/range';
+import { DateRange } from '../DateRange';
+import { usePaging } from '../Paging';
 import { MealCard } from './MealCard';
-
-const DAYS = 7;
-
-function daysAgo(n: number): string {
-  const day = new Date(`${localToday()}T12:00:00`);
-  day.setDate(day.getDate() - n);
-  return day.toISOString().slice(0, 10);
-}
 
 function byDay(meals: Meal[]): [string, Meal[]][] {
   const out = new Map<string, Meal[]>();
@@ -33,14 +28,18 @@ function DayTotal({ meals }: { meals: Meal[] }) {
   return <p className="muted">{text} (repas analysés)</p>;
 }
 
-/** The last 7 days of meals, grouped by day with the day's totals. */
+/** Meals of a period, grouped by day (a page is 10 days) with totals. */
 export function MealList() {
-  const meals = useMeals(daysAgo(DAYS - 1), localToday()).data ?? [];
+  const [range, setRange] = useRange(7);
+  const meals = useMeals(range).data ?? [];
+  const { page, bar } = usePaging(byDay(meals));
   return (
     <section className="card">
-      <h2>Repas des 7 derniers jours</h2>
+      <h2>Repas ({meals.length})</h2>
+      <DateRange value={range} onChange={setRange} />
       {meals.length === 0 && <p className="muted">Aucun repas noté.</p>}
-      {byDay(meals).map(([day, list]) => (
+      {bar}
+      {page.map(([day, list]) => (
         <div key={day} className="meal-day">
           <h3>{shortDate(day)}</h3>
           <DayTotal meals={list} />

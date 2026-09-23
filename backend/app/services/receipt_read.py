@@ -32,6 +32,16 @@ _INVOICE = re.compile(
     r"(?:numero de facture|n[°o] de facture|facture n[°o]?)\s*:?\s*(\S+)"
 )
 _NOON = time(12, 0)
+_SEP, _TSEP = r"[-_. ]", r"[-_. tT]*"
+#: File-name date-times: (pattern, meaning of its groups).
+_NAMES = (
+    (re.compile(rf"(?<!\d)(\d{{1,2}}){_SEP}(\d{{1,2}}){_SEP}(\d{{4}}){_TSEP}"
+                r"(\d{1,2})[hH:._-](\d{2})(?!\d)"), "dmyhi"),
+    (re.compile(rf"(?<!\d)(\d{{4}}){_SEP}(\d{{1,2}}){_SEP}(\d{{1,2}}){_TSEP}"
+                r"(\d{1,2})[hH:._-](\d{2})(?!\d)"), "ymdhi"),
+    (re.compile(r"(?<!\d)(\d{4})(\d{2})(\d{2})[-_tT ](\d{2})(\d{2})(?!\d)"),
+     "ymdhi"),
+)  # fmt: skip
 _MEDIA = {b"%PDF-": "application/pdf", b"\x89PNG": "image/png"}
 
 
@@ -77,10 +87,30 @@ def read(data: bytes, name: str, tz: ZoneInfo) -> Receipt | None:
     )
 
 
+def name_stamp(name: str) -> datetime | None:
+    """The date and time a file is named after (local, naive).
+
+    ``09-05-2026-03H47-…``, ``2026-05-09_03-47``, ``09.05.2026 03.47``,
+    ``20260509-0347``: the day first or the year first, any separator.
+    """
+    for pattern, order in _NAMES:
+        found = pattern.search(name)
+        if found:
+            parts = dict(zip(order, map(int, found.groups()), strict=True))
+            try:
+                return datetime(
+                    parts["y"], parts["m"], parts["d"], parts["h"], parts["i"]
+                )
+            except ValueError:
+                continue
+    return None
+
+
 def _when(name: str, text: str, tz: ZoneInfo) -> tuple[datetime, bool] | None:
     """The time from the file name, else the text; else the day at noon."""
     day = work_parse.day_of(text)
-    named = work_parse.stamps(name.replace("_", " "))
+    stamp = name_stamp(name)
+    named = [stamp] if stamp else []
     if named and (
         day is None or abs(named[0].date() - day) <= timedelta(days=1)
     ):

@@ -1,16 +1,15 @@
-import { useState } from 'react';
+import { type ChangeEvent, useState } from 'react';
 
 import {
   EVIDENCE_KINDS,
-  type EvidenceItem,
   MEAL_TRACES,
   postForm,
   TRACE_KINDS,
 } from '../../api/workfile';
 import { useWorkRefresh } from '../../hooks/useWork';
-import { useDeleteEvidence, useEvidence } from '../../hooks/useWorkFile';
-import { DownloadButton } from '../DownloadButton';
+import { nameStamp } from '../../utils/nameStamp';
 import { nowLocal } from '../journal/time';
+import { EvidenceList } from './EvidenceList';
 import { Choice } from './fields';
 
 function useAddEvidence() {
@@ -109,6 +108,16 @@ function TraceFields({ kind }: { kind: string }) {
   );
 }
 
+/** A file named with its date-time ("2026-05-09 03h47") sets "Quand". */
+function fillWhen(e: ChangeEvent<HTMLInputElement>) {
+  const name = e.currentTarget.files?.[0]?.name ?? '';
+  const stamp = nameStamp(name);
+  const when = e.currentTarget.form?.elements.namedItem('occurred_at');
+  if (stamp && when instanceof HTMLInputElement) {
+    when.value = stamp;
+  }
+}
+
 function What() {
   return (
     <>
@@ -122,7 +131,7 @@ function What() {
         name="description"
         placeholder="Ce que la preuve montre (ex. ce qui a été commandé)"
       />
-      <input type="file" name="file" />
+      <input type="file" name="file" onChange={fillWhen} />
     </>
   );
 }
@@ -149,69 +158,20 @@ function EvidenceForm() {
   );
 }
 
-function fmt(iso: string, withTime: boolean): string {
-  const at = new Date(iso);
-  return withTime
-    ? at.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })
-    : at.toLocaleDateString('fr-FR');
-}
-
-function span(item: EvidenceItem): string {
-  const end = item.ended_at ? ` → ${fmt(item.ended_at, true)}` : '';
-  return `${fmt(item.occurred_at, item.time_known)}${end}`;
-}
-
-function Details({ item }: { item: EvidenceItem }) {
-  return (
-    <>
-      {span(item)} — <strong>{EVIDENCE_KINDS[item.kind] ?? item.kind}</strong>
-      {item.count > 1 && ` ×${item.count}`} {item.title}
-      {item.place && item.place !== item.title && ` · ${item.place}`}
-      {item.amount != null && ` · ${item.amount} €`}
-      {item.meal_id && ' · repas au Journal'}
-      {item.sha256 && (
-        <span className="muted"> · SHA-256 {item.sha256.slice(0, 12)}…</span>
-      )}
-    </>
-  );
-}
-
-function Item({ item }: { item: EvidenceItem }) {
-  const del = useDeleteEvidence();
-  return (
-    <li>
-      <Details item={item} />
-      {item.file_name && (
-        <DownloadButton
-          path={`/evidence/${item.id}/file`}
-          filename={item.file_name}
-          label="Fichier"
-        />
-      )}
-      <button className="btn ghost" onClick={() => del.mutate(item.id)}>
-        Supprimer
-      </button>
-    </li>
-  );
-}
-
 /** Proofs (calls, mails…) and traces (transport, taxi, parking, meals…). */
 export function EvidenceCard() {
-  const items = useEvidence().data ?? [];
   return (
     <section className="card">
-      <h2>Preuves et traces ({items.length})</h2>
+      <h2>Preuves et traces</h2>
       <p className="muted">
         Preuves : appels, SMS, mails, captures. Traces : ce que des tiers ont
         enregistré — métro, taxi, parking, repas livré, hôtel, note de frais.
         Chaque fichier garde son empreinte SHA-256 (imprimée dans le rapport).
+        Un fichier nommé avec sa date et son heure (« 2026-05-09 03h47.pdf », «
+        09-05-2026_03.47.png ») remplit « Quand » tout seul.
       </p>
       <EvidenceForm />
-      <ul className="care-list">
-        {items.map((item) => (
-          <Item key={item.id} item={item} />
-        ))}
-      </ul>
+      <EvidenceList />
     </section>
   );
 }

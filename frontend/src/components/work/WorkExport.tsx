@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { createWorkReport } from '../../api/work';
+import { type Range, rangeQuery } from '../../utils/range';
 import { DownloadButton } from '../DownloadButton';
 
 const LEVELS: Record<string, string> = {
@@ -16,8 +17,7 @@ const FORMATS: Record<string, string> = {
 };
 
 interface Props {
-  start: string;
-  end: string;
+  range: Range;
   contract: number;
 }
 
@@ -44,7 +44,7 @@ function Choice(props: {
 function ReportButton(props: Props) {
   const [done, setDone] = useState('');
   const make = () =>
-    createWorkReport(props.start, props.end, props.contract).then(
+    createWorkReport(props.range, props.contract).then(
       () => setDone('Rapport créé : voir la page Rapports.'),
       (error: Error) => setDone(error.message),
     );
@@ -62,10 +62,10 @@ function ReportButton(props: Props) {
 export function WorkExport(props: Props) {
   const [level, setLevel] = useState('days');
   const [format, setFormat] = useState('csv');
-  const span = `start=${props.start}&end=${props.end}`;
-  const query = `${span}&level=${level}&format=${format}`;
+  const { start, end } = props.range;
+  const query = `${rangeQuery(props.range)}&level=${level}&format=${format}`;
   const path = `/work/export?${query}&contract_hours=${props.contract}`;
-  const name = `heures-${level}-${props.start}-${props.end}.${format}`;
+  const name = `heures-${level}-${start || 'debut'}-${end}.${format}`;
   return (
     <div className="quick">
       <Choice options={LEVELS} value={level} onChange={setLevel} />

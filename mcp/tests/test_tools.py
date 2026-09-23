@@ -247,6 +247,14 @@ async def test_work_clock_and_dry_run_import() -> None:
     assert b"02/03/2026;08:00;17:00" in upload.content
 
 
+async def test_days_to_complete_and_every_night() -> None:
+    seen = _capture()
+    await tools_work.work_incomplete()
+    await tools_workfile.sleep_nights(missing=False)
+    assert seen[0].url.path == "/api/v1/work/incomplete"
+    assert dict(seen[1].url.params) == {"missing": "false"}
+
+
 async def test_shortcut_logs_are_sent_together() -> None:
     seen = _capture()
     await tools_workfile.import_logs(

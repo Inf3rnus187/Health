@@ -33,7 +33,7 @@ async def stats(
         "start": first,
         "end": last,
         "contract_hours": contract,
-        "open": next((s for s in listed if s["end_at"] is None), None),
+        "open": next((s for s in listed if s["status"] == "open"), None),
         **summary(inside, contract),
         "days": [
             {

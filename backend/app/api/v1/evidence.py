@@ -28,8 +28,10 @@ async def index(
     start: Annotated[date | None, Query()] = None,
     end: Annotated[date | None, Query()] = None,
 ) -> list[Evidence]:
-    """Proofs and traces between two days (all by default), oldest first."""
-    return await evidence.list_items(session, principal.user.id, start, end)
+    """Proofs and traces between two local days (default: all), oldest first."""
+    user_id = principal.user.id
+    tz = await user_zone(session, user_id)
+    return await evidence.list_items(session, user_id, start, end, tz)
 
 
 def _form(

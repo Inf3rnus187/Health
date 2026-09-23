@@ -6,13 +6,17 @@ import {
   useDeleteSession,
   useWorkSessions,
 } from '../../hooks/useWork';
-import { localToday, shortDate } from '../../utils/format';
-import { clockTime, daysAgo, hm } from './format';
+import { shortDate } from '../../utils/format';
+import { useRange } from '../../utils/range';
+import { DateRange } from '../DateRange';
+import { usePaging } from '../Paging';
+import { clockTime, hm } from './format';
 
 const SOURCE: Record<string, string> = {
   tap: 'Raccourci',
   manual: 'Saisie',
   import: 'Import',
+  edited: 'Corrigée',
 };
 
 function Row({ row }: { row: WorkSession }) {
@@ -75,13 +79,17 @@ function AddSession() {
   );
 }
 
-/** The last 30 days of sessions, to check, add or remove. */
+/** The sessions of a period, to check, add or remove. */
 export function SessionList() {
-  const rows = useWorkSessions(daysAgo(29), localToday()).data ?? [];
+  const [range, setRange] = useRange(30);
+  const all = useWorkSessions(range).data ?? [];
+  const { page: rows, bar } = usePaging(all);
   return (
     <section className="card">
-      <h2>Sessions (30 derniers jours)</h2>
+      <h2>Sessions ({all.length})</h2>
       <AddSession />
+      <DateRange value={range} onChange={setRange} />
+      {bar}
       <div className="table-wrap">
         <table className="data-table">
           <tbody>

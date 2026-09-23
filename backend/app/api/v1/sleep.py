@@ -31,21 +31,25 @@ async def nights(
     session: SessionDep,
     start: Annotated[date | None, Query()] = None,
     end: Annotated[date | None, Query()] = None,
+    missing: Annotated[bool, Query()] = True,
 ) -> list[dict[str, Any]]:
-    """Nights by wake-up day (default: last 30 days).
+    """Nights by wake-up day, newest first (default: since the first one).
 
-    Days of the period without any sleep data are listed as missing.
+    Days of the period without any sleep data are listed as missing
+    (``missing=false`` leaves them out).
     """
     user_id = principal.user.id
-    last = end or await local_day(session, user_id, utcnow())
-    first = start or last - timedelta(days=29)
     tz = await user_zone(session, user_id)
+    last = end or await local_day(session, user_id, utcnow())
+    known = await sleep_nights.first_day(session, user_id, tz)
+    first = start or known or last - timedelta(days=29)
     found = await sleep_nights.nights(session, user_id, first, last, tz)
     days = [first + timedelta(days=i) for i in range((last - first).days + 1)]
     return [
         sleep_nights.as_dict(found[d]) if d in found
         else {"wake_day": d, "missing": True}
         for d in reversed(days)
+        if d in found or missing
     ]  # fmt: skip
 
 

@@ -1,3 +1,4 @@
+import { type Range, rangeQuery } from '../utils/range';
 import { api, getAccessToken } from './client';
 
 export interface WorkSession {
@@ -73,12 +74,13 @@ const json = (method: string, body?: unknown): RequestInit => ({
   body: body === undefined ? undefined : JSON.stringify(body),
 });
 
-export const fetchWorkStats = (start: string, end: string, contract: number) =>
-  api<WorkStats>(
-    `/work/stats?start=${start}&end=${end}&contract_hours=${contract}`,
+export const fetchWorkStats = (range: Range, contract: number) =>
+  api<WorkStats>(`/work/stats?${rangeQuery(range)}&contract_hours=${contract}`);
+/** Sessions of a period ("from the beginning": since 2000). */
+export const fetchWorkSessions = (range: Range) =>
+  api<WorkSession[]>(
+    `/work/sessions?start=${range.start || '2000-01-01'}&end=${range.end}`,
   );
-export const fetchWorkSessions = (start: string, end: string) =>
-  api<WorkSession[]>(`/work/sessions?start=${start}&end=${end}`);
 export const clockWork = (kind: 'in' | 'out') =>
   api<WorkSession>('/work/clock', json('POST', { kind }));
 export const addWorkSession = (body: SessionBody) =>
@@ -109,17 +111,13 @@ export async function importWork(
 }
 
 /** Queue the work-hours PDF report of a period (see Rapports). */
-export const createWorkReport = (
-  start: string,
-  end: string,
-  contract: number,
-) =>
+export const createWorkReport = (range: Range, contract: number) =>
   api<{ id: string; status: string }>(
     '/reports',
     json('POST', {
       type: 'work',
-      period_start: start,
-      period_end: end,
+      period_start: range.start || null,
+      period_end: range.end,
       params: { contract_hours: contract },
     }),
   );

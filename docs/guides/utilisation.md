@@ -81,7 +81,8 @@ Ce qu'Apple Santé n'enregistre pas : **pipi** et **repas**.
   qu'Apple Santé** (`nutrition.energy`, protéines, glucides…) ; modifier,
   réanalyser ou supprimer le repas remplace ou retire exactement ses
   nutriments.
-- **Repas des 7 derniers jours**, groupés par jour avec le total du jour.
+- **Repas** de la période (7 jours par défaut, ou dates exactes), groupés
+  par jour avec le total du jour, 10 jours par page.
 
 Depuis l'iPhone : voir [Raccourcis iPhone](#raccourcis-iphone--une-seule-règle).
 
@@ -151,6 +152,15 @@ VFC ou de la tension — jusqu'à un dossier complet pour faire valoir un
 arrêt, un accident du travail ou une maladie professionnelle. La page a
 trois onglets : **Pointage**, **Dossier travail et santé**, **Importer**.
 
+**Périodes et pages, partout pareil.** Chaque liste ou calcul daté
+(heures travaillées, sessions, synthèse du dossier, preuves et traces,
+nuits, repas, rapports) a le même sélecteur : raccourcis **7 j**,
+**30 j**, **3 mois**, **1 an**, **Tout** (depuis la première donnée), et
+deux dates exactes **Du … au …** pour n'importe quelle période. Les
+listes longues se lisent **page par page** : « Par page » (10 par
+défaut, ou plus) et « Précédent / Suivant ». Les jours s'entendent à
+l'heure locale : un taxi à 00:30 compte pour ce jour-là.
+
 ### Pointage
 
 - **Pointer** : « Embauche maintenant » / « Débauche maintenant », le
@@ -165,9 +175,25 @@ trois onglets : **Pointage**, **Dossier travail et santé**, **Importer**.
   manquante » ; une embauche jamais close devient « débauche manquante »
   au bout de 16 h. Une deuxième embauche le même jour pendant qu'une
   session est ouverte est ignorée.
-- **Journées à compléter** : toutes les sessions incomplètes, pour ajouter
-  l'heure manquante d'après vos notes. Une session pointée ou importée puis
-  complétée à la main est marquée « complétée à la main » (le rapport dit
+- **Journées à compléter** : toutes les sessions incomplètes (la plus
+  récente d'abord), avec « **preuve présente** » ou « sans preuve » et
+  un filtre (avec / sans preuve, embauche ou débauche manquante). Pour
+  retrouver l'heure vous-même, chaque journée propose des **indices
+  cliquables** :
+  - les **preuves et traces du jour** (parking 07:40 → 21:50, ticket,
+    appel…) ; pour une débauche manquante, aussi celles du **lendemain
+    matin** (le taxi de 03:47) ; un séjour qui couvre le jour (hôtel,
+    parking de plusieurs jours) propose aussi sa fin ;
+  - le **réveil** et les **premiers pas** du jour (embauche manquante),
+    les **derniers pas** et le **coucher** (débauche manquante) ;
+  - votre heure **habituelle ce jour de la semaine** (« habituel le
+    mercredi 19:05 ») et tous jours confondus (médianes des sessions
+    complètes).
+
+  Un clic pré-remplit l'heure (placée le lendemain si elle tombe avant
+  l'embauche : 01:30 après une embauche à 08:00) ; ajustez-la, notez
+  **d'où vient l'heure**, puis « Compléter ». Le hub ne choisit jamais
+  seul. La session est marquée « complétée à la main » (le rapport dit
   quelles heures ont été saisies).
 - **Valeurs du jour**, comme toute mesure (courbes, Données, tableaux de
   bord, exports, rapports) : `work.hours` (heures des sessions
@@ -175,7 +201,8 @@ trois onglets : **Pointage**, **Dossier travail et santé**, **Importer**.
   débauche), ces deux-là en heures décimales (8,25 = 08:15 ; 25,5 = 01:30
   le lendemain). Une journée incomplète n'a pas d'heures : les totaux sont
   des **minimums**.
-- **Heures travaillées** sur 7 jours, 30 jours, 3 mois, 1 an ou tout :
+- **Heures travaillées** sur la période choisie (raccourcis ou dates
+  exactes) :
   total, jours travaillés, moyenne par jour et par semaine, embauche et
   débauche moyennes, **heures supplémentaires** (par semaine, au-delà du
   contrat — 35 h par défaut, réglable), **jours de plus de 10 h** et
@@ -185,12 +212,16 @@ trois onglets : **Pointage**, **Dossier travail et santé**, **Importer**.
 - **Exporter** la période par jour, semaine, mois ou session, en CSV,
   Excel ou JSON ; **Rapport PDF** des heures (aussi dans Rapports ›
   « Heures travaillées »).
-- **Sessions (30 derniers jours)** : vérifier, ajouter une session oubliée
-  (l'embauche, la débauche ou les deux), supprimer.
+- **Sessions** de la période (30 jours par défaut), page par page :
+  vérifier, ajouter une session oubliée (l'embauche, la débauche ou les
+  deux), supprimer.
+- « **Au travail depuis** » ne concerne qu'une embauche de moins de 16 h :
+  une embauche ancienne jamais close est une journée à compléter et ne
+  bloque plus le bouton « Embauche maintenant ».
 
 ### Dossier travail et santé
 
-- **Synthèse** (3 mois, 1 an, tout) : sessions et journées incomplètes,
+- **Synthèse** (1 an par défaut, ou toute période exacte) : sessions et journées incomplètes,
   nuits connues, repères du Code du travail, liens travail ↔ sommeil, et
   « **Générer le rapport PDF complet** » (aussi dans Rapports ›
   « work_health » via l'API ou l'assistant).
@@ -213,11 +244,17 @@ trois onglets : **Pointage**, **Dossier travail et santé**, **Importer**.
   le rapport : une copie se vérifie contre l'original
   (`sha256sum fichier`). Les images (PNG, JPEG) sont reproduites dans
   l'annexe du rapport ; les autres fichiers y sont listés.
-- **Journées à compléter** (onglet Pointage) : les traces du jour (métro
-  07:52, taxi 23:40… et, pour une débauche manquante, celles du
-  lendemain matin : le taxi de 03:47) sont proposées à côté de chaque
-  journée incomplète ; un clic reprend l'heure.
-- **Nuits** (30 derniers réveils) : pour chaque nuit (rattachée au jour du
+  **Nommez vos fichiers avec la date et l'heure** : l'heure est souvent
+  absente du PDF alors que c'est elle qui compte. Au choix du fichier,
+  « Quand » se remplit tout seul depuis le nom — `2026-05-09 03h47.pdf`,
+  `09-05-2026_03.47.png`, `2026.05.09 3h47.jpg`, `IMG_20260509-0347.jpg`
+  (jour-mois-année ou année-mois-jour, séparés par `-`, `_`, `.` ou une
+  espace ; heure `03h47`, `03:47`, `03.47`, `03-47`). La liste se
+  filtre par période et par type (preuves, traces, ou un type précis),
+  la plus récente d'abord, page par page.
+- **Nuits** (30 jours par défaut ; « Tout » remonte à la première nuit
+  connue), la plus récente d'abord, page par page ; « Montrer les nuits
+  sans données » se décoche : pour chaque nuit (rattachée au jour du
   réveil, de 18 h la veille à 18 h), le sommeil, le nombre de **réveils**
   (phases d'éveil de la montre ; sans phases, les coupures de 5 min et
   plus), les **blocs** (sommeil « en plusieurs fois », coupé d'une heure
@@ -420,7 +457,11 @@ compléter.
 - **Synthèse clinique IA + PDF clinique** (par défaut) : le modèle médical
   rédige une synthèse de tout le dossier, chaque phrase citant ses faits ;
   affichée sur la page et en tête du PDF. Prend quelques minutes.
-- **PDF clinique**, **CSV**, **JSON**, **Excel**, **FHIR**.
+- **PDF clinique**, **Heures travaillées**, **Dossier travail ↔ santé**,
+  **CSV**, **JSON**, **Excel**, **FHIR**.
+- **Période** de chaque rapport : « Tout » par défaut, un raccourci ou
+  deux dates exactes (Du … au …) ; la liste des rapports rappelle la
+  période de chacun.
 - **Exporter mes données** : tout l'historique au format choisi.
 
 ## Import

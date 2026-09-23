@@ -333,6 +333,20 @@ body {
   cursor: pointer;
 }
 
+.date-range {
+  align-items: center;
+}
+
+.date-range label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-range .input {
+  width: auto;
+}
+
 .tab.active {
   background: var(--color-primary);
   border-color: var(--color-primary);

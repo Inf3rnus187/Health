@@ -2,8 +2,10 @@ import { useState } from 'react';
 
 import type { Night } from '../../api/workfile';
 import { useAddNight, useNights } from '../../hooks/useWorkFile';
-import { localToday, shortDate } from '../../utils/format';
-import { daysAgo } from '../work/format';
+import { shortDate } from '../../utils/format';
+import { useRange } from '../../utils/range';
+import { DateRange } from '../DateRange';
+import { usePaging } from '../Paging';
 import { Input } from './fields';
 import { hoursText } from './keys';
 
@@ -79,27 +81,53 @@ function TypeNight() {
   );
 }
 
-/** The last 30 nights; type the ones the watch missed. */
+function Missing(props: { on: boolean; set: (on: boolean) => void }) {
+  return (
+    <label className="muted">
+      <input
+        type="checkbox"
+        checked={props.on}
+        onChange={(e) => props.set(e.target.checked)}
+      />{' '}
+      Montrer les nuits sans données
+    </label>
+  );
+}
+
+function Table({ nights }: { nights: Night[] }) {
+  return (
+    <div className="table-wrap">
+      <table className="data-table">
+        <tbody>
+          {nights.map((n) => (
+            <Row key={n.wake_day} night={n} />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** The nights of a period, newest first; type the ones the watch missed. */
 export function NightsCard() {
-  const nights = useNights(daysAgo(29), localToday()).data ?? [];
+  const [range, setRange] = useRange(30);
+  const [missing, setMissing] = useState(true);
+  const nights = useNights(range, missing).data ?? [];
+  const { page, bar } = usePaging(nights);
   return (
     <section className="card">
-      <h2>Nuits (30 derniers réveils)</h2>
+      <h2>Nuits ({nights.length})</h2>
       <p className="muted">
         Réveils et « blocs » (sommeil en plusieurs fois, coupé d’une heure ou
         plus) lus dans les phases de la montre. Une nuit manquante se saisit ici
-        : elle est marquée « saisie » dans le rapport.
+        : elle est marquée « saisie » dans le rapport. « Tout » remonte à la
+        première nuit connue.
       </p>
       <TypeNight />
-      <div className="table-wrap">
-        <table className="data-table">
-          <tbody>
-            {nights.map((n) => (
-              <Row key={n.wake_day} night={n} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DateRange value={range} onChange={setRange} />
+      <Missing on={missing} set={setMissing} />
+      {bar}
+      <Table nights={page} />
     </section>
   );
 }

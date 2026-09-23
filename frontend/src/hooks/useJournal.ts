@@ -10,6 +10,7 @@ import {
   logUrination,
   type Meal,
 } from '../api/journal';
+import type { Range } from '../utils/range';
 
 const POLL_MS = 5000;
 /** Metrics the journal feeds (their pages refresh after a change). */
@@ -52,10 +53,10 @@ export const useLogUrination = () => useUrinationAction(logUrination);
 export const useDeleteUrination = () => useUrinationAction(deleteUrination);
 
 /** Meals of a period; polls while an AI reading is queued or running. */
-export function useMeals(start: string, end: string) {
+export function useMeals(range: Range) {
   return useQuery({
-    queryKey: ['meals', start, end],
-    queryFn: () => fetchMeals(start, end),
+    queryKey: ['meals', range],
+    queryFn: () => fetchMeals(range),
     refetchInterval: (query) => (pending(query.state.data) ? POLL_MS : false),
   });
 }

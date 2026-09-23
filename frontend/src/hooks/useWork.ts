@@ -7,6 +7,7 @@ import {
   fetchWorkSessions,
   fetchWorkStats,
 } from '../api/work';
+import type { Range } from '../utils/range';
 
 /** Queries that show work hours (they refresh after a change). */
 const FED = [
@@ -16,6 +17,7 @@ const FED = [
   'absences',
   'evidence',
   'nights',
+  'incomplete',
   'summary',
   'overview',
   'trend',
@@ -31,16 +33,16 @@ export function useWorkRefresh() {
   };
 }
 
-export const useWorkStats = (start: string, end: string, contract: number) =>
+export const useWorkStats = (range: Range, contract: number) =>
   useQuery({
-    queryKey: ['work-stats', start, end, contract],
-    queryFn: () => fetchWorkStats(start, end, contract),
+    queryKey: ['work-stats', range, contract],
+    queryFn: () => fetchWorkStats(range, contract),
   });
 
-export const useWorkSessions = (start: string, end: string) =>
+export const useWorkSessions = (range: Range) =>
   useQuery({
-    queryKey: ['work-sessions', start, end],
-    queryFn: () => fetchWorkSessions(start, end),
+    queryKey: ['work-sessions', range],
+    queryFn: () => fetchWorkSessions(range),
   });
 
 function useWorkAction<A>(fn: (arg: A) => Promise<unknown>) {

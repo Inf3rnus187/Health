@@ -132,9 +132,10 @@ async def _health(session: AsyncSession, report: Report) -> tuple[bytes, str]:
 
 
 async def _work(session: AsyncSession, report: Report) -> bytes:
-    """The work-hours report (default: the last 365 days, 35 h contract)."""
+    """The work-hours report (default: every session, 35 h contract)."""
     last = report.period_end or date.today()
-    first = report.period_start or last - timedelta(days=364)
+    known = await work_health_report.first_day(session, report.user_id)
+    first = report.period_start or known or last - timedelta(days=364)
     contract = _contract(report)
     stats = await work_stats.stats(
         session, report.user_id, first, last, contract

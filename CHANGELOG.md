@@ -8,6 +8,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Exact periods and pages everywhere.** Hours worked, sessions, the
+  work ↔ health summary, proofs and traces, nights, meals and reports
+  share one period picker: 7 d / 30 d / 3 months / 1 year / all, plus
+  exact « Du … au … » days; reports keep and show their period, and the
+  report list now offers the work ↔ health PDF. Long lists page with a
+  « par page » selector (10 or more). Nights are no longer limited to
+  the last 30 days (`/sleep/nights` defaults to the first night known,
+  `missing=false` hides days without data); evidence periods are local
+  days (a taxi at 00:30 belongs to that day).
+- **Help to complete a day.** `GET /work/incomplete` lists every session
+  with a missing half, newest first, with « preuve présente » and the
+  day's context: proofs and traces (the next morning for a missing
+  clock-out, stays covering the day), wake-up and bedtime, first and
+  last steps, the usual time for that weekday and overall. The page
+  shows them as clickable times, filters by proof, and saves a note on
+  where the time comes from. MCP: `work_incomplete`; `sleep_nights`
+  takes `missing`.
+- **Date-time from the file name** when adding a proof or trace
+  (`2026-05-09 03h47.pdf`, `09-05-2026_03.47.png`,
+  `IMG_20260509-0347.jpg`): the same patterns as receipt imports.
+
 - **Traces and expenses** in the work ↔ health file. Evidence also holds
   traces — what third parties recorded: transport, taxi / VTC, parking,
   delivered meal, meal bought, hotel, expense report — with an end time,
@@ -196,6 +217,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- « Au travail depuis » and the disabled « Embauche maintenant » came
+  from any clock-in never closed, even weeks old: only a session opened
+  less than 16 h ago is open now.
 - **Receipts and expense reports reconciled.** Importing a PDF receipt as
   a trace failed with a 500 (it was read as a CSV); receipts and
   invoices (PDF, scanned PDF, photo — OCR) are now read: day, time (from

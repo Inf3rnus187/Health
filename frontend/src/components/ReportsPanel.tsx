@@ -17,7 +17,7 @@ export function ReportsPanel() {
           Santé, photos et documents. Elle est jointe au PDF clinique.
         </p>
         <ReportControls
-          onCreate={(type) => create.mutate(type)}
+          onCreate={(type, range) => create.mutate({ type, range })}
           busy={create.isPending}
         />
         <ReportsTable reports={reports} />

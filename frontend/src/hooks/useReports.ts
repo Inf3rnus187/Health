@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { createReport, fetchReports } from '../api/reports';
+import type { Range } from '../utils/range';
 import type { Report } from '../api/types';
 
 function interval(reports: Report[] | undefined): number | false {
@@ -19,7 +20,8 @@ export function useReports() {
 export function useCreateReport() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (type: string) => createReport(type),
+    mutationFn: (a: { type: string; range: Range }) =>
+      createReport(a.type, a.range),
     onSuccess: () => void client.invalidateQueries({ queryKey: ['reports'] }),
   });
 }

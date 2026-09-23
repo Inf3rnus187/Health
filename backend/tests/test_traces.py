@@ -160,3 +160,22 @@ async def test_a_trace_typed_by_hand_with_its_meal(
         headers=auth,
     )  # fmt: skip
     assert parking.json()["ended_at"].startswith("2026-03-04T21:30")
+
+
+async def test_a_period_is_made_of_local_days(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """A taxi at 00:30 in Paris belongs to that day, not the UTC eve."""
+    await client.post(
+        "/api/v1/evidence",
+        data={"occurred_at": "2026-03-05T00:30", "kind": "taxi"},
+        headers=auth,
+    )
+    that_day = await client.get(
+        "/api/v1/evidence?start=2026-03-05&end=2026-03-05", headers=auth
+    )
+    eve = await client.get(
+        "/api/v1/evidence?start=2026-03-04&end=2026-03-04", headers=auth
+    )
+    assert [x["kind"] for x in that_day.json()] == ["taxi"]
+    assert eve.json() == []

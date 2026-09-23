@@ -6,29 +6,37 @@ import {
   deleteEvidence,
   fetchAbsences,
   fetchEvidence,
+  fetchIncomplete,
   fetchNights,
   fetchWorkHealth,
   saveAbsence,
   updateSession,
 } from '../api/workfile';
+import type { Range } from '../utils/range';
 import { useWorkRefresh } from './useWork';
 
 export const useAbsences = () =>
   useQuery({ queryKey: ['absences'], queryFn: fetchAbsences });
 
-export const useEvidence = () =>
-  useQuery({ queryKey: ['evidence'], queryFn: fetchEvidence });
-
-export const useNights = (start: string, end: string) =>
+export const useEvidence = (range: Range) =>
   useQuery({
-    queryKey: ['nights', start, end],
-    queryFn: () => fetchNights(start, end),
+    queryKey: ['evidence', range],
+    queryFn: () => fetchEvidence(range),
   });
 
-export const useWorkHealth = (start: string, end: string) =>
+export const useIncomplete = () =>
+  useQuery({ queryKey: ['incomplete'], queryFn: fetchIncomplete });
+
+export const useNights = (range: Range, missing: boolean) =>
   useQuery({
-    queryKey: ['work-health', start, end],
-    queryFn: () => fetchWorkHealth(start, end),
+    queryKey: ['nights', range, missing],
+    queryFn: () => fetchNights(range, missing),
+  });
+
+export const useWorkHealth = (range: Range) =>
+  useQuery({
+    queryKey: ['work-health', range],
+    queryFn: () => fetchWorkHealth(range),
   });
 
 /** A write that refreshes every work / file view. */

@@ -14,6 +14,7 @@ from app.core.scopes import WRITE_MEASUREMENTS
 from app.models.base import utcnow
 from app.services import (
     work,
+    work_context,
     work_export,
     work_health,
     work_health_report,
@@ -37,7 +38,10 @@ async def stats(
     end: Annotated[date | None, Query()] = None,
     contract_hours: Contract = 35.0,
 ) -> dict[str, Any]:
-    """Totals, averages, overtime, weeks, months, 7/30/90/365 days."""
+    """Totals, averages, overtime, weeks, months, 7/30/90/365 days.
+
+    Default period: from the first work session to today.
+    """
     first, last = await _period(session, principal.user.id, start, end)
     return await work_stats.stats(
         session, principal.user.id, first, last, contract_hours
@@ -118,9 +122,23 @@ async def health(
     )  # fmt: skip
 
 
+@router.get("/incomplete")
+async def incomplete(
+    principal: ReaderDep, session: SessionDep
+) -> list[dict[str, Any]]:
+    """Sessions with a missing half, each with the day's context.
+
+    Traces and proofs of the day (and the next morning for a missing
+    clock-out), wake-up and bedtime, first and last steps, the usual
+    time for that weekday: facts to choose a time from.
+    """
+    return await work_context.incomplete(session, principal.user.id)
+
+
 async def _period(
     session: SessionDep, user_id: str, start: date | None, end: date | None
 ) -> tuple[date, date]:
-    """The asked days (default: the last 365 days)."""
+    """The asked days (default: from the first work session to today)."""
     last = end or await local_day(session, user_id, utcnow())
-    return start or last - timedelta(days=364), last
+    first = start or await work_health_report.first_day(session, user_id)
+    return first or last - timedelta(days=364), last

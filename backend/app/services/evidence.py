@@ -8,9 +8,10 @@ report, so a copy can be checked against the original.
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import date
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +20,9 @@ from app.core.errors import NotFoundError
 from app.models.base import new_uuid
 from app.models.work import Evidence
 from app.services import evidence_files
+from app.services.timed_entries import day_bounds
+
+_UTC = ZoneInfo("UTC")
 
 #: Proof kind → French label.
 PROOFS = {
@@ -64,17 +68,14 @@ async def list_items(
     user_id: str,
     first: date | None = None,
     last: date | None = None,
+    tz: ZoneInfo = _UTC,
 ) -> list[Evidence]:
-    """Items between two days (all by default), oldest first."""
+    """Items between two local days (all by default), oldest first."""
     query = select(Evidence).where(Evidence.user_id == user_id)
     if first is not None:
-        query = query.where(
-            Evidence.occurred_at
-            >= datetime.combine(first, time.min, tzinfo=UTC)
-        )
+        query = query.where(Evidence.occurred_at >= day_bounds(first, tz)[0])
     if last is not None:
-        end = datetime.combine(last + timedelta(days=1), time.min, tzinfo=UTC)
-        query = query.where(Evidence.occurred_at < end)
+        query = query.where(Evidence.occurred_at < day_bounds(last, tz)[1])
     rows = await session.execute(query.order_by(Evidence.occurred_at))
     return list(rows.scalars())
 

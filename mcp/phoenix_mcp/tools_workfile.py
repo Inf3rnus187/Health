@@ -67,7 +67,7 @@ async def delete_absence(absence_id: str) -> Any:
 async def list_evidence(
     start: str | None = None, end: str | None = None
 ) -> Any:
-    """Evidence (calls, mails, screenshots…) with their SHA-256."""
+    """Proofs and traces between two local days, with their SHA-256."""
     return await client.get("/evidence", {"start": start, "end": end})
 
 
@@ -141,12 +141,17 @@ async def delete_evidence(item_id: str) -> Any:
 
 
 @mcp.tool()
-async def sleep_nights(start: str | None = None, end: str | None = None) -> Any:
-    """Nights by wake-up day: asleep, awakenings, blocks, bed / wake times.
+async def sleep_nights(
+    start: str | None = None, end: str | None = None, missing: bool = True
+) -> Any:
+    """Nights by wake-up day, newest first: asleep, awakenings, blocks.
 
-    Days without any sleep data are listed as missing (watch not worn).
+    Default: every night since the first one known. Days without any
+    sleep data are listed as missing (watch not worn) unless
+    ``missing`` is false.
     """
-    return await client.get("/sleep/nights", {"start": start, "end": end})
+    params = {"start": start, "end": end, "missing": str(missing).lower()}
+    return await client.get("/sleep/nights", params)
 
 
 @mcp.tool()

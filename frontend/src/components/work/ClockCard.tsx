@@ -30,7 +30,7 @@ function Buttons({ open }: { open: boolean }) {
 /** Clock in / out now, and where the day stands. */
 export function ClockCard() {
   const today = localToday();
-  const stats = useWorkStats(today, today, 35).data;
+  const stats = useWorkStats({ start: today, end: today }, 35).data;
   const open = stats?.open ?? null;
   return (
     <section className="card">

@@ -1,3 +1,4 @@
+import { type Range, rangeQuery } from '../utils/range';
 import { api, getAccessToken } from './client';
 import type { WorkSession } from './work';
 
@@ -117,26 +118,34 @@ export const saveAbsence = (body: Omit<Absence, 'id'>) =>
 export const deleteAbsence = (id: string) =>
   api<{ detail: string }>(`/absences/${id}`, json('DELETE'));
 
-export const fetchEvidence = () => api<EvidenceItem[]>('/evidence');
+export const fetchEvidence = (range: Range) =>
+  api<EvidenceItem[]>(`/evidence?${rangeQuery(range)}`);
+
 export const deleteEvidence = (id: string) =>
   api<{ detail: string }>(`/evidence/${id}`, json('DELETE'));
 
-export const fetchNights = (start: string, end: string) =>
-  api<Night[]>(`/sleep/nights?start=${start}&end=${end}`);
+export const fetchNights = (range: Range, missing: boolean) =>
+  api<Night[]>(`/sleep/nights?${rangeQuery(range)}&missing=${missing}`);
+
 export const addNight = (body: {
   bedtime: string;
   wake_time: string;
   awakenings: number | null;
 }) => api<{ id: string }>('/sleep/nights', json('POST', body));
 
-export const fetchWorkHealth = (start: string, end: string) =>
-  api<WorkHealth>(`/work/health?start=${start}&end=${end}`);
+export const fetchWorkHealth = (range: Range) =>
+  api<WorkHealth>(`/work/health?${rangeQuery(range)}`);
+
 export const updateSession = (id: string, body: Record<string, string>) =>
   api<WorkSession>(`/work/sessions/${id}`, json('PUT', body));
-export const createFileReport = (start: string, end: string) =>
+export const createFileReport = (range: Range) =>
   api<{ id: string }>(
     '/reports',
-    json('POST', { type: 'work_health', period_start: start, period_end: end }),
+    json('POST', {
+      type: 'work_health',
+      period_start: range.start || null,
+      period_end: range.end,
+    }),
   );
 
 /** POST a multipart form with the session token (files). */
@@ -155,3 +164,30 @@ export async function postForm<T>(path: string, form: FormData): Promise<T> {
   }
   return (await res.json()) as T;
 }
+
+/** What else says when a day to complete started or ended. */
+export interface DayContext {
+  missing: 'start' | 'end';
+  has_proof: boolean;
+  evidence: {
+    id: string;
+    label: string;
+    title: string;
+    trace: boolean;
+    at: string | null;
+    end_at: string | null;
+    time: string;
+  }[];
+  wake_time: string | null;
+  bedtime: string | null;
+  activity: { first: string | null; last: string | null };
+  usual: {
+    weekday: string;
+    that_weekday: string | null;
+    overall: string | null;
+  };
+}
+
+export type IncompleteDay = WorkSession & { context: DayContext };
+
+export const fetchIncomplete = () => api<IncompleteDay[]>('/work/incomplete');
