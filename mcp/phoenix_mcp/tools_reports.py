@@ -18,7 +18,9 @@ async def generate_report(
 
     Types: synthesis (AI clinical synthesis + clinical PDF, takes
     minutes), clinical_pdf, work (hours worked PDF: totals, overtime,
-    weeks, months; default last 365 days), csv, json, xlsx, fhir.
+    weeks, months; default last 365 days), work_health (the work ↔
+    health file: work, legal landmarks, sleep correlations, absences,
+    day-by-day journal, evidence annex), csv, json, xlsx, fhir.
     """
     body = {
         "type": report_type,

@@ -39,7 +39,9 @@ async def test_a_tap_clocks_in_then_out(
     listed = (await client.get(f"{WORK}/sessions", headers=auth)).json()
     assert len(listed) == 1 and listed[0]["end_at"] is not None
     alone = await client.post(TALLY, json={"metric": "work.end"}, headers=auth)
-    assert alone.status_code == 422  # nothing open to close
+    assert "à compléter" in alone.json()["detail"]  # kept, not refused
+    listed = (await client.get(f"{WORK}/sessions", headers=auth)).json()
+    assert [s["status"] for s in listed] == ["missing_start", "complete"]
 
 
 async def test_sessions_feed_the_daily_values(

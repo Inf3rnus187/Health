@@ -20,6 +20,7 @@ from phoenix_mcp import (
     tools_record,
     tools_reports,
     tools_work,
+    tools_workfile,
 )
 from phoenix_mcp.app import mcp
 
@@ -29,6 +30,10 @@ SECTIONS: tuple[tuple[ModuleType, str], ...] = (
     (tools_record, "Dossier médical, Suivi, documents"),
     (tools_journal, "Journal : pipi et repas"),
     (tools_work, "Travail : heures d'embauche et de débauche"),
+    (
+        tools_workfile,
+        "Dossier travail et santé : historiques, arrêts, preuves, nuits",
+    ),
     (tools_body, "Évolution, photos, données Apple"),
     (tools_reports, "Rapports, automatisations, accès direct"),
 )

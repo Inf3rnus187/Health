@@ -11,6 +11,7 @@ _REPORT_TYPES = {
     "clinical_pdf",
     "synthesis",
     "work",
+    "work_health",
     "csv",
     "json",
     "xlsx",

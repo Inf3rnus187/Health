@@ -7,6 +7,7 @@ are ``work.start`` (clock in now) and ``work.end`` (clock out now).
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,17 +39,21 @@ async def tap(
     before = await _hours(session, user_id, today, tz)
     row = await work.clock(session, user_id, KINDS[metric_key], None, "tap")
     after = await _hours(session, user_id, today, tz)
+    return before, after, _line(row, after, tz)
+
+
+def _line(row: dict[str, Any], after: float, tz: ZoneInfo) -> str:
+    """The notification: what was logged and the day's hours."""
     if row["end_at"] is None:
-        return before, after, f"Embauche {row['start_at'].astimezone(tz):%H:%M}"
+        return f"Embauche {row['start_at'].astimezone(tz):%H:%M}"
     worked = int(round(after * 60))
-    return (
-        before,
-        after,
-        (
-            f"Débauche {row['end_at'].astimezone(tz):%H:%M} — "
-            f"{worked // 60} h {worked % 60:02d} aujourd'hui"
-        ),
+    text = (
+        f"Débauche {row['end_at'].astimezone(tz):%H:%M} — "
+        f"{worked // 60} h {worked % 60:02d} aujourd'hui"
     )
+    if row["start_at"] is None:
+        text += " (embauche non pointée : à compléter)"
+    return text
 
 
 async def _hours(

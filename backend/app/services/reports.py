@@ -21,6 +21,7 @@ from app.services import (
     export,
     export_formats,
     reports_pdf,
+    work_health_report,
     work_pdf,
     work_stats,
 )
@@ -98,6 +99,13 @@ async def build(session: AsyncSession, report: Report) -> None:
     try:
         if report.type == "work":
             data, ext = await _work(session, report), "pdf"
+        elif report.type == "work_health":
+            period = (report.period_start, report.period_end)
+            contract = _contract(report)
+            data = await work_health_report.render(
+                session, report.user_id, period, contract
+            )
+            ext = "pdf"
         else:
             data, ext = await _health(session, report)
         report.file_path = str(_write(report, ext, data))
@@ -127,11 +135,16 @@ async def _work(session: AsyncSession, report: Report) -> bytes:
     """The work-hours report (default: the last 365 days, 35 h contract)."""
     last = report.period_end or date.today()
     first = report.period_start or last - timedelta(days=364)
-    contract = float((report.params or {}).get("contract_hours") or 35)
+    contract = _contract(report)
     stats = await work_stats.stats(
         session, report.user_id, first, last, contract
     )
     return work_pdf.work_pdf(stats)
+
+
+def _contract(report: Report) -> float:
+    """The weekly contract hours asked for the report (35 by default)."""
+    return float((report.params or {}).get("contract_hours") or 35)
 
 
 async def _metric_meta(session: AsyncSession, keys: set[str]) -> dict[str, Any]:

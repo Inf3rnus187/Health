@@ -16,9 +16,9 @@ class ClockIn(BaseModel):
 
 
 class WorkSessionIn(BaseModel):
-    """A stretch at work typed by hand (``end_at`` empty: still there)."""
+    """A stretch at work typed by hand (one of the two times may be empty)."""
 
-    start_at: datetime
+    start_at: datetime | None = None
     end_at: datetime | None = None
     note: str = Field(default="", max_length=200)
 
@@ -36,8 +36,10 @@ class WorkSessionOut(BaseModel):
 
     id: str
     date_key: date
-    start_at: datetime
+    start_at: datetime | None
     end_at: datetime | None
     hours: float | None
+    #: complete, open (at work now), missing_start or missing_end.
+    status: str
     source: str
     note: str

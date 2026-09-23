@@ -12,7 +12,14 @@ from app.core.deps import Principal, ReaderDep, SessionDep
 from app.core.deps_query import require_scope_flex
 from app.core.scopes import WRITE_MEASUREMENTS
 from app.models.base import utcnow
-from app.services import work, work_export, work_import, work_stats
+from app.services import (
+    work,
+    work_export,
+    work_health,
+    work_health_report,
+    work_import,
+    work_stats,
+)
 from app.services.daily_rollup import user_zone
 from app.services.timed_entries import local_day
 
@@ -87,6 +94,28 @@ async def import_log(
     if not dry_run:
         await session.commit()
     return report
+
+
+@router.get("/health")
+async def health(
+    principal: ReaderDep,
+    session: SessionDep,
+    start: Annotated[date | None, Query()] = None,
+    end: Annotated[date | None, Query()] = None,
+    contract_hours: Contract = 35.0,
+) -> dict[str, Any]:
+    """The work ↔ health file: days, sleep, legal landmarks, absences.
+
+    Default: from the first work session to today. Same data as the
+    ``work_health`` PDF report.
+    """
+    user_id = principal.user.id
+    last = end or await local_day(session, user_id, utcnow())
+    first = start or await work_health_report.first_day(session, user_id)
+    return await work_health.gather(
+        session, user_id, first or last - timedelta(days=364), last,
+        contract_hours,
+    )  # fmt: skip
 
 
 async def _period(

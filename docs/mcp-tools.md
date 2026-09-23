@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-71 outils.
+81 outils.
 
 ## Données et métriques
 
@@ -324,10 +324,11 @@ Paramètres : `start` (string | null, défaut `None`), `end` (string | null, dé
 
 Add a work session, or fix one (``session_id``).
 
-Times are ISO date-times (local time without an offset). Overlaps and
-sessions over 24 h are refused. Confirm with the user before fixing.
+Times are ISO date-times (local time without an offset); one of the
+two may be missing (completed later). Overlaps and sessions over
+72 h are refused. Confirm with the user before fixing.
 
-Paramètres : `start_at`* (string), `end_at` (string | null, défaut `None`), `note` (string, défaut ``), `session_id` (string | null, défaut `None`)
+Paramètres : `start_at` (string | null, défaut `None`), `end_at` (string | null, défaut `None`), `note` (string, défaut ``), `session_id` (string | null, défaut `None`)
 
 ### `delete_work_session`
 
@@ -362,6 +363,86 @@ Work hours as text: level sessions / days / weeks / months, csv or json.
 For a PDF use generate_report(report_type="work").
 
 Paramètres : `level` (string, défaut `days`), `export_format` (string, défaut `csv`), `start` (string | null, défaut `None`), `end` (string | null, défaut `None`), `contract_hours` (number, défaut `35`)
+
+## Dossier travail et santé : historiques, arrêts, preuves, nuits
+
+### `import_logs`
+
+Import iPhone Shortcut history files (one time stamp per line).
+
+``files``: [{"filename": "Embauche.txt", "text": "...", "key": ""}].
+The key comes from the file name when empty: work.start (Embauche),
+work.end (Débauche), habit.cigarettes, habit.coffee,
+water.bottles_1_5, elimination.urination. Send clock-in and clock-out
+files together so they are paired. First call with dry_run=true, show
+the user what was read, import for real once they agree.
+
+Paramètres : `files`* (array), `dry_run` (boolean, défaut `True`)
+
+### `list_absences`
+
+Absences (sick leave, work accident…) with their cause.
+
+Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`)
+
+### `save_absence`
+
+Record (or replace, with ``absence_id``) an absence.
+
+kind: arret_maladie, accident_travail, maladie_pro, conge or autre.
+
+Paramètres : `start_date`* (string), `end_date`* (string), `kind` (string, défaut `arret_maladie`), `cause` (string, défaut ``), `note` (string, défaut ``), `absence_id` (string | null, défaut `None`)
+
+### `delete_absence`
+
+Delete an absence (ask the user first).
+
+Paramètres : `absence_id`* (string)
+
+### `list_evidence`
+
+Evidence (calls, mails, screenshots…) with their SHA-256.
+
+Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`)
+
+### `add_evidence`
+
+Add a proof: when, kind, how many (e.g. 12 calls on a screenshot).
+
+kind: appel, sms, mail, capture, note, document or autre.
+
+Paramètres : `occurred_at`* (string), `kind` (string, défaut `capture`), `title` (string, défaut ``), `description` (string, défaut ``), `count` (integer, défaut `1`), `file_base64` (string | null, défaut `None`), `filename` (string, défaut `preuve.png`), `media_type` (string, défaut `image/png`)
+
+### `delete_evidence`
+
+Delete one evidence item and its file (ask the user first).
+
+Paramètres : `item_id`* (string)
+
+### `sleep_nights`
+
+Nights by wake-up day: asleep, awakenings, blocks, bed / wake times.
+
+Days without any sleep data are listed as missing (watch not worn).
+
+Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`)
+
+### `add_sleep_night`
+
+Type a night the watch missed (ISO local times; confirm first).
+
+Paramètres : `bedtime`* (string), `wake_time`* (string), `awakenings` (integer | null, défaut `None`)
+
+### `work_health`
+
+The work ↔ health file: work, legal landmarks, sleep, absences.
+
+Correlations (hours worked vs sleep the night after), nights after
+days off / short / long days, weeks, months, years, absences with the
+work and calls inside them, evidence. ``with_days`` adds every day.
+For the PDF: generate_report(report_type="work_health").
+
+Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`), `contract_hours` (number, défaut `35`), `with_days` (boolean, défaut `False`)
 
 ## Évolution, photos, données Apple
 
@@ -433,7 +514,9 @@ Generate a report, then poll get_report.
 
 Types: synthesis (AI clinical synthesis + clinical PDF, takes
 minutes), clinical_pdf, work (hours worked PDF: totals, overtime,
-weeks, months; default last 365 days), csv, json, xlsx, fhir.
+weeks, months; default last 365 days), work_health (the work ↔
+health file: work, legal landmarks, sleep correlations, absences,
+day-by-day journal, evidence annex), csv, json, xlsx, fhir.
 
 Paramètres : `report_type` (string, défaut `synthesis`), `period_start` (string | null, défaut `None`), `period_end` (string | null, défaut `None`)
 

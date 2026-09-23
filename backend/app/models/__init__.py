@@ -34,9 +34,11 @@ from app.models.report import Report
 from app.models.session import AuthSession
 from app.models.token import ApiToken
 from app.models.user import User
-from app.models.work import WorkSession
+from app.models.work import Absence, Evidence, WorkSession
 
 __all__ = [
+    "Absence",
+    "Evidence",
     "ApiToken",
     "Appointment",
     "AuditLog",

@@ -282,9 +282,44 @@ signale qu'il est aussi accepté en paramètre d'URL.
 |---|---|---|---|---|
 | POST | `/work/clock` | `write:measurements` + ?token= | JSON `ClockIn` (kind, at) | Clock in or out (now unless ``at`` is given). |
 | GET | `/work/export` | `read:all` | `start`?, `end`?, `level`?, `format`?, `contract_hours`? | Sessions, days, weeks or months as CSV, JSON or Excel. |
+| GET | `/work/health` | `read:all` | `start`?, `end`?, `contract_hours`? | The work ↔ health file: days, sleep, legal landmarks, absences. |
 | POST | `/work/import` | `write:measurements` + ?token= | `dry_run`?, form `file` | Import past clock-in / clock-out logs (txt, csv, json). |
 | GET | `/work/sessions` | `read:all` | `start`?, `end`? | Sessions between two days (default: the last 30), newest first. |
 | POST | `/work/sessions` | `write:measurements` | JSON `WorkSessionIn` (start_at, end_at, note) | Add a session typed by hand (same start: that session is updated). |
 | DELETE | `/work/sessions/{session_id}` | `write:measurements` | `session_id` | Delete a session. |
 | PUT | `/work/sessions/{session_id}` | `write:measurements` | `session_id`, JSON `WorkSessionUpdate` (start_at, end_at, note) | Fix a session's times or note. |
 | GET | `/work/stats` | `read:all` | `start`?, `end`?, `contract_hours`? | Totals, averages, overtime, weeks, months, 7/30/90/365 days. |
+
+## Import d'historiques de Raccourcis
+
+| Méthode | Route | Accès | Paramètres | Rôle |
+|---|---|---|---|---|
+| POST | `/logs/import` | `write:measurements` + ?token= | `dry_run`?, form `files`, form `keys` | Import Shortcut logs: one time stamp per line, one kind per file. |
+
+## Dossier travail : arrêts et absences
+
+| Méthode | Route | Accès | Paramètres | Rôle |
+|---|---|---|---|---|
+| GET | `/absences` | `read:all` | `start`?, `end`? | Absences overlapping two days (all by default), oldest first. |
+| POST | `/absences` | Session / hub:full | JSON `AbsenceIn` (start_date, end_date, kind, cause, note) | Record an absence (kind: arret_maladie, accident_travail…). |
+| DELETE | `/absences/{absence_id}` | Session / hub:full | `absence_id` | Delete an absence (its evidence stays). |
+| PUT | `/absences/{absence_id}` | Session / hub:full | `absence_id`, JSON `AbsenceIn` (start_date, end_date, kind, cause, note) | Replace an absence's dates, kind, cause and note. |
+
+## Dossier travail : preuves
+
+| Méthode | Route | Accès | Paramètres | Rôle |
+|---|---|---|---|---|
+| GET | `/evidence` | `read:all` | `start`?, `end`? | Evidence between two days (all by default), oldest first. |
+| POST | `/evidence` | Session / hub:full | form `file` | Add a proof (file optional): when, what, how many (12 calls…). |
+| DELETE | `/evidence/{item_id}` | Session / hub:full | `item_id` | Delete an item and its file. |
+| PUT | `/evidence/{item_id}` | Session / hub:full | `item_id`, JSON `EvidenceUpdate` (occurred_at, kind, title, description, count, absence_id) | Fix an item's details (its file and fingerprint do not change). |
+| GET | `/evidence/{item_id}/file` | `read:all` | `item_id` | The item's file, as received. |
+
+## Sommeil : nuits, réveils, nuits saisies
+
+| Méthode | Route | Accès | Paramètres | Rôle |
+|---|---|---|---|---|
+| GET | `/sleep/nights` | `read:all` | `start`?, `end`? | Nights by wake-up day (default: last 30 days). |
+| POST | `/sleep/nights` | Session / hub:full | JSON `TypedNight` (bedtime, wake_time, awakenings) | Type a night the watch missed (bedtime, wake-up, awakenings). |
+| DELETE | `/sleep/nights/{night_id}` | Session / hub:full | `night_id` | Delete a night typed by hand. |
+| GET | `/sleep/typed` | `read:all` | — | The nights typed by hand, newest first. |

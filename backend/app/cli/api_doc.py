@@ -55,6 +55,10 @@ SECTIONS = {
     "journal": "Journal (pipi, repas)",
     "meals": "Journal (pipi, repas)",
     "work": "Travail (heures d'embauche et de débauche)",
+    "logs": "Import d'historiques de Raccourcis",
+    "absences": "Dossier travail : arrêts et absences",
+    "evidence": "Dossier travail : preuves",
+    "sleep": "Sommeil : nuits, réveils, nuits saisies",
 }
 _INTRO = """# Référence de l'API
 

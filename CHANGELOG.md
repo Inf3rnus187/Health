@@ -8,6 +8,31 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Work ↔ health file** (Travail › Dossier travail et santé), to support
+  a sick-leave, work-accident or occupational-disease claim with facts:
+  - sessions may miss a half (a departure logged alone, an arrival never
+    closed): kept and listed in « Journées à compléter », completed by
+    hand and marked `edited`; sessions up to 72 h (migration 0012);
+  - absences (`/absences`): sick leave, work accident, occupational
+    disease, holidays, with cause and notes;
+  - evidence (`/evidence`): call, SMS, mail, screenshot, note, document,
+    with a count, a file (encrypted at rest) and its SHA-256;
+  - nights (`/sleep/nights`): per wake-up day, sleep, awakenings, blocks
+    (sleep in several goes), bedtime / wake-up, best device kept; nights
+    typed by hand when the watch was flat;
+  - `/work/health` and report type `work_health`: sources and gaps,
+    work summary, Code du travail landmarks (rest < 11 h, spread > 13 h,
+    sessions ≥ 12 h, 12-week average > 44 h, Sundays, public holidays,
+    night hours, consecutive days), work ↔ sleep correlations with a
+    plain reading and night-after bands, years / months / weeks with
+    sleep and health, absences with work and calls inside them, the
+    day-by-day journal and an evidence annex (images, SHA-256);
+  - `/logs/import`: iPhone Shortcut histories (`12 | 13/05/2025 07:42`),
+    one kind per file guessed from its name; arrivals and departures
+    paired without dropping anything, counters fill empty days (never
+    doubled), pee de-duplicated;
+  - ten MCP tools (81 in all).
+
 - **Travail — work hours as health data.** Clock in / out by the same
   Shortcut rule as every count (`POST /sync/tally` with `work.start` /
   `work.end`, GPS automations welcome), from the new **Travail** page or

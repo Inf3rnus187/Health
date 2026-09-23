@@ -12,6 +12,10 @@ import {
 const FED = [
   'work-stats',
   'work-sessions',
+  'work-health',
+  'absences',
+  'evidence',
+  'nights',
   'summary',
   'overview',
   'trend',

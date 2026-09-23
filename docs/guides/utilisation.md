@@ -147,18 +147,34 @@ L'analyse IA apparaît ensuite dans **Journal**.
 
 Les heures de travail comme donnée de santé : amplitude, heures
 supplémentaires et semaines chargées se lisent à côté du sommeil, de la
-VFC ou de la tension.
+VFC ou de la tension — jusqu'à un dossier complet pour faire valoir un
+arrêt, un accident du travail ou une maladie professionnelle. La page a
+trois onglets : **Pointage**, **Dossier travail et santé**, **Importer**.
+
+### Pointage
 
 - **Pointer** : « Embauche maintenant » / « Débauche maintenant », le
   Raccourci iPhone (même règle que les compteurs, voir plus haut, avec le
   GPS), ou l'assistant MCP (« j'embauche », « je débauche »). Une
   **session** va de l'embauche à la débauche ; plusieurs sessions par jour
   (pause déjeuner) s'additionnent. Une session appartient au jour où elle
-  commence ; 24 h au plus ; deux sessions ne se chevauchent pas.
+  commence ; **72 h au plus** (48 h sans partir, ça arrive) ; deux
+  sessions ne se chevauchent pas.
+- **Rien n'est perdu** : une débauche sans embauche en cours (retour de
+  pause non pointé, GPS muet) est gardée comme session « embauche
+  manquante » ; une embauche jamais close devient « débauche manquante »
+  au bout de 16 h. Une deuxième embauche le même jour pendant qu'une
+  session est ouverte est ignorée.
+- **Journées à compléter** : toutes les sessions incomplètes, pour ajouter
+  l'heure manquante d'après vos notes. Une session pointée ou importée puis
+  complétée à la main est marquée « complétée à la main » (le rapport dit
+  quelles heures ont été saisies).
 - **Valeurs du jour**, comme toute mesure (courbes, Données, tableaux de
-  bord, exports, rapports) : `work.hours` (heures travaillées),
-  `work.start` (première embauche) et `work.end` (dernière débauche), ces
-  deux-là en heures décimales (8,25 = 08:15 ; 25,5 = 01:30 le lendemain).
+  bord, exports, rapports) : `work.hours` (heures des sessions
+  complètes), `work.start` (première embauche) et `work.end` (dernière
+  débauche), ces deux-là en heures décimales (8,25 = 08:15 ; 25,5 = 01:30
+  le lendemain). Une journée incomplète n'a pas d'heures : les totaux sont
+  des **minimums**.
 - **Heures travaillées** sur 7 jours, 30 jours, 3 mois, 1 an ou tout :
   total, jours travaillés, moyenne par jour et par semaine, embauche et
   débauche moyennes, **heures supplémentaires** (par semaine, au-delà du
@@ -167,16 +183,95 @@ VFC ou de la tension.
   journée ; graphique par semaine (vert : contrat, rouge : 48 h) et
   tableau court / moyen / long terme.
 - **Exporter** la période par jour, semaine, mois ou session, en CSV,
-  Excel ou JSON ; **Rapport PDF** (aussi dans Rapports › « Heures
-  travaillées »).
+  Excel ou JSON ; **Rapport PDF** des heures (aussi dans Rapports ›
+  « Heures travaillées »).
 - **Sessions (30 derniers jours)** : vérifier, ajouter une session oubliée
-  (embauche + débauche), supprimer.
-- **Importer d'anciens pointages** : un fichier txt, csv ou json. Il est
-  d'abord **lu** (sessions trouvées, jours, heures, aperçu, lignes
-  ignorées et pourquoi), puis importé sur « Importer ». Réimporter le même
-  fichier ne crée pas de doublon (même début = même session).
+  (l'embauche, la débauche ou les deux), supprimer.
 
-Formats compris à l'import (une ligne = un pointage ou une journée) :
+### Dossier travail et santé
+
+- **Synthèse** (3 mois, 1 an, tout) : sessions et journées incomplètes,
+  nuits connues, repères du Code du travail, liens travail ↔ sommeil, et
+  « **Générer le rapport PDF complet** » (aussi dans Rapports ›
+  « work_health » via l'API ou l'assistant).
+- **Arrêts et absences** : arrêt maladie, accident du travail, maladie
+  professionnelle, congés, autre — dates, **cause**, notes. Le rapport
+  liste pour chacun le **travail pointé pendant l'arrêt** et les **preuves
+  datées pendant l'arrêt** (appels, dont le dimanche).
+- **Preuves** : appel, SMS, mail, capture d'écran, note, document — date
+  et heure, **nombre** (« 12 appels » sur une même capture), titre,
+  description, fichier (30 Mo au plus, chiffré au repos si activé). Chaque
+  fichier garde son **empreinte SHA-256** calculée à la réception,
+  imprimée dans le rapport : une copie se vérifie contre l'original
+  (`sha256sum fichier`). Les images (PNG, JPEG) sont reproduites dans
+  l'annexe du rapport ; les autres fichiers y sont listés.
+- **Nuits** (30 derniers réveils) : pour chaque nuit (rattachée au jour du
+  réveil, de 18 h la veille à 18 h), le sommeil, le nombre de **réveils**
+  (phases d'éveil de la montre ; sans phases, les coupures de 5 min et
+  plus), les **blocs** (sommeil « en plusieurs fois », coupé d'une heure
+  ou plus), coucher et lever. Quand plusieurs appareils ont enregistré la
+  même nuit, celui qui a vu le plus de sommeil est retenu (pas de double
+  compte). Une nuit sans donnée (montre déchargée) se **saisit** :
+  coucher, lever, réveils — marquée « saisie » dans le rapport.
+
+Le **rapport PDF complet** (« Dossier travail et santé ») contient, dans
+l'ordre :
+
+1. **Méthode et sources** : sessions par origine (pointage, historique
+   importé, saisie, complétée à la main), journées incomplètes non
+   comptées, nuits connues par origine, jours travaillés sans donnée de
+   sommeil.
+2. **Travail** : heures (sessions complètes), jours de présence pointée,
+   moyennes, embauche / débauche moyennes, heures au-delà du contrat,
+   jours > 10 h, semaines > 48 h, plus longue journée.
+3. **Repères du Code du travail**, avec les dates : repos quotidien de
+   moins de 11 h, amplitude de plus de 13 h, sessions de 12 h et plus,
+   moyenne de plus de 44 h sur 12 semaines, dimanches et jours fériés
+   travaillés, heures de nuit (21 h - 6 h), plus longue suite de jours
+   travaillés.
+4. **Travail et sommeil** : corrélations (heures travaillées / sommeil
+   de la nuit suivante, / réveils, heure de débauche / sommeil) avec r, le
+   nombre de jours et une lecture en clair ; sommeil moyen, réveils et
+   blocs après un jour non travaillé, < 8 h, 8-10 h, > 10 h (les journées
+   incomplètes sont exclues) ; graphique heures par semaine et sommeil
+   moyen.
+5. **Par année, mois et semaine** : jours, heures, heures au-delà du
+   contrat, nuits, sommeil, réveils, FC au repos, VFC, cigarettes et cafés
+   par jour.
+6. **Arrêts et absences** avec travail et preuves pendant chacun.
+7. **Journal jour par jour** : embauche, débauche, heures, remarques
+   (incomplète, absence, dimanche, férié), sommeil de la nuit suivante,
+   réveils, blocs.
+8. **Annexe : preuves**, avec empreintes et images.
+
+Le document rassemble des faits enregistrés ; ce n'est ni un avis médical
+ni un avis juridique. Une corrélation décrit un lien dans les données, pas
+à elle seule une cause.
+
+### Importer
+
+**Historiques de Raccourcis** (un horodatage par ligne, un fichier par
+type, comme les exports des Raccourcis iOS : `12 | 13/05/2025 07:42`) :
+choisir **tous les fichiers ensemble** ; le type est deviné du nom
+(Embauche, Débauche, Cigarettes, Café, Eau, Pipi, Envies) et modifiable.
+« Lire » montre ce qui a été compris, « Importer » enregistre.
+
+- **Embauches + débauches** sont appariées : même jour, ou débauche le
+  lendemain matin avant midi (20 h au plus) ; une embauche répétée le même
+  jour garde la première ; une débauche seule ou une embauche seule
+  deviennent des sessions à compléter. Une session de plus de 20 h (48 h
+  sans partir) se saisit à la main.
+- **Cigarettes, cafés, eau, envies** : comptés par jour. Un jour sans
+  valeur reçoit le compte ; un jour qui a déjà une valeur garde la plus
+  grande des deux (jamais additionnées deux fois, jamais baissées).
+- **Pipi** : une entrée horodatée par ligne ; une heure déjà enregistrée
+  (± 1 min) n'est pas ajoutée deux fois.
+- Réimporter les mêmes fichiers ne crée aucun doublon ; ajouter plus tard
+  un fichier de débauches complète les embauches seules déjà importées
+  (20 h au plus d'écart).
+
+**Fichier de pointages en texte libre** (une ligne = un pointage ou une
+journée, les mots disent ce qu'est chaque heure) :
 
 | Exemple | Lu comme |
 |---------|----------|
@@ -190,8 +285,8 @@ Formats compris à l'import (une ligne = un pointage ou une journée) :
 | `total 8h30`, `pause 00:45` | durées : ignorées |
 
 Les heures sans fuseau sont celles de votre fuseau (Europe/Paris par
-défaut). Une embauche sans débauche (ou l'inverse) est listée dans les
-lignes ignorées ; ajoutez la session à la main si besoin.
+défaut). Une embauche sans débauche (ou l'inverse) devient une session à
+compléter.
 
 ## Dossier
 
@@ -281,5 +376,6 @@ lignes ignorées ; ajoutez la session à la main si besoin.
 | Noter un pipi | Journal › « Pipi maintenant », ou le Raccourci avec `{"metric": "elimination.urination"}`. |
 | Noter un repas et savoir s'il était sain | Journal › Ajouter un repas (description + photo), ou le Raccourci repas › l'analyse s'affiche sous le repas. |
 | Suivre mes heures de travail | Travail (ou Raccourci GPS `work.start` / `work.end`, ou l'assistant) ; heures sup et semaines > 48 h dans « Heures travaillées ». |
-| Importer mes anciens pointages | Travail › Importer d'anciens pointages › Lire le fichier › Importer. |
+| Importer mes anciens pointages | Travail › Importer › Historiques de Raccourcis (tous les fichiers ensemble) › Lire › Importer. |
+| Faire valoir un arrêt / un accident du travail | Travail › Dossier : compléter les journées, déclarer les arrêts et leur cause, ajouter les preuves (captures d'appels, mails), saisir les nuits manquantes, puis « Générer le rapport PDF complet ». |
 | Vérifier que tout concorde | Données › Tout ce qui est enregistré. |

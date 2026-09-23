@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.v1 import (
+    absences,
     account,
     appointments,
     auth,
@@ -18,12 +19,14 @@ from app.api.v1 import (
     dashboard,
     data,
     events,
+    evidence,
     evolution,
     export,
     health_records,
     imports,
     ingest,
     journal,
+    logs,
     meals,
     meals_edit,
     measurements,
@@ -37,6 +40,7 @@ from app.api.v1 import (
     record,
     reports,
     samples,
+    sleep,
     summary,
     sync,
     tokens,
@@ -70,6 +74,10 @@ api_router.include_router(meals.router)
 api_router.include_router(meals_edit.router)
 api_router.include_router(work.router)
 api_router.include_router(work_data.router)
+api_router.include_router(logs.router)
+api_router.include_router(absences.router)
+api_router.include_router(evidence.router)
+api_router.include_router(sleep.router)
 api_router.include_router(medical.router)
 api_router.include_router(conditions.router)
 api_router.include_router(treatments.router)

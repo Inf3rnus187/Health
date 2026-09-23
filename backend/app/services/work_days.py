@@ -10,13 +10,14 @@ belongs to the day it starts.
 
 from __future__ import annotations
 
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.base import utcnow
 from app.models.measurement import Measurement
 from app.models.work import WorkSession
 from app.schemas.measurement import MeasurementIn
@@ -32,6 +33,9 @@ START = MetricSpec(
 )
 END = MetricSpec("work.end", "Heure de débauche", "work", "float", "h", "avg")
 SPECS = (HOURS, START, END)
+#: A clock-in without clock-out is "at work now" this long; after it the
+#: clock-out is "missing", and a new clock-in starts a new session.
+OPEN_FOR = timedelta(hours=16)
 
 
 async def refresh(
@@ -69,17 +73,18 @@ async def sessions_of(
     last: date,
     tz: ZoneInfo,
 ) -> list[WorkSession]:
-    """Sessions starting on the local days ``first``..``last``, in order."""
+    """Sessions of the local days ``first``..``last``, in order.
+
+    A session belongs to the day it starts (a departure logged alone: the
+    day it ends).
+    """
     start, _ = timed_entries.day_bounds(first, tz)
     _, end = timed_entries.day_bounds(last, tz)
+    anchor = func.coalesce(WorkSession.start_at, WorkSession.end_at)
     rows = await session.execute(
         select(WorkSession)
-        .where(
-            WorkSession.user_id == user_id,
-            WorkSession.start_at >= start,
-            WorkSession.start_at < end,
-        )
-        .order_by(WorkSession.start_at)
+        .where(WorkSession.user_id == user_id, anchor >= start, anchor < end)
+        .order_by(anchor)
     )
     return list(rows.scalars())
 
@@ -87,41 +92,58 @@ async def sessions_of(
 def day_values(
     rows: list[WorkSession], day: date, tz: ZoneInfo
 ) -> dict[str, float]:
-    """``work.hours`` / ``start`` / ``end`` of one day from its sessions."""
-    if not rows:
-        return {}
+    """``work.hours`` / ``start`` / ``end`` of one day from its sessions.
+
+    Hours count complete sessions only; the first clock-in and the last
+    clock-out are facts even when their other half is missing.
+    """
     midnight = datetime.combine(day, time.min, tzinfo=tz)
-    values = {START.key: _hour(rows[0].start_at, midnight)}
-    closed = [row for row in rows if row.end_at is not None]
+    starts = [utc(r.start_at) for r in rows if r.start_at is not None]
+    ends = [utc(r.end_at) for r in rows if r.end_at is not None]
+    values: dict[str, float] = {}
+    if starts:
+        values[START.key] = _hour(min(starts), midnight)
+    if ends:
+        values[END.key] = _hour(max(ends), midnight)
+    closed = [length for r in rows if (length := hours(r)) is not None]
     if closed:
-        values[HOURS.key] = round(sum(hours(row) or 0 for row in closed), 2)
-        values[END.key] = max(_hour(row.end_at, midnight) for row in closed)
+        values[HOURS.key] = round(sum(closed), 2)
     return values
 
 
 def hours(row: WorkSession) -> float | None:
-    """A session's duration in hours (None while open)."""
-    if row.end_at is None:
+    """A session's duration in hours (None while a half is missing)."""
+    if row.start_at is None or row.end_at is None:
         return None
     return (utc(row.end_at) - utc(row.start_at)).total_seconds() / 3600
 
 
 def view(row: WorkSession, tz: ZoneInfo) -> dict[str, Any]:
-    """A session as the API shows it: local day, times, duration."""
+    """A session as the API shows it: local day, times, duration, status."""
     duration = hours(row)
+    anchor = utc(row.start_at or row.end_at or utcnow())
     return {
         "id": row.id,
-        "date_key": utc(row.start_at).astimezone(tz).date(),
-        "start_at": utc(row.start_at),
+        "date_key": anchor.astimezone(tz).date(),
+        "start_at": utc(row.start_at) if row.start_at else None,
         "end_at": utc(row.end_at) if row.end_at else None,
         "hours": None if duration is None else round(duration, 2),
+        "status": _status(row),
         "source": row.source,
         "note": row.note or "",
     }
 
 
-def _hour(at: datetime | None, midnight: datetime) -> float:
+def _status(row: WorkSession) -> str:
+    """complete, open (at work now), missing_start or missing_end."""
+    if row.start_at is None:
+        return "missing_start"
+    if row.end_at is not None:
+        return "complete"
+    recent = utcnow() - utc(row.start_at) < OPEN_FOR
+    return "open" if recent else "missing_end"
+
+
+def _hour(at: datetime, midnight: datetime) -> float:
     """Decimal hours since the day's local midnight."""
-    if at is None:
-        return 0.0
     return round((utc(at) - midnight).total_seconds() / 3600, 2)

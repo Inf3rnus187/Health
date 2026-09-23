@@ -19,6 +19,7 @@ import re
 import unicodedata
 from datetime import date, datetime, timedelta
 from typing import NamedTuple
+from zoneinfo import ZoneInfo
 
 MONTHS = {
     "janv": 1, "janvier": 1, "jan": 1, "january": 1,
@@ -65,6 +66,13 @@ _TIME = re.compile(
 )
 
 
+#: A session as (clock-in, clock-out); either may be missing.
+Span = tuple[datetime | None, datetime | None]
+#: Automatic pairing never spans more than this (48 h shifts: by hand).
+_PAIR_MAX = timedelta(hours=20)
+_MORNING = 12
+
+
 class Event(NamedTuple):
     """A clock-in (``in``) or clock-out (``out``) at a local time."""
 
@@ -82,18 +90,30 @@ def fold(text: str) -> str:
 def read_line(text: str, number: int) -> tuple[list[Event], str | None]:
     """The events of one line, or why the line was not understood."""
     line = fold(text)
-    stamps = [(m.start(), _iso(m)) for m in _ISO.finditer(line)]
+    moments, day, stamped = _moments(line)
+    if not moments:
+        has_digits = any(ch.isdigit() for ch in line)
+        return [], ("pas d'heure" if day and has_digits else None)
+    if day is None and not stamped:
+        return [], "pas de date"
+    return _kinds(line, moments, number)
+
+
+def stamps(text: str) -> list[datetime]:
+    """Every date-time of a line (a one-kind log: one event each)."""
+    moments, _, _ = _moments(fold(text))
+    return [at for _, at in moments]
+
+
+def _moments(line: str) -> tuple[list[tuple[int, datetime]], date | None, bool]:
+    """The line's date-times with their place, its date, ISO or not."""
+    iso = [(m.start(), _iso(m)) for m in _ISO.finditer(line)]
     rest = _ISO.sub(lambda m: " " * len(m.group()), line)
     day = _date(rest)
     rest = _blank_dates(rest)
     times = [(m.start(), _time(day, m)) for m in _TIME.finditer(rest)]
-    moments = sorted(stamps + [(p, t) for p, t in times if t is not None])
-    if not moments:
-        has_digits = any(ch.isdigit() for ch in line)
-        return [], ("pas d'heure" if day and has_digits else None)
-    if day is None and not stamps:
-        return [], "pas de date"
-    return _kinds(line, moments, number)
+    found = [(p, t) for p, t in times if t is not None]
+    return sorted(iso + found), day, bool(iso)
 
 
 def _kinds(
@@ -192,37 +212,57 @@ def _time(day: date | None, match: re.Match[str]) -> datetime | None:
 
 
 def pair(
-    events: list[Event],
-) -> tuple[list[tuple[datetime, datetime]], list[dict[str, object]]]:
-    """Clock-ins matched with the next clock-out (24 h at most).
+    events: list[Event], tz: ZoneInfo
+) -> tuple[list[Span], list[dict[str, object]]]:
+    """Clock-ins matched with clock-outs; nothing logged is dropped.
 
-    The events must all be aware (or all naive) date-times.
+    A clock-in repeated the same day keeps the first. A clock-out closes
+    the open clock-in of the same day (or of the evening before, 20 h at
+    most). A clock-in left open or a clock-out alone becomes a session
+    with a missing half, to be completed by hand. Events must be aware.
     """
-    sessions: list[tuple[datetime, datetime]] = []
-    skipped: list[dict[str, object]] = []
+    spans: list[Span] = []
+    notes: list[dict[str, object]] = []
     start: Event | None = None
     unique = {(e.at, e.kind): e for e in events}  # a time logged twice
     for event in sorted(unique.values(), key=lambda e: (e.at, e.kind)):
-        if event.kind == "in":
+        if event.kind == "in" and start and _day(start, tz) == _day(event, tz):
+            notes.append(
+                _note(event, "embauche répétée : la première est gardée")
+            )
+        elif event.kind == "in":
             if start is not None:
-                skipped.append(_orphan(start, "embauche sans débauche"))
+                spans.append((start.at, None))
             start = event
-            continue
-        if start is None or not _fits(start.at, event.at):
-            skipped.append(_orphan(event, "débauche sans embauche"))
+        elif start is not None and _fits(start.at, event.at, tz):
+            spans.append((start.at, event.at))
+            start = None
         else:
-            sessions.append((start.at, event.at))
-        start = None
+            if start is not None:
+                spans.append((start.at, None))
+            spans.append((None, event.at))
+            start = None
     if start is not None:
-        skipped.append(_orphan(start, "embauche sans débauche"))
-    return sessions, skipped
+        spans.append((start.at, None))
+    return spans, notes
 
 
-def _fits(start: datetime, end: datetime) -> bool:
-    """Whether a start and an end make a believable session (≤ 24 h)."""
-    return timedelta(0) < end - start <= timedelta(hours=24)
+def _fits(start: datetime, end: datetime, tz: ZoneInfo) -> bool:
+    """Same day, or the next morning after an evening start (≤ 20 h)."""
+    if not timedelta(0) < end - start <= _PAIR_MAX:
+        return False
+    first, last = start.astimezone(tz), end.astimezone(tz)
+    next_morning = last.date() == first.date() + timedelta(days=1) and (
+        last.hour < _MORNING
+    )
+    return last.date() == first.date() or next_morning
 
 
-def _orphan(event: Event, reason: str) -> dict[str, object]:
-    """A time that could not be paired, for the import report."""
+def _day(event: Event, tz: ZoneInfo) -> date:
+    """The local day of an event."""
+    return event.at.astimezone(tz).date()
+
+
+def _note(event: Event, reason: str) -> dict[str, object]:
+    """A remark on a time for the import report."""
     return {"line": event.line, "at": event.at.isoformat(), "reason": reason}

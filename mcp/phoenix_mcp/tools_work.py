@@ -34,15 +34,16 @@ async def work_sessions(
 
 @mcp.tool()
 async def save_work_session(
-    start_at: str,
+    start_at: str | None = None,
     end_at: str | None = None,
     note: str = "",
     session_id: str | None = None,
 ) -> Any:
     """Add a work session, or fix one (``session_id``).
 
-    Times are ISO date-times (local time without an offset). Overlaps and
-    sessions over 24 h are refused. Confirm with the user before fixing.
+    Times are ISO date-times (local time without an offset); one of the
+    two may be missing (completed later). Overlaps and sessions over
+    72 h are refused. Confirm with the user before fixing.
     """
     body = {"start_at": start_at, "end_at": end_at, "note": note}
     if session_id:

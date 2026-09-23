@@ -18,6 +18,7 @@ from phoenix_mcp import (
     tools_record,
     tools_reports,
     tools_work,
+    tools_workfile,
 )
 from phoenix_mcp.app import mcp
 
@@ -244,3 +245,16 @@ async def test_work_clock_and_dry_run_import() -> None:
     assert upload.url.path == "/api/v1/work/import"
     assert dict(upload.url.params) == {"dry_run": "true"}
     assert b"02/03/2026;08:00;17:00" in upload.content
+
+
+async def test_shortcut_logs_are_sent_together() -> None:
+    seen = _capture()
+    await tools_workfile.import_logs(
+        [
+            {"filename": "Embauche.txt", "text": "1 | 02/03/2026 08:10"},
+            {"filename": "Debauche.txt", "text": "1 | 02/03/2026 17:00"},
+        ]
+    )
+    upload = seen[0]
+    assert upload.url.path == "/api/v1/logs/import"
+    assert upload.content.count(b'name="files"') == 2

@@ -58,7 +58,7 @@ async def request(
     return _body(method, path, response)
 
 
-async def upload(path: str, files: dict[str, Any], data: dict[str, str]) -> Any:
+async def upload(path: str, files: Any, data: dict[str, Any]) -> Any:
     """POST a multipart form (a document, a lab PDF…)."""
     async with _new_client(_TIMEOUT, json=False) as client:
         response = await client.post(path, files=files, data=_clean(data))

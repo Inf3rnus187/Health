@@ -23,6 +23,7 @@ from phoenix_mcp import (  # noqa: F401 - importing registers the tools
     tools_record,
     tools_reports,
     tools_work,
+    tools_workfile,
 )
 from phoenix_mcp.app import mcp
 from phoenix_mcp.auth import bearer_gate

@@ -7,7 +7,8 @@ from typing import Any
 
 from fpdf import FPDF
 
-from app.services.pdf_text import heading, latin, line
+from app.services.pdf_blocks import table
+from app.services.pdf_text import heading, line
 from app.services.work_math import MAX_WEEK_HOURS
 
 _CHART_WEEKS = 52
@@ -28,7 +29,7 @@ def work_pdf(stats: dict[str, Any]) -> bytes:
     _summary(pdf, stats)
     _chart(pdf, stats["weeks"][-_CHART_WEEKS:], stats["contract_hours"])
     for title, head, body in _tables(stats):
-        _table(pdf, title, head, body)
+        table(pdf, title, head, body)
     return bytes(pdf.output())
 
 
@@ -113,32 +114,6 @@ def _bars(
         height = value / top * h
         left = x + index * step + 0.3
         pdf.rect(left, y + h - height, max(step - 0.6, 0.4), height, "F")
-
-
-def _table(
-    pdf: FPDF, title: str, head: list[str], body: list[list[Any]]
-) -> None:
-    """A simple ruled table."""
-    if not body:
-        return
-    heading(pdf, title)
-    width = pdf.epw / len(head)
-    pdf.set_font("Helvetica", "B", 9)
-    for cell in head:
-        pdf.cell(width, 6, latin(cell), border=1)
-    pdf.ln()
-    pdf.set_font("Helvetica", size=9)
-    for row in body:
-        for cell in row:
-            pdf.cell(width, 5, latin(_text(cell)), border=1)
-        pdf.ln()
-    pdf.set_font("Helvetica", size=10)
-    pdf.set_x(pdf.l_margin)
-
-
-def _text(value: Any) -> str:
-    """A table cell."""
-    return f"{value:g}" if isinstance(value, float) else str(value)
 
 
 def _n(value: float | None) -> str:

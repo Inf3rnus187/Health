@@ -14,13 +14,14 @@ import json
 import re
 from datetime import UTC, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import InvalidInputError
 from app.services import work, work_parse
 from app.services.daily_rollup import user_zone
-from app.services.work_parse import Event
+from app.services.work_parse import Event, Span
 
 #: At most this many unreadable lines are listed back.
 MAX_SKIPPED = 50
@@ -73,65 +74,81 @@ async def import_file(
     """Read a log and (unless ``dry_run``) store its sessions."""
     tz = await user_zone(session, user_id)
     events, unread = read(data, filename)
-    aware = [
-        e._replace(
-            at=(e.at if e.at.tzinfo else e.at.replace(tzinfo=tz)).astimezone(
-                UTC
-            )
-        )
-        for e in events
-    ]
-    sessions, unpaired = work_parse.pair(aware)
-    skipped = unread + unpaired
-    stored = 0
+    aware = [_aware(e, tz) for e in events]
+    spans, notes = work_parse.pair(aware, tz)
+    stored, refused = 0, list[dict[str, Any]]()
     if not dry_run:
-        stored, refused = await _store(session, user_id, sessions)
-        skipped += refused
-    return _report(sessions, skipped, tz, dry_run, stored)
+        stored, refused = await store(session, user_id, spans)
+    return summary(spans, unread + refused, notes, tz, stored, dry_run)
 
 
-async def _store(
-    session: AsyncSession,
-    user_id: str,
-    sessions: list[tuple[datetime, datetime]],
+async def store(
+    session: AsyncSession, user_id: str, spans: list[Span]
 ) -> tuple[int, list[dict[str, Any]]]:
     """Add the sessions; the refused ones (overlaps) are listed back."""
-    stored, refused = 0, []
-    for start, end in sessions:
+    stored, refused = 0, list[dict[str, Any]]()
+    for start, end in spans:
         fields = {"start_at": start, "end_at": end, "note": ""}
         try:
             await work.add(session, user_id, fields, "import")
             stored += 1
         except InvalidInputError as exc:
-            refused.append({"at": start.isoformat(), "reason": str(exc)})
+            at = (start or end or datetime.now(UTC)).isoformat()
+            refused.append({"at": at, "reason": str(exc)})
     return stored, refused
 
 
-def _report(
-    sessions: list[tuple[datetime, datetime]],
+def summary(
+    spans: list[Span],
     skipped: list[dict[str, Any]],
-    tz: Any,
-    dry_run: bool,
+    notes: list[dict[str, Any]],
+    tz: ZoneInfo,
     stored: int,
+    dry_run: bool,
 ) -> dict[str, Any]:
     """What was found (and stored): counts, hours, days, a preview."""
-    local = [(s.astimezone(tz), e.astimezone(tz)) for s, e in sessions]
-    hours = sum((e - s).total_seconds() for s, e in local) / 3600
+    days = sorted({_local(s or e, tz).date() for s, e in spans if s or e})
+    whole = [(s, e) for s, e in spans if s and e]
     return {
         "dry_run": dry_run,
-        "sessions": len(local),
+        "sessions": len(spans),
+        "complete": len(whole),
+        "missing_start": sum(1 for s, _ in spans if s is None),
+        "missing_end": sum(1 for _, e in spans if e is None),
         "stored": stored,
-        "days": len({s.date() for s, _ in local}),
-        "first_day": min((s.date() for s, _ in local), default=None),
-        "last_day": max((s.date() for s, _ in local), default=None),
-        "total_hours": round(hours, 2),
-        "preview": [
-            {"day": s.date(), "start": f"{s:%H:%M}", "end": f"{e:%H:%M}"}
-            for s, e in local[:10]
-        ],
+        "days": len(days),
+        "first_day": days[0] if days else None,
+        "last_day": days[-1] if days else None,
+        "total_hours": round(
+            sum((e - s).total_seconds() for s, e in whole) / 3600, 2
+        ),
+        "preview": [_preview(span, tz) for span in spans[:10]],
+        "notes": notes[:MAX_SKIPPED],
         "skipped_count": len(skipped),
         "skipped": skipped[:MAX_SKIPPED],
     }
+
+
+def _preview(span: Span, tz: ZoneInfo) -> dict[str, Any]:
+    """One session for the preview (a missing half shows "?")."""
+    start, end = span
+    anchor = _local(start or end, tz)
+    return {
+        "day": anchor.date(),
+        "start": f"{_local(start, tz):%H:%M}" if start else "?",
+        "end": f"{_local(end, tz):%H:%M}" if end else "?",
+    }
+
+
+def _local(at: datetime | None, tz: ZoneInfo) -> datetime:
+    """A stored instant in local time."""
+    return (at or datetime.now(UTC)).astimezone(tz)
+
+
+def _aware(event: Event, tz: ZoneInfo) -> Event:
+    """An event with an aware UTC time (no offset: the user's local)."""
+    at = event.at if event.at.tzinfo else event.at.replace(tzinfo=tz)
+    return event._replace(at=at.astimezone(UTC))
 
 
 def _is_header(line: str) -> bool:

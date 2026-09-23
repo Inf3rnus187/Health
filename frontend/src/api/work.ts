@@ -3,9 +3,11 @@ import { api, getAccessToken } from './client';
 export interface WorkSession {
   id: string;
   date_key: string;
-  start_at: string;
+  start_at: string | null;
   end_at: string | null;
   hours: number | null;
+  /** complete, open, missing_start or missing_end. */
+  status: string;
   source: string;
   note: string;
 }
