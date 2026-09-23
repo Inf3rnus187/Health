@@ -47,6 +47,13 @@ export interface Correlation {
 export interface WorkHealth {
   start: string;
   end: string;
+  work: {
+    avg_week_hours: number | null;
+    full_weeks: number;
+    beyond_target_hours: number;
+    absences: { kind: string; label: string; days: number }[];
+    worked_while_off: { date: string; kind: string; hours: number }[];
+  };
   sources: {
     sessions: number;
     missing_start: number;

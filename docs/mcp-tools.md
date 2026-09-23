@@ -352,9 +352,14 @@ Paramètres : `session_id`* (string)
 
 Hours worked: totals, averages, overtime, weeks, months, periods.
 
-Default: the last 365 days. Overtime is per week beyond the contract;
-flags: days over 10 h, weeks over 48 h (French legal maximums).
-``periods`` gives 7 days / 30 days / 3 months / 1 year.
+Default: since the first work day. Overtime is per week beyond the
+contract (legal rule); flags: days over 10 h, weeks over 48 h.
+Days off (sick leave, holidays, rest, public holidays) are counted
+(``absences``), left out of the weekly average (full weeks only)
+and taken off each week's target (``beyond_target_hours``);
+``worked_while_off`` lists days worked during an absence.
+``periods`` gives 7 days / 30 days / 3 months / 1 year, averaged
+per week present.
 
 Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`), `contract_hours` (number, défaut `35`)
 

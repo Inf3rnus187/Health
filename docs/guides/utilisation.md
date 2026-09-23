@@ -203,12 +203,33 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
   des **minimums**.
 - **Heures travaillées** sur la période choisie (raccourcis ou dates
   exactes) :
-  total, jours travaillés, moyenne par jour et par semaine, embauche et
-  débauche moyennes, **heures supplémentaires** (par semaine, au-delà du
-  contrat — 35 h par défaut, réglable), **jours de plus de 10 h** et
-  **semaines de plus de 48 h** (maximums du Code du travail), plus longue
-  journée ; graphique par semaine (vert : contrat, rouge : 48 h) et
-  tableau court / moyen / long terme.
+  total, jours travaillés, moyenne par jour, embauche et débauche
+  moyennes, **heures supplémentaires** (par semaine, au-delà du contrat —
+  35 h par défaut, réglable — règle légale : heures faites), **jours de
+  plus de 10 h** et **semaines de plus de 48 h** (maximums du Code du
+  travail), plus longue journée ; graphique par semaine et tableau
+  court / moyen / long terme.
+- **Arrêts, congés, repos et jours fériés comptent** (Arrêts et
+  absences, saisis ou importés ; fériés d'office) :
+  - une tuile par type : jours calendaires et jours ouvrés dans la
+    période, et « **Travaillé pendant une absence** » (les dates) ;
+  - la **moyenne par semaine** ne prend que les **semaines complètes**
+    (sans absence ni férié) : une semaine avec deux jours d'arrêt n'est
+    pas une petite semaine de travail ;
+  - l'**objectif de chaque semaine** est le contrat moins ses jours
+    ouvrés d'absence (35 h, 21 h avec deux jours d'arrêt, 0 h en
+    congés) ; « **Au-delà de l'objectif** » cumule ce qui le dépasse
+    (trois jours de 11 h entre deux jours d'arrêt : 12 h) ;
+  - graphique : barres **orange** les semaines d'arrêt, **grises** les
+    semaines de congés, repos ou férié (rouge au-delà de 48 h prime),
+    objectif réduit en **pointillés** ; une semaine entière d'absence
+    apparaît, vide ;
+  - tableau court / moyen / long terme : jours d'absence et moyenne **par
+    semaine présente** (jours d'absence, fériés et jours d'avant le
+    premier pointage ôtés) ;
+  - l'export par jour liste aussi les jours d'absence (colonne
+    « absence »), l'export par semaine l'objectif et les jours d'absence,
+    le rapport PDF et le dossier travail ↔ santé les mêmes chiffres.
 - **Exporter** la période par jour, semaine, mois ou session, en CSV,
   Excel ou JSON ; **Rapport PDF** des heures (aussi dans Rapports ›
   « Heures travaillées »).

@@ -8,6 +8,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Days off in the hours worked.** Sick leave (and work accident,
+  occupational disease), holidays, rest days, other absences and public
+  holidays now count in the work stats, the export, the hours PDF and the
+  work ↔ health file: days off per kind (calendar and working days),
+  days worked during an absence, a weekly average over full weeks only,
+  each week's target reduced by its days off with the hours beyond it,
+  weeks entirely off listed, and short / long-term averages per week
+  present (days before the first record left out). Chart: orange weeks
+  of sick leave, grey weeks of leave / rest / public holiday, the
+  reduced target dashed. Legal overtime is unchanged (hours worked
+  beyond the contract).
+
 - **HR and tool exports.**
   - Lucca expense-report PDFs (the sealed archive or the printed report)
     give one trace per expense: day, nature, supplier, amount, amount

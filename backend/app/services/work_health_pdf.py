@@ -13,8 +13,8 @@ from typing import Any
 
 from fpdf import FPDF
 
+from app.services import work_absence, work_health_pdf_traces
 from app.services import work_health_pdf_more as more
-from app.services import work_health_pdf_traces
 from app.services.pdf_blocks import table
 from app.services.pdf_text import heading, line
 
@@ -97,7 +97,8 @@ def _work(pdf: FPDF, data: dict[str, Any]) -> None:
         f"Jours de présence pointée (au moins une embauche ou une "
         f"débauche) : {sum(1 for r in data['days'] if r['worked'])}.",
         f"Moyenne : {_n(w['avg_day_hours'])} h par jour travaillé, "
-        f"{_n(w['avg_week_hours'])} h par semaine travaillée.",
+        f"{_n(w['avg_week_hours'])} h par semaine"
+        " complète (sans absence ni férié).",
         f"Embauche moyenne {w['avg_start'] or '-'}, débauche moyenne "
         f"{w['avg_end'] or '-'}.",
         f"Heures au-delà du contrat (par semaine) : {w['overtime_hours']:g} h.",
@@ -107,6 +108,7 @@ def _work(pdf: FPDF, data: dict[str, Any]) -> None:
         + (
             f"{_d(longest['date'])}, {longest['hours']:g} h" if longest else "-"
         ),
+        *work_absence.texts(w),
     ):
         line(pdf, 5, text)
 

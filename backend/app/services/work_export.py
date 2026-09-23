@@ -10,6 +10,8 @@ from zoneinfo import ZoneInfo
 
 from openpyxl import Workbook
 
+from app.services.work_absence import LABELS
+
 LEVELS = ("sessions", "days", "weeks", "months")
 _MEDIA = {
     "csv": "text/csv",
@@ -47,12 +49,13 @@ def render(table: list[dict[str, Any]], fmt: str) -> tuple[bytes, str]:
 
 
 def _day(d: dict[str, Any]) -> dict[str, Any]:
-    """One worked day."""
+    """One day: worked, off, or both (work during an absence)."""
     return {
         "jour": d["date"],
         "embauche": d["start_text"] or "",
         "debauche": d["end_text"] or "",
         "heures": d["hours"],
+        "absence": LABELS.get(d.get("absence") or "", ""),
     }
 
 
@@ -65,6 +68,10 @@ def _week(w: dict[str, Any]) -> dict[str, Any]:
         "jours": w["days"],
         "heures_sup": w["overtime"],
         "plus_de_48h": "oui" if w["over_48h"] else "non",
+        "jours_absence": w["absent_days"],
+        "absence": LABELS.get(w["absence"] or "", ""),
+        "objectif_contrat": w["target"],
+        "au_dela_objectif": w["beyond_target"],
     }
 
 

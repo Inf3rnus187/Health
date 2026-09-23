@@ -250,3 +250,56 @@ async def test_nights_since_the_first_one_known(
     assert [n["wake_day"] for n in listed.json()] == ["2025-01-10"]
     everything = await client.get("/api/v1/sleep/nights", headers=auth)
     assert everything.json()[-1]["wake_day"] == "2025-01-10"  # not 30 days
+
+
+async def test_days_off_leave_the_averages_and_lower_the_target(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """A week with sick days is not a short week of work."""
+    days = [(f"2026-03-0{d}", 8) for d in range(2, 7)]  # full week: 40 h
+    days += [(f"2026-03-{d}", 11) for d in (11, 12, 13)]  # after 2 sick days
+    days.append(("2026-03-17", 2))  # a call-out during leave
+    for day, hours in days:
+        await client.post(
+            "/api/v1/work/sessions",
+            json={
+                "start_at": f"{day}T08:00",
+                "end_at": f"{day}T{8 + hours}:00",
+            },
+            headers=auth,
+        )
+    for start, end, kind in (
+        ("2026-03-09", "2026-03-10", "arret_maladie"),
+        ("2026-03-16", "2026-03-20", "conge"),
+    ):
+        await client.post(
+            "/api/v1/absences",
+            json={"start_date": start, "end_date": end, "kind": kind},
+            headers=auth,
+        )
+    stats = (
+        await client.get(
+            "/api/v1/work/stats",
+            params={"start": "2026-03-02", "end": "2026-03-22"},
+            headers=auth,
+        )
+    ).json()
+    assert stats["avg_week_hours"] == 40  # the full week only
+    assert stats["full_weeks"] == 1
+    assert stats["overtime_hours"] == 5  # legal: hours beyond 35 h
+    assert stats["beyond_target_hours"] == 5 + 12 + 2  # 21 h, then 0 h
+    sick, leave = stats["weeks"][1], stats["weeks"][2]
+    assert (sick["absent_days"], sick["target"], sick["absence"]) == (
+        2, 21, "arret",
+    )  # fmt: skip
+    assert (leave["hours"], leave["target"]) == (2, 0)
+    assert [(a["kind"], a["days"]) for a in stats["absences"]] == [
+        ("arret", 2), ("conge", 5),
+    ]  # fmt: skip
+    assert stats["worked_while_off"] == [
+        {"date": "2026-03-17", "kind": "conge", "hours": 2.0}
+    ]
+    off_day = next(d for d in stats["days"] if d["date"] == "2026-03-09")
+    assert (off_day["hours"], off_day["absence"]) == (0, "arret")
+    week = next(p for p in stats["periods"] if p["days"] == 7)
+    assert (week["absent_days"], week["week_average"]) == (5, None)

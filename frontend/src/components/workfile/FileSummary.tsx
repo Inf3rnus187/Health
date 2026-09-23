@@ -56,6 +56,17 @@ function Landmarks({ legal }: { legal: WorkHealth['legal'] }) {
   return <li>{parts.join(' · ')}</li>;
 }
 
+function OffLine({ work }: { work: WorkHealth['work'] }) {
+  const off = work.absences.map((a) => `${a.label} : ${a.days} j`);
+  const during = work.worked_while_off.length;
+  return (
+    <li>
+      {off.length ? off.join(' · ') : 'Aucune absence enregistrée'}
+      {during > 0 && ` · travaillé pendant une absence : ${during} j`}
+    </li>
+  );
+}
+
 function Numbers({ range }: { range: Range }) {
   const data = useWorkHealth(range).data;
   if (!data) return <p className="muted">Chargement…</p>;
@@ -68,6 +79,7 @@ function Numbers({ range }: { range: Range }) {
           `${src.nights} nuits connues.`}
       </li>
       <Landmarks legal={data.legal} />
+      <OffLine work={data.work} />
       {Object.entries(data.sleep.correlations).map(([key, corr]) => (
         <li key={key}>
           {READINGS[key]} : {reading(corr)}

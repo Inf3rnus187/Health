@@ -20,6 +20,12 @@ export interface WorkWeek {
   days: number;
   overtime: number;
   over_48h: boolean;
+  /** Weekdays off (absences, public holidays) and the main reason. */
+  absent_days: number;
+  absence: string | null;
+  /** The contract less the weekdays off. */
+  target: number;
+  beyond_target: number;
 }
 
 export interface WorkPeriod {
@@ -27,8 +33,17 @@ export interface WorkPeriod {
   days: number;
   total_hours: number;
   days_worked: number;
-  week_average: number;
+  absent_days: number;
+  /** Per week present (weekdays off left out); null if all off. */
+  week_average: number | null;
   overtime_hours: number;
+}
+
+export interface WorkOff {
+  kind: string;
+  label: string;
+  days: number;
+  workdays: number;
 }
 
 export interface WorkStats {
@@ -46,6 +61,11 @@ export interface WorkStats {
   days_over_10h: number;
   weeks_over_48h: number;
   overtime_hours: number;
+  /** Full weeks worked (no day off): the base of avg_week_hours. */
+  full_weeks: number;
+  beyond_target_hours: number;
+  absences: WorkOff[];
+  worked_while_off: { date: string; kind: string; hours: number }[];
   weeks: WorkWeek[];
   periods: WorkPeriod[];
 }

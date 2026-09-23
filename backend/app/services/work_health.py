@@ -25,6 +25,7 @@ from app.services import (
     evidence,
     measurements,
     sleep_nights,
+    work_absence,
     work_corr,
     work_days,
     work_legal,
@@ -56,11 +57,12 @@ async def gather(
     marks = work_traces.per_day(items, tz)
     table = _rows(first, last, (rows, days, nights, health, leaves, marks), tz)
     scores = await _scores(session, items)
+    off = work_absence.day_map(leaves, first, last)
     return {
         "start": first,
         "end": last,
         "contract_hours": contract,
-        **_assemble(rows, days, table, contract, tz),
+        **_assemble(rows, (days, off), table, contract, tz),
         "traces": work_traces.summary(table, scores),
         "absences": [_absence(a, table, items, tz) for a in leaves],
         "evidence": [_item(e, leaves, tz) for e in items],
@@ -70,15 +72,19 @@ async def gather(
 
 def _assemble(
     rows: list[WorkSession],
-    days: dict[date, work_math.Day],
+    worked: tuple[dict[date, work_math.Day], dict[date, str]],
     table: list[dict[str, Any]],
     contract: float,
     tz: ZoneInfo,
 ) -> dict[str, Any]:
     """Sources, work summary, landmarks, sleep and period tables."""
+    days, off = worked
     return {
         "sources": _sources(rows, table),
-        "work": work_math.summary(days, contract),
+        "work": {
+            **work_math.summary(days, contract, off),
+            "absences": work_absence.counts(off),
+        },
         "legal": _legal(rows, days, contract, tz),
         "sleep": {
             "correlations": work_corr.correlations(table),

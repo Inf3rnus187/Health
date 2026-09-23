@@ -7,7 +7,7 @@ the flags follow the French Code du travail maximums: 10 h in a day,
 
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import date, timedelta
 from statistics import fmean
 from typing import Any, NamedTuple
@@ -19,6 +19,7 @@ from app.services import work_days
 #: Legal maximums used as flags (Code du travail).
 MAX_DAY_HOURS = 10.0
 MAX_WEEK_HOURS = 48.0
+_WEEKDAYS = 5
 
 
 class Day(NamedTuple):
@@ -45,26 +46,58 @@ def daily(rows: list[WorkSession], tz: ZoneInfo) -> dict[date, Day]:
     return dict(sorted(days.items()))
 
 
-def weeks(days: dict[date, Day], contract: float) -> list[dict[str, Any]]:
-    """ISO weeks: hours, days worked, overtime beyond the contract."""
+def weeks(
+    days: dict[date, Day], contract: float, off: dict[date, str] | None = None
+) -> list[dict[str, Any]]:
+    """ISO weeks: hours, days worked, overtime, days off and the target.
+
+    ``off``: days off (absences, holidays). A week's target is the
+    contract less its weekdays off (35 h, 21 h with two days of sick
+    leave); a week entirely off is listed with no hours.
+    """
+    off = off or {}
     groups: dict[date, list[Day]] = defaultdict(list)
     for day, value in days.items():
-        groups[day - timedelta(days=day.weekday())].append(value)
-    out = []
-    for monday, values in sorted(groups.items()):
-        hours = round(sum(v.hours for v in values), 2)
-        year, week, _ = monday.isocalendar()
-        out.append(
-            {
-                "week": f"{year}-W{week:02d}",
-                "monday": monday,
-                "hours": hours,
-                "days": sum(1 for v in values if v.hours > 0),
-                "overtime": round(max(0.0, hours - contract), 2),
-                "over_48h": hours > MAX_WEEK_HOURS,
-            }
-        )
-    return out
+        groups[_monday(day)].append(value)
+    for day in off:
+        groups[_monday(day)]  # noqa: B018 - a week off shows too
+    return [
+        _week(monday, values, contract, off)
+        for monday, values in sorted(groups.items())
+    ]
+
+
+def _monday(day: date) -> date:
+    """The Monday of a day's ISO week."""
+    return day - timedelta(days=day.weekday())
+
+
+def _week(
+    monday: date, values: list[Day], contract: float, off: dict[date, str]
+) -> dict[str, Any]:
+    """One ISO week's numbers."""
+    hours = round(sum(v.hours for v in values), 2)
+    year, week, _ = monday.isocalendar()
+    week_off = [off[d] for d in _days(monday) if d in off]
+    workdays_off = sum(1 for d in _days(monday)[:_WEEKDAYS] if d in off)
+    target = round(contract * (_WEEKDAYS - workdays_off) / _WEEKDAYS, 2)
+    return {
+        "week": f"{year}-W{week:02d}",
+        "monday": monday,
+        "hours": hours,
+        "days": sum(1 for v in values if v.hours > 0),
+        "overtime": round(max(0.0, hours - contract), 2),
+        "over_48h": hours > MAX_WEEK_HOURS,
+        "absent_days": workdays_off,
+        "absence": Counter(week_off).most_common(1)[0][0] if week_off else None,
+        "target": target,
+        "beyond_target": round(max(0.0, hours - target), 2),
+    }
+
+
+def _days(monday: date) -> list[date]:
+    """The seven days of a week."""
+    return [monday + timedelta(days=n) for n in range(7)]
 
 
 def months(days: dict[date, Day], contract: float) -> list[dict[str, Any]]:
@@ -85,17 +118,23 @@ def months(days: dict[date, Day], contract: float) -> list[dict[str, Any]]:
     return [{"overtime": 0.0, **month} for month in out.values()]
 
 
-def summary(days: dict[date, Day], contract: float) -> dict[str, Any]:
-    """Totals, averages and legal-limit flags of a set of days."""
+def summary(
+    days: dict[date, Day], contract: float, off: dict[date, str] | None = None
+) -> dict[str, Any]:
+    """Totals, averages and legal-limit flags of a set of days.
+
+    With ``off`` (absences, holidays), the weekly average is that of the
+    full weeks worked (no day off), and the hours beyond the contract
+    less the days off are counted.
+    """
     worked = {d: v for d, v in days.items() if v.hours > 0}
-    listed = weeks(days, contract)
+    listed = weeks(days, contract, off)
     longest = max(worked.items(), key=lambda item: item[1].hours, default=None)
     total = round(sum(v.hours for v in worked.values()), 2)
     return {
         "total_hours": total,
         "days_worked": len(worked),
         "avg_day_hours": _mean([v.hours for v in worked.values()]),
-        "avg_week_hours": _mean([w["hours"] for w in listed]),
         "avg_start": clock_text(_mean([v.start for v in days.values()])),
         "avg_end": clock_text(_mean([v.end for v in days.values()])),
         "longest_day": (
@@ -104,6 +143,27 @@ def summary(days: dict[date, Day], contract: float) -> dict[str, Any]:
         "days_over_10h": sum(v.hours > MAX_DAY_HOURS for v in worked.values()),
         "weeks_over_48h": sum(w["over_48h"] for w in listed),
         "overtime_hours": round(sum(w["overtime"] for w in listed), 2),
+        **_off_part(worked, listed, off or {}),
+    }
+
+
+def _off_part(
+    worked: dict[date, Day], listed: list[dict[str, Any]], off: dict[date, str]
+) -> dict[str, Any]:
+    """What the days off change: averages, target, work while off."""
+    weeks_worked = [w for w in listed if w["hours"] > 0]
+    full = [w for w in weeks_worked if not w["absent_days"]]
+    return {
+        "avg_week_hours": _mean([w["hours"] for w in full or weeks_worked]),
+        "full_weeks": len(full),
+        "beyond_target_hours": round(
+            sum(w["beyond_target"] for w in listed), 2
+        ),
+        "worked_while_off": [
+            {"date": d, "kind": off[d], "hours": v.hours}
+            for d, v in worked.items()
+            if off.get(d, "ferie") != "ferie"
+        ],
     }
 
 
