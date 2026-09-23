@@ -245,10 +245,20 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
   manquante » ; une embauche jamais close devient « débauche manquante »
   au bout de 16 h. Une deuxième embauche le même jour pendant qu'une
   session est ouverte est ignorée.
-- **Journées à compléter** : toutes les sessions incomplètes (la plus
-  récente d'abord), avec « **preuve présente** » ou « sans preuve » et
-  un filtre (avec / sans preuve, embauche ou débauche manquante). Chaque
-  journée est une fiche : ce qui est connu (« Embauche 08:40 · Débauche
+- **Journées à compléter** : toutes les sessions incomplètes, avec
+  « **preuve présente** » ou « sans preuve » et un filtre (avec / sans
+  preuve, embauche ou débauche manquante), en deux vues :
+  - **Calendrier** (par défaut) : 12 mois d'un coup d'œil (« ◀ 12 mois »,
+    « Aujourd'hui », « 12 mois ▶ »), une **pastille** par jour à
+    compléter — **rouge** sans preuve, **orange** preuve présente — et le
+    nombre par mois ; un point vert pour une journée complète, gris pour
+    une absence ou un férié. **Cliquer un jour** ouvre sa fiche **à
+    droite** (la même que dans la liste), avec « ← Jour précédent /
+    Jour suivant → » parmi les jours à compléter. Le mois et le jour
+    choisis restent après un rechargement.
+  - **Liste** : les fiches l'une sous l'autre, page par page.
+
+  Chaque journée est une fiche : ce qui est connu (« Embauche 08:40 · Débauche
   ? à compléter »), puis de quoi retrouver l'heure vous-même :
   - les **preuves et traces du jour**, en tableau (type, heure, détail,
     montant) ; pour une débauche manquante, aussi celles du **lendemain

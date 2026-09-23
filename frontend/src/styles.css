@@ -1800,3 +1800,150 @@ img.viewer-file {
 .update-banner details {
   width: 100%;
 }
+
+/* « À compléter » as a calendar: 12 months left, the day picked right. */
+.todo-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
+  gap: 16px;
+  align-items: start;
+}
+
+.todo-panel {
+  position: sticky;
+  top: 8px;
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+}
+
+@media (max-width: 1000px) {
+  .todo-layout {
+    grid-template-columns: 1fr;
+  }
+  .todo-panel {
+    position: static;
+    max-height: none;
+  }
+}
+
+.cal-months {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px 14px;
+}
+
+.cal-month h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 13px;
+  text-transform: capitalize;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.cal-head {
+  font-size: 11px;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+.cal-day {
+  position: relative;
+  height: 21px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: none;
+  color: var(--color-text);
+  font-size: 11px;
+  cursor: default;
+}
+
+.cal-day:not(:disabled) {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.cal-day.todo-none {
+  background: var(--color-high-bg);
+  border-color: var(--color-danger);
+}
+
+.cal-day.todo-proof {
+  background: var(--color-warn-bg);
+  border-color: var(--color-warn);
+}
+
+.cal-day.off {
+  color: var(--color-muted);
+  background: var(--color-grid);
+}
+
+.cal-day.done::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 1px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--color-ok);
+}
+
+.cal-day.today {
+  text-decoration: underline;
+}
+
+.cal-day.selected {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 8px 0 12px;
+  font-size: 12px;
+}
+
+.cal-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.cal-dot.todo-none {
+  background: var(--color-danger);
+}
+
+.cal-dot.todo-proof {
+  background: var(--color-warn);
+}
+
+.cal-dot.done {
+  background: var(--color-ok);
+}
+
+.cal-dot.off {
+  background: var(--color-grid);
+  border: 1px solid var(--color-muted);
+}
+
+.todo-panel .quick {
+  flex-wrap: wrap;
+}
+
+.todo-panel .quick .input {
+  max-width: none;
+  flex: 1 1 150px;
+}

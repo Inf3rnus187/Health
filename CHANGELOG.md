@@ -34,6 +34,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **« À compléter » as a 12-month calendar** (default view; « Liste »
+  keeps the cards one under the other): a pastille per day to complete
+  (red without proof, orange with one) and the count per month, a green
+  dot for a complete day, grey for an absence or a public holiday;
+  clicking a day opens its card on the right (the same card), with
+  « Jour précédent / suivant ». View, months shown and day picked
+  survive a reload.
+
 - **Update notice and `./update.sh`.** The page compares its build with
   the one installed (`/version.json`, written at each web build; nginx
   revalidates it and `index.html`) and offers « Recharger » after an

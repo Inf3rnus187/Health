@@ -1,9 +1,13 @@
 import type { IncompleteDay } from '../../api/workfile';
+import { useWorkDays } from '../../hooks/useWork';
 import { useIncomplete } from '../../hooks/useWorkFile';
 import { useStored } from '../../utils/stored';
 import { usePaging } from '../Paging';
 import { Corrected } from './Corrected';
 import { DayCard } from './DayCard';
+import { TodoCalendar } from './TodoCalendar';
+import { marks, monthEnd, thisMonth, todoDays, yearTo } from './todoCalendar';
+import { TodoPanel } from './TodoPanel';
 import { Choice } from './fields';
 
 const SHOW: Record<string, string> = {
@@ -36,11 +40,73 @@ function Help() {
   );
 }
 
+const VIEWS = { calendar: 'Calendrier', list: 'Liste' };
+
+function List({ rows }: { rows: IncompleteDay[] }) {
+  const { page, bar } = usePaging(rows);
+  return (
+    <>
+      {bar}
+      <ul className="day-list">
+        {page.map((row) => (
+          <DayCard key={row.id} row={row} />
+        ))}
+      </ul>
+    </>
+  );
+}
+
+/** 12 months, a pastille per day to complete; the day picked on the right. */
+function Calendar({ rows }: { rows: IncompleteDay[] }) {
+  const [last, setLast] = useStored('work.todo.month', thisMonth());
+  const [day, setDay] = useStored('work.todo.day', '');
+  const first = `${yearTo(last)[0]}-01`;
+  const days = useWorkDays({ start: first, end: monthEnd(last) }).data ?? [];
+  return (
+    <div className="todo-layout">
+      <TodoCalendar
+        marks={marks(rows, days)}
+        selected={day}
+        onSelect={setDay}
+        last={last}
+        setLast={setLast}
+      />
+      <TodoPanel
+        day={day}
+        rows={rows}
+        days={todoDays(rows)}
+        onSelect={setDay}
+      />
+    </div>
+  );
+}
+
+function Views(props: { view: string; set: (v: string) => void }) {
+  return (
+    <div className="tabs">
+      {Object.entries(VIEWS).map(([key, label]) => (
+        <button
+          key={key}
+          className={key === props.view ? 'tab active' : 'tab'}
+          onClick={() => props.set(key)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** Every session with a missing half, with what helps to complete it. */
 export function Incomplete() {
   const rows = useIncomplete().data ?? [];
   const [show, setShow] = useStored('work.todo.show', 'all', Object.keys(SHOW));
-  const { page, bar } = usePaging(rows.filter((r) => keep(r, show)));
+  const [view, setView] = useStored(
+    'work.todo.view',
+    'calendar',
+    Object.keys(VIEWS),
+  );
+  const kept = rows.filter((r) => keep(r, show));
   const proofs = rows.filter((r) => r.context.has_proof).length;
   return (
     <section className="card">
@@ -48,13 +114,11 @@ export function Incomplete() {
         Journées à compléter ({rows.length}, dont {proofs} avec preuve)
       </h2>
       <Help />
-      <Choice options={SHOW} value={show} onChange={setShow} />
-      {bar}
-      <ul className="day-list">
-        {page.map((row) => (
-          <DayCard key={row.id} row={row} />
-        ))}
-      </ul>
+      <div className="toolbar">
+        <Views view={view} set={setView} />
+        <Choice options={SHOW} value={show} onChange={setShow} />
+      </div>
+      {view === 'calendar' ? <Calendar rows={kept} /> : <List rows={kept} />}
       <Corrected />
     </section>
   );
