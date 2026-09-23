@@ -197,3 +197,43 @@ def test_impossible_foods_are_rejected_with_a_reason() -> None:
         "quantité impossible (0 g)",
         "aliment sans nom",
     ]
+
+
+async def test_a_pee_is_counted_like_a_bottle(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """Same path as every one-tap count: /sync/tally, key ``metric``."""
+    tally = "/api/v1/sync/tally"
+    body = {"metric": "elimination.urination"}
+    one = await client.post(tally, json=body, headers=auth)
+    assert (one.json()["previous"], one.json()["total"]) == (0.0, 1.0)
+    two = await client.post(tally, json={**body, "amount": 2}, headers=auth)
+    assert two.json()["total"] == 3.0
+    back = await client.post(tally, json={**body, "amount": -1}, headers=auth)
+    assert back.json()["total"] == 2.0
+    day = await client.get(PEE, headers=auth)
+    assert day.json()["count"] == 2  # each pee kept with its time
+    past = await client.post(
+        tally, json={**body, "date_key": "2020-01-01"}, headers=auth
+    )
+    assert past.status_code == 422
+    below = await client.post(tally, json={**body, "amount": -3}, headers=auth)
+    assert below.status_code == 422
+
+
+async def test_meal_type_defaults_to_the_hour(
+    client: AsyncClient,
+    auth: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def no_worker(*_: Any) -> bool:
+        return False
+
+    monkeypatch.setattr(meal_ai, "enqueue", no_worker)
+    kinds = []
+    for at in ("2026-09-21T07:45", "2026-09-21T12:30", "2026-09-21T20:30"):
+        made = await client.post(
+            MEALS, data={"description": "soupe", "eaten_at": at}, headers=auth
+        )
+        kinds.append(made.json()["meal_type"])
+    assert kinds == ["breakfast", "lunch", "dinner"]

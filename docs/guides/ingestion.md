@@ -15,13 +15,16 @@ other sources). Required token scope per route:
 | Health Auto Export (daily JSON) | `POST /sync/auto-export` | `write:measurements` (+ `?token=`) |
 | SimpleHealthExportCSV (zip of CSV) | `POST /imports/apple-health` | `write:measurements` (+ `?token=`) |
 | iPhone Shortcut (flat map) | `POST /sync/health` | `ingest:watch` |
-| One-tap counters (cigarette, coffee…) | `POST /sync/tally` | `write:measurements` (+ `?token=`) |
+| One-tap counts: `{"metric": key, "amount"?}` — water bottle, coffee, cigarette, pee (`elimination.urination`, timed) | `POST /sync/tally` | `write:measurements` (+ `?token=`) |
 | Watch / HealthKit samples | `POST /ingest/watch` | `ingest:watch` |
 | CPAP | `POST /ingest/ppc` | `ingest:ppc` |
 | Progress photos | `POST /ingest/photo` | `ingest:photo` |
-| Pee (one tap, now or `{"at": …}`) | `POST /journal/urination` | `write:measurements` (+ `?token=`) |
-| Meal (description + photo, AI reading) | `POST /meals` (multipart) | `write:measurements` (+ `?token=`) |
-| Any script | `POST /measurements` | `write:measurements` |
+| Pee at a given time (web Journal, `{"at": …}`) | `POST /journal/urination` | `write:measurements` (+ `?token=`) |
+| Meal: form `description`, `file` (photo), `meal_type`?, `eaten_at`? | `POST /meals` (multipart) | `write:measurements` (+ `?token=`) |
+| Any script (sets — **replaces** — a day's value) | `POST /measurements` | `write:measurements` |
+
+iPhone Shortcuts step by step (one token, one rule for every count, one
+for meals): [usage guide](utilisation.md#raccourcis-iphone--une-seule-règle).
 
 ## Health Auto Export (JSON)
 

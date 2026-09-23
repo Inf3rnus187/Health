@@ -13,7 +13,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import NotFoundError
+from app.core.errors import InvalidInputError, NotFoundError
 from app.models.base import new_uuid, utcnow
 from app.models.health_raw import HealthSample
 from app.services import daily_rollup, timed_entries
@@ -88,3 +88,31 @@ async def remove(session: AsyncSession, user_id: str, sample_id: str) -> None:
     day = await timed_entries.local_day(session, user_id, sample.start_at)
     await session.delete(sample)
     await timed_entries.refresh(session, user_id, metric, {day})
+
+
+async def tap(
+    session: AsyncSession, user_id: str, amount: float, day: date
+) -> tuple[int, int]:
+    """Add ``amount`` pees now (negative: take back the last ones).
+
+    The one-tap counter path (``/sync/tally``) for a pee: each one keeps
+    its time. Returns the day's count before and after.
+    """
+    if day != await timed_entries.local_day(session, user_id, utcnow()):
+        raise InvalidInputError(
+            f"{SPEC.key}: a pee is logged now; use the Journal for another day"
+        )
+    if amount != int(amount):
+        raise InvalidInputError(f"{SPEC.key}: amount must be a whole number")
+    items = await day_list(session, user_id, day)
+    total = len(items) + int(amount)
+    if total < 0:
+        raise InvalidInputError(
+            f"{SPEC.key}: the total of {day} is {len(items)}, "
+            "it cannot go below 0"
+        )
+    for _ in range(int(amount)):
+        await log(session, user_id, None)
+    for item in items[total:]:
+        await remove(session, user_id, item["id"])
+    return len(items), total

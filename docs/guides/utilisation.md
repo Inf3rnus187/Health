@@ -74,9 +74,53 @@ Ce qu'Apple Santé n'enregistre pas : **pipi** et **repas**.
   nutriments.
 - **Repas des 7 derniers jours**, groupés par jour avec le total du jour.
 
-Depuis l'iPhone, un Raccourci « Pipi » en un appui :
-`POST https://<hub>/api/v1/journal/urination?token=<jeton write:measurements>`
-(corps vide = maintenant).
+Depuis l'iPhone : voir [Raccourcis iPhone](#raccourcis-iphone--une-seule-règle).
+
+## Raccourcis iPhone — une seule règle
+
+**Un seul jeton pour tous les raccourcis** : Import › « Jetons d'accès
+(API) » › cocher `write:measurements` (il écrit, il ne lit rien).
+
+### Compter quelque chose : bouteille, café, cigarette, pipi…
+
+Toujours **la même action, la même URL, le même champ** ; seule la
+valeur de `metric` change d'un raccourci à l'autre.
+
+- Action **« Obtenir le contenu de l'URL »**
+- URL : `https://<hub>/api/v1/sync/tally?token=<jeton>`
+- Méthode **POST**, Corps de la requête **JSON**
+- Champ `metric` (Texte) = la clé du tableau ; champ `amount` (Nombre)
+  facultatif : `1` par défaut, `-1` pour annuler un appui de trop.
+
+| Raccourci | `metric` |
+|-----------|----------|
+| Bouteille d'eau 1,5 L | `water.bottles_1_5` |
+| Café | `habit.coffee` |
+| Cigarette | `habit.cigarettes` |
+| Envie de fumer cassée | `habit.urges_broken` |
+| Pipi | `elimination.urination` (noté à l'heure de l'appui) |
+
+Chaque appui **ajoute** au total du jour et n'efface jamais rien ; la
+réponse donne le total avant (`previous`) et après (`total`).
+
+### Noter un repas : description + photo
+
+Le seul autre chemin, parce qu'un repas transporte une photo — même jeton.
+
+- Action **« Obtenir le contenu de l'URL »**
+- URL : `https://<hub>/api/v1/meals?token=<jeton>`
+- Méthode **POST**, Corps de la requête **Formulaire**
+- Champs : `description` (Texte, p. ex. le résultat de « Demander une
+  entrée ») et `file` (Fichier, le résultat de « Prendre une photo ») —
+  l'un des deux suffit. Facultatifs : `meal_type` (`breakfast`, `lunch`,
+  `snack`, `dinner` ; sinon déduit de l'heure) et `eaten_at` (sinon
+  maintenant).
+
+L'analyse IA apparaît ensuite dans **Journal**.
+
+> Un raccourci déjà réglé sur `POST /api/v1/journal/urination?token=…`
+> (sans corps) continue de marcher : c'est la route du bouton « Pipi
+> maintenant ». Pour un nouveau raccourci, suivre la règle ci-dessus.
 
 ## Dossier
 
@@ -162,7 +206,7 @@ Depuis l'iPhone, un Raccourci « Pipi » en un appui :
 | Une ordonnance → mes traitements | Dossier › Ajouter le document, attendre la lecture, puis « Ajouter aux traitements ». |
 | Suivre une maladie | Suivi › déclarer la maladie (ou la confirmer depuis « À confirmer »). |
 | Un rapport pour le médecin | Rapports › « Synthèse clinique IA » › Générer, puis Télécharger. |
-| Compter mes cigarettes | Raccourci iPhone : `POST /api/v1/sync/tally?token=<jeton write:measurements>` avec `{"metric":"habit.cigarettes"}` — chaque appui ajoute 1 au total du jour (`amount` pour un autre pas, négatif pour retirer une erreur). Par l'assistant MCP : « ajoute une clope » (outil `add_to_counter`, qui ajoute et n'efface jamais). |
-| Noter un pipi | Journal › « Pipi maintenant », ou le Raccourci iPhone ci-dessus. |
-| Noter un repas et savoir s'il était sain | Journal › Ajouter un repas (description + photo) › l'analyse s'affiche sous le repas. |
+| Compter eau, café, cigarettes, pipi | Raccourci iPhone : `POST /api/v1/sync/tally?token=<jeton>` avec `{"metric": "<clé>"}` ([Raccourcis iPhone](#raccourcis-iphone--une-seule-règle)). Par l'assistant MCP : « ajoute une clope » (outil `add_to_counter`, qui ajoute et n'efface jamais). |
+| Noter un pipi | Journal › « Pipi maintenant », ou le Raccourci avec `{"metric": "elimination.urination"}`. |
+| Noter un repas et savoir s'il était sain | Journal › Ajouter un repas (description + photo), ou le Raccourci repas › l'analyse s'affiche sous le repas. |
 | Vérifier que tout concorde | Données › Tout ce qui est enregistré. |

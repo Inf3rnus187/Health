@@ -7,7 +7,7 @@ the estimated nutrients into the same nutrition metrics as Apple.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -18,7 +18,7 @@ from app.models.base import new_uuid, utcnow
 from app.models.meal import Meal
 from app.services import meal_nutrients, meal_photo
 from app.services.daily_rollup import user_zone
-from app.services.timed_entries import day_bounds, local_day, utc
+from app.services.timed_entries import day_bounds, utc
 
 #: Meal type → French label.
 TYPES = {
@@ -28,6 +28,8 @@ TYPES = {
     "snack": "Collation",
 }
 _DESCRIPTION_MAX = 2000
+#: Default meal by local hour (before 10:30 breakfast… after 18:00 dinner).
+_MEAL_HOURS = ((10.5, "breakfast"), (15.0, "lunch"), (18.0, "snack"))
 
 
 async def create(
@@ -99,15 +101,23 @@ async def _apply(
     session: AsyncSession, meal: Meal, fields: dict[str, Any]
 ) -> None:
     """Validate and set type, time and description."""
-    kind = fields.get("meal_type") or meal.meal_type or "lunch"
+    zone = await user_zone(session, meal.user_id)
+    eaten = fields.get("eaten_at") or meal.eaten_at or utcnow()
+    if eaten.tzinfo is None:  # a local time typed in a form
+        eaten = eaten.replace(tzinfo=zone)
+    local = utc(eaten).astimezone(zone)
+    kind = fields.get("meal_type") or meal.meal_type or _meal_of(local)
     if kind not in TYPES:
         raise InvalidInputError(f"meal_type must be one of {sorted(TYPES)}")
     meal.meal_type = kind
-    eaten = fields.get("eaten_at") or meal.eaten_at or utcnow()
-    if eaten.tzinfo is None:  # a local time typed in a form
-        eaten = eaten.replace(tzinfo=await user_zone(session, meal.user_id))
-    meal.date_key = await local_day(session, meal.user_id, eaten)
+    meal.date_key = local.date()
     meal.eaten_at = utc(eaten)
     text = fields.get("description")
     if text is not None:
         meal.description = str(text).strip()[:_DESCRIPTION_MAX]
+
+
+def _meal_of(local: datetime) -> str:
+    """The meal of a local time, as the web form proposes it."""
+    hour = local.hour + local.minute / 60
+    return next((kind for end, kind in _MEAL_HOURS if hour < end), "dinner")

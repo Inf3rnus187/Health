@@ -141,6 +141,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **One rule for every iPhone Shortcut.** A pee needed its own route
+  (`/journal/urination`) while a bottle, a coffee or a cigarette went
+  through `/sync/tally`. Now every one-tap count uses `POST /sync/tally`
+  with `{"metric": "<key>"}` — `elimination.urination` included (each pee
+  is kept with its time, `-1` takes the last one back). A meal (text +
+  photo) is the only other path, `POST /meals` with the same token; its
+  type defaults to the hour instead of always « Déjeuner ». The usage
+  guide has one « Raccourcis iPhone » section with the keys.
+  `/journal/urination` still works (the Journal page uses it).
 - **The MCP could erase a count.** « Ajoute une clope » went through
   `record_measurement`, which *replaces* the day's value: the total was
   overwritten (1, then 11). Now:

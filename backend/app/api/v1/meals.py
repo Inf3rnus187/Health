@@ -26,12 +26,16 @@ TapDep = Annotated[Principal, Depends(require_scope_flex(WRITE_MEASUREMENTS))]
 async def create(
     principal: TapDep,
     session: SessionDep,
-    meal_type: Annotated[str, Form()] = "lunch",
+    meal_type: Annotated[str, Form()] = "",
     eaten_at: Annotated[str, Form()] = "",
     description: Annotated[str, Form()] = "",
     file: UploadFile | None = None,
 ) -> Meal:
-    """Log a meal (photo and/or description), then read it with the AI."""
+    """Log a meal (photo and/or description), then read it with the AI.
+
+    Form fields: ``description``, ``file`` (photo), and optionally
+    ``meal_type`` (default: from the hour) and ``eaten_at`` (default: now).
+    """
     fields = {
         "meal_type": meal_type,
         "eaten_at": _when(eaten_at),

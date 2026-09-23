@@ -1,10 +1,12 @@
-"""Increment a daily counter metric (café, cigarette, bouteille d'eau).
+"""Increment a daily counter (bouteille d'eau, café, cigarette, pipi).
 
 The daily fact table keeps one row per metric/day, so a plain ingest
 *replaces* the day's value — wrong for a one-tap counter. ``increment``
 reads the current day total, adds the amount and upserts the sum, so each
 tap (or an assistant's "add one") adds to the running total for the day.
 A negative amount takes back a wrong entry; the total never goes below 0.
+A pee (``elimination.urination``) is a timed journal entry: each one is
+logged with its time, the day's value is their count.
 """
 
 from __future__ import annotations
@@ -16,10 +18,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import InvalidInputError
 from app.schemas.measurement import MeasurementIn
-from app.services import audit
+from app.services import audit, urination
 from app.services import measurement_values as values
 from app.services import measurements as measure
 from app.services import metrics as metrics_service
+from app.services.canonical import canonical
 
 
 @dataclass(frozen=True)
@@ -40,6 +43,11 @@ async def increment(
     token_id: str | None = None,
 ) -> Tally:
     """Add ``amount`` to a metric's daily total; return both totals."""
+    if canonical(metric_key) == urination.SPEC.key:
+        before, after = await urination.tap(session, user_id, amount, day)
+        step = Tally(previous=before, total=after)
+        await _log(session, user_id, urination.SPEC.key, day, step, token_id)
+        return step
     metric = await metrics_service.get_metric(session, metric_key)
     previous = await _current(session, user_id, metric_key, day)
     total = previous + amount
@@ -54,14 +62,15 @@ async def increment(
         session, user_id, [item], source="watch", token_id=token_id
     )
     step = Tally(previous=previous, total=total)
-    await _log(session, user_id, item, step, token_id)
+    await _log(session, user_id, metric_key, day, step, token_id)
     return step
 
 
 async def _log(
     session: AsyncSession,
     user_id: str,
-    item: MeasurementIn,
+    metric_key: str,
+    day: date,
     step: Tally,
     token_id: str | None,
 ) -> None:
@@ -73,8 +82,8 @@ async def _log(
         user_id=user_id,
         source="token" if token_id else "api",
         payload={
-            "metric": item.metric_key,
-            "date": item.date_key.isoformat(),
+            "metric": metric_key,
+            "date": day.isoformat(),
             "previous": step.previous,
             "total": step.total,
         },

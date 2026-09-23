@@ -147,14 +147,15 @@ class OverwriteError(RuntimeError):
 async def add_to_counter(
     metric_key: str, amount: float = 1, date_key: str | None = None
 ) -> Any:
-    """ADD to a day's count: cigarettes, coffees, water bottles, urges.
+    """ADD to a day's count: water bottles, coffees, cigarettes, pees.
 
-    Use it for "ajoute une clope / un café / une bouteille": it adds
-    ``amount`` to the day's total (default: the user's today) and never
-    erases it. A negative amount takes back a wrong entry (never below
-    0). Returns the total before (``previous``) and after (``total``).
-    Keys: habit.cigarettes, habit.coffee, water.bottles_1_5,
-    habit.urges_broken (list_metrics domain "habit" for others).
+    Use it for "ajoute une bouteille / un café / une clope / un pipi": it
+    adds ``amount`` to the day's total (default: the user's today) and
+    never erases it. A negative amount takes back a wrong entry (never
+    below 0). Returns the total before (``previous``) and after
+    (``total``). Keys: water.bottles_1_5, habit.coffee, habit.cigarettes,
+    habit.urges_broken, elimination.urination (a pee is logged now; for
+    another time use log_urination).
     """
     body = {"metric": metric_key, "amount": amount}
     if date_key:
