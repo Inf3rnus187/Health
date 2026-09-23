@@ -46,7 +46,7 @@ const NOUN = 'repas (avec photos et nutriments)';
 
 /** Meals of a period, grouped by day (a page is 10 days) with totals. */
 export function MealList() {
-  const [range, setRange] = useRange(7);
+  const [range, setRange] = useRange(7, 'journal.meals');
   const meals = useMeals(range).data ?? [];
   const sel = useSelection();
   const { page, bar } = usePaging(byDay(meals));

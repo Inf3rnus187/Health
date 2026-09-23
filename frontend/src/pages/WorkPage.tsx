@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 import { ClockCard } from '../components/work/ClockCard';
 import { DaysTable } from '../components/work/DaysTable';
 import { SessionList } from '../components/work/SessionList';
@@ -14,6 +12,7 @@ import { LogsImport } from '../components/workfile/LogsImport';
 import { NightsCard } from '../components/workfile/NightsCard';
 import { TraceImport } from '../components/workfile/TraceImport';
 import { useIncomplete } from '../hooks/useWorkFile';
+import { useStored } from '../utils/stored';
 
 const TABS = {
   jours: 'Journées',
@@ -84,7 +83,7 @@ function Tabs(props: { tab: Tab; go: (tab: Tab) => void }) {
 
 /** Work: the days at a glance first, then what to complete, the rest. */
 export function WorkPage() {
-  const [tab, setTab] = useState<Tab>('jours');
+  const [tab, setTab] = useStored<Tab>('work.tab', 'jours', Object.keys(TABS));
   return (
     <>
       <Tabs tab={tab} go={setTab} />

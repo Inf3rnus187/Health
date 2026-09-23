@@ -110,7 +110,7 @@ function Table({ nights }: { nights: Night[] }) {
 
 /** The nights of a period, newest first; type the ones the watch missed. */
 export function NightsCard() {
-  const [range, setRange] = useRange(30);
+  const [range, setRange] = useRange(30, 'work.nights');
   const [missing, setMissing] = useState(true);
   const nights = useNights(range, missing).data ?? [];
   const { page, bar } = usePaging(nights);

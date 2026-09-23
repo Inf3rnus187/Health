@@ -94,7 +94,7 @@ function Numbers({ range }: { range: Range }) {
 
 /** The work ↔ health file at a glance, and its full PDF report. */
 export function FileSummary() {
-  const [range, setRange] = useRange(365);
+  const [range, setRange] = useRange(365, 'work.file');
   return (
     <section className="card">
       <h2>Dossier travail et santé</h2>

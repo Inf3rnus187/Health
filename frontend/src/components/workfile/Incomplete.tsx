@@ -1,7 +1,6 @@
-import { useState } from 'react';
-
 import type { IncompleteDay } from '../../api/workfile';
 import { useIncomplete } from '../../hooks/useWorkFile';
+import { useStored } from '../../utils/stored';
 import { usePaging } from '../Paging';
 import { Corrected } from './Corrected';
 import { DayCard } from './DayCard';
@@ -40,7 +39,7 @@ function Help() {
 /** Every session with a missing half, with what helps to complete it. */
 export function Incomplete() {
   const rows = useIncomplete().data ?? [];
-  const [show, setShow] = useState('all');
+  const [show, setShow] = useStored('work.todo.show', 'all', Object.keys(SHOW));
   const { page, bar } = usePaging(rows.filter((r) => keep(r, show)));
   const proofs = rows.filter((r) => r.context.has_proof).length;
   return (

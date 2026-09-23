@@ -36,7 +36,7 @@ function useContract(): [number, (hours: number) => void] {
 
 /** Hours worked over a period: numbers, weeks, periods, export. */
 export function WorkStatsCard() {
-  const [range, setRange] = useRange(30);
+  const [range, setRange] = useRange(30, 'work.stats');
   const [contract, setContract] = useContract();
   const stats = useWorkStats(range, contract).data;
   return (

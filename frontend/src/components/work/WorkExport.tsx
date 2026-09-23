@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { createWorkReport } from '../../api/work';
 import { type Range, rangeQuery } from '../../utils/range';
+import { useStored } from '../../utils/stored';
 import { DownloadButton } from '../DownloadButton';
 
 const LEVELS: Record<string, string> = {
@@ -60,8 +61,16 @@ function ReportButton(props: Props) {
 
 /** Export the period (CSV / Excel / JSON) or make its PDF report. */
 export function WorkExport(props: Props) {
-  const [level, setLevel] = useState('days');
-  const [format, setFormat] = useState('csv');
+  const [level, setLevel] = useStored(
+    'work.export.level',
+    'days',
+    Object.keys(LEVELS),
+  );
+  const [format, setFormat] = useStored(
+    'work.export.format',
+    'csv',
+    Object.keys(FORMATS),
+  );
   const { start, end } = props.range;
   const query = `${rangeQuery(props.range)}&level=${level}&format=${format}`;
   const path = `/work/export?${query}&contract_hours=${props.contract}`;

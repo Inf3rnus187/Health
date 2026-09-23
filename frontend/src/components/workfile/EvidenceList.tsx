@@ -8,6 +8,7 @@ import {
 import { type Selection, useSelection } from '../../hooks/useSelection';
 import { useDeleteEvidence, useEvidence } from '../../hooks/useWorkFile';
 import { useRange } from '../../utils/range';
+import { useStored } from '../../utils/stored';
 import { BulkBar, PickBox } from '../Bulk';
 import { DateRange } from '../DateRange';
 import { usePaging } from '../Paging';
@@ -106,9 +107,13 @@ function Items(props: { page: EvidenceItem[]; sel: Selection }) {
 const NOUN = 'preuves et traces (avec leurs fichiers)';
 
 function useShown() {
-  const [range, setRange] = useRange(null);
-  const [show, setShow] = useState('all');
-  const [text, setText] = useState('');
+  const [range, setRange] = useRange(null, 'work.evidence');
+  const [show, setShow] = useStored(
+    'work.evidence.show',
+    'all',
+    Object.keys(SHOW),
+  );
+  const [text, setText] = useStored('work.evidence.text', '');
   const items = useEvidence(range).data ?? [];
   const shown = items.filter((i) => keep(i, show) && says(i, text)).reverse();
   const filters = (

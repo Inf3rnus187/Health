@@ -1,8 +1,7 @@
-import { useState } from 'react';
-
 import type { WorkDayLine } from '../../api/work';
 import { useWorkDays } from '../../hooks/useWork';
 import { useRange } from '../../utils/range';
+import { useStored } from '../../utils/stored';
 import { DateRange } from '../DateRange';
 import { usePaging } from '../Paging';
 import { DayLine } from './DayLine';
@@ -85,8 +84,12 @@ function Table(props: { days: WorkDayLine[]; toComplete: () => void }) {
 
 /** One line per day, newest first: the whole day at a glance. */
 export function DaysTable(props: { toComplete: () => void }) {
-  const [range, setRange] = useRange(30);
-  const [show, setShow] = useState('Tous les jours');
+  const [range, setRange] = useRange(30, 'work.days');
+  const [show, setShow] = useStored(
+    'work.days.show',
+    'Tous les jours',
+    Object.keys(SHOW),
+  );
   const days = [...(useWorkDays(range).data ?? [])].reverse();
   const shown = days.filter(SHOW[show] ?? (() => true));
   const { page, bar } = usePaging(shown, 50);

@@ -1,10 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
-
 import { deleteAllPhotos, type Photo } from '../api/photos';
 import { EvolutionView } from '../components/evolution/EvolutionView';
 import { PhotoCard } from '../components/photos/PhotoCard';
 import { usePhotos } from '../hooks/usePhotos';
+import { useStored } from '../utils/stored';
 
 function DeleteAllButton() {
   const client = useQueryClient();
@@ -88,7 +87,11 @@ function Grid({ photos, loading }: { photos: Photo[]; loading: boolean }) {
 }
 
 function Gallery() {
-  const [angle, setAngle] = useState('');
+  const [angle, setAngle] = useStored(
+    'photos.angle',
+    '',
+    ANGLES.map((a) => a.id),
+  );
   const { data, isLoading } = usePhotos(angle || undefined);
   const photos = data ?? [];
   return (
@@ -103,7 +106,11 @@ function Gallery() {
 }
 
 export function PhotosPage() {
-  const [view, setView] = useState<View>('evolution');
+  const [view, setView] = useStored<View>(
+    'photos.view',
+    'evolution',
+    VIEWS.map((v) => v.id),
+  );
   return (
     <>
       <section className="card">

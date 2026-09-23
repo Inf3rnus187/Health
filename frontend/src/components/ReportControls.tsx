@@ -1,6 +1,5 @@
-import { useState } from 'react';
-
 import { type Range, useRange } from '../utils/range';
+import { useStored } from '../utils/stored';
 import { DateRange } from './DateRange';
 
 const TYPES = [
@@ -41,8 +40,12 @@ function TypeSelect(props: { value: string; onChange: (v: string) => void }) {
 
 /** A report type and its period ("Tout" by default), then "Générer". */
 export function ReportControls({ onCreate, busy }: ReportControlsProps) {
-  const [type, setType] = useState('synthesis');
-  const [range, setRange] = useRange(null);
+  const [type, setType] = useStored(
+    'reports.type',
+    'synthesis',
+    TYPES.map((t) => t.value),
+  );
+  const [range, setRange] = useRange(null, 'reports');
   return (
     <>
       <DateRange value={range} onChange={setRange} />

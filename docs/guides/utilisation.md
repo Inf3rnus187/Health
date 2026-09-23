@@ -30,6 +30,16 @@ session ne peut plus être renouvelée (déconnexion ailleurs, 14 jours
 sans usage), la page de connexion le dit : « Session expirée :
 reconnecte-toi ».
 
+**Vos choix restent après un rechargement** (F5, retour sur la page, le
+lendemain) : la **période** de chaque carte (Mes journées, Sessions,
+Statistiques, Preuves et traces, Nuits, synthèse du dossier, Repas,
+Rapports), l'**onglet** ouvert (Travail, Photos, tableaux de bord par
+domaine) et les **filtres** (« Tous les jours », type de preuve,
+recherche, niveau d'export, type de rapport). Une période qui allait
+jusqu'à aujourd'hui (« 30 j », « Tout », « du 01/09 à aujourd'hui »)
+avance avec les jours ; une période passée (« du 01/03 au 31/03 ») reste
+telle quelle. Ces choix sont gardés dans ce navigateur seulement.
+
 ## Accueil
 
 Tuiles des mesures clés (dernière valeur, moyenne 7 j, évolution) — un clic

@@ -8,6 +8,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Periods, tabs and filters survive a reload.** Each card's period
+  (Mes journées, Sessions, Statistiques, Preuves et traces, Nuits, the
+  file's summary, Repas, Rapports), the tab open (Travail, Photos,
+  dashboards by domain) and the filters (days, sessions, days to
+  complete, proof kind and search, export level, report type) are kept
+  in this browser. A period that ran up to today (« 30 j », « Tout »)
+  moves on with the days; a past one stays as it was.
 - **A page left open no longer ends on « 401 » / « identifiants
   invalides ».** The 15-minute access token was never renewed: every
   call then failed until a reload. The web app now renews it every 12

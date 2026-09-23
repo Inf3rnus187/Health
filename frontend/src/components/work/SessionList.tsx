@@ -4,6 +4,7 @@ import type { Place, WorkSession } from '../../api/work';
 import { type Selection, useSelection } from '../../hooks/useSelection';
 import { useAddSession, useWorkSessions } from '../../hooks/useWork';
 import { useRange } from '../../utils/range';
+import { useStored } from '../../utils/stored';
 import { BulkBar } from '../Bulk';
 import { DateRange } from '../DateRange';
 import { usePaging } from '../Paging';
@@ -100,8 +101,12 @@ function Table(props: { rows: WorkSession[]; sel: Selection }) {
 
 /** The sessions of a period, to check, add, fix or remove (many at once). */
 export function SessionList() {
-  const [range, setRange] = useRange(30);
-  const [show, setShow] = useState('Toutes');
+  const [range, setRange] = useRange(30, 'work.sessions');
+  const [show, setShow] = useStored(
+    'work.sessions.show',
+    'Toutes',
+    Object.keys(SHOW),
+  );
   const sel = useSelection();
   const all = useWorkSessions(range).data ?? [];
   const shown = all.filter(SHOW[show] ?? (() => true));
