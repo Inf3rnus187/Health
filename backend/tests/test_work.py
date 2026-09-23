@@ -267,3 +267,29 @@ async def test_a_remote_clock_in_opens_its_own_session(
         TALLY, json={"metric": "work.remote_start"}, headers=auth
     )
     assert tap.json()["detail"].startswith("Embauche à distance ")
+
+
+async def test_a_completed_day_can_be_fixed_again(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """Completed by hand, listed as such; a time cleared: to complete."""
+    made = await client.post(
+        f"{WORK}/sessions", json={"start_at": "2026-05-07T08:40"}, headers=auth
+    )
+    done = await client.put(
+        f"{WORK}/sessions/{made.json()['id']}",
+        json={"end_at": "2026-05-07T23:52", "note": "reçu VTC"},
+        headers=auth,
+    )
+    assert (done.json()["source"], done.json()["status"]) == (
+        "edited", "complete",
+    )  # fmt: skip
+    undone = await client.put(
+        f"{WORK}/sessions/{made.json()['id']}",
+        json={"end_at": None, "place": "remote"},
+        headers=auth,
+    )
+    body = undone.json()
+    assert (body["status"], body["place"], body["note"]) == (
+        "missing_end", "remote", "reçu VTC",
+    )  # fmt: skip

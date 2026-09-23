@@ -56,7 +56,8 @@ def _day(d: dict[str, Any]) -> dict[str, Any]:
         "debauche": d["end_text"] or "",
         "heures": d["hours"],
         "dont_distance": d.get("remote", 0.0),
-        "absence": LABELS.get(d.get("absence") or "", ""),
+        "absence": LABELS.get(d.get("absence") or "", "")
+        + (" (demi-journée)" if 0 < d.get("absence_share", 0) < 1 else ""),
     }
 
 

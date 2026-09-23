@@ -1,46 +1,30 @@
 import { useState } from 'react';
 
 import type { Place, WorkSession } from '../../api/work';
-import {
-  useAddSession,
-  useDeleteSession,
-  useWorkSessions,
-} from '../../hooks/useWork';
-import { shortDate } from '../../utils/format';
+import { useAddSession, useWorkSessions } from '../../hooks/useWork';
 import { useRange } from '../../utils/range';
 import { DateRange } from '../DateRange';
 import { usePaging } from '../Paging';
-import { clockTime, hm } from './format';
+import { SessionRow } from './SessionRow';
 
-const SOURCE: Record<string, string> = {
-  tap: 'Raccourci',
-  manual: 'Saisie',
-  import: 'Import',
-  edited: 'Corrigée',
+const SHOW: Record<string, (s: WorkSession) => boolean> = {
+  Toutes: () => true,
+  'Corrigées à la main': (s) => s.source === 'edited',
+  'À distance': (s) => s.place === 'remote',
+  Incomplètes: (s) => s.status.startsWith('missing'),
 };
 
-function Row({ row }: { row: WorkSession }) {
-  const del = useDeleteSession();
+function Filter(props: { value: string; onChange: (v: string) => void }) {
   return (
-    <tr>
-      <td>{shortDate(row.date_key)}</td>
-      <td>{clockTime(row.start_at)}</td>
-      <td>{row.end_at ? clockTime(row.end_at) : 'en cours'}</td>
-      <td>{hm(row.hours)}</td>
-      <td>
-        {row.place === 'remote' && <span className="badge">à distance</span>}
-      </td>
-      <td className="muted">{SOURCE[row.source] ?? row.source}</td>
-      <td>
-        <button
-          className="btn ghost"
-          title="Supprimer"
-          onClick={() => del.mutate(row.id)}
-        >
-          ×
-        </button>
-      </td>
-    </tr>
+    <select
+      className="input"
+      value={props.value}
+      onChange={(e) => props.onChange(e.target.value)}
+    >
+      {Object.keys(SHOW).map((name) => (
+        <option key={name}>{name}</option>
+      ))}
+    </select>
   );
 }
 
@@ -98,22 +82,25 @@ function AddSession() {
   );
 }
 
-/** The sessions of a period, to check, add or remove. */
+/** The sessions of a period, to check, add, fix or remove. */
 export function SessionList() {
   const [range, setRange] = useRange(30);
+  const [show, setShow] = useState('Toutes');
   const all = useWorkSessions(range).data ?? [];
-  const { page: rows, bar } = usePaging(all);
+  const shown = all.filter(SHOW[show] ?? (() => true));
+  const { page: rows, bar } = usePaging(shown);
   return (
     <section className="card">
-      <h2>Sessions ({all.length})</h2>
+      <h2>Sessions ({shown.length})</h2>
       <AddSession />
       <DateRange value={range} onChange={setRange} />
+      <Filter value={show} onChange={setShow} />
       {bar}
       <div className="table-wrap">
         <table className="data-table">
           <tbody>
             {rows.map((row) => (
-              <Row key={row.id} row={row} />
+              <SessionRow key={row.id} row={row} />
             ))}
           </tbody>
         </table>

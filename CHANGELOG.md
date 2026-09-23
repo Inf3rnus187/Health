@@ -8,6 +8,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **See a proof before choosing a time, and fix any correction.**
+  - Each day to complete is a clear card: what is known, the day's
+    proofs and traces in a table (and the morning after), landmarks, the
+    time kept. « Voir » opens a proof over the page: its receipt or
+    invoice (PDF, also in a tab), screenshot, place, amount and details;
+    also from the proofs list.
+  - « Corrigées à la main » lists every session completed or changed
+    afterwards; « Modifier » (also on each session row) reopens its
+    times, place and note with the day's proofs; clearing a time sends
+    the day back to complete. Any later time change now marks a session
+    `edited` (typed ones too). Deletions ask for confirmation.
+  - Session list filter: fixed by hand, remote, incomplete.
+- **Half days off** (migration 0016): an absence starts in the morning or
+  the afternoon and ends at noon or in the evening; half days count ½
+  in the days off, the week's target and the reports, and working the
+  other half is not work during an absence. Absences can be edited.
+  HR imports read half days (« après-midi » / « matin » columns or
+  cells, one record per half day). MCP `save_absence` takes
+  `start_half` / `end_half`.
+
 - **Remote work.** A work session is on site or remote (migration 0015).
   A remote session can be added or clocked (« Embauche à distance »,
   Shortcut key `work.remote_start`, MCP `clock_in(remote=True)`,

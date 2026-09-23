@@ -8,8 +8,9 @@ import {
 import { useDeleteEvidence, useEvidence } from '../../hooks/useWorkFile';
 import { useRange } from '../../utils/range';
 import { DateRange } from '../DateRange';
-import { DownloadButton } from '../DownloadButton';
 import { usePaging } from '../Paging';
+import { EvidenceViewer } from './EvidenceViewer';
+import { span, viewable } from './evidenceView';
 import { Choice } from './fields';
 
 const SHOW: Record<string, string> = {
@@ -25,18 +26,6 @@ function keep(item: EvidenceItem, show: string): boolean {
     return trace === (show === 'trace');
   }
   return show === 'all' || item.kind === show;
-}
-
-function fmt(iso: string, withTime: boolean): string {
-  const at = new Date(iso);
-  return withTime
-    ? at.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })
-    : at.toLocaleDateString('fr-FR');
-}
-
-function span(item: EvidenceItem): string {
-  const end = item.ended_at ? ` → ${fmt(item.ended_at, true)}` : '';
-  return `${fmt(item.occurred_at, item.time_known)}${end}`;
 }
 
 function Details({ item }: { item: EvidenceItem }) {
@@ -56,19 +45,22 @@ function Details({ item }: { item: EvidenceItem }) {
 
 function Item({ item }: { item: EvidenceItem }) {
   const del = useDeleteEvidence();
+  const [open, setOpen] = useState(false);
+  const drop = () =>
+    window.confirm('Supprimer cette preuve et son fichier ?') &&
+    del.mutate(item.id);
   return (
     <li>
-      <Details item={item} />
-      {item.file_name && (
-        <DownloadButton
-          path={`/evidence/${item.id}/file`}
-          filename={item.file_name}
-          label="Fichier"
-        />
-      )}
-      <button className="btn ghost" onClick={() => del.mutate(item.id)}>
+      <Details item={item} />{' '}
+      <button className="btn ghost" onClick={() => setOpen(true)}>
+        Voir
+      </button>
+      <button className="btn ghost" onClick={drop}>
         Supprimer
       </button>
+      {open && (
+        <EvidenceViewer item={viewable(item)} onClose={() => setOpen(false)} />
+      )}
     </li>
   );
 }

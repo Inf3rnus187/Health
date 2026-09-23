@@ -4,6 +4,14 @@ export function frNumber(value: number, digits = 1): string {
   return value.toLocaleString('fr-FR', { maximumFractionDigits: digits });
 }
 
+/** An amount with two decimals: ``38,40``. */
+export function money(value: number): string {
+  return value.toLocaleString('fr-FR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 /** Signed value with a true minus sign; "0" stays unsigned. */
 export function signed(value: number, digits = 1): string {
   const abs = frNumber(Math.abs(value), digits);

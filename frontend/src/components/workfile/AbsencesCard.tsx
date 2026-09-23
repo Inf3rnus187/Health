@@ -1,120 +1,60 @@
 import { useState } from 'react';
 
 import { ABSENCE_KINDS, type Absence } from '../../api/workfile';
-import {
-  useAbsences,
-  useDeleteAbsence,
-  useSaveAbsence,
-} from '../../hooks/useWorkFile';
-import { shortDate } from '../../utils/format';
-import { Choice, Input, Text } from './fields';
+import { useAbsences, useDeleteAbsence } from '../../hooks/useWorkFile';
+import { frNumber, shortDate } from '../../utils/format';
+import { AbsenceForm } from './AbsenceForm';
 
-const EMPTY = {
-  start_date: '',
-  end_date: '',
-  kind: 'arret_maladie',
-  cause: '',
-  note: '',
-};
-
-type Form = typeof EMPTY;
-
-const DATES: [keyof Form, string][] = [
-  ['start_date', 'Du'],
-  ['end_date', 'Au'],
-];
-const TEXTS: [keyof Form, string][] = [
-  ['cause', 'Cause (fièvre, épuisement…)'],
-  ['note', 'Notes'],
-];
-
-interface FieldsProps {
-  form: Form;
-  set: (k: keyof Form, v: string) => void;
-}
-
-function Dates({ form, set }: FieldsProps) {
+/** « du 07/05/2026 après-midi au 08/05/2026 midi (1 j) ». */
+function span(a: Absence): string {
+  const from = a.start_half === 'pm' ? ' après-midi' : '';
+  const until = a.end_half === 'am' ? ' midi' : '';
+  const days = `${frNumber(a.days)} j`;
+  if (a.start_date === a.end_date) {
+    const half = a.start_half === 'pm' ? ' (après-midi)' : until && ' (matin)';
+    return `le ${shortDate(a.start_date)}${half} (${days})`;
+  }
   return (
-    <>
-      {DATES.map(([key, label]) => (
-        <Input
-          key={key}
-          label={label}
-          type="date"
-          value={form[key]}
-          onChange={(v) => set(key, v)}
-        />
-      ))}
-    </>
+    `du ${shortDate(a.start_date)}${from} au ` +
+    `${shortDate(a.end_date)}${until} (${days})`
   );
 }
 
-function Fields({ form, set }: FieldsProps) {
-  return (
-    <>
-      <Dates form={form} set={set} />
-      <Choice
-        options={ABSENCE_KINDS}
-        value={form.kind}
-        onChange={(v) => set('kind', v)}
-      />
-      {TEXTS.map(([key, label]) => (
-        <Text
-          key={key}
-          label={label}
-          value={form[key]}
-          onChange={(v) => set(key, v)}
-        />
-      ))}
-    </>
-  );
-}
-
-function AbsenceForm() {
-  const save = useSaveAbsence();
-  const [form, setForm] = useState(EMPTY);
-  const set = (key: keyof Form, value: string) =>
-    setForm({ ...form, [key]: value });
-  const ready = Boolean(form.start_date && form.end_date);
-  return (
-    <div className="care-form">
-      <Fields form={form} set={set} />
-      <button
-        className="btn"
-        disabled={!ready}
-        onClick={() => save.mutate(form, { onSuccess: () => setForm(EMPTY) })}
-      >
-        Ajouter l’absence
-      </button>
-      {save.error && <p className="error">{save.error.message}</p>}
-    </div>
-  );
-}
-
-function Item({ absence }: { absence: Absence }) {
+function Item(props: { absence: Absence; edit: () => void }) {
   const del = useDeleteAbsence();
+  const a = props.absence;
+  const drop = () =>
+    window.confirm('Supprimer cette absence ?') && del.mutate(a.id);
   return (
     <li>
-      <strong>{ABSENCE_KINDS[absence.kind] ?? absence.kind}</strong> du{' '}
-      {shortDate(absence.start_date)} au {shortDate(absence.end_date)}
-      {absence.cause && ` — ${absence.cause}`}
-      <button className="btn ghost" onClick={() => del.mutate(absence.id)}>
+      <strong>{ABSENCE_KINDS[a.kind] ?? a.kind}</strong> {span(a)}
+      {a.cause && ` — ${a.cause}`}{' '}
+      <button className="btn ghost" onClick={props.edit}>
+        Modifier
+      </button>
+      <button className="btn ghost" onClick={drop}>
         Supprimer
       </button>
     </li>
   );
 }
 
-/** Sick leave and other absences, with their cause. */
+/** Sick leave and other absences, with their cause; half days too. */
 export function AbsencesCard() {
   const list = useAbsences().data ?? [];
+  const [editing, setEditing] = useState<Absence | null>(null);
   return (
     <section className="card">
       <h2>Arrêts et absences</h2>
-      <AbsenceForm />
+      {editing && <h3>Modifier l’absence</h3>}
+      <AbsenceForm
+        key={editing?.id ?? 'new'}
+        editing={editing}
+        done={() => setEditing(null)}
+      />
       <ul className="care-list">
         {list.map((a) => (
-          <Item key={a.id} absence={a} />
+          <Item key={a.id} absence={a} edit={() => setEditing(a)} />
         ))}
       </ul>
     </section>

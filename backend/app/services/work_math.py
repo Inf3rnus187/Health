@@ -22,6 +22,16 @@ MAX_WEEK_HOURS = 48.0
 _WEEKDAYS = 5
 
 
+class Off(NamedTuple):
+    """A day off: its group (arret, conge, repos, autre, ferie) and share.
+
+    ``share``: 1 for a whole day, 0.5 for a half day.
+    """
+
+    kind: str
+    share: float = 1.0
+
+
 class Day(NamedTuple):
     """One worked day: hours, first clock-in, last clock-out (decimal).
 
@@ -52,7 +62,7 @@ def daily(rows: list[WorkSession], tz: ZoneInfo) -> dict[date, Day]:
 
 
 def weeks(
-    days: dict[date, Day], contract: float, off: dict[date, str] | None = None
+    days: dict[date, Day], contract: float, off: dict[date, Off] | None = None
 ) -> list[dict[str, Any]]:
     """ISO weeks: hours, days worked, overtime, days off and the target.
 
@@ -78,13 +88,15 @@ def _monday(day: date) -> date:
 
 
 def _week(
-    monday: date, values: list[Day], contract: float, off: dict[date, str]
+    monday: date, values: list[Day], contract: float, off: dict[date, Off]
 ) -> dict[str, Any]:
     """One ISO week's numbers."""
     hours = round(sum(v.hours for v in values), 2)
     year, week, _ = monday.isocalendar()
-    week_off = [off[d] for d in _days(monday) if d in off]
-    workdays_off = sum(1 for d in _days(monday)[:_WEEKDAYS] if d in off)
+    week_off = [off[d].kind for d in _days(monday) if d in off]
+    workdays_off = sum(
+        off[d].share for d in _days(monday)[:_WEEKDAYS] if d in off
+    )
     target = round(contract * (_WEEKDAYS - workdays_off) / _WEEKDAYS, 2)
     return {
         "week": f"{year}-W{week:02d}",
@@ -94,7 +106,7 @@ def _week(
         "days": sum(1 for v in values if v.hours > 0),
         "overtime": round(max(0.0, hours - contract), 2),
         "over_48h": hours > MAX_WEEK_HOURS,
-        "absent_days": workdays_off,
+        "absent_days": round(workdays_off, 1),
         "absence": Counter(week_off).most_common(1)[0][0] if week_off else None,
         "target": target,
         "beyond_target": round(max(0.0, hours - target), 2),
@@ -127,7 +139,7 @@ def months(days: dict[date, Day], contract: float) -> list[dict[str, Any]]:
 
 
 def summary(
-    days: dict[date, Day], contract: float, off: dict[date, str] | None = None
+    days: dict[date, Day], contract: float, off: dict[date, Off] | None = None
 ) -> dict[str, Any]:
     """Totals, averages and legal-limit flags of a set of days.
 
@@ -169,7 +181,7 @@ def _remote_part(worked: dict[date, Day]) -> dict[str, Any]:
 
 
 def _off_part(
-    worked: dict[date, Day], listed: list[dict[str, Any]], off: dict[date, str]
+    worked: dict[date, Day], listed: list[dict[str, Any]], off: dict[date, Off]
 ) -> dict[str, Any]:
     """What the days off change: averages, target, work while off."""
     weeks_worked = [w for w in listed if w["hours"] > 0]
@@ -180,10 +192,10 @@ def _off_part(
         "beyond_target_hours": round(
             sum(w["beyond_target"] for w in listed), 2
         ),
-        "worked_while_off": [
-            {"date": d, "kind": off[d], "hours": v.hours}
+        "worked_while_off": [  # a whole day off (not a public holiday)
+            {"date": d, "kind": off[d].kind, "hours": v.hours}
             for d, v in worked.items()
-            if off.get(d, "ferie") != "ferie"
+            if d in off and off[d].kind != "ferie" and off[d].share >= 1
         ],
     }
 

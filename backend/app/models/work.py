@@ -64,8 +64,32 @@ class Absence(UUIDMixin, TimestampMixin, Base):
     kind: Mapped[str] = mapped_column(String(24), default="arret_maladie")
     cause: Mapped[str] = mapped_column(Text, default="")
     note: Mapped[str] = mapped_column(Text, default="")
+    #: am: from the morning of the first day; pm: from its afternoon.
+    start_half: Mapped[str] = mapped_column(
+        String(2), default="am", server_default="am"
+    )
+    #: pm: until the evening of the last day; am: until its noon.
+    end_half: Mapped[str] = mapped_column(
+        String(2), default="pm", server_default="pm"
+    )
 
     __table_args__ = (Index("ix_absences_user_start", "user_id", "start_date"),)
+
+    def day_share(self, day: date) -> float:
+        """How much of ``day`` is off: 1, ½ (a half day) or 0."""
+        if not self.start_date <= day <= self.end_date:
+            return 0.0
+        half = (day == self.start_date and self.start_half == "pm") or (
+            day == self.end_date and self.end_half == "am"
+        )
+        return 0.5 if half else 1.0
+
+    @property
+    def days(self) -> float:
+        """Days off, half days counted as ½."""
+        span = (self.end_date - self.start_date).days + 1
+        cut = (self.start_half == "pm") + (self.end_half == "am")
+        return max(0.5, span - cut / 2)
 
 
 class Evidence(UUIDMixin, TimestampMixin, Base):

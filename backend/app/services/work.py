@@ -105,14 +105,15 @@ async def update(
 ) -> dict[str, Any]:
     """Fix a session's times or note (only the fields given).
 
-    Times completed or changed by hand on a tapped or imported session
-    mark it ``edited`` (the report says which times were typed).
+    Times completed or changed afterwards mark the session ``edited``
+    (the report says which times were typed; the page lists them to
+    check and fix again).
     """
     tz = await user_zone(session, user_id)
     row = await _own(session, user_id, session_id)
     before = _day(row, tz)
     given = {k: fields[k] for k in _TIMES if k in fields}
-    if given and row.source in {"tap", "import"}:
+    if given:
         row.source = "edited"
     current = {k: utc(v) if (v := getattr(row, k)) else None for k in _TIMES}
     await _apply(session, row, {**current, **fields}, tz)

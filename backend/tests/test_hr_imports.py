@@ -218,14 +218,40 @@ async def test_absences_one_day_per_record_are_joined(
     client: AsyncClient, auth: dict[str, str]
 ) -> None:
     """Like an HR API: one record per half day, a weekend in between."""
-    days = ("2026-04-09", "2026-04-09", "2026-04-10", "2026-04-13")
+    days = ("2026-04-09", "2026-04-10", "2026-04-13")
     items = [
-        {"date": f"{d}T00:00:00", "isAM": n % 2 == 0,
+        {"date": f"{d}T00:00:00", "isAM": am,
          "leaveAccount": {"name": "Congés payés"}}
-        for n, d in enumerate(days)
+        for d in days
+        for am in (True, False)
     ]  # fmt: skip
     raw = json.dumps({"data": {"items": items}}).encode()
     read = await _post(client, auth, ABSENCES, [("leaves.json", raw)])
     (period,) = read["files"][0]["preview"]
     assert (period["start"], period["end"]) == ("2026-04-09", "2026-04-13")
     assert period["kind"] == "conge"
+
+
+async def test_half_days_in_an_hr_export(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    rows = (
+        "Date de début;Début;Date de fin;Fin;Compte\n"
+        "07/05/2026;Après-midi;11/05/2026;Matin;Congés payés\n"
+    )
+    read = await _post(client, auth, ABSENCES, [("a.csv", rows.encode())])
+    (period,) = read["files"][0]["preview"]
+    assert (period["start_half"], period["end_half"]) == ("pm", "am")
+    halves = [
+        {"date": f"2026-06-{d}T00:00:00", "isAM": am,
+         "leaveAccount": {"name": "RTT"}}
+        for d, am in (("01", True), ("01", False), ("02", True))
+    ]  # fmt: skip
+    raw = json.dumps({"data": {"items": halves}}).encode()
+    read = await _post(client, auth, ABSENCES, [("rtt.json", raw)])
+    (rtt,) = read["files"][0]["preview"]
+    assert (rtt["start"], rtt["end"], rtt["end_half"]) == (
+        "2026-06-01", "2026-06-02", "am",
+    )  # fmt: skip
+    listed = (await client.get("/api/v1/absences", headers=auth)).json()
+    assert [a["days"] for a in listed] == [4.0, 1.5]

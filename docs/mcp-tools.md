@@ -412,9 +412,11 @@ Paramètres : `start` (string | null, défaut `None`), `end` (string | null, dé
 Record (or replace, with ``absence_id``) an absence.
 
 kind: arret_maladie, accident_travail, maladie_pro, conge, repos
-(RTT, récupération) or autre.
+(RTT, récupération) or autre. Half days: ``start_half`` "pm" (from
+the afternoon of the first day), ``end_half`` "am" (until noon of the
+last day); a morning off alone: same day, end_half "am".
 
-Paramètres : `start_date`* (string), `end_date`* (string), `kind` (string, défaut `arret_maladie`), `cause` (string, défaut ``), `note` (string, défaut ``), `absence_id` (string | null, défaut `None`)
+Paramètres : `start_date`* (string), `end_date`* (string), `kind` (string, défaut `arret_maladie`), `cause` (string, défaut ``), `note` (string, défaut ``), `absence_id` (string | null, défaut `None`), `start_half` (string, défaut `am`), `end_half` (string, défaut `pm`)
 
 ### `delete_absence`
 

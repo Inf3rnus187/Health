@@ -303,3 +303,46 @@ async def test_days_off_leave_the_averages_and_lower_the_target(
     assert (off_day["hours"], off_day["absence"]) == (0, "arret")
     week = next(p for p in stats["periods"] if p["days"] == 7)
     assert (week["absent_days"], week["week_average"]) == (5, None)
+
+
+async def test_half_days_off_count_half(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """A sick afternoon: half a day off, the week's target 31 h 30."""
+    bad = await client.post(
+        "/api/v1/absences",
+        json={"start_date": "2026-05-07", "end_date": "2026-05-07",
+              "start_half": "pm", "end_half": "am"},
+        headers=auth,
+    )  # fmt: skip
+    assert bad.status_code == 422  # an afternoon cannot end at noon
+    made = await client.post(
+        "/api/v1/absences",
+        json={"start_date": "2026-05-07", "end_date": "2026-05-07",
+              "start_half": "pm", "kind": "arret_maladie"},
+        headers=auth,
+    )  # fmt: skip
+    assert made.json()["days"] == 0.5
+    await client.post(
+        "/api/v1/work/sessions",
+        json={"start_at": "2026-05-07T08:00", "end_at": "2026-05-07T12:00"},
+        headers=auth,
+    )
+    fixed = await client.put(
+        f"/api/v1/absences/{made.json()['id']}",
+        json={"start_date": "2026-05-07", "end_date": "2026-05-08",
+              "start_half": "pm", "end_half": "am", "kind": "arret_maladie"},
+        headers=auth,
+    )  # fmt: skip
+    assert fixed.json()["days"] == 1.0  # Thursday afternoon, Friday morning
+    stats = (
+        await client.get(
+            "/api/v1/work/stats",
+            params={"start": "2026-05-04", "end": "2026-05-10"},
+            headers=auth,
+        )
+    ).json()
+    (week,) = stats["weeks"]
+    assert (week["absent_days"], week["target"]) == (1.0, 28)
+    assert stats["worked_while_off"] == []  # a morning worked, not off
+    assert stats["absences"][0]["days"] == 1.0

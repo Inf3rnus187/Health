@@ -45,14 +45,19 @@ async def save_absence(
     cause: str = "",
     note: str = "",
     absence_id: str | None = None,
+    start_half: str = "am",
+    end_half: str = "pm",
 ) -> Any:
     """Record (or replace, with ``absence_id``) an absence.
 
     kind: arret_maladie, accident_travail, maladie_pro, conge, repos
-    (RTT, récupération) or autre.
+    (RTT, récupération) or autre. Half days: ``start_half`` "pm" (from
+    the afternoon of the first day), ``end_half`` "am" (until noon of the
+    last day); a morning off alone: same day, end_half "am".
     """
     body = {"start_date": start_date, "end_date": end_date, "kind": kind,
-            "cause": cause, "note": note}  # fmt: skip
+            "cause": cause, "note": note, "start_half": start_half,
+            "end_half": end_half}  # fmt: skip
     if absence_id:
         return await client.request("PUT", f"/absences/{absence_id}", body=body)
     return await client.post("/absences", body)

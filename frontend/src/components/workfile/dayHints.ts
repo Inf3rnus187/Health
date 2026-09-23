@@ -1,4 +1,5 @@
 import type { IncompleteDay } from '../../api/workfile';
+import { localStamp } from '../../utils/datetime';
 
 /** A time to pick for a day to complete (``at`` empty: time unknown). */
 export interface Hint {
@@ -6,13 +7,6 @@ export interface Hint {
   label: string;
   title: string;
   at: string;
-}
-
-/** An instant as a local ``YYYY-MM-DDTHH:MM`` (datetime-local value). */
-export function localStamp(iso: string): string {
-  const at = new Date(iso);
-  at.setMinutes(at.getMinutes() - at.getTimezoneOffset());
-  return at.toISOString().slice(0, 16);
 }
 
 /** The date key ``days`` after ``day``. */
@@ -36,34 +30,8 @@ export function placeClock(row: IncompleteDay, clock: string): string {
   return stamp;
 }
 
-/** The day's proofs and traces (a stay also offers its end). */
-function evidenceHints(row: IncompleteDay): Hint[] {
-  return row.context.evidence.flatMap((e) => {
-    const title = e.title || e.label;
-    const hints: Hint[] = [
-      {
-        key: `${e.id}-at`,
-        label: `${e.label} ${e.time}`,
-        title,
-        at: e.at ? e.at.slice(0, 16) : '',
-      },
-    ];
-    if (e.end_at) {
-      const end = e.end_at.slice(0, 16);
-      const label = `fin ${e.label} ${end.slice(8, 10)}/${end.slice(5, 7)}`;
-      hints.push({
-        key: `${e.id}-end`,
-        label: `${label} ${end.slice(11)}`,
-        title,
-        at: end,
-      });
-    }
-    return hints;
-  });
-}
-
 /** Clock times from the body and from habit, for the missing half. */
-function clockHints(row: IncompleteDay): Hint[] {
+export function clockHints(row: IncompleteDay): Hint[] {
   const c = row.context;
   const start = c.missing === 'start';
   const found: [string, string | null][] = start
@@ -87,9 +55,4 @@ function clockHints(row: IncompleteDay): Hint[] {
       title: what,
       at: placeClock(row, clock),
     }));
-}
-
-/** Everything that helps choosing the missing time. */
-export function hintsOf(row: IncompleteDay): Hint[] {
-  return [...evidenceHints(row), ...clockHints(row)];
 }

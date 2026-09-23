@@ -83,6 +83,16 @@ def periods(pdf: FPDF, data: dict[str, Any]) -> None:
         table(pdf, title, _PERIOD_HEAD, [_period(p) for p in data[key]], widths)
 
 
+def _span(a: dict[str, Any]) -> str:
+    """« Arrêt maladie du 07/05/2026 après-midi au 09/05/2026 (2,5 jours) »."""
+    first = " après-midi" if a.get("start_half") == "pm" else ""
+    last = " midi" if a.get("end_half") == "am" else ""
+    return (
+        f"{a['label']} du {_d(a['start_date'])}{first} au "
+        f"{_d(a['end_date'])}{last} ({a['days']:g} jours)"
+    )
+
+
 def absences(pdf: FPDF, data: dict[str, Any]) -> None:
     """Each absence with the work done and the evidence logged inside it."""
     if not data["absences"]:
@@ -90,12 +100,7 @@ def absences(pdf: FPDF, data: dict[str, Any]) -> None:
     heading(pdf, "Arrêts et absences")
     for a in data["absences"]:
         pdf.set_font("Helvetica", "B", 10)
-        line(
-            pdf,
-            6,
-            f"{a['label']} du {_d(a['start_date'])} au "
-            f"{_d(a['end_date'])} ({a['days']} jours)",
-        )
+        line(pdf, 6, _span(a))
         pdf.set_font("Helvetica", size=10)
         for text in (
             f"Cause : {a['cause'] or '-'}",
@@ -256,6 +261,14 @@ def _period(p: dict[str, Any]) -> list[Any]:
     ]
 
 
+def _absence_note(row: dict[str, Any]) -> str:
+    """« absence », or « demi-journée d'absence »."""
+    if not row["absence"]:
+        return ""
+    half = row.get("absence_share", 1) < 1
+    return "demi-journée d'absence" if half else "absence"
+
+
 def _day(row: dict[str, Any], feasts: set[date]) -> list[Any]:
     """One journal row."""
     night = row["night"] or {}
@@ -263,7 +276,7 @@ def _day(row: dict[str, Any], feasts: set[date]) -> list[Any]:
     notes = [
         f"dont {remote:g} h à distance" if remote else "",
         "incomplète" if row["partial"] else "",
-        "absence" if row["absence"] else "",
+        _absence_note(row),
         "dimanche" if row["weekday"] == 6 else "",  # noqa: PLR2004
         "férié" if row["date"] in feasts else "",
     ]

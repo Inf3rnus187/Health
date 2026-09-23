@@ -12,3 +12,10 @@ export function shortDateTime(iso: string | null): string {
   const time = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
   return `${day}/${date.getFullYear()} ${time}`;
 }
+
+/** An instant as a local ``YYYY-MM-DDTHH:MM`` (datetime-local value). */
+export function localStamp(iso: string): string {
+  const at = new Date(iso);
+  at.setMinutes(at.getMinutes() - at.getTimezoneOffset());
+  return at.toISOString().slice(0, 16);
+}

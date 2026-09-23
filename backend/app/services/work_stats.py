@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services import work_absence, work_days, work_math
 from app.services.daily_rollup import user_zone
-from app.services.work_math import Day, summary
+from app.services.work_math import Day, Off, summary
 
 #: The periods of the short / medium / long term view.
 PERIODS = ((7, "7 jours"), (30, "30 jours"), (90, "3 mois"), (365, "1 an"))
@@ -50,7 +50,7 @@ async def stats(
 
 
 def _days(
-    inside: dict[date, Day], off: dict[date, str]
+    inside: dict[date, Day], off: dict[date, Off]
 ) -> list[dict[str, Any]]:
     """Worked days and days off, in order."""
     out = []
@@ -62,14 +62,15 @@ def _days(
                 **value._asdict(),
                 "start_text": work_math.clock_text(value.start),
                 "end_text": work_math.clock_text(value.end),
-                "absence": off.get(day),
+                "absence": off[day].kind if day in off else None,
+                "absence_share": off[day].share if day in off else 0.0,
             }
         )
     return out
 
 
 def periods(
-    days: dict[date, Day], last: date, contract: float, off: dict[date, str]
+    days: dict[date, Day], last: date, contract: float, off: dict[date, Off]
 ) -> list[dict[str, Any]]:
     """Short / medium / long term: the last 7, 30, 90 and 365 days.
 
@@ -92,7 +93,7 @@ def periods(
                 "total_hours": stats["total_hours"],
                 "days_worked": stats["days_worked"],
                 "remote_hours": stats["remote_hours"],
-                "absent_days": sum(1 for k in away if k != "ferie"),
+                "absent_days": sum(o.share for o in away if o.kind != "ferie"),
                 "week_average": (
                     round(stats["total_hours"] / (present / 5), 2)
                     if present

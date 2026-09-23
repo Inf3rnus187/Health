@@ -59,6 +59,10 @@ _WORKED = re.compile(
 )
 _SHORT = 3
 MAX_LISTED = 50
+#: A half-day flag column (one record per half day) and half-day words.
+_FLAG = re.compile(r"^(is ?am|matin|morning|demi-journee du matin)$")
+_PM = re.compile(r"apres-?midi|\bpm\b|\b1[34]h")
+_AM = re.compile(r"\bmatin\b|\bmidi\b|\bam\b|\b12h")
 
 
 class Period(NamedTuple):
@@ -69,6 +73,8 @@ class Period(NamedTuple):
     kind: str
     label: str  # the export's own name for it ("RTT", "Congés payés")
     note: str
+    start_half: str = "am"  # pm: from the afternoon
+    end_half: str = "pm"  # am: until noon
 
 
 def read(
@@ -150,13 +156,39 @@ def _period(row: Row, cols: dict[str, str]) -> tuple[Period | None, str]:
         return None, "temps travaillé (télétravail, formation…)"
     notes = [row.get(cols.get("note", ""), "").strip()]
     notes.append("en attente de validation" if _PENDING.search(status) else "")
-    return Period(
+    period = Period(
         start=first,
         end=last,
         kind=kind_of(label),
         label=label[:100],
         note=" ; ".join(n for n in notes if n)[:500],
-    ), ""
+    )
+    first_half, last_half = _halves(row, cols)
+    return period._replace(start_half=first_half, end_half=last_half), ""
+
+
+def _halves(row: Row, cols: dict[str, str]) -> tuple[str, str]:
+    """Half days: « après-midi » at the start, « matin / midi » at the end.
+
+    Read in the date cells, in columns titled « début… » / « fin… », or a
+    per-half-day flag (``isAM``: true, the morning only).
+    """
+    starts, ends, flags = [], [], []
+    for head, cell in row.items():
+        title = work_parse.fold(head)
+        if _FLAG.search(title):
+            flags.append(work_parse.fold(cell))
+        elif head == cols.get("start") or re.search(r"debut|start", title):
+            starts.append(work_parse.fold(cell))
+        elif head == cols.get("end") or re.search(r"\bfin\b|\bend", title):
+            ends.append(work_parse.fold(cell))
+    if flags and flags[0] in {"true", "1", "oui", "matin", "am"}:
+        return "am", "am"
+    if flags and flags[0] in {"false", "0", "non", "apres-midi", "pm"}:
+        return "pm", "pm"
+    afternoon = any(_PM.search(c) for c in starts)
+    noon = any(_AM.search(c) for c in ends)
+    return ("pm" if afternoon else "am"), ("am" if noon else "pm")
 
 
 def _day(text: str) -> date | None:
@@ -169,30 +201,44 @@ def _day(text: str) -> date | None:
 
 
 def _merged(found: list[Period]) -> list[Period]:
-    """Days of the same absence joined (a weekend between them too)."""
+    """Days of the same absence joined (a weekend between them too).
+
+    Two halves of one day make it whole (a morning, then an afternoon).
+    """
     out: list[Period] = []
-    for p in sorted(found, key=lambda p: (p.kind, p.label, p.start)):
+    for p in sorted(
+        found, key=lambda p: (p.kind, p.label, p.start, p.start_half)
+    ):
         last = out[-1] if out else None
         if (
             last
             and (last.kind, last.label) == (p.kind, p.label)
-            and _joins(last.end, p.start)
+            and _joins(last, p)
         ):
             notes = " ; ".join(
                 dict.fromkeys(n for n in (last.note, p.note) if n)
             )
-            out[-1] = last._replace(end=max(last.end, p.end), note=notes)
+            later = (
+                p if (p.end, p.end_half) >= (last.end, last.end_half) else last
+            )
+            out[-1] = last._replace(
+                end=later.end, end_half=later.end_half, note=notes
+            )
         else:
             out.append(p)
     return sorted(out, key=lambda p: p.start)
 
 
-def _joins(end: date, start: date) -> bool:
-    """Whether ``start`` follows ``end`` (only a weekend between)."""
-    day = end + timedelta(days=1)
-    while day < start and day.weekday() >= 5:  # noqa: PLR2004
+def _joins(last: Period, nxt: Period) -> bool:
+    """Whether ``nxt`` follows ``last`` (a weekend between at most)."""
+    if nxt.start <= last.end:
+        return True  # overlapping, or the other half of the same day
+    if last.end_half == "am" or nxt.start_half == "pm":
+        return False  # a half day missing between them
+    day = last.end + timedelta(days=1)
+    while day < nxt.start and day.weekday() >= 5:  # noqa: PLR2004
         day += timedelta(days=1)
-    return start <= day
+    return nxt.start <= day
 
 
 async def store(
@@ -236,6 +282,8 @@ def _fields(period: Period) -> dict[str, Any]:
     return {
         "start_date": period.start,
         "end_date": period.end,
+        "start_half": period.start_half,
+        "end_half": period.end_half,
         "kind": period.kind,
         "cause": period.label if period.kind == "autre" else "",
         "note": " ; ".join(p for p in (source, period.note) if p)[:2000],

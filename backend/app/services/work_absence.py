@@ -9,7 +9,7 @@ with two days of sick leave is not a short week of work.
 
 from __future__ import annotations
 
-from collections import Counter
+from collections import defaultdict
 from datetime import date, timedelta
 from typing import Any
 
@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.work import Absence
 from app.services import absences, work_legal
+from app.services.work_math import Off
 
 #: Absence kind → group shown in the numbers.
 GROUPS = {
@@ -39,36 +40,47 @@ _WEEKDAYS = 5
 _LISTED = 12
 
 
-def day_map(leaves: list[Absence], first: date, last: date) -> dict[date, str]:
-    """Each day off between ``first`` and ``last`` with its group."""
+def day_map(leaves: list[Absence], first: date, last: date) -> dict[date, Off]:
+    """Each day off between ``first`` and ``last``: its group and share.
+
+    A half day (from the afternoon, until noon) is ½; two halves of the
+    same day (a sick morning, an afternoon of leave) make a whole day.
+    """
     rank = list(LABELS)
-    out: dict[date, str] = {}
+    out: dict[date, Off] = {}
     for leave in sorted(
         leaves, key=lambda a: rank.index(GROUPS.get(a.kind, "autre"))
     ):
+        kind = GROUPS.get(leave.kind, "autre")
         day, end = max(leave.start_date, first), min(leave.end_date, last)
         while day <= end:
-            out.setdefault(day, GROUPS.get(leave.kind, "autre"))
+            held = out.get(day)
+            share = leave.day_share(day) + (held.share if held else 0.0)
+            out[day] = Off(held.kind if held else kind, min(1.0, share))
             day += timedelta(days=1)
     for year in range(first.year, last.year + 1):
         for feast in work_legal.holidays(year):
             if first <= feast <= last and feast.weekday() < _WEEKDAYS:
-                out.setdefault(feast, "ferie")
+                out.setdefault(feast, Off("ferie", 1.0))
     return dict(sorted(out.items()))
 
 
 async def days_off(
     session: AsyncSession, user_id: str, first: date, last: date
-) -> dict[date, str]:
+) -> dict[date, Off]:
     """The user's days off between two days (absences, holidays)."""
     leaves = await absences.list_absences(session, user_id, first, last)
     return day_map(leaves, first, last)
 
 
-def counts(off: dict[date, str]) -> list[dict[str, Any]]:
-    """Days off per group: calendar days and weekdays."""
-    days = Counter(off.values())
-    weekdays = Counter(k for d, k in off.items() if d.weekday() < _WEEKDAYS)
+def counts(off: dict[date, Off]) -> list[dict[str, Any]]:
+    """Days off per group: calendar days and weekdays (½ for a half)."""
+    days: dict[str, float] = defaultdict(float)
+    weekdays: dict[str, float] = defaultdict(float)
+    for day, item in off.items():
+        days[item.kind] += item.share
+        if day.weekday() < _WEEKDAYS:
+            weekdays[item.kind] += item.share
     return [
         {
             "kind": kind,
@@ -81,11 +93,12 @@ def counts(off: dict[date, str]) -> list[dict[str, Any]]:
     ]
 
 
-def present_weekdays(off: dict[date, str], first: date, last: date) -> int:
-    """Weekdays between two days that were not off."""
-    total, day = 0, first
+def present_weekdays(off: dict[date, Off], first: date, last: date) -> float:
+    """Weekdays between two days not off (a half day off: ½ present)."""
+    total, day = 0.0, first
     while day <= last:
-        total += day.weekday() < _WEEKDAYS and day not in off
+        if day.weekday() < _WEEKDAYS:
+            total += 1.0 - (off[day].share if day in off else 0.0)
         day += timedelta(days=1)
     return total
 
@@ -93,7 +106,7 @@ def present_weekdays(off: dict[date, str], first: date, last: date) -> int:
 def texts(work: dict[str, Any]) -> list[str]:
     """The days-off and remote-work lines of a report (French)."""
     parts = [
-        f"{a['label']} {a['days']} j ({a['workdays']} ouvrés)"
+        f"{a['label']} {a['days']:g} j ({a['workdays']:g} ouvrés)"
         for a in work.get("absences", [])
     ]
     out = [

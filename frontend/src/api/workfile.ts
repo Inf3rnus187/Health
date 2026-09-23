@@ -9,7 +9,15 @@ export interface Absence {
   kind: string;
   cause: string;
   note: string;
+  /** am: from the morning; pm: from the afternoon. */
+  start_half: 'am' | 'pm';
+  /** pm: until the evening; am: until noon. */
+  end_half: 'am' | 'pm';
+  /** Days off, half days as ½. */
+  days: number;
 }
+
+export type AbsenceBody = Omit<Absence, 'id' | 'days'>;
 
 export interface EvidenceItem {
   id: string;
@@ -25,6 +33,8 @@ export interface EvidenceItem {
   amount: number | null;
   meal_id: string | null;
   file_name: string | null;
+  media_type: string | null;
+  currency: string;
   sha256: string | null;
 }
 
@@ -125,8 +135,10 @@ const json = (method: string, body?: unknown): RequestInit => ({
 });
 
 export const fetchAbsences = () => api<Absence[]>('/absences');
-export const saveAbsence = (body: Omit<Absence, 'id'>) =>
+export const saveAbsence = (body: AbsenceBody) =>
   api<Absence>('/absences', json('POST', body));
+export const updateAbsence = (a: { id: string; body: AbsenceBody }) =>
+  api<Absence>(`/absences/${a.id}`, json('PUT', a.body));
 export const deleteAbsence = (id: string) =>
   api<{ detail: string }>(`/absences/${id}`, json('DELETE'));
 
@@ -148,8 +160,10 @@ export const addNight = (body: {
 export const fetchWorkHealth = (range: Range) =>
   api<WorkHealth>(`/work/health?${rangeQuery(range)}`);
 
-export const updateSession = (id: string, body: Record<string, string>) =>
-  api<WorkSession>(`/work/sessions/${id}`, json('PUT', body));
+export const updateSession = (
+  id: string,
+  body: Record<string, string | null>,
+) => api<WorkSession>(`/work/sessions/${id}`, json('PUT', body));
 export const createFileReport = (range: Range) =>
   api<{ id: string }>(
     '/reports',
@@ -189,6 +203,13 @@ export interface DayContext {
     at: string | null;
     end_at: string | null;
     time: string;
+    place: string;
+    amount: number | null;
+    currency: string;
+    description: string;
+    file_name: string | null;
+    media_type: string | null;
+    count: number;
   }[];
   wake_time: string | null;
   bedtime: string | null;

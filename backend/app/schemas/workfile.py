@@ -31,22 +31,30 @@ class AbsenceIn(BaseModel):
     kind: AbsenceKind = "arret_maladie"
     cause: str = Field(default="", max_length=4000)
     note: str = Field(default="", max_length=4000)
+    #: am: from the morning (default); pm: from the afternoon.
+    start_half: Literal["am", "pm"] = "am"
+    #: pm: until the evening (default); am: until noon.
+    end_half: Literal["am", "pm"] = "pm"
 
     @model_validator(mode="after")
     def _ordered(self) -> AbsenceIn:
-        """The end cannot come before the start."""
+        """The end cannot come before the start (half days included)."""
         if self.end_date < self.start_date:
             raise ValueError("end_date before start_date")
+        same_day = self.end_date == self.start_date
+        if same_day and (self.start_half, self.end_half) == ("pm", "am"):
+            raise ValueError("an afternoon cannot end at noon the same day")
         return self
 
 
 class AbsenceOut(AbsenceIn):
-    """A stored absence."""
+    """A stored absence (``days``: half days counted as ½)."""
 
     model_config = ConfigDict(from_attributes=True)
 
     id: str
     created_at: datetime
+    days: float
 
 
 class EvidenceUpdate(BaseModel):

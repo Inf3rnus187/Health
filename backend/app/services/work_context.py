@@ -35,6 +35,9 @@ _DAYS = (
     "dimanche",
 )
 _MORNING = 12
+#: What the viewer shows of a proof (the file itself is fetched apart).
+_SHOWN = ("place", "amount", "currency", "description", "file_name",
+          "media_type", "count")  # fmt: skip
 
 
 async def incomplete(
@@ -129,6 +132,7 @@ def _item(item: Evidence, at: datetime, end: datetime | None) -> dict[str, Any]:
         "end_at": end.isoformat() if end else None,
         "time": shown + (f" → {end:%d/%m %H:%M}" if end else ""),
         "sort": at.isoformat(),
+        **{k: getattr(item, k) for k in _SHOWN},
     }
 
 

@@ -10,6 +10,7 @@ import {
   fetchNights,
   fetchWorkHealth,
   saveAbsence,
+  updateAbsence,
   updateSession,
 } from '../api/workfile';
 import type { Range } from '../utils/range';
@@ -47,9 +48,10 @@ export function useFileAction<A>(fn: (arg: A) => Promise<unknown>) {
 
 export const useSaveAbsence = () => useFileAction(saveAbsence);
 export const useDeleteAbsence = () => useFileAction(deleteAbsence);
+export const useUpdateAbsence = () => useFileAction(updateAbsence);
 export const useDeleteEvidence = () => useFileAction(deleteEvidence);
 export const useAddNight = () => useFileAction(addNight);
 export const useCompleteSession = () =>
-  useFileAction((a: { id: string; body: Record<string, string> }) =>
+  useFileAction((a: { id: string; body: Record<string, string | null> }) =>
     updateSession(a.id, a.body),
   );

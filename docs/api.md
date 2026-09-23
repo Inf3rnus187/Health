@@ -302,10 +302,10 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | Méthode | Route | Accès | Paramètres | Rôle |
 |---|---|---|---|---|
 | GET | `/absences` | `read:all` | `start`?, `end`? | Absences overlapping two days (all by default), oldest first. |
-| POST | `/absences` | Session / hub:full | JSON `AbsenceIn` (start_date, end_date, kind, cause, note) | Record an absence (arret_maladie, accident_travail, repos…). |
+| POST | `/absences` | Session / hub:full | JSON `AbsenceIn` (start_date, end_date, kind, cause, note, start_half, end_half) | Record an absence (arret_maladie, accident_travail, repos…). |
 | POST | `/absences/import` | Session / hub:full | `dry_run`?, form `files`, form `person` | Import absences from an HR export (Lucca…: CSV, Excel, JSON). |
 | DELETE | `/absences/{absence_id}` | Session / hub:full | `absence_id` | Delete an absence (its evidence stays). |
-| PUT | `/absences/{absence_id}` | Session / hub:full | `absence_id`, JSON `AbsenceIn` (start_date, end_date, kind, cause, note) | Replace an absence's dates, kind, cause and note. |
+| PUT | `/absences/{absence_id}` | Session / hub:full | `absence_id`, JSON `AbsenceIn` (start_date, end_date, kind, cause, note, start_half, end_half) | Replace an absence's dates, kind, cause and note. |
 
 ## Dossier travail : preuves et traces
 

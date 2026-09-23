@@ -1,13 +1,11 @@
 import { useState } from 'react';
 
 import type { IncompleteDay } from '../../api/workfile';
-import { useDeleteSession } from '../../hooks/useWork';
-import { useCompleteSession, useIncomplete } from '../../hooks/useWorkFile';
-import { shortDate } from '../../utils/format';
+import { useIncomplete } from '../../hooks/useWorkFile';
 import { usePaging } from '../Paging';
-import { clockTime } from '../work/format';
-import { DayHints, ProofBadge } from './DayHints';
-import { Choice, Input } from './fields';
+import { Corrected } from './Corrected';
+import { DayCard } from './DayCard';
+import { Choice } from './fields';
 
 const SHOW: Record<string, string> = {
   all: 'Toutes',
@@ -25,81 +23,15 @@ function keep(row: IncompleteDay, show: string): boolean {
   return show === 'all' || c.missing === show;
 }
 
-function Known({ row }: { row: IncompleteDay }) {
-  return (
-    <strong>
-      {row.context.usual.weekday} {shortDate(row.date_key)} —{' '}
-      {row.start_at
-        ? `embauche ${clockTime(row.start_at)}, débauche ?`
-        : `embauche ?, débauche ${clockTime(row.end_at)}`}{' '}
-    </strong>
-  );
-}
-
-interface ActionProps {
-  row: IncompleteDay;
-  at: string;
-  note: string;
-}
-
-function Actions({ row, at, note }: ActionProps) {
-  const complete = useCompleteSession();
-  const del = useDeleteSession();
-  const field = row.context.missing === 'start' ? 'start_at' : 'end_at';
-  const body = note ? { [field]: at, note } : { [field]: at };
-  return (
-    <>
-      <button
-        className="btn"
-        disabled={!at}
-        onClick={() => complete.mutate({ id: row.id, body })}
-      >
-        Compléter
-      </button>
-      <button className="btn ghost" onClick={() => del.mutate(row.id)}>
-        Supprimer
-      </button>
-      {complete.error && (
-        <span className="error">{complete.error.message}</span>
-      )}
-    </>
-  );
-}
-
-function Fill({ row }: { row: IncompleteDay }) {
-  const [at, setAt] = useState('');
-  const [note, setNote] = useState('');
-  const label = row.context.missing === 'start' ? 'Embauche' : 'Débauche';
-  return (
-    <li>
-      <Known row={row} /> <ProofBadge row={row} />
-      <DayHints row={row} pick={setAt} />
-      <div className="quick">
-        <Input
-          label={label}
-          type="datetime-local"
-          value={at}
-          onChange={setAt}
-        />
-        <Input
-          label="D’où vient l’heure (note)"
-          value={note}
-          onChange={setNote}
-        />
-        <Actions row={row} at={at} note={note} />
-      </div>
-    </li>
-  );
-}
-
 function Help() {
   return (
     <p className="muted">
-      Embauche ou débauche non pointée (montre sans batterie, GPS muet). Cliquez
-      un indice pour pré-remplir l’heure : trace ou preuve du jour (taxi,
-      parking, ticket…), réveil, premiers / derniers pas, votre heure habituelle
-      ce jour de la semaine. Ajustez, notez d’où vient l’heure, puis « Compléter
-      » : la session est marquée corrigée à la main.
+      Embauche ou débauche non pointée (montre sans batterie, GPS muet). Pour
+      chaque journée : les preuves et traces du jour — « Voir » ouvre le reçu,
+      la facture ou la capture pour vérifier le lieu avant de choisir —, «
+      Prendre » reprend leur heure ; les repères (réveil, premiers / derniers
+      pas, heure habituelle) aussi. Ajustez, notez d’où vient l’heure, puis «
+      Compléter ». Une erreur se corrige plus bas, dans « Corrigées à la main ».
     </p>
   );
 }
@@ -118,11 +50,12 @@ export function Incomplete() {
       <Help />
       <Choice options={SHOW} value={show} onChange={setShow} />
       {bar}
-      <ul className="care-list">
+      <ul className="day-list">
         {page.map((row) => (
-          <Fill key={row.id} row={row} />
+          <DayCard key={row.id} row={row} />
         ))}
       </ul>
+      <Corrected />
     </section>
   );
 }

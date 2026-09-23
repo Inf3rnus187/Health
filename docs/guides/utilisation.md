@@ -192,13 +192,17 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
   session est ouverte est ignorée.
 - **Journées à compléter** : toutes les sessions incomplètes (la plus
   récente d'abord), avec « **preuve présente** » ou « sans preuve » et
-  un filtre (avec / sans preuve, embauche ou débauche manquante). Pour
-  retrouver l'heure vous-même, chaque journée propose des **indices
-  cliquables** :
-  - les **preuves et traces du jour** (parking 07:40 → 21:50, ticket,
-    appel…) ; pour une débauche manquante, aussi celles du **lendemain
+  un filtre (avec / sans preuve, embauche ou débauche manquante). Chaque
+  journée est une fiche : ce qui est connu (« Embauche 08:40 · Débauche
+  ? à compléter »), puis de quoi retrouver l'heure vous-même :
+  - les **preuves et traces du jour**, en tableau (type, heure, détail,
+    montant) ; pour une débauche manquante, aussi celles du **lendemain
     matin** (le taxi de 03:47) ; un séjour qui couvre le jour (hôtel,
-    parking de plusieurs jours) propose aussi sa fin ;
+    parking de plusieurs jours) propose aussi sa fin. **« Voir »** ouvre
+    la preuve par-dessus la page — le reçu ou la facture (PDF, aussi dans
+    un onglet), la capture, le lieu, le montant, le détail — pour
+    vérifier par exemple d'où partait le VTC avant de choisir ;
+    « Prendre 23:52 » / « Prendre la fin » reprennent son heure ;
   - le **réveil** et les **premiers pas** du jour (embauche manquante),
     les **derniers pas** et le **coucher** (débauche manquante) ;
   - votre heure **habituelle ce jour de la semaine** (« habituel le
@@ -208,8 +212,14 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
   Un clic pré-remplit l'heure (placée le lendemain si elle tombe avant
   l'embauche : 01:30 après une embauche à 08:00) ; ajustez-la, notez
   **d'où vient l'heure**, puis « Compléter ». Le hub ne choisit jamais
-  seul. La session est marquée « complétée à la main » (le rapport dit
+  seul. La session est marquée « corrigée à la main » (le rapport dit
   quelles heures ont été saisies).
+- **Une erreur se corrige** : sous les journées à compléter, « **Corrigées
+  à la main** » liste toutes les sessions complétées ou modifiées après
+  coup ; « Modifier » rouvre l'embauche, la débauche, le lieu (sur place /
+  à distance) et la note, avec les preuves du jour (« Voir », « →
+  embauche », « → débauche »). Vider une heure remet la journée à
+  compléter. Même « Modifier » sur chaque ligne des Sessions.
 - **Valeurs du jour**, comme toute mesure (courbes, Données, tableaux de
   bord, exports, rapports) : `work.hours` (heures des sessions
   complètes, à distance comprise), `work.remote_hours` (la part à
@@ -249,9 +259,11 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
 - **Exporter** la période par jour, semaine, mois ou session, en CSV,
   Excel ou JSON ; **Rapport PDF** des heures (aussi dans Rapports ›
   « Heures travaillées »).
-- **Sessions** de la période (30 jours par défaut), page par page :
-  vérifier, ajouter une session oubliée (l'embauche, la débauche ou les
-  deux), supprimer.
+- **Sessions** de la période (30 jours par défaut), page par page, avec
+  un filtre (corrigées à la main, à distance, incomplètes) : vérifier,
+  ajouter une session oubliée (l'embauche, la débauche ou les deux),
+  **modifier** (heures, lieu, note, avec les preuves du jour),
+  supprimer (après confirmation).
 - « **Au travail depuis** » ne concerne qu'une embauche de moins de 16 h :
   une embauche ancienne jamais close est une journée à compléter et ne
   bloque plus le bouton « Embauche maintenant ».
@@ -264,7 +276,13 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
   « work_health » via l'API ou l'assistant).
 - **Arrêts et absences** : arrêt maladie, accident du travail, maladie
   professionnelle, congés, **repos** (RTT, récupération), autre — dates,
-  **cause**, notes ; ou importées de votre outil RH (voir Importer). Le rapport
+  **cause**, notes ; ou importées de votre outil RH (voir Importer).
+  **Demi-journées** : « Du 07/05 à partir de l'après-midi » et / ou « au
+  08/05 jusqu'à midi » ; une matinée seule : même jour, « jusqu'à midi ».
+  Une demi-journée compte ½ partout (jours d'absence, objectif de la
+  semaine : 31 h 30 au lieu de 35 h ; travailler l'autre moitié n'est pas
+  « travailler pendant une absence »). **« Modifier »** rouvre une
+  absence ; supprimer demande confirmation. Le rapport
   liste pour chacun le **travail pointé pendant l'arrêt** et les **preuves
   datées pendant l'arrêt** (appels, dont le dimanche).
 - **Preuves et traces**. Preuves : appel, SMS, mail, capture d'écran,

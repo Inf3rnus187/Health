@@ -72,7 +72,7 @@ async def gather(
 
 def _assemble(
     rows: list[WorkSession],
-    worked: tuple[dict[date, work_math.Day], dict[date, str]],
+    worked: tuple[dict[date, work_math.Day], dict[date, work_math.Off]],
     table: list[dict[str, Any]],
     contract: float,
     tz: ZoneInfo,
@@ -139,9 +139,8 @@ def _row(
         "end": work.end if work else None,
         "night": sleep_nights.as_dict(night) if night else None,
         "health": {k: v[day] for k, v in health.items() if day in v},
-        "absence": next(
-            (a.kind for a in leaves if a.start_date <= day <= a.end_date), None
-        ),
+        "absence": next((a.kind for a in leaves if a.day_share(day)), None),
+        "absence_share": max((a.day_share(day) for a in leaves), default=0),
     }
 
 
@@ -178,6 +177,10 @@ def _sources(
     }
 
 
+#: An absence's span: days, half days, length.
+_SPAN = ("start_date", "end_date", "start_half", "end_half", "days")
+
+
 def _absence(
     leave: Absence,
     table: list[dict[str, Any]],
@@ -192,9 +195,7 @@ def _absence(
     calls = [e for e in proofs if e.kind == "appel"]
     return {
         "id": leave.id,
-        "start_date": leave.start_date,
-        "end_date": leave.end_date,
-        "days": (leave.end_date - leave.start_date).days + 1,
+        **{k: getattr(leave, k) for k in _SPAN},
         "kind": leave.kind,
         "label": absences.KINDS.get(leave.kind, leave.kind),
         "cause": leave.cause,
