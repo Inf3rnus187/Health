@@ -12,6 +12,7 @@ from app.services.apple_health import hk_catalog
 _HUB = {
     "bio": "Biologie",
     "liver": "Foie (FibroScan)",
+    "elimination": "Élimination (urine)",
     "profile": "Profil",
     "vitals": "Signes vitaux",
     "fitness": "Forme physique",

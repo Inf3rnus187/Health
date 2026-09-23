@@ -23,3 +23,13 @@ async def reconcile_data(ctx: dict[str, Any], user_id: str) -> str:
     async with SessionFactory() as session:
         await reconcile.run(session, user_id)
     return user_id
+
+
+async def analyze_meal(ctx: dict[str, Any], meal_id: str) -> str:
+    """Read a meal (photo → foods → checked nutrients, assessment)."""
+    from app.core.db import SessionFactory
+    from app.services import meal_ai
+
+    async with SessionFactory() as session:
+        await meal_ai.run(session, meal_id)
+    return meal_id

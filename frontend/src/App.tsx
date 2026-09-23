@@ -8,6 +8,7 @@ import { DataPage } from './pages/DataPage';
 import { HealthPage } from './pages/HealthPage';
 import { HomePage } from './pages/HomePage';
 import { ImportPage } from './pages/ImportPage';
+import { JournalPage } from './pages/JournalPage';
 import { LoginPage } from './pages/LoginPage';
 import { MedicalPage } from './pages/MedicalPage';
 import { PhotosPage } from './pages/PhotosPage';
@@ -22,6 +23,7 @@ function AppRoutes() {
         <Route path="sante" element={<HealthPage />} />
         <Route path="donnees" element={<DataPage />} />
         <Route path="dossier" element={<MedicalPage />} />
+        <Route path="journal" element={<JournalPage />} />
         <Route path="photos" element={<PhotosPage />} />
         <Route path="suivi" element={<CarePage />} />
         <Route path="rapports" element={<ReportsPage />} />

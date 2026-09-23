@@ -20,6 +20,7 @@ from app.models.health_raw import (
     Workout,
 )
 from app.models.mapping import IngestMapping
+from app.models.meal import Meal
 from app.models.measurement import Measurement
 from app.models.medical import (
     Appointment,
@@ -49,6 +50,7 @@ __all__ = [
     "HealthSample",
     "ImportJob",
     "IngestMapping",
+    "Meal",
     "Measurement",
     "MedicalDocument",
     "MetricDefinition",

@@ -1429,3 +1429,116 @@ a.tile:hover {
   display: grid;
   gap: 2px;
 }
+
+/* Journal: pee log, meal form and meal cards */
+.chips {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 2px 4px 2px 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip-x {
+  border: none;
+  background: none;
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.meal-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.meal-form .meal-text,
+.meal-form .meal-file {
+  grid-column: 1 / -1;
+}
+
+.meal-text {
+  font: inherit;
+  resize: vertical;
+}
+
+.meal-day h3 {
+  margin: 0;
+}
+
+.meal-file {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--color-muted);
+}
+
+.meal-day {
+  border-top: 1px solid var(--color-grid);
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+.meal-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 10px 0;
+}
+
+.meal-photo {
+  width: 180px;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  object-fit: cover;
+}
+
+.meal-body {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.meal-body h3 {
+  margin: 0 0 4px;
+}
+
+.meal-remarks {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0;
+}
+
+.nutri-table td {
+  padding: 1px 12px 1px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.small {
+  font-size: 0.8em;
+}
+
+.badge-warn {
+  background: var(--color-warn-bg);
+  color: var(--color-warn);
+}
+
+.badge-high {
+  background: var(--color-high-bg);
+  color: var(--color-high);
+}

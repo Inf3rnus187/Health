@@ -3,7 +3,7 @@
 Le serveur MCP donne à un assistant (Claude Desktop, Claude Code, tout
 client MCP) **l'accès à tout le hub** : données Apple Santé, Dossier,
 Suivi, documents et leur texte, marqueurs, poids, photos, rapports avec
-synthèse, automatisations — 53 outils, listés avec leurs paramètres dans
+synthèse, automatisations — 62 outils, listés avec leurs paramètres dans
 [`mcp-tools.md`](../mcp-tools.md). Chaque outil appelle l'API REST : il voit
 exactement ce que voient les pages.
 

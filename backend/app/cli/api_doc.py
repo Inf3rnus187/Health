@@ -12,7 +12,7 @@ from __future__ import annotations
 import inspect
 import sys
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, get_args
 
 from fastapi import FastAPI
 from fastapi.dependencies.models import Dependant
@@ -52,6 +52,8 @@ SECTIONS = {
     "reports": "Rapports",
     "export": "Export",
     "automations": "Automatisations",
+    "journal": "Journal (pipi, repas)",
+    "meals": "Journal (pipi, repas)",
 }
 _INTRO = """# Référence de l'API
 
@@ -184,9 +186,14 @@ def _params(dependant: Dependant) -> str:
 def _body(param: Any) -> str:
     """A body parameter: a JSON model (its fields) or a form field."""
     kind = param.field_info.annotation
+    options = [a for a in get_args(kind) if a is not type(None)]
+    optional = len(options) == 1
+    if optional:  # Model | None: an optional JSON body
+        kind = options[0]
     if inspect.isclass(kind) and issubclass(kind, BaseModel):
         fields = ", ".join(kind.model_fields)
-        return f"JSON `{kind.__name__}` ({fields})"
+        mark = "?" if optional else ""
+        return f"JSON `{kind.__name__}`{mark} ({fields})"
     if param.alias == "body":
         return "JSON libre"
     return f"form `{param.alias}`"

@@ -19,6 +19,7 @@ import uvicorn
 from phoenix_mcp import (  # noqa: F401 - importing registers the tools
     tools_body,
     tools_data,
+    tools_journal,
     tools_record,
     tools_reports,
 )

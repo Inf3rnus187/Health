@@ -5,6 +5,7 @@ const LINKS = [
   { to: '/dashboards', label: 'Tableaux de bord', end: false },
   { to: '/sante', label: 'Santé', end: false },
   { to: '/donnees', label: 'Données', end: false },
+  { to: '/journal', label: 'Journal', end: false },
   { to: '/dossier', label: 'Dossier', end: false },
   { to: '/photos', label: 'Photos', end: false },
   { to: '/suivi', label: 'Suivi', end: false },

@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-53 outils.
+62 outils.
 
 ## Données et métriques
 
@@ -216,6 +216,66 @@ Paramètres : `appointment_id`* (string)
 Observations of the imported CDA record (Mon espace santé).
 
 Paramètres : `search` (string | null, défaut `None`), `limit` (integer, défaut `50`), `offset` (integer, défaut `0`)
+
+## Journal : pipi et repas
+
+### `log_urination`
+
+Record one urination (now, or ``at`` ISO date-time with offset).
+
+Paramètres : `at` (string | null, défaut `None`)
+
+### `list_urinations`
+
+A day's urinations (default today): count and times.
+
+Paramètres : `day` (string | null, défaut `None`)
+
+### `delete_urination`
+
+Delete one urination entry.
+
+Paramètres : `entry_id`* (string)
+
+### `log_meal`
+
+Log a meal, then the AI reads it (minutes; poll get_meal).
+
+meal_type: breakfast, lunch, snack or dinner. The description is
+authoritative (quantities, cooking, no fat…); an optional photo helps
+estimate portions. Nutrients go to Apple's nutrition metrics.
+
+Paramètres : `description`* (string), `meal_type` (string, défaut `lunch`), `eaten_at` (string | null, défaut `None`), `photo_base64` (string | null, défaut `None`), `photo_filename` (string, défaut `repas.jpg`)
+
+### `list_meals`
+
+Meals with their reading (default: last 7 days).
+
+Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`)
+
+### `get_meal`
+
+One meal: foods, checked nutrients, score, verdict, remarks.
+
+Paramètres : `meal_id`* (string)
+
+### `update_meal`
+
+Correct a meal (text, type, time); it is read again.
+
+Paramètres : `meal_id`* (string), `description` (string | null, défaut `None`), `meal_type` (string | null, défaut `None`), `eaten_at` (string | null, défaut `None`)
+
+### `analyze_meal`
+
+Read a meal again with the current models.
+
+Paramètres : `meal_id`* (string)
+
+### `delete_meal`
+
+Delete a meal, its photo and its nutrients.
+
+Paramètres : `meal_id`* (string)
 
 ## Évolution, photos, données Apple
 

@@ -19,6 +19,8 @@ other sources). Required token scope per route:
 | Watch / HealthKit samples | `POST /ingest/watch` | `ingest:watch` |
 | CPAP | `POST /ingest/ppc` | `ingest:ppc` |
 | Progress photos | `POST /ingest/photo` | `ingest:photo` |
+| Pee (one tap, now or `{"at": …}`) | `POST /journal/urination` | `write:measurements` (+ `?token=`) |
+| Meal (description + photo, AI reading) | `POST /meals` (multipart) | `write:measurements` (+ `?token=`) |
 | Any script | `POST /measurements` | `write:measurements` |
 
 ## Health Auto Export (JSON)

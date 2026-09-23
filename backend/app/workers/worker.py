@@ -12,7 +12,7 @@ from arq.connections import RedisSettings
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
-from app.workers.jobs import analyze_document, reconcile_data
+from app.workers.jobs import analyze_document, analyze_meal, reconcile_data
 
 _log = get_logger("worker")
 
@@ -64,13 +64,14 @@ async def _startup(ctx: dict[str, Any]) -> None:
 
 
 async def _resume_documents() -> None:
-    """Re-queue document readings a previous worker left unfinished."""
+    """Re-queue document / meal readings a previous worker left unfinished."""
     from app.core.db import SessionFactory
-    from app.services import document_ai
+    from app.services import document_ai, meal_ai
 
     try:
         async with SessionFactory() as session:
             resumed = await document_ai.requeue_stale(session)
+            resumed += await meal_ai.requeue_stale(session)
     except Exception as exc:  # noqa: BLE001 - never block the worker boot
         _log.warning("resume_documents_failed", error=str(exc))
         return
@@ -84,6 +85,7 @@ class WorkerSettings:
         ping,
         analyze_photo,
         analyze_document,
+        analyze_meal,
         reconcile_data,
         generate_report,
         import_apple_health_job,

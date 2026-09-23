@@ -12,7 +12,7 @@ from app.services.textfold import fold
 
 # fmt: off
 _LIVER = ("liver.cap", "liver.lsm", "bio.alat", "bio.asat", "bio.ggt", "bio.triglycerides", "body.weight", "body.waist")
-_GLUCOSE = ("bio.hba1c", "bio.glycemie", "body.weight", "body.waist", "bio.triglycerides")
+_GLUCOSE = ("bio.hba1c", "bio.glycemie", "body.weight", "body.waist", "bio.triglycerides", "nutrition.energy", "elimination.urination")
 _LIPIDS = ("bio.cholesterol_ldl", "bio.cholesterol_hdl", "bio.cholesterol_non_hdl", "bio.cholesterol_total", "bio.triglycerides")
 _BREATH = ("symptom.breath", "symptom.cough", "body.spo2", "body.resp_rate", "habit.cigarettes")
 
@@ -23,7 +23,7 @@ LINKS: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("dyslipidemie", "cholesterol", "hypercholesterolemie", "triglyceride", "hypertriglyceridemie"), _LIPIDS),
     (("obesite", "surpoids", "syndrome metabolique"), ("body.weight", "body.waist", "body.bmi", "body.fat_pct", "bio.hba1c", "bio.triglycerides")),
     (("hypertension", "hta", "tension arterielle"), ("vitals.bp_systolic", "vitals.bp_diastolic", "rest.hr", "body.weight", "bio.potassium", "bio.creatinine")),
-    (("apnee", "saos", "sahos", "sas "), ("ppc.ahi", "ppc.hours_used", "ppc.leak_median", "body.spo2", "state.fatigue", "body.weight")),
+    (("apnee", "saos", "sahos", "sas "), ("ppc.ahi", "ppc.hours_used", "ppc.leak_median", "body.spo2", "state.fatigue", "body.weight", "elimination.urination")),
     (("tabac", "tabagisme", "fumeur", "nicotin", "sevrage tabagique"), ("habit.cigarettes", "habit.urges_broken", "symptom.breath", "symptom.cough", "body.spo2")),
     (("bpco", "asthme", "emphyseme", "bronch", "insuffisance respiratoire", "dyspnee"), _BREATH),
     (("cardiaque", "coronar", "infarctus", "fibrillation", "arythmie", "insuffisance cardiaque"), ("heart.rate", "rest.hr", "heart.hrv", "vitals.bp_systolic", "vitals.bp_diastolic", "body.weight", "fitness.vo2max")),

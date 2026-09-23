@@ -13,13 +13,20 @@ import sys
 from types import ModuleType
 from typing import Any
 
-from phoenix_mcp import tools_body, tools_data, tools_record, tools_reports
+from phoenix_mcp import (
+    tools_body,
+    tools_data,
+    tools_journal,
+    tools_record,
+    tools_reports,
+)
 from phoenix_mcp.app import mcp
 
 #: Tool module → section title, in reading order.
 SECTIONS: tuple[tuple[ModuleType, str], ...] = (
     (tools_data, "Données et métriques"),
     (tools_record, "Dossier médical, Suivi, documents"),
+    (tools_journal, "Journal : pipi et repas"),
     (tools_body, "Évolution, photos, données Apple"),
     (tools_reports, "Rapports, automatisations, accès direct"),
 )

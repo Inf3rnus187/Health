@@ -260,3 +260,18 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | GET | `/automations/{automation_id}` | Session / hub:full | `automation_id` | Return one automation. |
 | PATCH | `/automations/{automation_id}` | Session / hub:full | `automation_id`, JSON `AutomationUpdate` (name, action, is_active) | Update an automation's name, action or active flag. |
 | POST | `/automations/{automation_id}/run` | `write:measurements` | `automation_id` | Execute an automation's action and return a result summary. |
+
+## Journal (pipi, repas)
+
+| Méthode | Route | Accès | Paramètres | Rôle |
+|---|---|---|---|---|
+| GET | `/journal/urination` | `read:all` | `day`? | A day's urinations (default today) with their times. |
+| POST | `/journal/urination` | `write:measurements` + ?token= | JSON `UrinationIn`? (at) | Record one urination (now unless ``at`` is given). |
+| DELETE | `/journal/urination/{sample_id}` | `write:measurements` | `sample_id` | Delete one urination entry. |
+| GET | `/meals` | `read:all` | `start`?, `end`? | Meals between two days (default: the last 7 days), newest first. |
+| POST | `/meals` | `write:measurements` + ?token= | form `meal_type`, form `eaten_at`, form `description`, form `file` | Log a meal (photo and/or description), then read it with the AI. |
+| DELETE | `/meals/{meal_id}` | `write:measurements` | `meal_id` | Delete a meal, its photo and its nutrients. |
+| GET | `/meals/{meal_id}` | `read:all` | `meal_id` | One meal with its reading. |
+| PUT | `/meals/{meal_id}` | `write:measurements` | `meal_id`, JSON `MealUpdate` (meal_type, eaten_at, description) | Change type, time or description, then read the meal again. |
+| POST | `/meals/{meal_id}/analyze` | `write:measurements` | `meal_id` | Read the meal again with the current models. |
+| GET | `/meals/{meal_id}/photo` | `read:all` | `meal_id` | The meal's photo (JPEG, EXIF removed). |

@@ -49,6 +49,35 @@ GPX), observations du dossier CDA importé.
 - **Une mesure en détail** : choisir une métrique → graphique + chiffres.
 - **Données brutes** : relevés paginés, filtrables par métrique et dates.
 
+## Journal
+
+Ce qu'Apple Santé n'enregistre pas : **pipi** et **repas**.
+
+- **Pipi** : « Pipi maintenant » (ou une autre heure du jour) ; la liste des
+  heures du jour, supprimables. Chaque miction est horodatée ; la valeur
+  du jour (`elimination.urination`) est le nombre de mictions — courbes,
+  tableaux de bord, Suivi (diabète, apnée du sommeil) et rapports la
+  voient comme toute autre mesure.
+- **Ajouter un repas** : type (petit-déjeuner, déjeuner, collation, dîner),
+  date et heure, **description** (quantités, cuisson, « sans huile ni
+  beurre »…) et **photo** facultative (sur téléphone, l'appareil photo
+  s'ouvre). La photo est nettoyée (EXIF et GPS retirés), redimensionnée et
+  chiffrée si le chiffrement est activé.
+- **Analyse IA du repas** (une à quelques minutes) : aliments et
+  quantités, **nutriments** (énergie, protéines, glucides dont sucres,
+  lipides dont saturés, fibres, sodium), **note 0–10**, verdict, points
+  positifs et à surveiller **pour vos maladies déclarées** (stéatose,
+  diabète…). Voir le [guide IA](ia-medicale.md#repas).
+- Les nutriments d'un repas rejoignent les **mêmes mesures nutrition
+  qu'Apple Santé** (`nutrition.energy`, protéines, glucides…) ; modifier,
+  réanalyser ou supprimer le repas remplace ou retire exactement ses
+  nutriments.
+- **Repas des 7 derniers jours**, groupés par jour avec le total du jour.
+
+Depuis l'iPhone, un Raccourci « Pipi » en un appui :
+`POST https://<hub>/api/v1/journal/urination?token=<jeton write:measurements>`
+(corps vide = maintenant).
+
 ## Dossier
 
 - **À confirmer — lu dans vos documents** : diagnostics et médicaments que
@@ -134,4 +163,6 @@ GPX), observations du dossier CDA importé.
 | Suivre une maladie | Suivi › déclarer la maladie (ou la confirmer depuis « À confirmer »). |
 | Un rapport pour le médecin | Rapports › « Synthèse clinique IA » › Générer, puis Télécharger. |
 | Compter mes cigarettes | Raccourci iPhone : `POST /api/v1/sync/tally?token=<jeton write:measurements>` avec `{"metric":"habit.cigarettes"}` — chaque appui ajoute 1 au total du jour (`amount` pour un autre pas). |
+| Noter un pipi | Journal › « Pipi maintenant », ou le Raccourci iPhone ci-dessus. |
+| Noter un repas et savoir s'il était sain | Journal › Ajouter un repas (description + photo) › l'analyse s'affiche sous le repas. |
 | Vérifier que tout concorde | Données › Tout ce qui est enregistré. |

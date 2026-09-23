@@ -14,6 +14,7 @@ from phoenix_mcp import (
     client,
     server,  # noqa: F401 - importing registers every tool
     tools_data,
+    tools_journal,
     tools_record,
     tools_reports,
 )
@@ -166,3 +167,11 @@ async def test_the_callers_hub_token_is_checked_and_used() -> None:
     assert used == ["full", "full"]
     assert api_calls.count("full") == 1
     assert client.REQUEST_TOKEN.get() is None  # reset after the request
+
+
+async def test_a_meal_is_sent_as_a_form_with_its_photo() -> None:
+    seen = _capture()
+    await tools_journal.log_meal("salade, poulet", photo_base64="SGVsbG8=")
+    body = seen[0].content
+    assert seen[0].url.path == "/api/v1/meals"
+    assert b"salade, poulet" in body and b'filename="repas.jpg"' in body

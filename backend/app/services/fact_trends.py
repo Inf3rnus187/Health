@@ -25,6 +25,8 @@ INDICATORS = (
     "sleep.asleep",
     "fitness.vo2max",
     "habit.cigarettes",
+    "nutrition.energy",
+    "elimination.urination",
     "ppc.ahi",
     "ppc.hours_used",
     "state.fatigue",

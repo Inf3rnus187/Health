@@ -74,6 +74,28 @@ renvoie le texte exact que l'IA a lu — pour vérifier une extraction.
 
 Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
 
+## Repas
+
+1. **Photo** (facultative) → le modèle de vision (`OLLAMA_VISION_MODEL`)
+   liste les aliments et estime les portions en grammes. **Votre
+   description fait foi** (quantités, cuisson, absence de matière grasse).
+2. **Modèle texte** (`OLLAMA_TEXT_MODEL`) → nutriments de chaque aliment
+   (valeurs de référence Ciqual ramenées à la quantité), puis un avis
+   **pour vos maladies déclarées** : note 0–10, verdict, points positifs,
+   points à surveiller. Aucune posologie ni prescription.
+3. **Contrôle** (code, pas d'IA) : un aliment est **écarté**, avec sa
+   raison, si c'est physiquement impossible — quantité nulle ou > 1,5 kg,
+   nutriments plus lourds que l'aliment, sucres > glucides, saturés >
+   lipides, sodium impossible. L'**énergie est recalculée** depuis les
+   macronutriments (4 kcal/g protéines et glucides, 9 lipides, 2 fibres) :
+   les totaux sont cohérents par construction.
+4. Les totaux deviennent des relevés `meal` à l'heure du repas, dans les
+   mesures nutrition d'Apple Santé ; ce sont des **estimations**
+   (±20–30 % typiquement sur les portions), affichées comme telles.
+
+Statuts et délai : comme les documents (en attente → en cours → lu /
+échec), 15 minutes maximum ; relancé après un redémarrage du worker.
+
 ## Photos (méthode v2)
 
 - Contrôle qualité automatique (luminosité, netteté, résolution) : une

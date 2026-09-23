@@ -99,7 +99,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   removed and listed with the reason. Shown on the Rapports page (hover
   a reference to read the fact) and at the top of the clinical PDF, with
   the facts in an annex. A model failure is reported, never hidden.
-- **MCP server covers the whole hub** (53 tools): data and metrics
+- **MCP server covers the whole hub** (62 tools): data and metrics
   (overview, samples, trends, inventory, reconcile, entries), the record
   (Dossier, Suivi, documents and the text the AI read, conditions,
   treatments, appointments, CDA), markers, weight / photo evolution,
@@ -111,6 +111,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - MCP `streamable-http` transport (now the compose default) answers each
   request with plain JSON and needs no session, so a single `curl` can
   list the tools or call one.
+- **Journal** page: what Apple Health does not record.
+  - *Pee log*: one tap (web or iPhone Shortcut with `?token=`) = one timed
+    entry; the daily count (`elimination.urination`) is a metric like any
+    other (charts, Suivi for diabetes / sleep apnoea, reports).
+  - *Meals*: type (breakfast, lunch, snack, dinner), time, description and
+    an optional photo (EXIF / GPS removed). The AI reads them: foods and
+    portions (vision model, the description takes precedence), nutrients
+    per food and an assessment for the declared conditions (text model:
+    score 0–10, verdict, positives, points to watch). Impossible foods are
+    dropped with the reason and energy is recomputed from the macros. The
+    totals go into Apple's nutrition metrics as `meal` samples; editing,
+    re-reading or deleting a meal replaces or removes exactly them.
+  - API `/journal/urination`, `/meals`; 9 new MCP tools (62 in all).
 - `GET /medical/documents/{id}/text`: the text the AI reads from a
   document (OCR for scans), to check an extraction against its source.
 - **Documentation** (French guides): configuration (every variable, tokens
