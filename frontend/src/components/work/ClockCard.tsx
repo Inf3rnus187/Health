@@ -1,5 +1,10 @@
 import type { Place, WorkSession } from '../../api/work';
-import { useClock, useWorkStats } from '../../hooks/useWork';
+import {
+  useClock,
+  useDeleteSession,
+  useWorkSessions,
+  useWorkStats,
+} from '../../hooks/useWork';
 import { localToday } from '../../utils/format';
 import { clockTime, hm } from './format';
 
@@ -49,6 +54,51 @@ function Buttons({ open }: { open: WorkSession | null }) {
   );
 }
 
+function said(s: WorkSession): string {
+  const start = s.start_at ? clockTime(s.start_at) : '?';
+  const end = s.end_at
+    ? clockTime(s.end_at)
+    : s.status === 'open'
+      ? 'en cours'
+      : '?';
+  const place = s.place === 'remote' ? 'À distance' : 'Sur place';
+  return `${place} ${start} → ${end}`;
+}
+
+/** One of today's clockings, with « Supprimer » (a wrong tap, a test). */
+function Today({ s }: { s: WorkSession }) {
+  const del = useDeleteSession();
+  const drop = () =>
+    window.confirm(`Supprimer ce pointage (${said(s)}) ?`) && del.mutate(s.id);
+  return (
+    <li className="quick">
+      <span>
+        {said(s)}
+        {s.hours != null && ` · ${hm(s.hours)}`}
+      </span>
+      <button className="btn ghost" onClick={drop}>
+        Supprimer
+      </button>
+    </li>
+  );
+}
+
+/** Today's clockings (and one still open since yesterday). */
+function Clockings({ open }: { open: WorkSession | null }) {
+  const today = localToday();
+  const list = useWorkSessions({ start: today, end: today }).data ?? [];
+  const all =
+    open && !list.some((s) => s.id === open.id) ? [open, ...list] : list;
+  if (all.length === 0) return null;
+  return (
+    <ul className="care-list">
+      {all.map((s) => (
+        <Today key={s.id} s={s} />
+      ))}
+    </ul>
+  );
+}
+
 /** Clock in / out now, and where the day stands. */
 export function ClockCard() {
   const today = localToday();
@@ -64,6 +114,7 @@ export function ClockCard() {
           : 'Pas en poste.'}
       </p>
       <Buttons open={open} />
+      <Clockings open={open} />
     </section>
   );
 }

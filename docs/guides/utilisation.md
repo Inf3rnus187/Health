@@ -38,7 +38,9 @@ domaine) et les **filtres** (« Tous les jours », type de preuve,
 recherche, niveau d'export, type de rapport). Une période qui allait
 jusqu'à aujourd'hui (« 30 j », « Tout », « du 01/09 à aujourd'hui »)
 avance avec les jours ; une période passée (« du 01/03 au 31/03 ») reste
-telle quelle. Ces choix sont gardés dans ce navigateur seulement.
+telle quelle ; une période qui s'arrête avant aujourd'hui le dit (« La
+période s'arrête le 08/09/2026 ») avec « Jusqu'à aujourd'hui ». Ces
+choix sont gardés dans ce navigateur seulement.
 
 ## Accueil
 
@@ -349,9 +351,15 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
 - **Exporter** la période par jour, semaine, mois ou session, en CSV,
   Excel ou JSON ; **Rapport PDF** des heures (aussi dans Rapports ›
   « Heures travaillées »).
+- **Pointages du jour** : sous les boutons d'embauche et de débauche,
+  la carte « Travail — aujourd'hui » liste les pointages du jour
+  (« À distance 21:45 → en cours ») avec « **Supprimer** » : un clic de
+  trop ou un essai s'annule là, après confirmation.
 - **Sessions** de la période (30 jours par défaut), page par page, avec
-  un filtre (corrigées à la main, à distance, incomplètes) : vérifier,
-  ajouter une session oubliée (l'embauche, la débauche ou les deux),
+  un filtre (corrigées à la main, à distance, incomplètes), en tableau
+  (jour, embauche, débauche, durée, lieu, origine) : vérifier,
+  « **+ Ajouter une session** » oubliée dans un cadre à part (embauche,
+  débauche — vide : à compléter —, lieu sur place ou à distance),
   **modifier** (heures, lieu, note, avec les preuves du jour),
   supprimer (après confirmation), ou en cocher plusieurs pour les
   supprimer d'un coup (voir « Supprimer plusieurs éléments à la fois »).

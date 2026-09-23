@@ -49,6 +49,10 @@ function Editing(props: { row: WorkSession; done: () => void }) {
   );
 }
 
+function Remote() {
+  return <span className="badge">à distance</span>;
+}
+
 /** One session, ticked or not; « Modifier » opens its editor in place. */
 export function SessionRow({ row, sel }: { row: WorkSession; sel: Selection }) {
   const [editing, setEditing] = useState(false);
@@ -62,9 +66,7 @@ export function SessionRow({ row, sel }: { row: WorkSession; sel: Selection }) {
       <td>{row.start_at ? clockTime(row.start_at) : '? à compléter'}</td>
       <td>{end(row)}</td>
       <td>{hm(row.hours)}</td>
-      <td>
-        {row.place === 'remote' && <span className="badge">à distance</span>}
-      </td>
+      <td>{row.place === 'remote' ? <Remote /> : 'sur place'}</td>
       <td className="muted" title={row.note}>
         {SOURCE[row.source] ?? row.source}
       </td>

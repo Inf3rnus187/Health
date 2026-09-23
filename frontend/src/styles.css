@@ -1703,3 +1703,78 @@ img.viewer-file {
   border: 1px dashed var(--color-border);
   border-radius: var(--radius);
 }
+
+/* A card title with its main action on the right. */
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 8px;
+}
+
+.card-head h2 {
+  margin: 0;
+}
+
+/* A form that adds something, framed apart from the list below it. */
+.form-box {
+  margin: 8px 0 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+}
+
+.form-box h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.field .input {
+  width: auto;
+  margin: 0;
+}
+
+/* The list's own controls (period, filter) on one band. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.toolbar .tabs {
+  margin-bottom: 0;
+}
+
+.toolbar .input {
+  width: auto;
+  margin: 0;
+}
+
+.notice {
+  width: 100%;
+  margin: 0;
+  color: var(--color-warn);
+}
+
+.data-table th {
+  text-align: left;
+}

@@ -8,6 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A clocking can be undone where it was made**: the « Travail —
+  aujourd'hui » card lists today's clockings with « Supprimer ». The
+  Sessions card is tidied: « + Ajouter une session » opens a framed form
+  (labelled times, « Lieu » instead of a loose checkbox) apart from the
+  list; the period and filter sit on their own band; the table has
+  column titles and says « sur place » / « à distance ». A period kept
+  from an earlier visit that ends before today says so, with « Jusqu'à
+  aujourd'hui ».
 - **Periods, tabs and filters survive a reload.** Each card's period
   (Mes journées, Sessions, Statistiques, Preuves et traces, Nuits, the
   file's summary, Repas, Rapports), the tab open (Travail, Photos,

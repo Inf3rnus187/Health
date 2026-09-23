@@ -96,8 +96,10 @@ export function DaysTable(props: { toComplete: () => void }) {
   return (
     <section className="card">
       <h2>Mes journées</h2>
-      <DateRange value={range} onChange={setRange} />
-      <Filter value={show} onChange={setShow} />
+      <div className="toolbar">
+        <DateRange value={range} onChange={setRange} />
+        <Filter value={show} onChange={setShow} />
+      </div>
       <Totals days={shown} />
       {bar}
       <Table days={page} toComplete={props.toComplete} />
