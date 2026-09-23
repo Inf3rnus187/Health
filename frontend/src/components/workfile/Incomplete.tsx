@@ -56,10 +56,30 @@ function List({ rows }: { rows: IncompleteDay[] }) {
   );
 }
 
+/** On a narrow screen the panel is under the months: bring it up. */
+function reveal() {
+  if (!window.matchMedia('(max-width: 1000px)').matches) return;
+  requestAnimationFrame(() =>
+    document
+      .querySelector('.todo-panel')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+  );
+}
+
+/** The day picked (kept across reloads), brought into view. */
+function usePicked(): [string, (day: string) => void] {
+  const [day, setDay] = useStored('work.todo.day', '');
+  const pick = (picked: string) => {
+    setDay(picked);
+    reveal();
+  };
+  return [day, pick];
+}
+
 /** 12 months, a pastille per day to complete; the day picked on the right. */
 function Calendar({ rows }: { rows: IncompleteDay[] }) {
   const [last, setLast] = useStored('work.todo.month', thisMonth());
-  const [day, setDay] = useStored('work.todo.day', '');
+  const [day, pick] = usePicked();
   const first = `${yearTo(last)[0]}-01`;
   const days = useWorkDays({ start: first, end: monthEnd(last) }).data ?? [];
   return (
@@ -67,16 +87,11 @@ function Calendar({ rows }: { rows: IncompleteDay[] }) {
       <TodoCalendar
         marks={marks(rows, days)}
         selected={day}
-        onSelect={setDay}
+        onSelect={pick}
         last={last}
         setLast={setLast}
       />
-      <TodoPanel
-        day={day}
-        rows={rows}
-        days={todoDays(rows)}
-        onSelect={setDay}
-      />
+      <TodoPanel day={day} rows={rows} days={todoDays(rows)} onSelect={pick} />
     </div>
   );
 }

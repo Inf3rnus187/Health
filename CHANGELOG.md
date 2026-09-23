@@ -8,6 +8,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Every page uses the whole screen.** The content was held in a
+  960 px column in the middle; it now spans the window, with a side
+  margin that follows its size (12 to 32 px). The « À compléter »
+  calendar follows the room it has: 6 months per row on a wide screen,
+  then 4, 3, 2 (one below 300 px); its days grow with their month, the
+  green dot of a complete day sits under the number instead of on it,
+  and the day's card stays beside the months (under the menu, not
+  behind it) — on a phone it moves under them and comes into view when
+  a day is touched. On a phone the menu is one line that scrolls, tab
+  labels no longer break, rows of buttons wrap, and nothing makes the
+  page scroll sideways (the health dashboards, the import and nights
+  forms did). A lone field keeps a readable width, a period's name
+  stays on one line in tables, and the proof viewer opens wider.
 - **A clocking can be undone where it was made**: the « Travail —
   aujourd'hui » card lists today's clockings with « Supprimer ». The
   Sessions card is tidied: « + Ajouter une session » opens a framed form

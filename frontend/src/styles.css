@@ -16,6 +16,8 @@
   --color-high: #b91c1c;
   --color-high-bg: #fee2e2;
   --radius: 10px;
+  /* Side margin of every page: the content uses the whole screen. */
+  --gutter: clamp(12px, 2vw, 32px);
   --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -51,9 +53,11 @@ body {
 
 .header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  gap: 8px 12px;
+  padding: 12px var(--gutter);
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
 }
@@ -69,11 +73,12 @@ body {
   gap: 12px;
 }
 
+/* Pages take the screen's whole width (no column in the middle). */
 .content {
-  max-width: 960px;
-  margin: 20px auto;
-  padding: 0 16px;
+  margin: 20px 0;
+  padding: 0 var(--gutter);
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
 }
 
@@ -81,7 +86,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  padding: 8px 20px;
+  padding: 8px var(--gutter);
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   position: sticky;
@@ -251,6 +256,12 @@ body {
   margin: 4px 0 12px;
 }
 
+/* A lone field in a card keeps a readable width on a wide screen. */
+.card > select.input,
+.card > input.input {
+  max-width: 560px;
+}
+
 .login-card {
   max-width: 340px;
   margin: 16vh auto;
@@ -274,6 +285,7 @@ body {
 
 .quick {
   display: flex;
+  flex-wrap: wrap; /* a narrow screen: the buttons go to the next line */
   align-items: flex-end;
   gap: 12px;
   margin-top: 12px;
@@ -326,6 +338,8 @@ body {
 }
 
 .tab {
+  flex-shrink: 0; /* a label on one line, even in a scrolling row */
+  white-space: nowrap;
   border: 1px solid var(--color-border);
   background: transparent;
   color: var(--color-muted);
@@ -362,6 +376,7 @@ body {
 }
 
 .dash-card {
+  min-width: 0; /* its scrolling tabs never widen the page */
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: 12px;
@@ -391,7 +406,8 @@ body {
 }
 
 .data-table td:first-child {
-  width: 24px;
+  width: 24px; /* as narrow as its content (a box, a date, « 7 jours ») */
+  white-space: nowrap;
 }
 
 .filters {
@@ -684,10 +700,11 @@ progress {
     flex-wrap: wrap;
   }
   .dash-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
-  .tabs {
-    flex-wrap: nowrap;
+  .tabs,
+  .nav {
+    flex-wrap: nowrap; /* one line that scrolls: the sticky menu stays low */
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -1573,7 +1590,7 @@ a.tile:hover {
 
 .modal {
   width: 100%;
-  max-width: 960px;
+  max-width: 1400px;
   max-height: 92vh;
   overflow: auto;
   padding: 16px;
@@ -1801,24 +1818,27 @@ img.viewer-file {
   width: 100%;
 }
 
-/* « À compléter » as a calendar: 12 months left, the day picked right. */
+/* « À compléter » as a calendar: 12 months left, the day picked right;
+   the months per row follow the room the calendar has (2, 3, 4, 6; one
+   below 300 px). */
 .todo-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) clamp(340px, 28%, 520px);
+  gap: 20px;
   align-items: start;
 }
 
 .todo-panel {
   position: sticky;
-  top: 8px;
-  max-height: calc(100vh - 16px);
+  top: 60px; /* under the sticky menu */
+  max-height: calc(100vh - 68px);
   overflow-y: auto;
+  scroll-margin-top: 60px;
 }
 
 @media (max-width: 1000px) {
   .todo-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .todo-panel {
     position: static;
@@ -1826,48 +1846,102 @@ img.viewer-file {
   }
 }
 
+.todo-calendar {
+  container: todo-cal / inline-size;
+}
+
 .cal-months {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px 14px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px 20px;
+}
+
+@container todo-cal (min-width: 300px) {
+  .cal-months {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container todo-cal (min-width: 560px) {
+  .cal-months {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container todo-cal (min-width: 820px) {
+  .cal-months {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@container todo-cal (min-width: 1200px) {
+  .cal-months {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+/* A month is its own container: its days grow with it. */
+.cal-month {
+  container-type: inline-size;
+  min-width: 0;
 }
 
 .cal-month h4 {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 0 0 4px;
-  font-size: 13px;
+  min-height: 22px; /* same with or without a count: grids aligned */
+  margin: 0 0 6px;
+  font-size: clamp(13px, 6cqi, 16px);
   text-transform: capitalize;
 }
 
 .cal-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
 }
 
 .cal-head {
-  font-size: 11px;
+  font-size: clamp(10px, 4.5cqi, 13px);
   text-align: center;
   color: var(--color-muted);
 }
 
+/* The number, and under it a dot when the day is complete (never on it). */
 .cal-day {
-  position: relative;
-  height: 21px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%; /* its column's width; the ratio only sets the height */
+  min-height: 26px;
+  aspect-ratio: 5 / 4;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 5px;
+  border-radius: 6px;
   background: none;
   color: var(--color-text);
-  font-size: 11px;
+  font-size: clamp(11px, 5.5cqi, 15px);
+  line-height: 1;
   cursor: default;
+}
+
+.cal-day::after {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
 }
 
 .cal-day:not(:disabled) {
   cursor: pointer;
   font-weight: 600;
+}
+
+.cal-day:not(:disabled):hover {
+  filter: brightness(1.15);
 }
 
 .cal-day.todo-none {
@@ -1886,14 +1960,6 @@ img.viewer-file {
 }
 
 .cal-day.done::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: 1px;
-  width: 4px;
-  height: 4px;
-  margin-left: -2px;
-  border-radius: 50%;
   background: var(--color-ok);
 }
 

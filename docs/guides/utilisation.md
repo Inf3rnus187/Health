@@ -1,5 +1,10 @@
 # Guide — utiliser le hub, page par page
 
+Toutes les pages occupent **toute la largeur de l'écran** (une marge
+qui suit sa taille) et s'adaptent au téléphone : le menu tient sur une
+ligne qui défile, les boutons passent à la ligne, les tableaux larges
+défilent dans leur cadre.
+
 ## Le principe : une seule vérité
 
 Chaque mesure a **une seule clé** (ex. `body.weight`, `bio.hba1c`,
@@ -255,7 +260,10 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
     une absence ou un férié. **Cliquer un jour** ouvre sa fiche **à
     droite** (la même que dans la liste), avec « ← Jour précédent /
     Jour suivant → » parmi les jours à compléter. Le mois et le jour
-    choisis restent après un rechargement.
+    choisis restent après un rechargement. Le calendrier suit la largeur
+    de l'écran : 6 mois par ligne sur un grand écran, 4, 3 ou 2 sur un
+    plus petit ; sur téléphone la fiche passe sous les mois et s'affiche
+    dès qu'on touche un jour.
   - **Liste** : les fiches l'une sous l'autre, page par page.
 
   Chaque journée est une fiche : ce qui est connu (« Embauche 08:40 · Débauche
