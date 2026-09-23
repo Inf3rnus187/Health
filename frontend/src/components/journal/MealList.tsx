@@ -1,7 +1,9 @@
 import type { Meal } from '../../api/journal';
 import { useMeals } from '../../hooks/useJournal';
+import { type Selection, useSelection } from '../../hooks/useSelection';
 import { frNumber, shortDate } from '../../utils/format';
 import { useRange } from '../../utils/range';
+import { BulkBar } from '../Bulk';
 import { DateRange } from '../DateRange';
 import { usePaging } from '../Paging';
 import { MealCard } from './MealCard';
@@ -28,25 +30,36 @@ function DayTotal({ meals }: { meals: Meal[] }) {
   return <p className="muted">{text} (repas analysés)</p>;
 }
 
+function Day(props: { day: string; list: Meal[]; sel: Selection }) {
+  return (
+    <div className="meal-day">
+      <h3>{shortDate(props.day)}</h3>
+      <DayTotal meals={props.list} />
+      {props.list.map((meal) => (
+        <MealCard key={meal.id} meal={meal} sel={props.sel} />
+      ))}
+    </div>
+  );
+}
+
+const NOUN = 'repas (avec photos et nutriments)';
+
 /** Meals of a period, grouped by day (a page is 10 days) with totals. */
 export function MealList() {
   const [range, setRange] = useRange(7);
   const meals = useMeals(range).data ?? [];
+  const sel = useSelection();
   const { page, bar } = usePaging(byDay(meals));
+  const ids = meals.map((m) => m.id);
   return (
     <section className="card">
       <h2>Repas ({meals.length})</h2>
       <DateRange value={range} onChange={setRange} />
       {meals.length === 0 && <p className="muted">Aucun repas noté.</p>}
+      <BulkBar what="meals" noun={NOUN} shown={ids} sel={sel} />
       {bar}
       {page.map(([day, list]) => (
-        <div key={day} className="meal-day">
-          <h3>{shortDate(day)}</h3>
-          <DayTotal meals={list} />
-          {list.map((meal) => (
-            <MealCard key={meal.id} meal={meal} />
-          ))}
-        </div>
+        <Day key={day} day={day} list={list} sel={sel} />
       ))}
     </section>
   );

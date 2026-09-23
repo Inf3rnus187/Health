@@ -12,6 +12,7 @@ from app.api.v1 import (
     automations,
     automations_run,
     biology,
+    bulk,
     capture,
     catalog,
     clinical,
@@ -80,6 +81,7 @@ api_router.include_router(work_journal.router)
 api_router.include_router(logs.router)
 api_router.include_router(absences.router)
 api_router.include_router(evidence.router)
+api_router.include_router(bulk.router)
 api_router.include_router(sleep.router)
 api_router.include_router(traces.router)
 api_router.include_router(medical.router)

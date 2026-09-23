@@ -1,8 +1,10 @@
 import { useState } from 'react';
 
 import type { Place, WorkSession } from '../../api/work';
+import { type Selection, useSelection } from '../../hooks/useSelection';
 import { useAddSession, useWorkSessions } from '../../hooks/useWork';
 import { useRange } from '../../utils/range';
+import { BulkBar } from '../Bulk';
 import { DateRange } from '../DateRange';
 import { usePaging } from '../Paging';
 import { SessionRow } from './SessionRow';
@@ -82,29 +84,38 @@ function AddSession() {
   );
 }
 
-/** The sessions of a period, to check, add, fix or remove. */
+function Table(props: { rows: WorkSession[]; sel: Selection }) {
+  return (
+    <div className="table-wrap">
+      <table className="data-table">
+        <tbody>
+          {props.rows.map((row) => (
+            <SessionRow key={row.id} row={row} sel={props.sel} />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** The sessions of a period, to check, add, fix or remove (many at once). */
 export function SessionList() {
   const [range, setRange] = useRange(30);
   const [show, setShow] = useState('Toutes');
+  const sel = useSelection();
   const all = useWorkSessions(range).data ?? [];
   const shown = all.filter(SHOW[show] ?? (() => true));
   const { page: rows, bar } = usePaging(shown);
+  const ids = shown.map((s) => s.id);
   return (
     <section className="card">
       <h2>Sessions ({shown.length})</h2>
       <AddSession />
       <DateRange value={range} onChange={setRange} />
       <Filter value={show} onChange={setShow} />
+      <BulkBar what="work/sessions" noun="sessions" shown={ids} sel={sel} />
       {bar}
-      <div className="table-wrap">
-        <table className="data-table">
-          <tbody>
-            {rows.map((row) => (
-              <SessionRow key={row.id} row={row} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <Table rows={rows} sel={sel} />
     </section>
   );
 }

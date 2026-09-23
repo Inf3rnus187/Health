@@ -270,6 +270,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | DELETE | `/journal/urination/{sample_id}` | `write:measurements` | `sample_id` | Delete one urination entry. |
 | GET | `/meals` | `read:all` | `start`?, `end`? | Meals between two days (default: the last 7 days), newest first. |
 | POST | `/meals` | `write:measurements` + ?token= | form `meal_type`, form `eaten_at`, form `description`, form `price`, form `file` | Log a meal (photo and/or description), then read it with the AI. |
+| POST | `/meals/delete` | `write:measurements` | JSON `IdsIn` (ids) | Delete meals with their photos and nutrients. |
 | DELETE | `/meals/{meal_id}` | `write:measurements` | `meal_id` | Delete a meal, its photo and its nutrients. |
 | GET | `/meals/{meal_id}` | `read:all` | `meal_id` | One meal with its reading. |
 | PUT | `/meals/{meal_id}` | `write:measurements` | `meal_id`, JSON `MealUpdate` (meal_type, eaten_at, description, price, vendor) | Change type, time or description, then read the meal again. |
@@ -288,6 +289,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | GET | `/work/incomplete` | `read:all` | — | Sessions with a missing half, each with the day's context. |
 | GET | `/work/sessions` | `read:all` | `start`?, `end`? | Sessions between two days (default: the last 30), newest first. |
 | POST | `/work/sessions` | `write:measurements` | JSON `WorkSessionIn` (start_at, end_at, note, place) | Add a session typed by hand (same start: that session is updated). |
+| POST | `/work/sessions/delete` | `write:measurements` | JSON `IdsIn` (ids) | Delete work sessions and rebuild their days. |
 | DELETE | `/work/sessions/{session_id}` | `write:measurements` | `session_id` | Delete a session. |
 | PUT | `/work/sessions/{session_id}` | `write:measurements` | `session_id`, JSON `WorkSessionUpdate` (start_at, end_at, note, place) | Fix a session's times or note. |
 | GET | `/work/stats` | `read:all` | `start`?, `end`?, `contract_hours`? | Totals, averages, overtime, weeks, months, 7/30/90/365 days. |
@@ -304,6 +306,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 |---|---|---|---|---|
 | GET | `/absences` | `read:all` | `start`?, `end`? | Absences overlapping two days (all by default), oldest first. |
 | POST | `/absences` | Session / hub:full | JSON `AbsenceIn` (start_date, end_date, kind, cause, note, start_half, end_half) | Record an absence (arret_maladie, accident_travail, repos…). |
+| POST | `/absences/delete` | Session / hub:full | JSON `IdsIn` (ids) | Delete absences (their evidence stays, unlinked). |
 | POST | `/absences/import` | Session / hub:full | `dry_run`?, form `files`, form `person` | Import absences from an HR export (Lucca…: CSV, Excel, JSON). |
 | DELETE | `/absences/{absence_id}` | Session / hub:full | `absence_id` | Delete an absence (its evidence stays). |
 | PUT | `/absences/{absence_id}` | Session / hub:full | `absence_id`, JSON `AbsenceIn` (start_date, end_date, kind, cause, note, start_half, end_half) | Replace an absence's dates, kind, cause and note. |
@@ -314,6 +317,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 |---|---|---|---|---|
 | GET | `/evidence` | `read:all` | `start`?, `end`? | Proofs and traces between two local days (default: all), oldest first. |
 | POST | `/evidence` | Session / hub:full | form `file` | Add a proof or a trace (file optional): when, what, how many. |
+| POST | `/evidence/delete` | Session / hub:full | JSON `EvidenceDeleteIn` (ids, meals) | Delete proofs and traces with their files. |
 | DELETE | `/evidence/{item_id}` | Session / hub:full | `item_id` | Delete an item and its file. |
 | PUT | `/evidence/{item_id}` | Session / hub:full | `item_id`, JSON `EvidenceUpdate` (occurred_at, kind, title, description, count, absence_id, ended_at, place, amount, currency) | Fix an item's details (its file and fingerprint do not change). |
 | GET | `/evidence/{item_id}/file` | `read:all` | `item_id` | The item's file, as received. |

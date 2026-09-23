@@ -1,8 +1,10 @@
 import { useState } from 'react';
 
 import type { WorkSession } from '../../api/work';
+import type { Selection } from '../../hooks/useSelection';
 import { useDeleteSession } from '../../hooks/useWork';
 import { shortDate } from '../../utils/format';
+import { PickBox } from '../Bulk';
 import { clockTime, hm } from './format';
 import { SessionEditor } from './SessionEditor';
 
@@ -37,19 +39,22 @@ function Buttons(props: { row: WorkSession; edit: () => void }) {
 function Editing(props: { row: WorkSession; done: () => void }) {
   return (
     <tr>
-      <td colSpan={7}>
+      <td colSpan={8}>
         <SessionEditor row={props.row} onDone={props.done} />
       </td>
     </tr>
   );
 }
 
-/** One session; « Modifier » opens its editor in place. */
-export function SessionRow({ row }: { row: WorkSession }) {
+/** One session, ticked or not; « Modifier » opens its editor in place. */
+export function SessionRow({ row, sel }: { row: WorkSession; sel: Selection }) {
   const [editing, setEditing] = useState(false);
   if (editing) return <Editing row={row} done={() => setEditing(false)} />;
   return (
     <tr>
+      <td>
+        <PickBox sel={sel} id={row.id} />
+      </td>
       <td>{shortDate(row.date_key)}</td>
       <td>{row.start_at ? clockTime(row.start_at) : '? à compléter'}</td>
       <td>{end(row)}</td>

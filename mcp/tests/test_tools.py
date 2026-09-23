@@ -298,3 +298,13 @@ async def test_a_trace_carries_its_amount_and_meal_flag() -> None:
     )
     body = seen[0].content  # a form without file: url-encoded
     assert b"amount=24.9" in body and b"meal=true" in body
+
+
+async def test_many_items_go_at_once() -> None:
+    seen = _capture()
+    await tools_workfile.delete_many("evidence", ["a", "b"], meals=True)
+    await tools_workfile.delete_many("sessions", ["c"])
+    assert seen[0].url.path == "/api/v1/evidence/delete"
+    assert json.loads(seen[0].content) == {"ids": ["a", "b"], "meals": True}
+    assert seen[1].url.path == "/api/v1/work/sessions/delete"
+    assert json.loads(seen[1].content) == {"ids": ["c"]}

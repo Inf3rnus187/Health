@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-85 outils.
+86 outils.
 
 ## Données et métriques
 
@@ -497,6 +497,18 @@ Paramètres : `files`* (array), `dry_run` (boolean, défaut `True`), `person` (s
 Delete one evidence item and its file (ask the user first).
 
 Paramètres : `item_id`* (string)
+
+### `delete_many`
+
+Delete many items at once (5000 at most); answers how many went.
+
+``what``: evidence (proofs and traces, their files; ``meals`` also
+deletes the Journal meals deliveries were logged as), sessions (work
+sessions, their days rebuilt), absences or meals. Take the ids from
+list_evidence / work_sessions / list_absences / list_meals, show the
+user what will go and ask before deleting: it cannot be undone.
+
+Paramètres : `what`* (string), `ids`* (array), `meals` (boolean, défaut `False`)
 
 ### `sleep_nights`
 

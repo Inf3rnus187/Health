@@ -8,6 +8,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Delete many items at once**: proofs and traces, work sessions,
+  absences and Journal meals. Tick items or « Tout sélectionner » (every
+  item the period and filters show, all pages), then « Supprimer la
+  sélection (N) » after a confirmation; an item ticked then hidden by a
+  filter is kept. Deleting delivery traces can take their Journal meals
+  too; the days of deleted sessions are rebuilt. The proofs list also
+  filters by words (title, place, detail, file name). API:
+  `POST /evidence/delete` (`meals`), `/work/sessions/delete`,
+  `/absences/delete`, `/meals/delete` — only the user's own ids go;
+  MCP `delete_many`.
+
 - **Uber rides and Uber Eats orders read from Uber's own export**
   (`rider_lifetime_trips`, `user_orders`), column by column:
   - a ride: pickup → drop-off at the exact time (the `_utc` columns; the

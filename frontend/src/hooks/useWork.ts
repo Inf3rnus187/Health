@@ -11,7 +11,7 @@ import {
 import type { Range } from '../utils/range';
 
 /** Queries that show work hours (they refresh after a change). */
-const FED = [
+export const FED = [
   'work-stats',
   'work-sessions',
   'work-days',

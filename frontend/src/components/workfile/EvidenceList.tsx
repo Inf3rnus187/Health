@@ -5,8 +5,10 @@ import {
   type EvidenceItem,
   TRACE_KINDS,
 } from '../../api/workfile';
+import { type Selection, useSelection } from '../../hooks/useSelection';
 import { useDeleteEvidence, useEvidence } from '../../hooks/useWorkFile';
 import { useRange } from '../../utils/range';
+import { BulkBar, PickBox } from '../Bulk';
 import { DateRange } from '../DateRange';
 import { usePaging } from '../Paging';
 import { EvidenceFile } from '../FileButtons';
@@ -29,6 +31,13 @@ function keep(item: EvidenceItem, show: string): boolean {
   return show === 'all' || item.kind === show;
 }
 
+/** Whether an item's words hold the searched text (case ignored). */
+function says(item: EvidenceItem, text: string): boolean {
+  const words = [item.title, item.place, item.description, item.file_name];
+  const plain = text.trim().toLowerCase();
+  return !plain || words.join(' ').toLowerCase().includes(plain);
+}
+
 function Details({ item }: { item: EvidenceItem }) {
   return (
     <>
@@ -44,7 +53,7 @@ function Details({ item }: { item: EvidenceItem }) {
   );
 }
 
-function Item({ item }: { item: EvidenceItem }) {
+function Item({ item, sel }: { item: EvidenceItem; sel: Selection }) {
   const del = useDeleteEvidence();
   const [open, setOpen] = useState(false);
   const drop = () =>
@@ -52,7 +61,7 @@ function Item({ item }: { item: EvidenceItem }) {
     del.mutate(item.id);
   return (
     <li>
-      <Details item={item} />{' '}
+      <PickBox sel={sel} id={item.id} /> <Details item={item} />{' '}
       <EvidenceFile id={item.id} name={item.file_name} />
       <button className="btn ghost" onClick={() => setOpen(true)}>
         Détails
@@ -67,26 +76,72 @@ function Item({ item }: { item: EvidenceItem }) {
   );
 }
 
-/** Proofs and traces of a period, newest first, by kind, page by page. */
-export function EvidenceList() {
+function Search(props: { value: string; onChange: (v: string) => void }) {
+  return (
+    <input
+      className="input"
+      type="search"
+      placeholder="Chercher (titre, lieu, détail, fichier)"
+      value={props.value}
+      onChange={(e) => props.onChange(e.target.value)}
+    />
+  );
+}
+
+function withMeals(items: EvidenceItem[]) {
+  const logged = new Set(items.filter((i) => i.meal_id).map((i) => i.id));
+  return (ids: string[]) => ids.filter((id) => logged.has(id)).length;
+}
+
+function Items(props: { page: EvidenceItem[]; sel: Selection }) {
+  return (
+    <ul className="care-list">
+      {props.page.map((item) => (
+        <Item key={item.id} item={item} sel={props.sel} />
+      ))}
+    </ul>
+  );
+}
+
+const NOUN = 'preuves et traces (avec leurs fichiers)';
+
+function useShown() {
   const [range, setRange] = useRange(null);
   const [show, setShow] = useState('all');
+  const [text, setText] = useState('');
   const items = useEvidence(range).data ?? [];
-  const shown = items.filter((i) => keep(i, show)).reverse();
+  const shown = items.filter((i) => keep(i, show) && says(i, text)).reverse();
+  const filters = (
+    <>
+      <DateRange value={range} onChange={setRange} />
+      <Choice options={SHOW} value={show} onChange={setShow} />
+      <Search value={text} onChange={setText} />
+    </>
+  );
+  return { items, shown, filters };
+}
+
+/** Proofs and traces of a period, newest first, by kind or words. */
+export function EvidenceList() {
+  const { items, shown, filters } = useShown();
+  const sel = useSelection();
   const { page, bar } = usePaging(shown);
+  const ids = shown.map((i) => i.id);
   return (
     <>
       <h3>
         Liste : {shown.length} affichée(s) sur {items.length} dans la période
       </h3>
-      <DateRange value={range} onChange={setRange} />
-      <Choice options={SHOW} value={show} onChange={setShow} />
+      {filters}
+      <BulkBar
+        what="evidence"
+        noun={NOUN}
+        shown={ids}
+        sel={sel}
+        meals={withMeals(items)}
+      />
       {bar}
-      <ul className="care-list">
-        {page.map((item) => (
-          <Item key={item.id} item={item} />
-        ))}
-      </ul>
+      <Items page={page} sel={sel} />
     </>
   );
 }

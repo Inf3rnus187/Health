@@ -82,7 +82,9 @@ Ce qu'Apple Santé n'enregistre pas : **pipi** et **repas**.
   réanalyser ou supprimer le repas remplace ou retire exactement ses
   nutriments.
 - **Repas** de la période (7 jours par défaut, ou dates exactes), groupés
-  par jour avec le total du jour, 10 jours par page.
+  par jour avec le total du jour, 10 jours par page. Cocher des repas (ou
+  « Tout sélectionner » : tous ceux de la période) puis « Supprimer la
+  sélection » les retire d'un coup, avec photos et nutriments.
 
 Depuis l'iPhone : voir [Raccourcis iPhone](#raccourcis-iphone--une-seule-règle).
 
@@ -289,7 +291,8 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
   un filtre (corrigées à la main, à distance, incomplètes) : vérifier,
   ajouter une session oubliée (l'embauche, la débauche ou les deux),
   **modifier** (heures, lieu, note, avec les preuves du jour),
-  supprimer (après confirmation).
+  supprimer (après confirmation), ou en cocher plusieurs pour les
+  supprimer d'un coup (voir « Supprimer plusieurs éléments à la fois »).
 - « **Au travail depuis** » ne concerne qu'une embauche de moins de 16 h :
   une embauche ancienne jamais close est une journée à compléter et ne
   bloque plus le bouton « Embauche maintenant ».
@@ -338,8 +341,21 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
   `09-05-2026_03.47.png`, `2026.05.09 3h47.jpg`, `IMG_20260509-0347.jpg`
   (jour-mois-année ou année-mois-jour, séparés par `-`, `_`, `.` ou une
   espace ; heure `03h47`, `03:47`, `03.47`, `03-47`). La liste se
-  filtre par période et par type (preuves, traces, ou un type précis),
-  la plus récente d'abord, page par page.
+  filtre par période, par type (preuves, traces, ou un type précis) et
+  par **mots** (titre, lieu, détail, nom du fichier), la plus récente
+  d'abord, page par page.
+- **Supprimer plusieurs éléments à la fois** — preuves et traces,
+  sessions, arrêts et absences, repas du Journal : cocher les éléments,
+  ou « **Tout sélectionner** » (tous ceux que la période et les filtres
+  affichent, **toutes pages comprises**), puis « **Supprimer la
+  sélection (N)** » ; une confirmation rappelle combien partent, c'est
+  définitif. Un élément coché puis masqué par un filtre n'est pas
+  supprimé. Pour des traces de repas livrés, « et les N repas du
+  Journal créés par ces livraisons » (coché par défaut) retire aussi ces
+  repas. Les journées des sessions supprimées sont recalculées. Exemple :
+  des courses importées avant la lecture exacte des exports Uber (lieu
+  « Paris », 0 €) : type « Taxi / VTC », chercher « Personal », « Tout
+  sélectionner », supprimer, puis réimporter le fichier.
 - **Nuits** (30 jours par défaut ; « Tout » remonte à la première nuit
   connue), la plus récente d'abord, page par page ; « Montrer les nuits
   sans données » se décoche : pour chaque nuit (rattachée au jour du

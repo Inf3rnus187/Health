@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 
 import { fetchMealPhoto, MEAL_TYPES, type Meal } from '../../api/journal';
 import { useAnalyzeMeal, useDeleteMeal } from '../../hooks/useJournal';
+import type { Selection } from '../../hooks/useSelection';
+import { PickBox } from '../Bulk';
 import { MealAnalysisView } from './MealAnalysisView';
 import { clock } from './time';
 
@@ -49,12 +51,13 @@ function Actions({ meal }: { meal: Meal }) {
   );
 }
 
-export function MealCard({ meal }: { meal: Meal }) {
+export function MealCard({ meal, sel }: { meal: Meal; sel?: Selection }) {
   return (
     <article className="meal-card">
       <Photo meal={meal} />
       <div className="meal-body">
         <h3>
+          {sel && <PickBox sel={sel} id={meal.id} />}{' '}
           {MEAL_TYPES[meal.meal_type] ?? meal.meal_type} ·{' '}
           {clock(meal.eaten_at)}
         </h3>

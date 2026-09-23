@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import base64
-from typing import Any
+from typing import Any, Literal
 
 from phoenix_mcp import client
 from phoenix_mcp.app import mcp
@@ -180,6 +180,35 @@ def _content(file: dict[str, str]) -> bytes:
 async def delete_evidence(item_id: str) -> Any:
     """Delete one evidence item and its file (ask the user first)."""
     return await client.request("DELETE", f"/evidence/{item_id}")
+
+
+#: What can be deleted many at once → its API path.
+_BULK = {
+    "evidence": "/evidence/delete",
+    "sessions": "/work/sessions/delete",
+    "absences": "/absences/delete",
+    "meals": "/meals/delete",
+}
+
+
+@mcp.tool()
+async def delete_many(
+    what: Literal["evidence", "sessions", "absences", "meals"],
+    ids: list[str],
+    meals: bool = False,
+) -> Any:
+    """Delete many items at once (5000 at most); answers how many went.
+
+    ``what``: evidence (proofs and traces, their files; ``meals`` also
+    deletes the Journal meals deliveries were logged as), sessions (work
+    sessions, their days rebuilt), absences or meals. Take the ids from
+    list_evidence / work_sessions / list_absences / list_meals, show the
+    user what will go and ask before deleting: it cannot be undone.
+    """
+    body: dict[str, Any] = {"ids": ids}
+    if what == "evidence":
+        body["meals"] = meals
+    return await client.post(_BULK[what], body)
 
 
 @mcp.tool()
