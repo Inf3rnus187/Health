@@ -27,6 +27,9 @@ class Trace(NamedTuple):
     file: tuple[str, str, bytes] | None = None
     #: How many actions (a day of tickets: 12 comments).
     actions: int = 1
+    #: One trace a day per source (tickets, a chat): met again, the day
+    #: is replaced when the new one holds more actions.
+    daily: bool = False
 
 
 def noon(day: date, tz: ZoneInfo) -> datetime:

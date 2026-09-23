@@ -8,6 +8,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **WhatsApp chats as proofs** (`.txt` export, iPhone or Android, any
+  date order, messages on several lines): per day, your messages are an
+  « Activité pro » trace from the first to the last one you sent
+  (presence, late traces, days to complete, evidence during sick
+  leave); a day of messages received only is an « SMS / message »
+  proof; calls are an « Appel » proof with their count; each lists the
+  day's messages. The `.txt` is kept untouched as a document. You are
+  « Moi » / « Me »… or the name chosen in the preview. Days of tickets
+  and of each chat now merge per source (a chat never replaces the
+  tickets of the same day).
+
 - **Overlaps no longer block a day to complete.** Each card lists the
   day's other sessions (« 09:02 → ? — embauche seule »); « Réunir :
   09:02 → 19:12 » makes a lone clock-in and a lone clock-out one session

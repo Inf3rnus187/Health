@@ -43,7 +43,7 @@ TRACES = {
     "repas": "Repas acheté",
     "hotel": "Hôtel",
     "frais": "Note de frais",
-    "activite": "Activité pro (tickets, outils)",
+    "activite": "Activité pro (tickets, messages, outils)",
 }
 #: Every kind → French label.
 KINDS = {**PROOFS, **TRACES}

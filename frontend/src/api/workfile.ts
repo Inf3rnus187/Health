@@ -112,7 +112,7 @@ export const TRACE_KINDS: Record<string, string> = {
   repas: 'Repas acheté',
   hotel: 'Hôtel',
   frais: 'Note de frais',
-  activite: 'Activité pro (tickets, outils)',
+  activite: 'Activité pro (tickets, messages, outils)',
 };
 
 export const EVIDENCE_KINDS: Record<string, string> = {

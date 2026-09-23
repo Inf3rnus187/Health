@@ -21,6 +21,8 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from app.services import (
+    chat_read,
+    chat_traces,
     receipt_read,
     table_read,
     trace_columns,
@@ -40,11 +42,15 @@ def read(
 ) -> tuple[list[Trace], list[dict[str, Any]], dict[str, Any]]:
     """The traces of a file, the rows left out and what was read.
 
-    A ticket export gives the ``person``'s activity (default: the most
-    active author, the others listed to choose from).
+    A ticket export or a WhatsApp chat gives the ``person``'s activity
+    (default: the most active author, or « Moi » in a chat; the others
+    listed to choose from).
     """
     if receipt_read.is_receipt(data, name):
         return trace_sources.document(data, name, kind, tz)
+    if chat_read.is_chat(data, name):
+        found, about = chat_traces.traces(data, name, person, tz)
+        return found, [], about
     rows = table_read.rows_of(data, name)
     if not rows:
         return [], [{"line": 1, "reason": "fichier illisible ou vide"}], {}

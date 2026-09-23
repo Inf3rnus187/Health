@@ -47,6 +47,7 @@ const FIELD: Record<string, string> = {
   extras: 'autres',
   document: 'document',
   tickets: 'tickets',
+  chat: 'conversation',
   ignored: 'non lu',
 };
 
@@ -70,7 +71,7 @@ function People(props: { file: FileReport; onPerson: (n: string) => void }) {
   if (people.length === 0) return null;
   return (
     <label>
-      Vos actions (votre nom dans l’outil) :{' '}
+      Vous (votre nom dans l’outil ou la conversation) :{' '}
       <select
         className="input"
         value={String(props.file.columns.person ?? '')}

@@ -111,7 +111,8 @@ def tickets(
     if not cols:
         return None
     found = ticket_read.people(rows, cols)
-    who = person.strip() or (found[0][0] if found else "")
+    names = [name for name, _ in found]
+    who = person.strip() if person.strip() in names else next(iter(names), "")
     days = ticket_read.days(rows, cols, who, tz)
     about = {
         "tickets": f"actions de {who}" if who else "aucun auteur",
@@ -136,4 +137,5 @@ def _activity(day: ticket_read.Day, who: str) -> Trace:
         what=(f"{who} : " + " ; ".join(day.actions))[:4000],
         group=f"tickets-{day.day}",
         actions=count,
+        daily=True,
     )

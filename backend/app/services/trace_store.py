@@ -25,8 +25,6 @@ from app.services.timed_entries import day_bounds, utc
 from app.services.trace_model import Trace
 
 MAX_LISTED = 50
-#: Kinds kept as one trace a day (a day of tickets).
-DAILY = {"activite"}
 _SAME_TIME = timedelta(minutes=1)
 
 
@@ -105,11 +103,12 @@ async def _match(
 def _same(row: Evidence, trace: Trace) -> bool:
     """Whether a stored item of that kind and day is this trace.
 
-    A day of tickets is the same whatever its times (a later export has
-    more actions); a document, only with the same file.
+    A day of tickets or of a chat is the same whatever its times (a
+    later export has more actions), for the same source; a document,
+    only with the same file.
     """
-    if trace.kind in DAILY:
-        return True
+    if trace.daily:
+        return _source(row.title) == _source(trace.vendor)
     if trace.kind in evidence.PROOFS:
         return trace.file is not None and row.sha256 == _sha(trace.file[2])
     same_amount = (row.amount is None and trace.amount is None) or (
@@ -123,7 +122,7 @@ def _same(row: Evidence, trace: Trace) -> bool:
 
 def _brings(row: Evidence, trace: Trace) -> bool:
     """Whether a trace met again adds something (time, end, file, text)."""
-    if trace.kind in DAILY:
+    if trace.daily:
         return trace.actions > (row.count or 1)
     return bool(
         (trace.time_known and not row.time_known)
@@ -135,7 +134,7 @@ def _brings(row: Evidence, trace: Trace) -> bool:
 
 def _merge(row: Evidence, trace: Trace) -> None:
     """Complete a stored trace with what the new one brings."""
-    if trace.kind in DAILY:  # the day seen again, with more actions
+    if trace.daily:  # the day seen again, with more actions
         row.occurred_at, row.ended_at = trace.start, trace.end
         row.description, row.count = trace.what, trace.actions
         row.title = trace.vendor[:200]
@@ -220,6 +219,11 @@ def _new_parts(row: Evidence, trace: Trace) -> list[str]:
     """What a trace met again says that the stored one does not."""
     have = row.description or ""
     return [p for p in trace.what.split(" · ") if p.strip() and p not in have]
+
+
+def _source(title: str) -> str:
+    """Where a day comes from: « Tickets », « WhatsApp — Alex »."""
+    return title.split(" : ")[0] if " : " in title else title.split(" — ")[0]
 
 
 def _sha(data: bytes) -> str:

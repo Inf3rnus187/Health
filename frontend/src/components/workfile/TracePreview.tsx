@@ -1,4 +1,4 @@
-import { TRACE_KINDS } from '../../api/workfile';
+import { EVIDENCE_KINDS } from '../../api/workfile';
 import { money, shortDate } from '../../utils/format';
 
 /** One trace as read, before it is stored. */
@@ -19,7 +19,7 @@ export interface SkippedRow {
 }
 
 function Row({ t }: { t: PreviewRow }) {
-  const label = TRACE_KINDS[t.kind] ?? t.kind;
+  const label = EVIDENCE_KINDS[t.kind] ?? t.kind;
   return (
     <tr>
       <td className="nowrap">{shortDate(t.day)}</td>
@@ -31,7 +31,7 @@ function Row({ t }: { t: PreviewRow }) {
       <td>
         <strong>{t.title}</strong>
         {t.place && !t.title.includes(t.place) && ` · ${t.place}`}
-        {t.what && <div className="muted">{t.what}</div>}
+        {t.what && <div className="muted pre-line">{t.what}</div>}
       </td>
       <td className="nowrap">{t.amount != null && `${money(t.amount)} €`}</td>
     </tr>

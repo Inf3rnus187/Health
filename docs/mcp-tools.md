@@ -482,7 +482,11 @@ report PDF gives one trace per expense (its comment kept) and keeps
 the PDF untouched as a document. A ticket export (NinjaOne…) gives
 ``person``'s actions, one trace a day from the first to the last
 (default: the most active author; the dry run lists the others —
-ask the user which name is theirs). Uber's own exports
+ask the user which name is theirs). A WhatsApp chat export (.txt):
+per day, ``person``'s messages are work activity (first → last),
+days with only messages received are proofs, calls are counted; the
+.txt is kept as a document (default person: « Moi », else the most
+active sender who is not the chat). Uber's own exports
 (rider_lifetime_trips, user_orders) are read column by column: ride
 pickup → drop-off at the exact time, addresses, km, price paid; Eats
 order: establishment, order and delivery times, items, price (the

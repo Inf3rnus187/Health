@@ -67,7 +67,7 @@ function useTraceImport(picked: Picked[], meals: boolean) {
 function Head(props: { pick: (list: FileList | null) => void }) {
   return (
     <>
-      <h2>Importer des traces (Uber, Navigo, parking, frais, tickets)</h2>
+      <h2>Importer des traces (Uber, Navigo, frais, tickets, WhatsApp)</h2>
       <p className="muted">{INTRO}</p>
       <input
         type="file"
@@ -125,7 +125,10 @@ function Buttons(props: {
 
 const INTRO =
   'Exports CSV, Excel ou JSON (Uber, Uber Eats, Navigo, parking, notes ' +
-  'de frais, relevé bancaire, tickets NinjaOne), reçus ou factures en ' +
+  'de frais, relevé bancaire, tickets NinjaOne), conversations WhatsApp ' +
+  'exportées en .txt (vos messages = activité pro, jour par jour ; les ' +
+  'messages reçus et les appels = preuves ; le fichier gardé intact), ' +
+  'reçus ou factures en ' +
   'PDF ou photo, notes de frais Lucca en PDF (une trace par dépense, le ' +
   'PDF gardé intact). Les exports Uber (rider_lifetime_trips, ' +
   'user_orders) sont lus colonne par colonne : heures exactes, départ → ' +

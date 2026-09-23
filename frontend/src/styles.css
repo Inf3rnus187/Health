@@ -1690,3 +1690,8 @@ img.viewer-file {
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+/* A text whose line breaks matter (a day of messages). */
+.pre-line {
+  white-space: pre-line;
+}

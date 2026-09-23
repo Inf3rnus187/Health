@@ -526,6 +526,29 @@ transport…), « Lire », puis « Importer ».
   - L'aperçu montre les premières traces telles qu'elles seront
     enregistrées et, dépliables, les lignes non importées avec la
     raison.
+- **Conversations WhatsApp** (export `.txt` d'une discussion) : iPhone
+  (`[23/05/2025 21:56:42] Nom : message`) comme Android (`23/05/2025
+  21:56 - Nom: message`, ou `5/23/25, 9:56 PM`), un message sur
+  plusieurs lignes compris. Pour chaque jour de la conversation :
+  - **vos messages** font une trace **Activité pro**, de votre premier à
+    votre dernier message du jour (« WhatsApp — Alex : 5 messages de
+    moi, 3 reçus », 22:10 → 23:40) : elle compte comme présence (jour
+    travaillé sans pointage, traces tardives, repères des journées à
+    compléter), y compris **pendant un arrêt** (le rapport liste les
+    preuves datées pendant chaque arrêt) ;
+  - un jour avec seulement des **messages reçus** : une preuve « SMS /
+    message » ; les **appels** (vocal, vidéo, manqué) : une preuve
+    « Appel » avec leur nombre (le rapport compte les appels pendant
+    l'arrêt, dont le dimanche) ;
+  - chaque jour liste ses messages (heure, auteur, texte) ; l'avis de
+    chiffrement est ignoré ; le fichier `.txt` est gardé **intact**
+    comme document (SHA-256).
+  - **Qui êtes-vous** dans la conversation : « Moi » (ou « Me »,
+    « Vous »…) si l'export l'écrit ainsi, sinon choisissez votre nom
+    dans la liste de l'aperçu. Le nom de la conversation vient du nom
+    du fichier (« Discussion WhatsApp avec Alex.txt ») ou de l'export.
+  - Réimporter un export plus récent complète les jours (plus de
+    messages) sans doublon.
 
 **Absences : export de l'outil RH** (Lucca, Figgo…) — carte
 « Importer des absences » : l'export des absences en CSV, Excel ou JSON.
@@ -568,6 +591,7 @@ Où trouver ces historiques (en général) :
 | Source | Comment l'obtenir |
 |--------|-------------------|
 | Uber, Uber Eats | Application › Compte › Confidentialité › télécharger vos données : un ZIP avec le CSV des courses (`rider_lifetime_trips-0.csv`, anciennement `trips_data`) et celui des commandes Uber Eats (`user_orders-0.csv`). |
+| WhatsApp | Dans la discussion : iPhone › nom du contact › Exporter la discussion › Sans médias (un .zip : importer le `_chat.txt` qu'il contient) ; Android › ⋮ › Plus › Exporter la discussion › Sans médias (un .txt). |
 | Navigo / transports | Historique de validations du passe (espace personnel Navigo ou demande RGPD à Île-de-France Mobilités). |
 | Parkings (Indigo, Onepark, Zenpark, PayByPhone…) | Historique ou factures dans le compte de l'application. |
 | Taxis (G7…), hôtels | Reçus et factures (mails) : à ajouter en traces avec le fichier. |
