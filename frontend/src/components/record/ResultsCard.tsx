@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 import type { RecordResult, ResultPoint } from '../../api/record';
 import { useRecord } from '../../hooks/useRecord';
+import { colorForMetric } from '../../theme/palette';
 import { frNumber, shortDate, signed } from '../../utils/format';
 import { Sparkline } from '../Sparkline';
 import { DocLink } from './DocLink';
@@ -36,7 +37,7 @@ function Row({ result }: { result: RecordResult }) {
         </Link>
         <Sparkline
           values={result.history.map((h) => h.value)}
-          color="#2563eb"
+          color={colorForMetric(result.key)}
         />
       </td>
       <td>

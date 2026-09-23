@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { MetricOverview } from '../../api/overview';
 import type { CareCondition } from '../../api/record';
 import { useCareOverview } from '../../hooks/useRecord';
+import { colorForMetric } from '../../theme/palette';
 import { frNumber, shortDate, signed } from '../../utils/format';
 import { DocLinks } from '../record/DocLink';
 import { Sparkline } from '../Sparkline';
@@ -44,7 +45,10 @@ function Indicator({ metric }: { metric: MetricOverview }) {
       </strong>
       <span className="muted">{shortDate(when)}</span>
       <Change metric={metric} />
-      <Sparkline values={metric.series.map((p) => p.value)} color="#2563eb" />
+      <Sparkline
+        values={metric.series.map((p) => p.value)}
+        color={colorForMetric(metric.key)}
+      />
     </li>
   );
 }

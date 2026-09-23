@@ -23,8 +23,8 @@ Guiding constraints (non‑negotiable):
 
 ## Status — what this milestone delivers
 
-This repository currently implements **Phases 1–2** of the
-[roadmap](docs/architecture.md#roadmap) as a solid, tested foundation:
+All phases of the [roadmap](docs/architecture.md#roadmap) are implemented
+and tested:
 
 | Area | Status |
 |------|--------|
@@ -53,6 +53,12 @@ This repository currently implements **Phases 1–2** of the
 | **Dark theme** + mobile‑responsive layout | ✅ |
 | **Multi‑page UI** (Accueil/récap · Tableaux de bord · Santé · Données · Rapports · Import) | ✅ |
 | **Rapports** (générer PDF clinique/CSV/JSON/XLSX/FHIR + télécharger) & **exports** dans l'UI | ✅ |
+| **Complete Apple Health catalog** (iOS 26 SDK: 121 quantity + 72 category types, French labels) + **Health Auto Export** | ✅ |
+| **One truth**: canonical keys, daily values rebuilt from raw samples, *Réconcilier*, same numbers on every page | ✅ |
+| **Medical record** (Dossier): documents read by **MedGemma** with values checked against the text, results + source, chronology, suggestions | ✅ |
+| **Suivi**: each condition with its indicators and documents | ✅ |
+| **Évolution**: validated markers (FibroScan, FLI, FIB-4, HbA1c…), weight milestones, longitudinal photo method | ✅ |
+| **AI clinical synthesis** report: every sentence cites the record's facts, unproven ones removed | ✅ |
 
 **All 9 specification phases are implemented.** Remaining follow‑ups
 (signed container images, encrypted off‑site backups, an automated retention
@@ -97,8 +103,27 @@ commented [`.env.example`](.env.example). Key settings:
 | `POSTGRES_USER/PASSWORD/DB` | Database credentials. |
 | `ADMIN_EMAIL/PASSWORD` | Initial admin created by the seed step. |
 | `ACCESS_TOKEN_TTL_MIN` / `REFRESH_TOKEN_TTL_DAYS` | Token lifetimes. |
-| `OLLAMA_URL` / `OLLAMA_*_MODEL` | AI endpoint + models (Phase 4). |
+| `OLLAMA_URL` / `OLLAMA_*_MODEL` | AI endpoint + one model per task (photos, documents, synthesis — MedGemma recommended). |
 | `WEB_PORT` | Host port for the web tier (default 8082). |
+| `PHOENIX_API_TOKEN` / `MCP_AUTH_TOKEN` / `MCP_BIND` | MCP server (optional). |
+
+Every variable is explained in the
+[configuration guide](docs/guides/configuration.md).
+
+---
+
+## Documentation
+
+| Guide | Contenu |
+|-------|---------|
+| [Configuration](docs/guides/configuration.md) | Installer, mettre à jour, toutes les variables, jetons et scopes, services, journaux. |
+| [Utilisation](docs/guides/utilisation.md) | Chaque page (Accueil, Données, Dossier, Photos, Suivi, Rapports, Import…) et les parcours types. |
+| [IA médicale](docs/guides/ia-medicale.md) | MedGemma par tâche, lecture des documents et valeurs rejetées, synthèse clinique, méthode photo, dépannage. |
+| [Ingestion](docs/guides/ingestion.md) | Apple Santé, Health Auto Export, Raccourcis, montre, PPC, photos. |
+| [MCP](docs/guides/mcp.md) | Brancher un assistant (Claude Desktop / Code, stdio) de façon sûre. |
+| [Référence API](docs/api.md) | Toutes les routes, leurs paramètres et le droit exigé (générée depuis le code). |
+| [Outils MCP](docs/mcp-tools.md) | Les 53 outils et leurs paramètres (générée depuis le serveur). |
+| [Architecture](docs/architecture.md), [modèle de données](docs/data-model.md), [ADR](docs/adr/) | Conception. |
 
 ---
 
@@ -237,8 +262,9 @@ docker compose exec api \
   tableaux de bord se règlent par **jour / semaine / mois / année** et la
   **molette zoome** l'axe du temps.
 - Les unités Apple (`mi`, `lb`, `mL`, `degF`, `%` fractionnel…) sont
-  converties. Les métriques inconnues sont créées automatiquement (sans
-  migration) sous le domaine `apple`.
+  converties. Chaque type Apple a son libellé français et son domaine
+  (catalogue complet du SDK iOS 26) ; un type hors catalogue est créé
+  automatiquement (sans migration) sous le domaine `apple`.
 - **Rejouable** : réimporter remplace proprement les données Apple
   précédentes (aucun doublon).
 
@@ -286,7 +312,8 @@ uv pip install -e ".[dev]"
 ruff check app tests && ruff format --check app tests
 mypy app
 python ../tools/check_code_limits.py app     # §14.1 structural limits
-pytest                                        # 28 tests, ≥80% coverage
+pytest                                        # ≥80% coverage
+python -m app.cli.api_doc > ../docs/api.md    # after changing a route
 ```
 
 Frontend (Node 22, pnpm):
@@ -336,7 +363,7 @@ phoenix-health-hub/
 │   └── app/{core,models,schemas,services,api,workers,seed}
 ├── frontend/               # React + Vite + TS (theme, api, components)
 ├── nginx/                  # reverse proxy + React build image
-├── mcp/                    # MCP server (Phase 7 placeholder)
+├── mcp/                    # MCP server (53 tools, API client)
 ├── tools/                  # custom code-limit checker
 └── docs/                   # architecture, data model, guides, ADRs
 ```
@@ -354,8 +381,9 @@ phoenix-health-hub/
 
 Argon2id passwords, short JWTs with rotating/revocable refresh sessions,
 hashed scoped tokens, strict input validation, security headers + CSP,
-and an append‑only audit log. Hardening items (SBOM, image/dep scans,
-media encryption, MFA) are scheduled for Phase 9 — see
+an append‑only audit log, optional TOTP MFA and media encryption, SBOM and
+image/dependency scans in CI. Tokens that only send data cannot read it
+(`read:all`); the MCP server requires its own secret. See
 [SECURITY.md](SECURITY.md).
 
 ## License

@@ -110,6 +110,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   account and the Shortcut download still require an interactive login.
 - `GET /medical/documents/{id}/text`: the text the AI reads from a
   document (OCR for scans), to check an extraction against its source.
+- **Documentation** (French guides): configuration (every variable, tokens
+  and scopes, services, logs, updating), page-by-page usage and common
+  tasks, medical AI (models per task, document reading and rejected
+  values, clinical synthesis, photo method, troubleshooting), MCP (safe
+  setup, Claude Desktop / Claude Code / stdio); Health Auto Export in the
+  ingestion guide. **Generated references**: `docs/api.md` (every route,
+  its parameters and required access, read from the code) and
+  `docs/mcp-tools.md` (every MCP tool and its parameters); tests fail when
+  either is out of date.
 - `GET /catalog/domains`: French name of every domain, used by the
   dashboard tabs (Apple Santé and the hub's own domains — tabac, PPC,
   biologie…).

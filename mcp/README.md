@@ -45,6 +45,10 @@ uv pip install -e ".[dev]" && python -m phoenix_mcp.server
 Client example (SSE): URL `http://<host>:9000/sse`, header
 `Authorization: Bearer <MCP_AUTH_TOKEN>`. For a desktop client that launches
 the server itself, use `MCP_TRANSPORT=stdio` (no network, no secret needed).
+Step-by-step setup (Claude Desktop, Claude Code, stdio over SSH):
+[docs/guides/mcp.md](../docs/guides/mcp.md). Every tool with its parameters:
+[docs/mcp-tools.md](../docs/mcp-tools.md) — regenerate with
+`python -m phoenix_mcp.doc > ../docs/mcp-tools.md` after changing a tool.
 
 ## Develop
 

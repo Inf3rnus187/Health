@@ -1,8 +1,54 @@
-# Guide — ingestion (Apple Watch, CPAP, capture)
+# Guide — ingestion (Apple Santé, Health Auto Export, montre, PPC, capture)
 
-The `/ingest/*` and `/capture` endpoints are implemented (Phase 3). Samples
-are mapped to metrics through a **configurable table** (`ingest_mappings`),
-so new HealthKit/CPAP fields are absorbed with no code change.
+Every channel writes the **same canonical metric** for the same concept
+(e.g. `body.weight`, `activity.steps`, `bio.hba1c`), resolved through the
+full HealthKit catalog (iOS 26 SDK: 121 quantity + 72 category types) and a
+**configurable mapping table** (`ingest_mappings`). Raw samples are kept;
+daily values are rebuilt from them with one rule (one Apple channel per
+day — native export and Health Auto Export are never added up — plus the
+other sources). Required token scope per route:
+[API reference](../api.md).
+
+| Channel | Route | Token scope |
+|---------|-------|-------------|
+| Full Apple Health export (`export.zip`) | `POST /imports/apple-health` | `write:measurements` (+ `?token=`) |
+| Health Auto Export (daily JSON) | `POST /sync/auto-export` | `write:measurements` (+ `?token=`) |
+| SimpleHealthExportCSV (zip of CSV) | `POST /imports/apple-health` | `write:measurements` (+ `?token=`) |
+| iPhone Shortcut (flat map) | `POST /sync/health` | `ingest:watch` |
+| One-tap counters (cigarette, coffee…) | `POST /sync/tally` | `write:measurements` (+ `?token=`) |
+| Watch / HealthKit samples | `POST /ingest/watch` | `ingest:watch` |
+| CPAP | `POST /ingest/ppc` | `ingest:ppc` |
+| Progress photos | `POST /ingest/photo` | `ingest:photo` |
+| Any script | `POST /measurements` | `write:measurements` |
+
+## Health Auto Export (JSON)
+
+The *Health Auto Export* iOS app pushes Health data on a schedule.
+
+1. Web app › **Import › « Health Auto Export (JSON) » › Créer l'URL** — it
+   mints a `write:measurements` token and shows
+   `https://<hub>/api/v1/sync/auto-export?token=<token>`.
+2. In the app: new **Automation** of type **REST API**, paste the URL,
+   method **POST**, format **JSON**, data type **Health Metrics**, the
+   metrics you want (all is fine), and a sync schedule. A first run with a
+   long date range back-fills the history.
+
+What the server does with a payload
+(`{"data": {"metrics": [{"name", "units", "data": [{"date", "qty"}]}]}}`):
+
+- every spelling the app has used for a metric maps to its HealthKit type
+  (`walking_running_distance`, `weight_body_mass`, `blood_oxygen_saturation`…),
+  so it lands on the same metric as the native export;
+- `blood_pressure` is split into systolic / diastolic; `sleep_analysis`
+  into sleep stages (`sleep.asleep`, `sleep.deep`, `sleep.rem`…, hours →
+  minutes); percentages (already 0–100) are never scaled twice;
+- each point is stored as a raw sample; re-pushing a day replaces that
+  day's Health Auto Export samples (idempotent), and the daily values are
+  recomputed from the pushed day onward;
+- workouts in the payload are not imported (use the full export for them);
+- a name outside the catalog is still stored, under an `apple.<name>`
+  metric; points without a date or a number (`qty`, or `Avg` for heart
+  rate) are listed in the response's `skipped`.
 
 ## Apple Watch → `/ingest/watch`
 
@@ -22,10 +68,11 @@ curl -s $BASE/ingest/watch -H "Authorization: Bearer $WATCH_TOKEN" \
 
 CPAP data uses the same shape at `/ingest/ppc` (scope `ingest:ppc`).
 
-A `healthkit_type` that has **no mapping** is no longer skipped: it is
-imported under a synthesised `apple.*` metric, created on the fly (same
-full-fidelity behaviour as the zip importer). Only samples with neither a
-`metric_key` nor a `healthkit_type` are reported in `skipped`.
+A `healthkit_type` that has **no mapping** is not skipped: it resolves
+through the HealthKit catalog (French label, domain, unit, daily rule), or
+to a synthesised `apple.*` metric for a type outside the SDK catalog. Only
+samples with neither a `metric_key` nor a `healthkit_type` are reported in
+`skipped`.
 
 ## iPhone Shortcut sync — `/sync/*`
 
@@ -75,7 +122,7 @@ hand-enter) **or** the usual `Authorization: Bearer <token>` header.
 The importer **auto-detects** the archive: `export.xml` → Apple's native
 format; otherwise it reads every `type,sourceName,…,unit,value` CSV member
 into the same full-fidelity storage (`health_samples`) and daily roll-ups,
-creating `apple.*` metrics on the fly for unknown types.
+resolving each type through the HealthKit catalog.
 
 ## Managing mappings
 
@@ -104,7 +151,9 @@ curl -s $BASE/capture -H "Authorization: Bearer $ACCESS" \
 #     "complement": [ ...active manual metrics to fill... ] }
 ```
 
-The actual photo upload + AI analysis attach to this event in Phase 4.
+Photos are sent separately to `POST /ingest/photo` (multipart: `file`,
+`angle` = `face` / `profil` / `dos`, optional `date_key`, `weight`) with an
+`ingest:photo` token; the analysis runs in the worker.
 
 ## Also works: scoped tokens + batch measurements
 
@@ -131,12 +180,3 @@ idempotent path the ingestion endpoints build on.
    ```
 
 Idempotency means re‑sending the same day is safe (values update in place).
-
-## Phase 3 contract (planned)
-
-- `POST /ingest/watch` — `{ date_key, samples: [{ metric_key | healthkit_type,
-  value, unit, ts }] }`, mapped to metrics via a configurable HealthKit table.
-- `POST /ingest/ppc` — CPAP machine data (hours, AHI, leaks, pressure).
-- `POST /capture` — mode B: opens a `capture_session` event, attaches the
-  day's photo, reads the weight, pre‑fills Watch data, and returns the
-  manual‑only complement form.
