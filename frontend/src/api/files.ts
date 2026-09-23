@@ -1,4 +1,4 @@
-import { getAccessToken } from './client';
+import { authFetch } from './client';
 
 /** Types for files served as "application/octet-stream". */
 const TYPES: Record<string, string> = {
@@ -16,9 +16,7 @@ const TYPES: Record<string, string> = {
 
 /** A private file (``/api/v1`` path) as a blob the browser can show. */
 async function blobOf(path: string, name: string): Promise<Blob> {
-  const token = getAccessToken();
-  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-  const res = await fetch(`/api/v1${path}`, { headers });
+  const res = await authFetch(path);
   if (!res.ok) throw new Error(`Erreur ${res.status}`);
   const blob = await res.blob();
   const guessed = TYPES[name.split('.').pop()?.toLowerCase() ?? ''];

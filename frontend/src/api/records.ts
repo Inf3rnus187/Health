@@ -1,4 +1,4 @@
-import { api, getAccessToken } from './client';
+import { api, authFetch } from './client';
 import type {
   EcgRow,
   EcgSeries,
@@ -31,9 +31,7 @@ export async function downloadRecord(
   path: string,
   filename: string,
 ): Promise<void> {
-  const token = getAccessToken();
-  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-  const res = await fetch(`/api/v1${path}`, { headers });
+  const res = await authFetch(path);
   if (!res.ok) {
     throw new Error(`Erreur ${res.status}`);
   }

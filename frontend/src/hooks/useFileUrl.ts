@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
 
-import { getAccessToken } from '../api/client';
+import { authFetch } from '../api/client';
 
 function fetchBlob(path: string): Promise<Blob> {
-  const token = getAccessToken();
-  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-  return fetch(`/api/v1${path}`, { headers }).then((res) =>
+  return authFetch(path).then((res) =>
     res.ok ? res.blob() : Promise.reject(res.status),
   );
 }

@@ -1,4 +1,4 @@
-import { api, getAccessToken } from './client';
+import { api, authFetch } from './client';
 import type { ClinicalDoc, ObservationPage } from './types';
 
 export function fetchObservations(
@@ -22,11 +22,8 @@ export function fetchClinicalDoc(): Promise<ClinicalDoc | null> {
 export async function importCda(
   form: FormData,
 ): Promise<{ observations: number }> {
-  const token = getAccessToken();
-  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-  const res = await fetch('/api/v1/clinical/import', {
+  const res = await authFetch('/clinical/import', {
     method: 'POST',
-    headers,
     body: form,
   });
   if (!res.ok) {

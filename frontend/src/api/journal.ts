@@ -1,5 +1,5 @@
 import type { Range } from '../utils/range';
-import { api, getAccessToken } from './client';
+import { api, authFetch } from './client';
 
 export interface UrinationDay {
   day: string;
@@ -78,18 +78,9 @@ export const analyzeMeal = (id: string) =>
 export const deleteMeal = (id: string) =>
   api<{ detail: string }>(`/meals/${id}`, json('DELETE'));
 
-function authHeaders(): Record<string, string> {
-  const token = getAccessToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
 /** Log a meal (multipart: photo + fields); the AI reading is queued. */
 export async function createMeal(form: FormData): Promise<Meal> {
-  const res = await fetch('/api/v1/meals', {
-    method: 'POST',
-    headers: authHeaders(),
-    body: form,
-  });
+  const res = await authFetch('/meals', { method: 'POST', body: form });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as {
       detail?: string;
@@ -101,9 +92,7 @@ export async function createMeal(form: FormData): Promise<Meal> {
 
 /** The meal photo as an object URL (authenticated). */
 export async function fetchMealPhoto(id: string): Promise<string> {
-  const res = await fetch(`/api/v1/meals/${id}/photo`, {
-    headers: authHeaders(),
-  });
+  const res = await authFetch(`/meals/${id}/photo`);
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}`);
   }

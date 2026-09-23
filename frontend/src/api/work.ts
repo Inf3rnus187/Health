@@ -1,5 +1,5 @@
 import { type Range, rangeQuery } from '../utils/range';
-import { api, getAccessToken } from './client';
+import { api, authFetch } from './client';
 
 export interface WorkSession {
   id: string;
@@ -160,10 +160,8 @@ export async function importWork(
 ): Promise<WorkImport> {
   const form = new FormData();
   form.append('file', file);
-  const token = getAccessToken();
-  const res = await fetch(`/api/v1/work/import?dry_run=${dryRun}`, {
+  const res = await authFetch(`/work/import?dry_run=${dryRun}`, {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: form,
   });
   if (!res.ok) {

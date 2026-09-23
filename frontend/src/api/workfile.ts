@@ -1,5 +1,5 @@
 import { type Range, rangeQuery } from '../utils/range';
-import { api, getAccessToken } from './client';
+import { api, authFetch } from './client';
 import type { WorkSession } from './work';
 
 export interface Absence {
@@ -176,12 +176,7 @@ export const createFileReport = (range: Range) =>
 
 /** POST a multipart form with the session token (files). */
 export async function postForm<T>(path: string, form: FormData): Promise<T> {
-  const token = getAccessToken();
-  const res = await fetch(`/api/v1${path}`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: form,
-  });
+  const res = await authFetch(path, { method: 'POST', body: form });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as {
       detail?: string;

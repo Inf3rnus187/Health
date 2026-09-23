@@ -1,4 +1,4 @@
-import { api, getAccessToken } from './client';
+import { api, getAccessToken, renewSession } from './client';
 import type { ImportJob } from './types';
 
 export function listImportJobs(): Promise<ImportJob[]> {
@@ -9,7 +9,21 @@ export function resetImported(): Promise<{ detail: string }> {
   return api<{ detail: string }>('/imports/reset', { method: 'POST' });
 }
 
-export function uploadExport(
+/** Upload with progress; an expired session is renewed, then resent. */
+export async function uploadExport(
+  file: File,
+  onProgress: (pct: number) => void,
+): Promise<ImportJob> {
+  try {
+    return await send(file, onProgress);
+  } catch (error) {
+    const expired = (error as { status?: number }).status === 401;
+    if (expired && (await renewSession())) return send(file, onProgress);
+    throw error;
+  }
+}
+
+function send(
   file: File,
   onProgress: (pct: number) => void,
 ): Promise<ImportJob> {
@@ -46,6 +60,8 @@ function _settle(
   if (xhr.status >= 200 && xhr.status < 300) {
     resolve(JSON.parse(xhr.responseText) as ImportJob);
   } else {
-    reject(new Error(`Erreur ${xhr.status}`));
+    reject(
+      Object.assign(new Error(`Erreur ${xhr.status}`), { status: xhr.status }),
+    );
   }
 }

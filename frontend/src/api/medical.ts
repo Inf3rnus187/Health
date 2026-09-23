@@ -1,4 +1,4 @@
-import { api, getAccessToken } from './client';
+import { api, authFetch } from './client';
 import type { MedicalDoc } from './types';
 
 export function listMedicalDocs(): Promise<MedicalDoc[]> {
@@ -6,14 +6,8 @@ export function listMedicalDocs(): Promise<MedicalDoc[]> {
 }
 
 export async function uploadMedicalDoc(form: FormData): Promise<MedicalDoc> {
-  const token = getAccessToken();
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-  const res = await fetch('/api/v1/medical/documents', {
+  const res = await authFetch('/medical/documents', {
     method: 'POST',
-    headers,
     body: form,
   });
   if (!res.ok) {
@@ -29,9 +23,7 @@ export function deleteMedicalDoc(id: string): Promise<{ detail: string }> {
 }
 
 export async function viewMedicalDoc(id: string): Promise<void> {
-  const token = getAccessToken();
-  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-  const res = await fetch(`/api/v1/medical/documents/${id}/file`, { headers });
+  const res = await authFetch(`/medical/documents/${id}/file`);
   if (!res.ok) {
     throw new Error(`Erreur ${res.status}`);
   }

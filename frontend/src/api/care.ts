@@ -1,4 +1,4 @@
-import { api, getAccessToken } from './client';
+import { api, authFetch } from './client';
 import type { Appointment, Condition, Treatment } from './types';
 
 type Body = Record<string, unknown>;
@@ -28,11 +28,8 @@ export const deleteAppointment = (id: string) => del(`/appointments/${id}`);
 export async function importAppointments(
   form: FormData,
 ): Promise<{ added: number }> {
-  const token = getAccessToken();
-  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-  const res = await fetch('/api/v1/appointments/import', {
+  const res = await authFetch('/appointments/import', {
     method: 'POST',
-    headers,
     body: form,
   });
   if (!res.ok) {

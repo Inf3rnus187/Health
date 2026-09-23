@@ -21,6 +21,15 @@ moyennes 7 / 30 jours, sources).
   debout, notifications cardiaques, pleine conscience… deviennent des
   nombres traçables.
 
+**Connexion** : une fois connecté, la session tient tant que la page
+sert au moins une fois tous les 14 jours (`REFRESH_TOKEN_TTL_DAYS`) — le
+jeton d'accès de 15 min est renouvelé tout seul, avant son échéance et
+dès qu'une requête le trouve expiré (la requête est alors rejouée, sans
+erreur à l'écran), y compris avec plusieurs onglets ouverts. Si la
+session ne peut plus être renouvelée (déconnexion ailleurs, 14 jours
+sans usage), la page de connexion le dit : « Session expirée :
+reconnecte-toi ».
+
 ## Accueil
 
 Tuiles des mesures clés (dernière valeur, moyenne 7 j, évolution) — un clic

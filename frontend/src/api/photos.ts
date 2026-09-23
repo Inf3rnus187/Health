@@ -1,4 +1,4 @@
-import { api, getAccessToken } from './client';
+import { api, authFetch } from './client';
 
 export interface Photo {
   id: string;
@@ -80,9 +80,7 @@ export function deleteAllPhotos(): Promise<{ deleted: number }> {
 }
 
 export async function fetchPhotoBlob(id: string): Promise<string> {
-  const token = getAccessToken();
-  const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-  const res = await fetch(`/api/v1/photos/${id}/file`, { headers });
+  const res = await authFetch(`/photos/${id}/file`);
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}`);
   }

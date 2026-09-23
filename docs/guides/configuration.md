@@ -58,7 +58,7 @@ docker compose ps
 | Variable | Défaut | Rôle |
 |----------|--------|------|
 | `SECRET_KEY` | — (obligatoire, ≥ 32 car.) | Signe les sessions (JWT). Générée par `install.sh`. |
-| `ACCESS_TOKEN_TTL_MIN` | `15` | Durée d'une session avant rafraîchissement. |
+| `ACCESS_TOKEN_TTL_MIN` | `15` | Durée du jeton d'accès. La page web le renouvelle seule (toutes les 12 min, et à la première réponse 401) avec le jeton de rafraîchissement : une page restée ouverte ne se déconnecte pas. |
 | `REFRESH_TOKEN_TTL_DAYS` | `14` | Durée maximale d'une connexion. |
 | `JWT_ALGORITHM` | `HS256` | Algorithme de signature. |
 | `CORS_ORIGINS` | vide | Origines navigateur autorisées (vide = même origine). |

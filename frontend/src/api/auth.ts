@@ -8,13 +8,6 @@ export function login(email: string, password: string): Promise<TokenPair> {
   });
 }
 
-export function refreshTokens(refreshToken: string): Promise<TokenPair> {
-  return api<TokenPair>('/auth/refresh', {
-    method: 'POST',
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  });
-}
-
 export function logoutRequest(
   refreshToken: string,
 ): Promise<{ detail: string }> {
