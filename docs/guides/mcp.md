@@ -27,7 +27,7 @@ PHOENIX_API_TOKEN=<le jeton hub:full>
 MCP_AUTH_TOKEN=<secret généré par : openssl rand -hex 32>
 MCP_BIND=127.0.0.1      # 0.0.0.0 pour y accéder depuis un autre appareil du réseau
 MCP_PORT=9000
-MCP_TRANSPORT=sse       # ou streamable-http
+MCP_TRANSPORT=streamable-http   # recommandé ; ou sse
 ```
 
 `MCP_AUTH_TOKEN` est **obligatoire** en SSE / HTTP : sans lui le serveur
@@ -41,25 +41,37 @@ docker compose --profile mcp up -d --build mcp
 docker compose logs mcp --since 5m
 ```
 
-Vérifier (depuis la machine cliente) :
+Vérifier depuis la machine cliente (mode `streamable-http`, un seul
+`curl` par appel, réponse JSON directe) :
 
 ```bash
-curl -i http://<IP>:9000/sse                     # → 401 Unauthorized (normal)
-curl -N -H "Authorization: Bearer <MCP_AUTH_TOKEN>" http://<IP>:9000/sse
-# → un flux « event: endpoint » : le serveur répond
+TOKEN='<MCP_AUTH_TOKEN>'
+# lister les outils
+curl -s http://<IP>:9000/mcp -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+# lire le poids
+curl -s http://<IP>:9000/mcp -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"metric_overview","arguments":{"key":"body.weight","days":30}}}'
 ```
+
+Sans l'en-tête `Authorization` : 401 (normal). En mode `sse`, les réponses
+arrivent dans le flux `/sse` ouvert à part : `curl` ne suffit plus, il faut
+un client MCP.
 
 ## 4. Brancher un client
 
-Points d'entrée : SSE `http://<IP>:9000/sse`, ou `http://<IP>:9000/mcp` avec
-`MCP_TRANSPORT=streamable-http`. En-tête obligatoire :
+Points d'entrée : `http://<IP>:9000/mcp` (`MCP_TRANSPORT=streamable-http`)
+ou `http://<IP>:9000/sse` (`MCP_TRANSPORT=sse`). En-tête obligatoire :
 `Authorization: Bearer <MCP_AUTH_TOKEN>`.
 
 ### Claude Code
 
 ```bash
-claude mcp add --transport sse phoenix http://<IP>:9000/sse \
+claude mcp add --transport http phoenix http://<IP>:9000/mcp \
   --header "Authorization: Bearer <MCP_AUTH_TOKEN>"
+# en mode sse : --transport sse … http://<IP>:9000/sse
 ```
 
 ### Claude Desktop (via `mcp-remote`)
@@ -72,7 +84,7 @@ Dans `claude_desktop_config.json` (Node.js requis) :
     "phoenix": {
       "command": "npx",
       "args": [
-        "-y", "mcp-remote", "http://<IP>:9000/sse",
+        "-y", "mcp-remote", "http://<IP>:9000/mcp",
         "--allow-http",
         "--header", "Authorization:${AUTH_HEADER}"
       ],

@@ -112,7 +112,7 @@ services:
     env_file: [.env]
     environment:
       API_BASE_URL: http://api:8000/api/v1
-      MCP_TRANSPORT: ${MCP_TRANSPORT:-sse}
+      MCP_TRANSPORT: ${MCP_TRANSPORT:-streamable-http}
       MCP_PORT: "9000"
     ports:
       - "${MCP_BIND:-127.0.0.1}:${MCP_PORT:-9000}:9000"

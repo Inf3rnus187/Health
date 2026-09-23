@@ -108,6 +108,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`hub:full` token scope** (« Accès complet — MCP / assistant »): lets
   a token do everything the web app does; managing tokens, 2FA, the
   account and the Shortcut download still require an interactive login.
+- MCP `streamable-http` transport (now the compose default) answers each
+  request with plain JSON and needs no session, so a single `curl` can
+  list the tools or call one.
 - `GET /medical/documents/{id}/text`: the text the AI reads from a
   document (OCR for scans), to check an extraction against its source.
 - **Documentation** (French guides): configuration (every variable, tokens

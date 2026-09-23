@@ -20,4 +20,8 @@ mcp = FastMCP(
     instructions=INSTRUCTIONS,
     host=os.environ.get("MCP_HOST", "0.0.0.0"),
     port=int(os.environ.get("MCP_PORT", "9000")),
+    # streamable-http: every request is answered on its own (plain JSON,
+    # no session), so a single curl can call a tool.
+    stateless_http=True,
+    json_response=True,
 )

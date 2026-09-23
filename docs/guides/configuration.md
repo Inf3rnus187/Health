@@ -120,7 +120,7 @@ lancer ensuite « Réanalyser tout l'historique ».
 | `MCP_AUTH_TOKEN` | Secret que chaque client MCP doit envoyer (obligatoire en réseau). |
 | `MCP_BIND` | `127.0.0.1` (défaut) ou `0.0.0.0` pour le réseau local. |
 | `MCP_PORT` | `9000`. |
-| `MCP_TRANSPORT` | `sse` (défaut), `streamable-http` ou `stdio`. |
+| `MCP_TRANSPORT` | `streamable-http` (recommandé : une requête, une réponse JSON — un simple `curl` marche), `sse` ou `stdio`. |
 
 Détails : [guide MCP](mcp.md).
 

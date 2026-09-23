@@ -26,7 +26,7 @@ document, to check an extraction against its source.
 | `API_BASE_URL` | REST API base (default `http://api:8000/api/v1`). |
 | `PHOENIX_API_TOKEN` | API token with the **`hub:full`** scope (web app › Import › « Jetons d’accès (API) » › « Accès complet — MCP / assistant »). It can do everything the web app does **except** managing tokens, 2FA and the account. |
 | `MCP_AUTH_TOKEN` | **Required** for `sse` / `streamable-http`: every client request must send `Authorization: Bearer <MCP_AUTH_TOKEN>` (401 otherwise). Generate with `openssl rand -hex 32`. |
-| `MCP_TRANSPORT` | `sse` (default), `streamable-http` or `stdio`. |
+| `MCP_TRANSPORT` | `streamable-http` (default in compose: one request, one JSON answer — a plain `curl` works), `sse` or `stdio`. |
 | `MCP_HOST` / `MCP_PORT` | Bind address inside the container (default `0.0.0.0:9000`). |
 | `MCP_BIND` | Host interface the compose port is published on (default `127.0.0.1`; `0.0.0.0` for the LAN). |
 
@@ -42,7 +42,7 @@ docker compose --profile mcp up -d mcp   # in the repo root
 uv pip install -e ".[dev]" && python -m phoenix_mcp.server
 ```
 
-Client example (SSE): URL `http://<host>:9000/sse`, header
+Client example: URL `http://<host>:9000/mcp` (or `/sse` in sse mode), header
 `Authorization: Bearer <MCP_AUTH_TOKEN>`. For a desktop client that launches
 the server itself, use `MCP_TRANSPORT=stdio` (no network, no secret needed).
 Step-by-step setup (Claude Desktop, Claude Code, stdio over SSH):
