@@ -328,4 +328,4 @@ signale qu'il est aussi accepté en paramètre d'URL.
 
 | Méthode | Route | Accès | Paramètres | Rôle |
 |---|---|---|---|---|
-| POST | `/traces/import` | Session / hub:full | `dry_run`?, `meals`?, form `files`, form `kinds` | Import CSV / Excel / JSON exports, one kind per file. |
+| POST | `/traces/import` | Session / hub:full | `dry_run`?, `meals`?, form `files`, form `kinds` | Import exports (CSV, Excel, JSON) and receipts (PDF, photo). |

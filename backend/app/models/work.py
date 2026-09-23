@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 
 from sqlalchemy import (
+    Boolean,
     Date,
     DateTime,
     Float,
@@ -78,6 +79,9 @@ class Evidence(UUIDMixin, TimestampMixin, Base):
         ForeignKey("users.id", ondelete="CASCADE")
     )
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    #: False when only the day is known (an expense line): matched with a
+    #: receipt of the same day and amount, which then gives the time.
+    time_known: Mapped[bool] = mapped_column(Boolean, default=True)
     #: Parking exit, taxi drop-off, hotel check-out…
     ended_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

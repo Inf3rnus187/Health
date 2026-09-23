@@ -10,7 +10,8 @@ from __future__ import annotations
 import csv
 import io
 import json
-from datetime import datetime
+import zipfile
+from datetime import datetime, time
 from typing import Any
 
 from openpyxl import load_workbook
@@ -20,7 +21,15 @@ _MIN_HEADERS = 2
 
 
 def rows_of(data: bytes, filename: str) -> list[Row]:
-    """The file's rows, keyed by their column titles."""
+    """The file's rows, keyed by their column titles (none if unreadable)."""
+    try:
+        return _rows(data, filename)
+    except (csv.Error, ValueError, OSError, KeyError, zipfile.BadZipFile):
+        return []
+
+
+def _rows(data: bytes, filename: str) -> list[Row]:
+    """The rows of a CSV, Excel or JSON file."""
     name = filename.lower()
     if name.endswith((".xlsx", ".xlsm")):
         return _table(_sheet(data))
@@ -66,6 +75,8 @@ def _cell(value: Any) -> str:
     if value is None:
         return ""
     if isinstance(value, datetime):
+        if value.time() == time.min:  # a date cell: no time to invent
+            return value.date().isoformat()
         return value.isoformat(sep=" ")
     return str(value)
 

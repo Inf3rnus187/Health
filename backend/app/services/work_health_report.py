@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.work import WorkSession
-from app.services import evidence, work_health, work_health_pdf
+from app.services import evidence, evidence_files, work_health, work_health_pdf
 from app.services.daily_rollup import user_zone
 from app.services.timed_entries import utc
 
@@ -53,7 +53,7 @@ async def _images(
     for item in items:
         if (item["media_type"] or "").startswith("image/"):
             row = await evidence.get(session, user_id, item["id"])
-            data = evidence.read_file(row)
+            data = evidence_files.read_file(row)
             if data:
                 out[item["id"]] = data
     return out

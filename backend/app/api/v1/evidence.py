@@ -13,7 +13,7 @@ from app.core.deps import ReaderDep, SessionDep, UserDep
 from app.core.errors import InvalidInputError, NotFoundError
 from app.models.work import Evidence
 from app.schemas.workfile import EvidenceOut, EvidenceUpdate
-from app.services import evidence, trace_columns, traces
+from app.services import evidence, evidence_files, trace_columns, traces
 from app.services.daily_rollup import user_zone
 
 router = APIRouter(prefix="/evidence", tags=["evidence"])
@@ -129,7 +129,7 @@ async def download(
 ) -> Response:
     """The item's file, as received."""
     row = await evidence.get(session, principal.user.id, item_id)
-    data = evidence.read_file(row)
+    data = evidence_files.read_file(row)
     if data is None:
         raise NotFoundError("No file for this evidence")
     name = (row.file_name or "preuve").replace('"', "")

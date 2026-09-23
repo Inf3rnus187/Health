@@ -214,8 +214,9 @@ trois onglets : **Pointage**, **Dossier travail et santé**, **Importer**.
   (`sha256sum fichier`). Les images (PNG, JPEG) sont reproduites dans
   l'annexe du rapport ; les autres fichiers y sont listés.
 - **Journées à compléter** (onglet Pointage) : les traces du jour (métro
-  07:52, taxi 23:40…) sont rappelées à côté de chaque journée incomplète,
-  pour retrouver l'heure manquante.
+  07:52, taxi 23:40… et, pour une débauche manquante, celles du
+  lendemain matin : le taxi de 03:47) sont proposées à côté de chaque
+  journée incomplète ; un clic reprend l'heure.
 - **Nuits** (30 derniers réveils) : pour chaque nuit (rattachée au jour du
   réveil, de 18 h la veille à 18 h), le sommeil, le nombre de **réveils**
   (phases d'éveil de la montre ; sans phases, les coupures de 5 min et
@@ -288,11 +289,31 @@ choisir **tous les fichiers ensemble** ; le type est deviné du nom
   un fichier de débauches complète les embauches seules déjà importées
   (20 h au plus d'écart).
 
-**Traces : exports des applications** (Uber, Uber Eats, Navigo, parking,
-hôtel, notes de frais, relevé bancaire) en CSV, Excel (.xlsx) ou JSON.
-Choisir les fichiers, vérifier le **type** de chacun (deviné du nom :
-`trips_data` → taxi, `eats` → repas livré, `navigo` → transport…),
-« Lire », puis « Importer ».
+**Traces : exports des applications et reçus** — Uber, Uber Eats,
+Navigo, parking, hôtel, notes de frais, relevé bancaire en CSV, Excel
+(.xlsx) ou JSON, et **reçus / factures en PDF ou en photo**. Choisir les
+fichiers, vérifier le **type** de chacun (« Deviner » par défaut ; sinon
+deviné du nom : `trips_data` → taxi, `eats` → repas livré, `navigo` →
+transport…), « Lire », puis « Importer ».
+
+- **Reçus et factures** (PDF avec texte, PDF scanné ou photo lus par
+  OCR) : la date, **l'heure** (tirée du nom du fichier quand il la porte,
+  comme les reçus Uber `09-05-2026-03H47-….pdf`, sinon du texte), le
+  **montant total payé**, qui a facturé (« Uber — H PRETIGE 41 »), les
+  lignes facturées et le numéro de facture. Le fichier est gardé comme
+  preuve (SHA-256).
+- **Un reçu et sa ligne de note de frais ne font qu'une trace** : même
+  type, même jour, même montant, et heures égales ou l'une inconnue. Dans
+  un sens comme dans l'autre, la trace est complétée — l'heure et le
+  fichier du reçu, le motif de la note de frais — et comptée une fois
+  (« rapprochées » dans l'aperçu).
+- **Notes de frais** : une colonne qui nomme le type de chaque ligne
+  (taxi, parking, dîner, déjeuner, hôtel, train…) l'emporte sur le type
+  du fichier ; les colonnes sans titre ou non reconnues (motif, « Heures
+  supp suite piratage », plateforme…) sont gardées dans la description ;
+  un texte « parking du 2/04/26 10h05 au 05/04/2026 23h32 » donne le
+  **début et la fin** exacts. Un séjour de 6 h ou plus (parking, hôtel)
+  compte comme **présence sur chaque jour** qu'il couvre.
 
 - Les colonnes sont reconnues **par leur titre**, en français ou en
   anglais (heure de début / fin, date, heure, montant, devise, lieu ou
@@ -300,7 +321,9 @@ Choisir les fichiers, vérifier le **type** de chacun (deviné du nom :
   colonne a servi à quoi (« début : « Begin Trip Time » »).
 - Les heures avec fuseau (« 2026-03-02 22:40:00 +0000 UTC » chez Uber)
   sont converties ; sans fuseau, c'est votre heure locale. Une ligne
-  sans heure (note de frais, hôtel) est placée à midi.
+  sans heure (note de frais, hôtel) garde sa date seule (heure
+  « inconnue » : elle ne compte pas comme trace tardive et se complète
+  par le reçu).
 - Les lignes **annulées** sont ignorées ; les articles d'une même
   commande n'en font qu'une (prix compté une fois) ; une trace déjà
   enregistrée (même type, même minute, même montant) n'est pas

@@ -8,7 +8,6 @@ report, so a copy can be checked against the original.
 
 from __future__ import annotations
 
-import hashlib
 from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 from typing import Any
@@ -16,11 +15,10 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import crypto
-from app.core.config import get_settings
 from app.core.errors import NotFoundError
 from app.models.base import new_uuid
 from app.models.work import Evidence
+from app.services import evidence_files
 
 #: Proof kind → French label.
 PROOFS = {
@@ -55,13 +53,7 @@ async def create(
     """Store an item; ``upload`` is (file name, media type, bytes)."""
     row = Evidence(id=new_uuid(), user_id=user_id, **fields)
     if upload is not None:
-        name, media, data = upload
-        path = _path(user_id, row.id)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(crypto.encrypt(data))
-        row.file_path, row.file_name, row.media_type = str(path), name, media
-        row.size_bytes = len(data)
-        row.sha256 = hashlib.sha256(data).hexdigest()
+        evidence_files.attach(row, upload)
     session.add(row)
     await session.flush()
     return row
@@ -102,15 +94,3 @@ async def delete(session: AsyncSession, user_id: str, item_id: str) -> None:
         Path(row.file_path).unlink(missing_ok=True)
     await session.delete(row)
     await session.flush()
-
-
-def read_file(row: Evidence) -> bytes | None:
-    """The item's file, decrypted (None without a file)."""
-    if not row.file_path:
-        return None
-    return crypto.decrypt(Path(row.file_path).read_bytes())
-
-
-def _path(user_id: str, item_id: str) -> Path:
-    """On-disk location of an item's file."""
-    return Path(get_settings().media_dir) / user_id / "evidence" / item_id

@@ -13,6 +13,8 @@ export interface Absence {
 export interface EvidenceItem {
   id: string;
   occurred_at: string;
+  /** False when only the day is known (an expense line). */
+  time_known: boolean;
   ended_at: string | null;
   kind: string;
   title: string;

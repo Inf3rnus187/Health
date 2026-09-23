@@ -62,7 +62,8 @@ def cell(traces_of_day: list[dict[str, Any]]) -> str:
     """A day's traces in a few words for the journal."""
     parts = []
     for t in traces_of_day[:3]:
-        span = f"{t['time']}-{t['end']}" if t["end"] else t["time"]
+        when = t["time"] or "(jour)"
+        span = f"{when}-{t['end']}" if t["end"] else when
         price = f" {t['amount']:g}EUR" if t["amount"] else ""
         parts.append(f"{SHORT.get(t['kind'], t['kind'])} {span}{price}")
     more = len(traces_of_day) - 3

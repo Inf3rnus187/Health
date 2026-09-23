@@ -27,16 +27,29 @@ AMOUNT = ("fare amount", "order price", "total ttc", "montant ttc",
           "montant", "total", "prix", "price", "amount", "cout", "cost",
           "ttc", "tarif")  # fmt: skip
 CURRENCY = ("currency", "devise", "monnaie")
-PLACE = ("restaurant", "store", "merchant", "commercant", "etablissement",
-         "hotel", "parking", "station", "gare", "begin trip address",
-         "pickup address", "adresse de depart", "lieu", "adresse", "address",
-         "ville", "city")  # fmt: skip
+PLACE = ("begin trip address", "pickup address", "adresse de depart",
+         "lieu", "adresse", "address", "station", "gare", "ville",
+         "city")  # fmt: skip
+VENDOR = ("restaurant", "store", "merchant", "commercant", "etablissement",
+          "enseigne", "societe", "fournisseur", "prestataire", "vendor",
+          "hotel", "parking")  # fmt: skip
 WHAT = ("item name", "item_name", "items", "article", "designation",
         "description", "libelle", "produit", "product", "motif", "objet",
         "nature")  # fmt: skip
 STATUS = ("status", "statut", "etat", "state")
 ORDER = ("order id", "order_id", "order uuid", "order number",
          "numero de commande", "n° de commande", "id commande")  # fmt: skip
+#: Words of a line that say which kind of trace it is (checked in order).
+KIND_WORDS = (
+    (("uber eats", "deliveroo", "just eat", "livraison"), "livraison"),
+    (("taxi", "vtc", "uber", "g7", "bolt", "heetch", "course"), "taxi"),
+    (("parking", "stationnement", "indigo", "onepark", "zenpark"), "parking"),
+    (("hotel", "nuitee", "ibis", "airbnb", "booking"), "hotel"),
+    (("diner", "dejeuner", "petit-dejeuner", "repas", "restaurant",
+      "boulangerie", "sandwich"), "repas"),
+    (("train", "sncf", "metro", "navigo", "rer", "bus", "tram",
+      "transport", "peage"), "transport"),
+)  # fmt: skip
 #: A row whose status holds one of these words was not carried out.
 CANCELLED = re.compile(r"cancel|annul|fail|echou|refus|unfulfil")
 
@@ -54,6 +67,10 @@ class Columns(NamedTuple):
     what: str | None
     status: str | None
     order: str | None
+    vendor: str | None = None
+    kind: str | None = None
+    #: Other text columns (a reason, a comment): kept in the description.
+    extras: tuple[str, ...] = ()
 
 
 def find(rows: list[Row]) -> Columns:
@@ -61,7 +78,7 @@ def find(rows: list[Row]) -> Columns:
     titles = list(rows[0]) if rows else []
     timed = [t for t in titles if work_parse.stamps(_value(rows, t))]
     dated = [t for t in titles if work_parse.day_of(_value(rows, t))]
-    return Columns(
+    found = Columns(
         start=_pick(timed, START),
         end=_pick(timed, END),
         date=_pick(dated, DATE) or _pick(titles, DATE),
@@ -72,6 +89,20 @@ def find(rows: list[Row]) -> Columns:
         what=_pick(titles, WHAT),
         status=_pick(titles, STATUS),
         order=_pick(titles, ORDER),
+        vendor=_pick(titles, VENDOR),
+        kind=_kind_column(rows, titles),
+    )
+    used = {v for v in found._asdict().values() if isinstance(v, str)}
+    rest = [t for t in titles if t not in used and _texty(rows, t)]
+    return found._replace(extras=tuple(rest))
+
+
+def kind_of(text: str) -> str | None:
+    """The trace kind a text speaks of (None when it says nothing)."""
+    plain = work_parse.fold(text)
+    return next(
+        (kind for words, kind in KIND_WORDS if any(w in plain for w in words)),
+        None,
     )
 
 
@@ -102,3 +133,22 @@ def _pick(titles: list[str], words: tuple[str, ...]) -> str | None:
 def _value(rows: list[Row], title: str) -> str:
     """The first filled value of a column."""
     return next((r.get(title, "") for r in rows if r.get(title)), "")
+
+
+def _kind_column(rows: list[Row], titles: list[str]) -> str | None:
+    """The column whose values name a kind (taxi, parking, dîner…)."""
+    best, share = None, 0.5
+    for title in titles:
+        values = [r.get(title, "") for r in rows if r.get(title)]
+        if not values:
+            continue
+        hits = sum(1 for v in values if kind_of(v)) / len(values)
+        if hits > share:
+            best, share = title, hits
+    return best
+
+
+def _texty(rows: list[Row], title: str) -> bool:
+    """Whether a column holds words (not only numbers or dates)."""
+    value = _value(rows, title)
+    return bool(re.search(r"[a-zA-Z]{3,}", value))

@@ -149,14 +149,16 @@ function EvidenceForm() {
   );
 }
 
+function fmt(iso: string, withTime: boolean): string {
+  const at = new Date(iso);
+  return withTime
+    ? at.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })
+    : at.toLocaleDateString('fr-FR');
+}
+
 function span(item: EvidenceItem): string {
-  const fmt = (iso: string) =>
-    new Date(iso).toLocaleString('fr-FR', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    });
-  const end = item.ended_at ? ` → ${fmt(item.ended_at)}` : '';
-  return `${fmt(item.occurred_at)}${end}`;
+  const end = item.ended_at ? ` → ${fmt(item.ended_at, true)}` : '';
+  return `${fmt(item.occurred_at, item.time_known)}${end}`;
 }
 
 function Details({ item }: { item: EvidenceItem }) {

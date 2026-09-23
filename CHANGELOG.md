@@ -196,6 +196,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Receipts and expense reports reconciled.** Importing a PDF receipt as
+  a trace failed with a 500 (it was read as a CSV); receipts and
+  invoices (PDF, scanned PDF, photo — OCR) are now read: day, time (from
+  the file name, as Uber names its receipts, or the text), total paid,
+  who billed it, items and invoice number, the file kept with its
+  SHA-256. A receipt and the expense-report line of the same ride (same
+  kind, day and amount; times equal or one unknown) are one trace,
+  completed in either order (migration 0014: `time_known`). Expense
+  reports: a column naming each line's kind wins over the file's kind,
+  untitled and unknown columns are kept in the description, "du … au …"
+  gives a stay's exact start and end, and a stay of 6 h or more marks
+  presence on each day it covers. An unreadable file is reported, never
+  a crash. Days to complete offer the day's traces (and the next
+  morning's) as one-click times.
 - **Home tiles for pee and distance walked.** « Pipi » (count of the day,
   time of the last one) and « Distance marche/course » (km of the day)
   sit on the home page with cigarettes and coffee; a count prints bare

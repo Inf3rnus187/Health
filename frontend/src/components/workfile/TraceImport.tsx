@@ -14,10 +14,11 @@ interface FileReport {
   label: string;
   traces: number;
   new: number;
+  merged: number;
   duplicates: number;
   total: number;
   skipped_count: number;
-  columns: Record<string, string>;
+  columns: Record<string, string | string[]>;
 }
 
 interface Report {
@@ -34,10 +35,17 @@ const GUESS: [string[], string][] = [
   [['hotel', 'booking', 'airbnb'], 'hotel'],
 ];
 
+/** Kinds to choose from: guessed (a type column, a receipt) or one. */
+const KINDS: Record<string, string> = {
+  auto: 'Deviner (colonne type, reçu)',
+  ...TRACE_KINDS,
+};
+
 function guess(name: string): string {
   const plain = name.toLowerCase();
+  if (/\.(pdf|png|jpe?g)$/.test(plain)) return 'auto';
   const hit = GUESS.find(([words]) => words.some((w) => plain.includes(w)));
-  return hit ? hit[1] : 'frais';
+  return hit ? hit[1] : 'auto';
 }
 
 const FIELD: Record<string, string> = {
@@ -51,15 +59,20 @@ const FIELD: Record<string, string> = {
   what: 'détail',
   status: 'statut',
   order: 'commande',
+  vendor: 'société',
+  kind: 'type',
+  extras: 'autres',
+  document: 'document',
 };
 
 function line(f: FileReport): string {
   const found =
     Object.entries(f.columns)
-      .map(([key, title]) => `${FIELD[key] ?? key} : « ${title} »`)
+      .map(([key, title]) => `${FIELD[key] ?? key} : « ${String(title)} »`)
       .join(', ') || 'aucune';
   return (
     `${f.name} (${f.label}) : ${f.traces} traces, ${f.new} nouvelles, ` +
+    `${f.merged} rapprochées d’une trace déjà là (reçu ↔ note de frais), ` +
     `${f.duplicates} déjà là, ${f.total} €, ${f.skipped_count} lignes ` +
     `ignorées — colonnes lues : ${found}.`
   );
@@ -107,7 +120,7 @@ function Files(props: {
         <li key={p.file.name}>
           {p.file.name}{' '}
           <Choice
-            options={TRACE_KINDS}
+            options={KINDS}
             value={p.kind}
             onChange={(k) => props.onKind(i, k)}
           />
@@ -143,9 +156,11 @@ function Buttons(props: {
 }
 
 const INTRO =
-  'Exports CSV, Excel ou JSON : Uber (trips_data), Uber Eats, Navigo, ' +
-  'parking, hôtels, notes de frais. Les colonnes sont reconnues par leur ' +
-  'titre ; les courses annulées sont ignorées, rien n’est importé deux fois.';
+  'Exports CSV, Excel ou JSON (Uber, Uber Eats, Navigo, parking, notes ' +
+  'de frais, relevé bancaire) et reçus ou factures en PDF ou photo. Les ' +
+  'colonnes sont reconnues par leur titre ; un reçu et la ligne de note ' +
+  'de frais du même trajet (même jour, même montant) ne font qu’une ' +
+  'trace : le reçu apporte l’heure et le fichier.';
 
 function MealsBox(props: { on: boolean; set: (on: boolean) => void }) {
   return (

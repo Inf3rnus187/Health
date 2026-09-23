@@ -66,6 +66,7 @@ class EvidenceOut(BaseModel):
 
     id: str
     occurred_at: datetime
+    time_known: bool = True
     ended_at: datetime | None = None
     kind: str
     title: str

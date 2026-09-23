@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import type { WorkSession } from '../../api/work';
 import { useDeleteSession, useWorkSessions } from '../../hooks/useWork';
-import { TRACE_KINDS } from '../../api/workfile';
+import { type EvidenceItem, TRACE_KINDS } from '../../api/workfile';
 import { useCompleteSession, useEvidence } from '../../hooks/useWorkFile';
 import { localToday, shortDate } from '../../utils/format';
 import { clockTime } from '../work/format';
@@ -53,35 +53,63 @@ function Actions(props: ActionProps) {
   );
 }
 
-function Hints({ day }: { day: string }) {
+/** An instant as a local ``YYYY-MM-DDTHH:MM`` (datetime-local value). */
+function localStamp(iso: string): string {
+  const at = new Date(iso);
+  at.setMinutes(at.getMinutes() - at.getTimezoneOffset());
+  return at.toISOString().slice(0, 16);
+}
+
+/** The next day's date key (a clock-out after midnight). */
+function nextDay(day: string): string {
+  const at = new Date(`${day}T12:00:00`);
+  at.setDate(at.getDate() + 1);
+  return at.toISOString().slice(0, 10);
+}
+
+function useHints(row: WorkSession): EvidenceItem[] {
   const items = useEvidence().data ?? [];
-  const seen = items.filter(
-    (i) => i.kind in TRACE_KINDS && i.occurred_at.slice(0, 10) === day,
-  );
-  if (seen.length === 0) {
+  const days = row.start_at ? [row.date_key, nextDay(row.date_key)] : [];
+  return items.filter((i) => {
+    const stamp = localStamp(i.occurred_at);
+    const sameDay = stamp.startsWith(row.date_key);
+    const morning = stamp.startsWith(days[1] ?? '-') && stamp < `${days[1]}T12`;
+    return i.kind in TRACE_KINDS && i.time_known && (sameDay || morning);
+  });
+}
+
+function Hints(props: { row: WorkSession; pick: (at: string) => void }) {
+  const hints = useHints(props.row);
+  if (hints.length === 0) {
     return null;
   }
-  const text = seen
-    .map((i) => `${i.kind} ${clockTime(i.occurred_at)}`)
-    .join(', ');
-  return <span className="muted"> · traces ce jour-là : {text}</span>;
+  return (
+    <span className="muted">
+      {' '}
+      · traces :{' '}
+      {hints.map((i) => (
+        <button
+          key={i.id}
+          className="chip"
+          onClick={() => props.pick(localStamp(i.occurred_at))}
+        >
+          {i.kind} {localStamp(i.occurred_at).slice(5).replace('T', ' ')}
+        </button>
+      ))}
+    </span>
+  );
 }
 
 function Fill({ row }: { row: WorkSession }) {
-  const [time, setTime] = useState('');
+  const [at, setAt] = useState('');
   const field = row.start_at ? 'end_at' : 'start_at';
   const label = field === 'start_at' ? 'Embauche' : 'Débauche';
   return (
     <li>
       <Known row={row} />
-      <Hints day={row.date_key} />
-      <Input label={label} type="time" value={time} onChange={setTime} />
-      <Actions
-        row={row}
-        field={field}
-        at={`${row.date_key}T${time}`}
-        ready={Boolean(time)}
-      />
+      <Hints row={row} pick={setAt} />
+      <Input label={label} type="datetime-local" value={at} onChange={setAt} />
+      <Actions row={row} field={field} at={at} ready={Boolean(at)} />
     </li>
   );
 }

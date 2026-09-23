@@ -420,13 +420,15 @@ Paramètres : `occurred_at`* (string), `kind` (string, défaut `capture`), `titl
 
 ### `import_traces`
 
-Import app exports as traces (Uber, Uber Eats, Navigo, parking).
+Import app exports and receipts as traces (Uber, Navigo, parking).
 
 ``files``: [{"filename": "trips_data.csv", "text": "...", "kind":
-"taxi"}] — kind: transport, taxi, parking, livraison, repas, hotel or
-frais; CSV or JSON text (columns found by their titles). ``meals``
-logs each delivery as a meal with its price. Dry run first, then
-import for real once the user agrees.
+"auto"}] — or "base64" instead of "text" for a PDF / photo receipt.
+kind: auto (guessed from a type column or the receipt), transport,
+taxi, parking, livraison, repas, hotel or frais. A receipt and the
+expense-report line of the same ride (same day, same amount) become
+one trace. ``meals`` logs deliveries as priced meals. Dry run first,
+then import for real once the user agrees.
 
 Paramètres : `files`* (array), `meals` (boolean, défaut `True`), `dry_run` (boolean, défaut `True`)
 

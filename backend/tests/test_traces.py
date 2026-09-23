@@ -76,11 +76,11 @@ async def test_exports_are_read_by_their_columns(
     rides, metro, expenses = preview["files"]
     assert (rides["traces"], rides["skipped_count"]) == (2, 1)  # 1 cancelled
     assert rides["preview"][0]["time"] == "23:40"  # 22:40 UTC → Paris
-    assert rides["preview"][0]["end"] == "00:05"
+    assert rides["preview"][0]["end"] == "03/03 00:05"
     assert rides["total"] == 59.2
     assert metro["preview"][0] == {
         "day": "2026-03-02", "time": "07:52", "end": None,
-        "place": "Châtelet", "amount": None, "what": "",
+        "kind": "transport", "place": "Châtelet", "amount": None, "what": "",
     }  # fmt: skip
     assert expenses["total"] == 89.5
     done = await _import(client, auth, files)

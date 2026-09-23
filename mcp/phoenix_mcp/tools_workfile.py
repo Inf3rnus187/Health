@@ -108,21 +108,30 @@ async def add_evidence(
 async def import_traces(
     files: list[dict[str, str]], meals: bool = True, dry_run: bool = True
 ) -> Any:
-    """Import app exports as traces (Uber, Uber Eats, Navigo, parking).
+    """Import app exports and receipts as traces (Uber, Navigo, parking).
 
     ``files``: [{"filename": "trips_data.csv", "text": "...", "kind":
-    "taxi"}] — kind: transport, taxi, parking, livraison, repas, hotel or
-    frais; CSV or JSON text (columns found by their titles). ``meals``
-    logs each delivery as a meal with its price. Dry run first, then
-    import for real once the user agrees.
+    "auto"}] — or "base64" instead of "text" for a PDF / photo receipt.
+    kind: auto (guessed from a type column or the receipt), transport,
+    taxi, parking, livraison, repas, hotel or frais. A receipt and the
+    expense-report line of the same ride (same day, same amount) become
+    one trace. ``meals`` logs deliveries as priced meals. Dry run first,
+    then import for real once the user agrees.
     """
     upload = [
-        ("files", (f["filename"], f["text"].encode(), "text/plain"))
+        ("files", (f["filename"], _content(f), "application/octet-stream"))
         for f in files
     ]
-    data = {"kinds": [f["kind"] for f in files]}
+    data = {"kinds": [f.get("kind", "auto") for f in files]}
     flags = f"dry_run={str(dry_run).lower()}&meals={str(meals).lower()}"
     return await client.upload(f"/traces/import?{flags}", upload, data)
+
+
+def _content(file: dict[str, str]) -> bytes:
+    """A file's bytes: base64 (a PDF, a photo) or text."""
+    if file.get("base64"):
+        return base64.b64decode(file["base64"])
+    return file.get("text", "").encode()
 
 
 @mcp.tool()

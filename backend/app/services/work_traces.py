@@ -10,7 +10,7 @@ with the AI's score of each meal.
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date, time
+from datetime import date, datetime, time, timedelta
 from statistics import fmean
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -25,30 +25,61 @@ LATE = time(21, 0)
 #: Traces that place you somewhere (not a meal, not a document).
 PRESENCE = {"transport", "taxi", "parking", "hotel"}
 _LONG_DAY_H = 10.0
+#: A trace this long (a parking or hotel stay) also marks the next days.
+_STAY = timedelta(hours=6)
 
 
 def per_day(
     items: list[Evidence], tz: ZoneInfo
 ) -> dict[date, list[dict[str, Any]]]:
-    """The traces of each local day, in time order."""
+    """The traces of each local day, in time order.
+
+    A stay of 6 h or more over several days (parking from Thursday to
+    Sunday) also shows on each following day, as a continuation.
+    """
     days: dict[date, list[dict[str, Any]]] = defaultdict(list)
     for item in sorted(items, key=lambda e: utc(e.occurred_at)):
         if item.kind not in evidence.TRACES:
             continue
         start = utc(item.occurred_at).astimezone(tz)
         end = utc(item.ended_at).astimezone(tz) if item.ended_at else None
-        days[start.date()].append(
-            {
-                "kind": item.kind,
-                "time": f"{start:%H:%M}",
-                "end": f"{end:%H:%M}" if end else None,
-                "late": start.time() >= LATE,
-                "place": item.place,
-                "amount": item.amount,
-                "meal_id": item.meal_id,
-            }
-        )
+        days[start.date()].append(_entry(item, start, end))
+        day = start.date() + timedelta(days=1)
+        stay = end is not None and end - start >= _STAY
+        while stay and end is not None and day <= end.date():
+            days[day].append(_continued(item, end, day))
+            day += timedelta(days=1)
     return days
+
+
+def _entry(
+    item: Evidence, start: datetime, end: datetime | None
+) -> dict[str, Any]:
+    """A trace on its first day."""
+    known = item.time_known is not False
+    return {
+        "kind": item.kind,
+        "time": f"{start:%H:%M}" if known else None,
+        "end": f"{end:%d/%m %H:%M}" if end else None,
+        "late": known and start.time() >= LATE,
+        "place": item.place,
+        "amount": item.amount,
+        "meal_id": item.meal_id,
+    }
+
+
+def _continued(item: Evidence, end: datetime, day: date) -> dict[str, Any]:
+    """A several-day trace on a following day (amount counted once)."""
+    last = f"{end:%H:%M}" if day == end.date() else "24:00"
+    return {
+        "kind": item.kind,
+        "time": "00:00",
+        "end": last,
+        "late": False,
+        "place": f"{item.place} (suite)",
+        "amount": None,
+        "meal_id": None,
+    }
 
 
 def summary(

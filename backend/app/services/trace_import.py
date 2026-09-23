@@ -1,113 +1,138 @@
-"""Import traces from app exports: rides, deliveries, transport, parking.
+"""Import traces from app exports and receipts (rides, meals, parking…).
 
-One file, one kind (taxi / VTC, delivered meals, transport pass,
-parking, hotel, expense report…). Columns are found by their titles
-(:mod:`trace_columns`); cancelled rows are skipped; the rows of one
-delivery order are merged; a trace already stored (same kind, same
-minute, same amount) is not added twice. Deliveries can also be logged
-as meals, with their price, for the AI to read.
+A file is either a table (CSV, Excel, JSON: Uber, Uber Eats, Navigo,
+parking, expense reports, bank statements) or a receipt / invoice (PDF,
+photo: :mod:`receipt_read`, the file kept as the proof). Columns are
+found by their titles (:mod:`trace_columns`); a column naming each
+line's kind (taxi, parking, dîner…) wins over the file's kind; a
+"du … au …" text gives a start and an end; cancelled rows are skipped;
+one order's rows are merged. The same trace met twice — an expense line
+and its receipt: same kind, same day, same amount, times equal or one
+unknown — is kept once, the receipt adding its time and its file.
 """
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, time, timedelta
+import re
+from datetime import UTC, datetime, time
 from typing import Any, NamedTuple
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.models.meal import Meal
-from app.models.work import Evidence
-from app.services import evidence, table_read, trace_columns, traces, work_parse
-from app.services.daily_rollup import user_zone
+from app.services import receipt_read, table_read, trace_columns, work_parse
 from app.services.trace_columns import Columns
+from app.services.traces import MEAL_KINDS
 
-MAX_LISTED = 50
 #: The time given to a trace known only by its date.
 _NOON = time(12, 0)
+_SPAN = re.compile(r"\s(?:au|a|to|->|→|jusqu'au)\s", re.IGNORECASE)
 
 
 class Trace(NamedTuple):
-    """One trace read from a row (times in UTC)."""
+    """One trace read from a file (times in UTC)."""
 
     start: datetime
     end: datetime | None
+    time_known: bool
+    kind: str
     place: str
+    vendor: str
     amount: float | None
     currency: str
     what: str
     group: str
-
-
-async def import_traces(
-    session: AsyncSession,
-    user_id: str,
-    files: list[tuple[str, str, bytes]],
-    *,
-    dry_run: bool,
-    meals: bool,
-) -> tuple[dict[str, Any], list[Meal]]:
-    """Import ``(file name, kind, content)`` files; meals to read after."""
-    tz = await user_zone(session, user_id)
-    report: dict[str, Any] = {"dry_run": dry_run, "files": []}
-    logged: list[Meal] = []
-    for name, kind, data in files:
-        found, skipped, columns = read(data, name, kind, tz)
-        new = [t for t in found if not await _stored(session, user_id, kind, t)]
-        if not dry_run:
-            logged += await _store(session, user_id, kind, new, meals)
-        report["files"].append(
-            _summary(name, kind, (found, new, skipped), columns, tz, dry_run)
-        )
-    return report, logged
+    #: (file name, media type, bytes) — a receipt is its own proof.
+    file: tuple[str, str, bytes] | None = None
 
 
 def read(
     data: bytes, name: str, kind: str, tz: ZoneInfo
-) -> tuple[list[Trace], list[dict[str, Any]], Columns]:
+) -> tuple[list[Trace], list[dict[str, Any]], Columns | None]:
     """The traces of a file, the rows left out and the columns found."""
+    if receipt_read.is_receipt(data, name):
+        receipt = receipt_read.read(data, name, tz)
+        if receipt is None:
+            return [], [{"line": 1, "reason": "aucune date lisible"}], None
+        return [_from_receipt(receipt, kind, (name, data))], [], None
     rows = table_read.rows_of(data, name)
+    if not rows:
+        return [], [{"line": 1, "reason": "fichier illisible ou vide"}], None
     columns = trace_columns.find(rows)
+    found, skipped = _table(rows, columns, kind, tz)
+    return _orders(found), skipped, columns
+
+
+def _table(
+    rows: list[table_read.Row], columns: Columns, kind: str, tz: ZoneInfo
+) -> tuple[list[Trace], list[dict[str, Any]]]:
+    """The traces of a table's rows and the rows left out."""
     found: list[Trace] = []
     skipped: list[dict[str, Any]] = []
     for number, row in enumerate(rows, start=2):
         status = work_parse.fold(row.get(columns.status or "", ""))
-        start = _when(row, columns, tz)
+        when = _when(row, columns, tz)
         if trace_columns.CANCELLED.search(status):
             skipped.append({"line": number, "reason": "annulé"})
-        elif start is None:
-            skipped.append({"line": number, "reason": "pas de date ni d'heure"})
+        elif when is None:
+            skipped.append({"line": number, "reason": "pas de date"})
         else:
-            found.append(_trace(row, columns, start, tz))
-    return (
-        (_orders(found) if kind in traces.MEAL_KINDS else found),
-        skipped,
-        columns,
-    )
+            found.append(_trace(row, columns, when, kind, tz))
+    return found, skipped
 
 
 def _trace(
-    row: table_read.Row, c: Columns, start: datetime, tz: ZoneInfo
+    row: table_read.Row,
+    c: Columns,
+    when: tuple[datetime, bool],
+    kind: str,
+    tz: ZoneInfo,
 ) -> Trace:
     """A row as a trace."""
-    end = _stamp(row.get(c.end or "", ""), tz) if c.end else None
-    group = (
-        row.get(c.order or "", "")
-        or f"{start.isoformat()}|{row.get(c.place or '', '')}"
-    )
+
+    def cell(key: str | None) -> str:
+        return row.get(key or "", "")
+
+    text = " · ".join(v for v in (cell(c.what), *map(cell, c.extras)) if v)
+    start, known = when
+    span = _span(" ".join((cell(c.place), text)), tz) if not known else None
+    end = _stamp(cell(c.end), tz) if c.end else None
+    row_kind = trace_columns.kind_of(cell(c.kind)) if c.kind else None
     return Trace(
-        start=start,
-        end=end if end and end > start else None,
-        place=row.get(c.place or "", "")[:300],
-        amount=trace_columns.amount(row.get(c.amount or "", "")),
-        currency=(row.get(c.currency or "", "") or "EUR")[:3].upper(),
-        what=row.get(c.what or "", "")[:500],
-        group=group,
-    )  # fmt: skip
+        start=span[0] if span else start,
+        end=span[1] if span else (end[0] if end and end[0] > start else None),
+        time_known=bool(span) or known,
+        kind=row_kind or (kind if kind != "auto" else "frais"),
+        place=cell(c.place)[:300],
+        vendor=cell(c.vendor)[:200],
+        amount=trace_columns.amount(cell(c.amount)),
+        currency=(cell(c.currency) or "EUR")[:3].upper(),
+        what=text[:500],
+        group=cell(c.order) or f"{start:%Y%m%d%H%M}{cell(c.vendor)}",
+    )
 
 
-def _when(row: table_read.Row, c: Columns, tz: ZoneInfo) -> datetime | None:
+def _from_receipt(
+    receipt: receipt_read.Receipt, kind: str, file: tuple[str, bytes]
+) -> Trace:
+    """A receipt as a trace, its file attached."""
+    name, data = file
+    return Trace(
+        start=receipt.start.astimezone(UTC),
+        end=None,
+        time_known=receipt.time_known,
+        kind=(receipt.kind or "frais") if kind == "auto" else kind,
+        place="",
+        vendor=receipt.vendor,
+        amount=receipt.amount,
+        currency="EUR",
+        what=receipt.what,
+        group=name,
+        file=(name, receipt.media_type, data),
+    )
+
+
+def _when(
+    row: table_read.Row, c: Columns, tz: ZoneInfo
+) -> tuple[datetime, bool] | None:
     """The row's start: a date-time column, else a date and a time."""
     if c.start:
         return _stamp(row.get(c.start, ""), tz)
@@ -116,115 +141,46 @@ def _when(row: table_read.Row, c: Columns, tz: ZoneInfo) -> datetime | None:
     return None
 
 
-def _stamp(text: str, tz: ZoneInfo) -> datetime | None:
-    """The first date-time of a text, in UTC (no offset: local time)."""
+def _stamp(text: str, tz: ZoneInfo) -> tuple[datetime, bool] | None:
+    """The first date-time of a text in UTC, and whether its time is known."""
     found = work_parse.stamps(text)
     if found:
         at = found[0] if found[0].tzinfo else found[0].replace(tzinfo=tz)
-        return at.astimezone(UTC)
+        return at.astimezone(UTC), True
     day = work_parse.day_of(text)  # a date alone: an expense, a hotel
     if day is None:
         return None
-    return datetime.combine(day, _NOON, tzinfo=tz).astimezone(UTC)
+    return datetime.combine(day, _NOON, tzinfo=tz).astimezone(UTC), False
+
+
+def _span(text: str, tz: ZoneInfo) -> tuple[datetime, datetime] | None:
+    """A "du 2/04/26 10h05 au 05/04/2026 23h32" text: start and end."""
+    parts = _SPAN.split(text, maxsplit=1)
+    if len(parts) != 2:  # noqa: PLR2004
+        return None
+    first, last = (work_parse.stamps(part) for part in parts)
+    if not first or not last:
+        return None
+    start, end = (
+        (s if s.tzinfo else s.replace(tzinfo=tz)).astimezone(UTC)
+        for s in (first[0], last[0])
+    )
+    return (start, end) if end > start else None
 
 
 def _orders(found: list[Trace]) -> list[Trace]:
-    """The rows of one order merged (items listed, price counted once)."""
+    """The rows of one meal order merged (items listed, price once)."""
     groups: dict[str, list[Trace]] = {}
     for trace in found:
-        groups.setdefault(trace.group, []).append(trace)
+        key = trace.group if trace.kind in MEAL_KINDS else str(id(trace))
+        groups.setdefault(key, []).append(trace)
     merged = []
     for rows in groups.values():
         prices = [t.amount for t in rows if t.amount is not None]
         once = len(set(prices)) == 1  # the order total repeated per item
         items = ", ".join(dict.fromkeys(t.what for t in rows if t.what))
-        merged.append(
-            rows[0]._replace(
-                amount=(prices[0] if once else round(sum(prices), 2))
-                if prices
-                else None,
-                what=items[:500],
-            )
+        total = (
+            (prices[0] if once else round(sum(prices), 2)) if prices else None
         )
+        merged.append(rows[0]._replace(amount=total, what=items[:500]))
     return merged
-
-
-async def _stored(
-    session: AsyncSession, user_id: str, kind: str, trace: Trace
-) -> bool:
-    """Whether the same trace is already stored (same kind, minute, price)."""
-    rows = await session.execute(
-        select(Evidence.amount).where(
-            Evidence.user_id == user_id,
-            Evidence.kind == kind,
-            Evidence.occurred_at.between(
-                trace.start - timedelta(minutes=1),
-                trace.start + timedelta(minutes=1),
-            ),
-        )
-    )
-    return any(a == trace.amount for a in rows.scalars())
-
-
-async def _store(
-    session: AsyncSession,
-    user_id: str,
-    kind: str,
-    new: list[Trace],
-    meals: bool,
-) -> list[Meal]:
-    """Store the traces; the meals logged from deliveries are returned."""
-    logged = []
-    for t in new:
-        fields = {
-            "occurred_at": t.start, "ended_at": t.end, "kind": kind,
-            "title": t.place or evidence.KINDS.get(kind, kind),
-            "description": t.what, "place": t.place, "amount": t.amount,
-            "currency": t.currency,
-        }  # fmt: skip
-        row = await evidence.create(session, user_id, fields, None)
-        if meals and kind in traces.MEAL_KINDS:
-            logged.append(await traces.add_meal(session, row, t.what))
-    return logged
-
-
-def _summary(
-    name: str,
-    kind: str,
-    parts: tuple[list[Trace], list[Trace], list[dict[str, Any]]],
-    columns: Columns,
-    tz: ZoneInfo,
-    dry_run: bool,
-) -> dict[str, Any]:
-    """What one file held."""
-    found, new, skipped = parts
-    days: list[date] = sorted({t.start.astimezone(tz).date() for t in found})
-    return {
-        "name": name,
-        "kind": kind,
-        "label": evidence.KINDS.get(kind, kind),
-        "traces": len(found),
-        "new": len(new),
-        "duplicates": len(found) - len(new),
-        "stored": 0 if dry_run else len(new),
-        "first_day": days[0] if days else None,
-        "last_day": days[-1] if days else None,
-        "total": round(sum(t.amount or 0 for t in new), 2),
-        "columns": {k: v for k, v in columns._asdict().items() if v},
-        "preview": [_preview(t, tz) for t in found[:8]],
-        "skipped_count": len(skipped),
-        "skipped": skipped[:MAX_LISTED],
-    }
-
-
-def _preview(trace: Trace, tz: ZoneInfo) -> dict[str, Any]:
-    """One trace for the preview."""
-    local = trace.start.astimezone(tz)
-    return {
-        "day": local.date(),
-        "time": f"{local:%H:%M}",
-        "end": f"{trace.end.astimezone(tz):%H:%M}" if trace.end else None,
-        "place": trace.place,
-        "amount": trace.amount,
-        "what": trace.what[:120],
-    }
