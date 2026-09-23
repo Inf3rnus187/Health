@@ -2,7 +2,8 @@ import { useState } from 'react';
 
 import type { WorkSession } from '../../api/work';
 import { useDeleteSession, useWorkSessions } from '../../hooks/useWork';
-import { useCompleteSession } from '../../hooks/useWorkFile';
+import { TRACE_KINDS } from '../../api/workfile';
+import { useCompleteSession, useEvidence } from '../../hooks/useWorkFile';
 import { localToday, shortDate } from '../../utils/format';
 import { clockTime } from '../work/format';
 import { Input } from './fields';
@@ -52,6 +53,20 @@ function Actions(props: ActionProps) {
   );
 }
 
+function Hints({ day }: { day: string }) {
+  const items = useEvidence().data ?? [];
+  const seen = items.filter(
+    (i) => i.kind in TRACE_KINDS && i.occurred_at.slice(0, 10) === day,
+  );
+  if (seen.length === 0) {
+    return null;
+  }
+  const text = seen
+    .map((i) => `${i.kind} ${clockTime(i.occurred_at)}`)
+    .join(', ');
+  return <span className="muted"> · traces ce jour-là : {text}</span>;
+}
+
 function Fill({ row }: { row: WorkSession }) {
   const [time, setTime] = useState('');
   const field = row.start_at ? 'end_at' : 'start_at';
@@ -59,6 +74,7 @@ function Fill({ row }: { row: WorkSession }) {
   return (
     <li>
       <Known row={row} />
+      <Hints day={row.date_key} />
       <Input label={label} type="time" value={time} onChange={setTime} />
       <Actions
         row={row}

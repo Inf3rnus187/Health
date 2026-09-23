@@ -4,7 +4,16 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import (
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
@@ -55,7 +64,13 @@ class Absence(UUIDMixin, TimestampMixin, Base):
 
 
 class Evidence(UUIDMixin, TimestampMixin, Base):
-    """A proof: call, message, mail, screenshot, note (file optional)."""
+    """A proof or a trace, file optional.
+
+    Proofs: call, message, mail, screenshot, note, document. Traces (third
+    parties saw you, at a time, somewhere): transport pass, taxi / ride,
+    parking, delivered meal, restaurant, hotel, expense report — with an
+    end time, a place and an amount when known.
+    """
 
     __tablename__ = "evidence"
 
@@ -63,8 +78,19 @@ class Evidence(UUIDMixin, TimestampMixin, Base):
         ForeignKey("users.id", ondelete="CASCADE")
     )
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    #: appel, sms, mail, capture, note, document or autre.
+    #: Parking exit, taxi drop-off, hotel check-out…
+    ended_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    #: See ``evidence.KINDS`` (proofs) and ``evidence.TRACES`` (traces).
     kind: Mapped[str] = mapped_column(String(16), default="capture")
+    place: Mapped[str] = mapped_column(String(300), default="")
+    amount: Mapped[float | None] = mapped_column(Float, nullable=True)
+    currency: Mapped[str] = mapped_column(String(3), default="EUR")
+    #: The meal a delivered or bought meal was logged as.
+    meal_id: Mapped[str | None] = mapped_column(
+        ForeignKey("meals.id", ondelete="SET NULL"), nullable=True
+    )
     title: Mapped[str] = mapped_column(String(200), default="")
     description: Mapped[str] = mapped_column(Text, default="")
     #: How many events it stands for (e.g. 12 calls on one screenshot).

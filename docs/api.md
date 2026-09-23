@@ -269,10 +269,10 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | POST | `/journal/urination` | `write:measurements` + ?token= | JSON `UrinationIn`? (at) | Record one urination (now unless ``at`` is given). |
 | DELETE | `/journal/urination/{sample_id}` | `write:measurements` | `sample_id` | Delete one urination entry. |
 | GET | `/meals` | `read:all` | `start`?, `end`? | Meals between two days (default: the last 7 days), newest first. |
-| POST | `/meals` | `write:measurements` + ?token= | form `meal_type`, form `eaten_at`, form `description`, form `file` | Log a meal (photo and/or description), then read it with the AI. |
+| POST | `/meals` | `write:measurements` + ?token= | form `meal_type`, form `eaten_at`, form `description`, form `price`, form `file` | Log a meal (photo and/or description), then read it with the AI. |
 | DELETE | `/meals/{meal_id}` | `write:measurements` | `meal_id` | Delete a meal, its photo and its nutrients. |
 | GET | `/meals/{meal_id}` | `read:all` | `meal_id` | One meal with its reading. |
-| PUT | `/meals/{meal_id}` | `write:measurements` | `meal_id`, JSON `MealUpdate` (meal_type, eaten_at, description) | Change type, time or description, then read the meal again. |
+| PUT | `/meals/{meal_id}` | `write:measurements` | `meal_id`, JSON `MealUpdate` (meal_type, eaten_at, description, price, vendor) | Change type, time or description, then read the meal again. |
 | POST | `/meals/{meal_id}/analyze` | `write:measurements` | `meal_id` | Read the meal again with the current models. |
 | GET | `/meals/{meal_id}/photo` | `read:all` | `meal_id` | The meal's photo (JPEG, EXIF removed). |
 
@@ -305,14 +305,14 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | DELETE | `/absences/{absence_id}` | Session / hub:full | `absence_id` | Delete an absence (its evidence stays). |
 | PUT | `/absences/{absence_id}` | Session / hub:full | `absence_id`, JSON `AbsenceIn` (start_date, end_date, kind, cause, note) | Replace an absence's dates, kind, cause and note. |
 
-## Dossier travail : preuves
+## Dossier travail : preuves et traces
 
 | Méthode | Route | Accès | Paramètres | Rôle |
 |---|---|---|---|---|
-| GET | `/evidence` | `read:all` | `start`?, `end`? | Evidence between two days (all by default), oldest first. |
-| POST | `/evidence` | Session / hub:full | form `file` | Add a proof (file optional): when, what, how many (12 calls…). |
+| GET | `/evidence` | `read:all` | `start`?, `end`? | Proofs and traces between two days (all by default), oldest first. |
+| POST | `/evidence` | Session / hub:full | form `file` | Add a proof or a trace (file optional): when, what, how many. |
 | DELETE | `/evidence/{item_id}` | Session / hub:full | `item_id` | Delete an item and its file. |
-| PUT | `/evidence/{item_id}` | Session / hub:full | `item_id`, JSON `EvidenceUpdate` (occurred_at, kind, title, description, count, absence_id) | Fix an item's details (its file and fingerprint do not change). |
+| PUT | `/evidence/{item_id}` | Session / hub:full | `item_id`, JSON `EvidenceUpdate` (occurred_at, kind, title, description, count, absence_id, ended_at, place, amount, currency) | Fix an item's details (its file and fingerprint do not change). |
 | GET | `/evidence/{item_id}/file` | `read:all` | `item_id` | The item's file, as received. |
 
 ## Sommeil : nuits, réveils, nuits saisies
@@ -323,3 +323,9 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | POST | `/sleep/nights` | Session / hub:full | JSON `TypedNight` (bedtime, wake_time, awakenings) | Type a night the watch missed (bedtime, wake-up, awakenings). |
 | DELETE | `/sleep/nights/{night_id}` | Session / hub:full | `night_id` | Delete a night typed by hand. |
 | GET | `/sleep/typed` | `read:all` | — | The nights typed by hand, newest first. |
+
+## Autres
+
+| Méthode | Route | Accès | Paramètres | Rôle |
+|---|---|---|---|---|
+| POST | `/traces/import` | Session / hub:full | `dry_run`?, `meals`?, form `files`, form `kinds` | Import CSV / Excel / JSON exports, one kind per file. |

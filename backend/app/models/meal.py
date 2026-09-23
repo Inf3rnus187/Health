@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import Date, DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, JSONColumn, TimestampMixin, UUIDMixin
@@ -24,6 +24,9 @@ class Meal(UUIDMixin, TimestampMixin, Base):
     #: breakfast, lunch, dinner or snack.
     meal_type: Mapped[str] = mapped_column(String(16), default="lunch")
     description: Mapped[str] = mapped_column(Text, default="")
+    #: What it cost (a delivery, a sandwich bought late) and from whom.
+    price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    vendor: Mapped[str] = mapped_column(String(120), default="")
     photo_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
     #: AI reading: None (never), queued, running, done or failed.
     analysis_status: Mapped[str | None] = mapped_column(

@@ -11,6 +11,7 @@ from typing import Any
 
 from fpdf import FPDF
 
+from app.services import work_health_pdf_traces
 from app.services.pdf_blocks import table
 from app.services.pdf_text import heading, line
 from app.services.work_legal import holidays
@@ -103,7 +104,8 @@ def absences(pdf: FPDF, data: dict[str, Any]) -> None:
             f"({', '.join(_d(d) for d in a['worked_days'][:15]) or 'aucun'}), "
             f"{a['worked_hours']:g} h pointées.",
             f"Preuves datées pendant l'absence : {a['evidence']} ; appels : "
-            f"{a['calls']} (dont {a['calls_on_sundays']} un dimanche).",
+            f"{a['calls']} (dont {a['calls_on_sundays']} un dimanche) ; "
+            f"traces (transport, taxi, parking, repas…) : {a['traces']}.",
         ):
             if text:
                 line(pdf, 5, text)
@@ -111,7 +113,9 @@ def absences(pdf: FPDF, data: dict[str, Any]) -> None:
 
 def journal(pdf: FPDF, data: dict[str, Any]) -> None:
     """Every worked or absent day, with the night after it."""
-    rows = [r for r in data["days"] if r["worked"] or r["absence"]]
+    rows = [
+        r for r in data["days"] if r["worked"] or r["absence"] or r["traces"]
+    ]
     feasts = {d for y in {r["date"].year for r in rows} for d in holidays(y)}
     table(
         pdf,
@@ -122,12 +126,13 @@ def journal(pdf: FPDF, data: dict[str, Any]) -> None:
             "Débauche",
             "Heures",
             "Remarque",
+            "Traces",
             "Sommeil après",
             "Réveils",
             "Blocs",
         ],
         [_day(r, feasts) for r in rows],
-        [0.15, 0.1, 0.1, 0.08, 0.25, 0.12, 0.1, 0.1],
+        [0.12, 0.08, 0.08, 0.07, 0.15, 0.25, 0.09, 0.08, 0.08],
     )
 
 
@@ -267,6 +272,7 @@ def _day(row: dict[str, Any], feasts: set[date]) -> list[Any]:
         clock_text(row["end"]),
         row["hours"],
         ", ".join(n for n in notes if n),
+        work_health_pdf_traces.cell(row["traces"]),
         None if asleep is None else round(asleep / 60, 1),
         night.get("awakenings"),
         night.get("blocks"),

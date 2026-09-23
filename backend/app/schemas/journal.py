@@ -20,6 +20,8 @@ class MealUpdate(BaseModel):
     meal_type: str | None = None
     eaten_at: datetime | None = None
     description: str | None = Field(default=None, max_length=2000)
+    price: float | None = Field(default=None, ge=0, le=10000)
+    vendor: str | None = Field(default=None, max_length=120)
 
 
 class MealOut(BaseModel):
@@ -32,6 +34,8 @@ class MealOut(BaseModel):
     date_key: date
     meal_type: str
     description: str
+    price: float | None = None
+    vendor: str = ""
     has_photo: bool = False
     analysis_status: str | None = None
     analysis: dict[str, Any] | None = None

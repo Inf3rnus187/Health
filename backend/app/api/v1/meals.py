@@ -29,17 +29,20 @@ async def create(
     meal_type: Annotated[str, Form()] = "",
     eaten_at: Annotated[str, Form()] = "",
     description: Annotated[str, Form()] = "",
+    price: Annotated[float | None, Form(ge=0, le=10000)] = None,
     file: UploadFile | None = None,
 ) -> Meal:
     """Log a meal (photo and/or description), then read it with the AI.
 
     Form fields: ``description``, ``file`` (photo), and optionally
-    ``meal_type`` (default: from the hour) and ``eaten_at`` (default: now).
+    ``meal_type`` (default: from the hour), ``eaten_at`` (default: now)
+    and ``price`` (what it cost).
     """
     fields = {
         "meal_type": meal_type,
         "eaten_at": _when(eaten_at),
         "description": description,
+        "price": price,
     }
     photo = None
     if file is not None and file.filename:

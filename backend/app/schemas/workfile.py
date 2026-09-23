@@ -53,6 +53,10 @@ class EvidenceUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=8000)
     count: int | None = Field(default=None, ge=1, le=10000)
     absence_id: str | None = None
+    ended_at: datetime | None = None
+    place: str | None = Field(default=None, max_length=300)
+    amount: float | None = Field(default=None, ge=0, le=100000)
+    currency: str | None = Field(default=None, min_length=3, max_length=3)
 
 
 class EvidenceOut(BaseModel):
@@ -62,10 +66,15 @@ class EvidenceOut(BaseModel):
 
     id: str
     occurred_at: datetime
+    ended_at: datetime | None = None
     kind: str
     title: str
     description: str
     count: int
+    place: str = ""
+    amount: float | None = None
+    currency: str = "EUR"
+    meal_id: str | None = None
     file_name: str | None
     media_type: str | None
     size_bytes: int
@@ -73,8 +82,10 @@ class EvidenceOut(BaseModel):
     absence_id: str | None
     created_at: datetime
 
-    @field_validator("occurred_at", "created_at")
+    @field_validator("occurred_at", "ended_at", "created_at")
     @classmethod
-    def _aware(cls, value: datetime) -> datetime:
+    def _aware(cls, value: datetime | None) -> datetime | None:
         """A time read back without offset (SQLite) is UTC."""
-        return value.replace(tzinfo=UTC) if value.tzinfo is None else value
+        if value is None or value.tzinfo is not None:
+            return value
+        return value.replace(tzinfo=UTC)

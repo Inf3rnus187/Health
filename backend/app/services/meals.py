@@ -102,7 +102,8 @@ async def _apply(
 ) -> None:
     """Validate and set type, time and description."""
     zone = await user_zone(session, meal.user_id)
-    eaten = fields.get("eaten_at") or meal.eaten_at or utcnow()
+    stored = utc(meal.eaten_at) if meal.eaten_at else None
+    eaten = fields.get("eaten_at") or stored or utcnow()
     if eaten.tzinfo is None:  # a local time typed in a form
         eaten = eaten.replace(tzinfo=zone)
     local = utc(eaten).astimezone(zone)
@@ -115,6 +116,10 @@ async def _apply(
     text = fields.get("description")
     if text is not None:
         meal.description = str(text).strip()[:_DESCRIPTION_MAX]
+    if "price" in fields:
+        meal.price = fields["price"]
+    if fields.get("vendor") is not None:
+        meal.vendor = str(fields["vendor"]).strip()[:120]
 
 
 def _meal_of(local: datetime) -> str:

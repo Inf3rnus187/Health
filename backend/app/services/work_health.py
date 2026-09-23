@@ -14,9 +14,11 @@ from datetime import date, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFoundError
+from app.models.meal import Meal
 from app.models.work import Absence, Evidence, WorkSession
 from app.services import (
     absences,
@@ -27,6 +29,7 @@ from app.services import (
     work_days,
     work_legal,
     work_math,
+    work_traces,
 )
 from app.services.daily_rollup import user_zone
 from app.services.sleep_nights import Night
@@ -50,12 +53,15 @@ async def gather(
     leaves = await absences.list_absences(session, user_id, first, last)
     items = await evidence.list_items(session, user_id, first, last)
     health = await _health(session, user_id, first, last)
-    table = _rows(first, last, (rows, days, nights, health, leaves), tz)
+    marks = work_traces.per_day(items, tz)
+    table = _rows(first, last, (rows, days, nights, health, leaves, marks), tz)
+    scores = await _scores(session, items)
     return {
         "start": first,
         "end": last,
         "contract_hours": contract,
         **_assemble(rows, days, table, contract, tz),
+        "traces": work_traces.summary(table, scores),
         "absences": [_absence(a, table, items, tz) for a in leaves],
         "evidence": [_item(e, leaves, tz) for e in items],
         "days": table,
@@ -91,7 +97,7 @@ def _rows(
     tz: ZoneInfo,
 ) -> list[dict[str, Any]]:
     """One row per calendar day."""
-    rows, days, nights, health, leaves = data
+    rows, days, nights, health, leaves, marks = data
     partial = {
         work_days.view(r, tz)["date_key"]
         for r in rows
@@ -100,9 +106,8 @@ def _rows(
     out = []
     day = first
     while day <= last:
-        out.append(
-            _row(day, days.get(day), day in partial, nights, health, leaves)
-        )
+        row = _row(day, days.get(day), day in partial, nights, health, leaves)
+        out.append({**row, "traces": marks.get(day, [])})
         day += timedelta(days=1)
     return out
 
@@ -190,6 +195,7 @@ def _absence(
         "worked_days": [r["date"] for r in inside if r["worked"]],
         "worked_hours": round(sum(r["hours"] or 0 for r in inside), 2),
         "evidence": len(proofs),
+        "traces": sum(1 for e in proofs if e.kind in evidence.TRACES),
         "calls": sum(e.count for e in calls),
         "calls_on_sundays": sum(
             e.count for e in calls
@@ -221,6 +227,22 @@ def _within(item: Evidence, leave: Absence, tz: ZoneInfo) -> bool:
     """Whether an item happened during an absence."""
     day = utc(item.occurred_at).astimezone(tz).date()
     return leave.start_date <= day <= leave.end_date
+
+
+async def _scores(
+    session: AsyncSession, items: list[Evidence]
+) -> dict[str, float]:
+    """The AI score of the meals logged from deliveries / purchases."""
+    ids = {e.meal_id for e in items if e.meal_id}
+    if not ids:
+        return {}
+    rows = await session.execute(select(Meal).where(Meal.id.in_(ids)))
+    out = {}
+    for meal in rows.scalars():
+        score = (meal.analysis or {}).get("score")
+        if isinstance(score, int | float):
+            out[meal.id] = float(score)
+    return out
 
 
 async def _health(

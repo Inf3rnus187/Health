@@ -13,10 +13,14 @@ export interface Absence {
 export interface EvidenceItem {
   id: string;
   occurred_at: string;
+  ended_at: string | null;
   kind: string;
   title: string;
   description: string;
   count: number;
+  place: string;
+  amount: number | null;
+  meal_id: string | null;
   file_name: string | null;
   sha256: string | null;
 }
@@ -75,6 +79,17 @@ export const ABSENCE_KINDS: Record<string, string> = {
   autre: 'Autre absence',
 };
 
+/** Traces: a third party saw you (with a place, an amount, an end). */
+export const TRACE_KINDS: Record<string, string> = {
+  transport: 'Transport (métro, Navigo, train)',
+  taxi: 'Taxi / VTC',
+  parking: 'Parking',
+  livraison: 'Repas livré (Uber Eats…)',
+  repas: 'Repas acheté',
+  hotel: 'Hôtel',
+  frais: 'Note de frais',
+};
+
 export const EVIDENCE_KINDS: Record<string, string> = {
   appel: 'Appel',
   sms: 'SMS / message',
@@ -83,7 +98,11 @@ export const EVIDENCE_KINDS: Record<string, string> = {
   note: 'Note',
   document: 'Document',
   autre: 'Autre',
+  ...TRACE_KINDS,
 };
+
+/** Trace kinds that are meals (logged as a meal with its price). */
+export const MEAL_TRACES = ['livraison', 'repas'];
 
 const json = (method: string, body?: unknown): RequestInit => ({
   method,

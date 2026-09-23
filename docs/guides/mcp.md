@@ -3,7 +3,7 @@
 Le serveur MCP donne à un assistant (Claude Desktop, Claude Code, tout
 client MCP) **l'accès à tout le hub** : données Apple Santé, Dossier,
 Suivi, documents et leur texte, marqueurs, poids, photos, rapports avec
-synthèse, automatisations, heures de travail, dossier travail et santé — 81 outils, listés avec leurs paramètres dans
+synthèse, automatisations, heures de travail, dossier travail et santé — 82 outils, listés avec leurs paramètres dans
 [`mcp-tools.md`](../mcp-tools.md). Chaque outil appelle l'API REST : il voit
 exactement ce que voient les pages.
 
@@ -143,7 +143,9 @@ Depuis un autre poste, la même commande à travers SSH :
   21 janvier pour épuisement » (`save_absence`), « ajoute cette capture :
   12 appels du chef le 18 » (`add_evidence`), « la montre était déchargée
   cette nuit, je me suis couché à 1 h, levé à 6 h, réveillé 3 fois »
-  (`add_sleep_night`), « quel lien entre mes heures et mon sommeil ? »
+  (`add_sleep_night`), « Uber Eats hier à 21 h 15, burger frites 24,90 € »
+  (`add_evidence` type `livraison` avec le repas), « importe mon export
+  Uber » (`import_traces`), « quel lien entre mes heures et mon sommeil ? »
   (`work_health`), rapport complet (`generate_report("work_health")`).
 - **Tout le reste** : `api_get` / `api_call` atteignent n'importe quelle
   route de la [référence API](../api.md). Les routes destructrices agissent

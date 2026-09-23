@@ -59,6 +59,7 @@ export function MealCard({ meal }: { meal: Meal }) {
           {clock(meal.eaten_at)}
         </h3>
         {meal.description && <p>{meal.description}</p>}
+        {meal.price != null && <p className="muted">{meal.price} €</p>}
         <Reading meal={meal} />
         <Actions meal={meal} />
       </div>

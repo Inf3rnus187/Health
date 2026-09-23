@@ -17,6 +17,7 @@ other sources). Required token scope per route:
 | iPhone Shortcut (flat map) | `POST /sync/health` | `ingest:watch` |
 | One-tap counts: `{"metric": key, "amount"?}` — water bottle, coffee, cigarette, pee (`elimination.urination`, timed), clock in / out (`work.start` / `work.end`) | `POST /sync/tally` | `write:measurements` (+ `?token=`) |
 | Past clock-in / clock-out logs (txt, csv, json; `?dry_run=true` reads only) | `POST /work/import` | `write:measurements` (+ `?token=`) |
+| App exports as traces — Uber, Uber Eats, Navigo, parking, hotels, expense reports, bank statements (CSV / XLSX / JSON; `files` + `kinds`, `meals=true` logs deliveries as priced meals) | `POST /traces/import` | session or `hub:full` |
 | iPhone Shortcut histories — one time stamp per line, one kind per file (`files` + optional `keys`; clock-ins and clock-outs paired, counters fill empty days, pee de-duplicated) | `POST /logs/import` | `write:measurements` (+ `?token=`) |
 | Watch / HealthKit samples | `POST /ingest/watch` | `ingest:watch` |
 | CPAP | `POST /ingest/ppc` | `ingest:ppc` |

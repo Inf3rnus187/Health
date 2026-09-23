@@ -14,9 +14,16 @@ from typing import Any
 from fpdf import FPDF
 
 from app.services import work_health_pdf_more as more
+from app.services import work_health_pdf_traces
 from app.services.pdf_blocks import table
 from app.services.pdf_text import heading, line
 
+_ORIGINS = {
+    "tap": "pointage (Raccourci / GPS)",
+    "import": "historique importé",
+    "manual": "saisie",
+    "edited": "complétée à la main",
+}
 _DAY = ("lun", "mar", "mer", "jeu", "ven", "sam", "dim")
 
 
@@ -32,6 +39,7 @@ def build(data: dict[str, Any], images: dict[str, bytes]) -> bytes:
     more.sleep(pdf, data)
     more.periods(pdf, data)
     more.absences(pdf, data)
+    work_health_pdf_traces.traces(pdf, data)
     more.journal(pdf, data)
     more.evidence(pdf, data, images)
     return bytes(pdf.output())
@@ -56,14 +64,8 @@ def _header(pdf: FPDF, data: dict[str, Any]) -> None:
 def _method(pdf: FPDF, data: dict[str, Any]) -> None:
     """Where every number comes from, and what is missing."""
     src = data["sources"]
-    names = {
-        "tap": "pointage (Raccourci / GPS)",
-        "import": "historique importé",
-        "manual": "saisie",
-        "edited": "complétée à la main",
-    }
     by = ", ".join(
-        f"{n} {names.get(k, k)}" for k, n in src["by_source"].items()
+        f"{n} {_ORIGINS.get(k, k)}" for k, n in src["by_source"].items()
     )
     heading(pdf, "Méthode et sources")
     for text in (
@@ -78,6 +80,8 @@ def _method(pdf: FPDF, data: dict[str, Any]) -> None:
         "un jour de travail est celui de la nuit suivante.",
         "Chaque preuve jointe est identifiée par son empreinte SHA-256, "
         "calculée à sa réception.",
+        "Les traces (transport, taxi, parking, repas livrés, hôtel, notes "
+        "de frais) viennent des relevés des services eux-mêmes.",
     ):
         line(pdf, 5, text)
 

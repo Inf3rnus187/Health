@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta, timezone
 from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
@@ -49,7 +49,7 @@ _SKIP = r"total|duree|temps|travaillee?s?|worked|duration|pause|break"
 _WORD = re.compile(rf"\b(?:(?P<in>{_IN})|(?P<out>{_OUT})|(?P<skip>{_SKIP}))\b")
 _ISO = re.compile(
     r"(\d{4})-(\d{2})-(\d{2})[t ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?"
-    r"(Z|[+-]\d{2}:?\d{2})?"
+    r"(?:\s?(z|utc|[+-]\d{2}:?\d{2}))?"  # "+0000 UTC" (Uber exports)
 )
 _DATES = (
     re.compile(r"\b(\d{4})-(\d{1,2})-(\d{1,2})\b"),
@@ -103,6 +103,12 @@ def stamps(text: str) -> list[datetime]:
     """Every date-time of a line (a one-kind log: one event each)."""
     moments, _, _ = _moments(fold(text))
     return [at for _, at in moments]
+
+
+def day_of(text: str) -> date | None:
+    """The date of a text without any time (an expense line, a hotel)."""
+    line = _ISO.sub(lambda m: " " * len(m.group()), fold(text))
+    return _date(line)
 
 
 def _moments(line: str) -> tuple[list[tuple[int, datetime]], date | None, bool]:
@@ -161,10 +167,13 @@ def _iso(match: re.Match[str]) -> datetime:
     """An ISO date-time; with an offset it is kept aware."""
     y, mo, d, h, mi, s, zone = match.groups()
     at = datetime(int(y), int(mo), int(d), int(h), int(mi), int(s or 0))
-    if zone:
-        stamp = f"{at.isoformat()}{'+00:00' if zone == 'z' else zone}"
-        return datetime.fromisoformat(stamp)
-    return at
+    if not zone:
+        return at
+    if zone in {"z", "utc"}:
+        return at.replace(tzinfo=UTC)
+    sign, digits = zone[0], zone[1:].replace(":", "")
+    offset = timedelta(hours=int(digits[:2]), minutes=int(digits[2:]))
+    return at.replace(tzinfo=timezone(offset if sign == "+" else -offset))
 
 
 def _date(line: str) -> date | None:

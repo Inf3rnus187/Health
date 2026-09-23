@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 from typing import Annotated, Any
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Form, Query, UploadFile, status
 from fastapi.responses import Response
@@ -12,7 +13,7 @@ from app.core.deps import ReaderDep, SessionDep, UserDep
 from app.core.errors import InvalidInputError, NotFoundError
 from app.models.work import Evidence
 from app.schemas.workfile import EvidenceOut, EvidenceUpdate
-from app.services import evidence
+from app.services import evidence, trace_columns, traces
 from app.services.daily_rollup import user_zone
 
 router = APIRouter(prefix="/evidence", tags=["evidence"])
@@ -27,7 +28,7 @@ async def index(
     start: Annotated[date | None, Query()] = None,
     end: Annotated[date | None, Query()] = None,
 ) -> list[Evidence]:
-    """Evidence between two days (all by default), oldest first."""
+    """Proofs and traces between two days (all by default), oldest first."""
     return await evidence.list_items(session, principal.user.id, start, end)
 
 
@@ -52,6 +53,30 @@ def _form(
     }
 
 
+def _trace(
+    ended_at: Annotated[str, Form()] = "",
+    place: Annotated[str, Form(max_length=300)] = "",
+    amount: Annotated[str, Form(max_length=40)] = "",
+    currency: Annotated[str, Form(min_length=3, max_length=3)] = "EUR",
+    meal: Annotated[bool, Form()] = False,
+) -> dict[str, Any]:
+    """What a trace adds: end, place, amount, and "log it as a meal".
+
+    Empty fields (a web form sends them) mean "not given".
+    """
+    try:
+        end = datetime.fromisoformat(ended_at) if ended_at.strip() else None
+    except ValueError as exc:
+        raise InvalidInputError("ended_at must be an ISO date-time") from exc
+    return {
+        "ended_at": end,
+        "place": place.strip(),
+        "amount": trace_columns.amount(amount) if amount.strip() else None,
+        "currency": currency.upper(),
+        "meal": meal,
+    }
+
+
 @router.post(
     "", response_model=EvidenceOut, status_code=status.HTTP_201_CREATED
 )
@@ -59,23 +84,43 @@ async def create(
     principal: UserDep,
     session: SessionDep,
     fields: Annotated[dict[str, Any], Depends(_form)],
+    trace: Annotated[dict[str, Any], Depends(_trace)],
     file: UploadFile | None = None,
 ) -> Evidence:
-    """Add a proof (file optional): when, what, how many (12 calls…)."""
+    """Add a proof or a trace (file optional): when, what, how many.
+
+    A delivered or bought meal (``meal=true``) is also logged as a meal,
+    with its price, and read by the AI.
+    """
     tz = await user_zone(session, principal.user.id)
-    when = fields["occurred_at"]
-    if when.tzinfo is None:  # a local time typed in a form
-        when = when.replace(tzinfo=tz)
-    fields["occurred_at"] = when.astimezone(UTC)
-    upload = None
-    if file is not None and file.filename:
-        data = await file.read()
-        if len(data) > _MAX_BYTES:
-            raise InvalidInputError("File over 30 MB")
-        upload = (file.filename, file.content_type or "", data)
-    row = await evidence.create(session, principal.user.id, fields, upload)
+    as_meal = trace.pop("meal") and fields["kind"] in traces.MEAL_KINDS
+    fields["occurred_at"] = _utc(fields["occurred_at"], tz)
+    if trace["ended_at"] is not None:
+        trace["ended_at"] = _utc(trace["ended_at"], tz)
+    row = await evidence.create(
+        session, principal.user.id, {**fields, **trace}, await _upload(file)
+    )
+    meal = await traces.add_meal(session, row, "") if as_meal else None
     await session.commit()
+    if meal is not None:
+        await traces.read_meal(session, meal)
     return row
+
+
+async def _upload(file: UploadFile | None) -> tuple[str, str, bytes] | None:
+    """The uploaded file (name, media type, bytes), 30 MB at most."""
+    if file is None or not file.filename:
+        return None
+    data = await file.read()
+    if len(data) > _MAX_BYTES:
+        raise InvalidInputError("File over 30 MB")
+    return file.filename, file.content_type or "", data
+
+
+def _utc(value: datetime, tz: ZoneInfo) -> datetime:
+    """A form time in UTC (without offset: the user's local time)."""
+    aware = value if value.tzinfo else value.replace(tzinfo=tz)
+    return aware.astimezone(UTC)
 
 
 @router.get("/{item_id}/file")
@@ -105,11 +150,10 @@ async def edit(
     """Fix an item's details (its file and fingerprint do not change)."""
     row = await evidence.get(session, principal.user.id, item_id)
     changes = body.model_dump(exclude_unset=True)
-    when = changes.get("occurred_at")
-    if when is not None:
-        tz = await user_zone(session, principal.user.id)
-        aware = when if when.tzinfo else when.replace(tzinfo=tz)
-        changes["occurred_at"] = aware.astimezone(UTC)
+    tz = await user_zone(session, principal.user.id)
+    for key in ("occurred_at", "ended_at"):
+        if changes.get(key) is not None:
+            changes[key] = _utc(changes[key], tz)
     for key, value in changes.items():
         setattr(row, key, value)
     await session.commit()

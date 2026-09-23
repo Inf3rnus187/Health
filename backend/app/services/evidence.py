@@ -1,7 +1,9 @@
-"""Evidence: calls, messages, mails, screenshots, notes (files encrypted).
+"""Evidence: proofs and traces, their files encrypted at rest.
 
-Each file keeps its SHA-256 as received, printed in the report, so a copy
-can be checked against the original.
+Proofs are calls, mails, screenshots…; traces are what third parties saw
+(transport pass, taxi, parking, delivered meals, hotels, expense
+reports). Each file keeps its SHA-256 as received, printed in the
+report, so a copy can be checked against the original.
 """
 
 from __future__ import annotations
@@ -20,8 +22,8 @@ from app.core.errors import NotFoundError
 from app.models.base import new_uuid
 from app.models.work import Evidence
 
-#: Kind → French label.
-KINDS = {
+#: Proof kind → French label.
+PROOFS = {
     "appel": "Appel",
     "sms": "SMS / message",
     "mail": "Mail",
@@ -30,6 +32,18 @@ KINDS = {
     "document": "Document",
     "autre": "Autre",
 }
+#: Trace kind → French label (a third party saw you, at a time).
+TRACES = {
+    "transport": "Transport (métro, Navigo, train)",
+    "taxi": "Taxi / VTC",
+    "parking": "Parking",
+    "livraison": "Repas livré",
+    "repas": "Repas acheté",
+    "hotel": "Hôtel",
+    "frais": "Note de frais",
+}
+#: Every kind → French label.
+KINDS = {**PROOFS, **TRACES}
 
 
 async def create(

@@ -57,7 +57,7 @@ SECTIONS = {
     "work": "Travail (heures d'embauche et de débauche)",
     "logs": "Import d'historiques de Raccourcis",
     "absences": "Dossier travail : arrêts et absences",
-    "evidence": "Dossier travail : preuves",
+    "evidence": "Dossier travail : preuves et traces",
     "sleep": "Sommeil : nuits, réveils, nuits saisies",
 }
 _INTRO = """# Référence de l'API

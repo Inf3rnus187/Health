@@ -258,3 +258,14 @@ async def test_shortcut_logs_are_sent_together() -> None:
     upload = seen[0]
     assert upload.url.path == "/api/v1/logs/import"
     assert upload.content.count(b'name="files"') == 2
+
+
+async def test_a_trace_carries_its_amount_and_meal_flag() -> None:
+    seen = _capture()
+    await tools_workfile.add_evidence(
+        "2026-03-02T21:15",
+        kind="livraison",
+        trace={"place": "Burger Palace", "amount": 24.9, "meal": True},
+    )
+    body = seen[0].content  # a form without file: url-encoded
+    assert b"amount=24.9" in body and b"meal=true" in body

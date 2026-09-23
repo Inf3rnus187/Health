@@ -198,13 +198,24 @@ trois onglets : **Pointage**, **Dossier travail et santé**, **Importer**.
   professionnelle, congés, autre — dates, **cause**, notes. Le rapport
   liste pour chacun le **travail pointé pendant l'arrêt** et les **preuves
   datées pendant l'arrêt** (appels, dont le dimanche).
-- **Preuves** : appel, SMS, mail, capture d'écran, note, document — date
-  et heure, **nombre** (« 12 appels » sur une même capture), titre,
-  description, fichier (30 Mo au plus, chiffré au repos si activé). Chaque
-  fichier garde son **empreinte SHA-256** calculée à la réception,
-  imprimée dans le rapport : une copie se vérifie contre l'original
+- **Preuves et traces**. Preuves : appel, SMS, mail, capture d'écran,
+  note, document — date et heure, **nombre** (« 12 appels » sur une même
+  capture), titre, description, fichier (30 Mo au plus, chiffré au repos
+  si activé). **Traces** — ce que des tiers ont enregistré : transport
+  (métro, Navigo, train), taxi / VTC, parking, **repas livré** (Uber
+  Eats…), repas acheté, hôtel, note de frais — avec en plus l'heure de
+  **fin** (sortie du parking, arrivée du taxi, départ de l'hôtel), le
+  **lieu** et le **montant**. Un repas livré ou acheté peut être
+  **ajouté au Journal** (case cochée par défaut) : le repas y est créé à
+  l'heure de la commande, avec l'enseigne, ce qui a été commandé et son
+  **prix**, puis lu par l'IA (nutriments, note sur 10). Chaque fichier
+  garde son **empreinte SHA-256** calculée à la réception, imprimée dans
+  le rapport : une copie se vérifie contre l'original
   (`sha256sum fichier`). Les images (PNG, JPEG) sont reproduites dans
   l'annexe du rapport ; les autres fichiers y sont listés.
+- **Journées à compléter** (onglet Pointage) : les traces du jour (métro
+  07:52, taxi 23:40…) sont rappelées à côté de chaque journée incomplète,
+  pour retrouver l'heure manquante.
 - **Nuits** (30 derniers réveils) : pour chaque nuit (rattachée au jour du
   réveil, de 18 h la veille à 18 h), le sommeil, le nombre de **réveils**
   (phases d'éveil de la montre ; sans phases, les coupures de 5 min et
@@ -238,11 +249,18 @@ l'ordre :
 5. **Par année, mois et semaine** : jours, heures, heures au-delà du
    contrat, nuits, sommeil, réveils, FC au repos, VFC, cigarettes et cafés
    par jour.
-6. **Arrêts et absences** avec travail et preuves pendant chacun.
-7. **Journal jour par jour** : embauche, débauche, heures, remarques
-   (incomplète, absence, dimanche, férié), sommeil de la nuit suivante,
+6. **Arrêts et absences** avec travail, preuves et traces pendant chacun.
+7. **Traces et dépenses** : nombre et montant par type ; jours **sans
+   pointage où une trace vous place quelque part** (présence attestée par
+   un tiers) ; traces après 21 h un jour travaillé ; repas livrés ou
+   achetés (nombre, montant, après 21 h, les jours longs — plus de 10 h ou
+   débauche après 21 h —, note moyenne IA) ; lien heures travaillées /
+   dépense repas du jour ; dépenses par mois et par type.
+8. **Journal jour par jour** : embauche, débauche, heures, remarques
+   (incomplète, absence, dimanche, férié), **traces du jour** (métro
+   07:52, livraison 21:15 24,90 €…), sommeil de la nuit suivante,
    réveils, blocs.
-8. **Annexe : preuves**, avec empreintes et images.
+9. **Annexe : preuves et traces**, avec empreintes et images.
 
 Le document rassemble des faits enregistrés ; ce n'est ni un avis médical
 ni un avis juridique. Une corrélation décrit un lien dans les données, pas
@@ -269,6 +287,37 @@ choisir **tous les fichiers ensemble** ; le type est deviné du nom
 - Réimporter les mêmes fichiers ne crée aucun doublon ; ajouter plus tard
   un fichier de débauches complète les embauches seules déjà importées
   (20 h au plus d'écart).
+
+**Traces : exports des applications** (Uber, Uber Eats, Navigo, parking,
+hôtel, notes de frais, relevé bancaire) en CSV, Excel (.xlsx) ou JSON.
+Choisir les fichiers, vérifier le **type** de chacun (deviné du nom :
+`trips_data` → taxi, `eats` → repas livré, `navigo` → transport…),
+« Lire », puis « Importer ».
+
+- Les colonnes sont reconnues **par leur titre**, en français ou en
+  anglais (heure de début / fin, date, heure, montant, devise, lieu ou
+  enseigne, articles, statut, n° de commande) ; l'aperçu dit quelle
+  colonne a servi à quoi (« début : « Begin Trip Time » »).
+- Les heures avec fuseau (« 2026-03-02 22:40:00 +0000 UTC » chez Uber)
+  sont converties ; sans fuseau, c'est votre heure locale. Une ligne
+  sans heure (note de frais, hôtel) est placée à midi.
+- Les lignes **annulées** sont ignorées ; les articles d'une même
+  commande n'en font qu'une (prix compté une fois) ; une trace déjà
+  enregistrée (même type, même minute, même montant) n'est pas
+  réimportée.
+- « Ajouter les repas livrés au Journal » crée un repas par commande,
+  avec son prix, lu par l'IA.
+
+Où trouver ces historiques (en général) :
+
+| Source | Comment l'obtenir |
+|--------|-------------------|
+| Uber, Uber Eats | Application › Compte › Confidentialité › télécharger vos données : un ZIP avec un CSV des courses (`trips_data`) et des commandes Uber Eats. |
+| Navigo / transports | Historique de validations du passe (espace personnel Navigo ou demande RGPD à Île-de-France Mobilités). |
+| Parkings (Indigo, Onepark, Zenpark, PayByPhone…) | Historique ou factures dans le compte de l'application. |
+| Taxis (G7…), hôtels | Reçus et factures (mails) : à ajouter en traces avec le fichier. |
+| Notes de frais | L'export Excel du tableau de frais. |
+| Banque | Export CSV du relevé : les paiements par carte (UBER EATS, parking, taxi…) avec date et montant. |
 
 **Fichier de pointages en texte libre** (une ligne = un pointage ou une
 journée, les mots disent ce qu'est chaque heure) :

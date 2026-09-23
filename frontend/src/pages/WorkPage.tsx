@@ -10,6 +10,7 @@ import { FileSummary } from '../components/workfile/FileSummary';
 import { Incomplete } from '../components/workfile/Incomplete';
 import { LogsImport } from '../components/workfile/LogsImport';
 import { NightsCard } from '../components/workfile/NightsCard';
+import { TraceImport } from '../components/workfile/TraceImport';
 
 const TABS = {
   pointage: 'Pointage',
@@ -38,6 +39,7 @@ const CONTENT: Record<Tab, () => JSX.Element> = {
   import: () => (
     <>
       <LogsImport />
+      <TraceImport />
       <WorkImport />
     </>
   ),

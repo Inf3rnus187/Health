@@ -41,6 +41,8 @@ export interface Meal {
   date_key: string;
   meal_type: string;
   description: string;
+  price: number | null;
+  vendor: string;
   has_photo: boolean;
   analysis_status: string | null;
   analysis: MealAnalysis | null;

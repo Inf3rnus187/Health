@@ -8,6 +8,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Traces and expenses** in the work ↔ health file. Evidence also holds
+  traces — what third parties recorded: transport, taxi / VTC, parking,
+  delivered meal, meal bought, hotel, expense report — with an end time,
+  a place and an amount (migration 0013). A delivery or a meal bought
+  can be logged as a meal with its price and vendor, read by the AI;
+  meals take a price. `/traces/import` reads Uber, Uber Eats, Navigo,
+  parking, hotel, expense-report and bank exports (CSV, Excel, JSON) by
+  their column titles: UTC times converted, cancelled rows skipped, the
+  rows of one order merged, nothing imported twice. The report adds a
+  « Traces et dépenses » section (presence attested on days never
+  clocked, late traces, spending by kind and month, deliveries on long
+  days with their AI score, hours vs meal spending) and the day's traces
+  in the journal; days to complete show the day's traces. MCP:
+  `add_evidence` takes a trace, `import_traces`, `log_meal` a price.
+
 - **Work ↔ health file** (Travail › Dossier travail et santé), to support
   a sick-leave, work-accident or occupational-disease claim with facts:
   - sessions may miss a half (a departure logged alone, an arrival never

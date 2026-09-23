@@ -8,6 +8,20 @@ const HINT =
   'Ex. : 2 tomates, ½ concombre, comté dans la salade, un filet de blanc ' +
   'de poulet, pommes de terre rissolées — sans huile, beurre ni sauce.';
 
+function Price() {
+  return (
+    <input
+      className="input"
+      type="number"
+      name="price"
+      min={0}
+      step={0.01}
+      placeholder="Prix € (livraison…)"
+      title="Ce qu’il a coûté (facultatif)"
+    />
+  );
+}
+
 function When() {
   return (
     <>
@@ -24,6 +38,7 @@ function When() {
         name="eaten_at"
         defaultValue={nowLocal()}
       />
+      <Price />
     </>
   );
 }

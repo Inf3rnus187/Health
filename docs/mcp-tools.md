@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-81 outils.
+82 outils.
 
 ## Données et métriques
 
@@ -263,9 +263,10 @@ Log a meal, then the AI reads it (minutes; poll get_meal).
 meal_type: breakfast, lunch, snack or dinner (empty: from the hour
 it was eaten). The description is
 authoritative (quantities, cooking, no fat…); an optional photo helps
-estimate portions. Nutrients go to Apple's nutrition metrics.
+estimate portions. ``price``: what it cost (a delivery). Nutrients go
+to Apple's nutrition metrics.
 
-Paramètres : `description`* (string), `meal_type` (string, défaut ``), `eaten_at` (string | null, défaut `None`), `photo_base64` (string | null, défaut `None`), `photo_filename` (string, défaut `repas.jpg`)
+Paramètres : `description`* (string), `meal_type` (string, défaut ``), `eaten_at` (string | null, défaut `None`), `photo_base64` (string | null, défaut `None`), `photo_filename` (string, défaut `repas.jpg`), `price` (number | null, défaut `None`)
 
 ### `list_meals`
 
@@ -407,11 +408,27 @@ Paramètres : `start` (string | null, défaut `None`), `end` (string | null, dé
 
 ### `add_evidence`
 
-Add a proof: when, kind, how many (e.g. 12 calls on a screenshot).
+Add a proof or a trace: when, kind, how many, what it shows.
 
-kind: appel, sms, mail, capture, note, document or autre.
+Proofs: appel, sms, mail, capture, note, document, autre. Traces
+(a third party saw you): transport, taxi, parking, livraison, repas,
+hotel, frais. ``trace``: {"ended_at", "place", "amount", "currency",
+"meal": true} — "meal" logs a delivery / meal bought as a meal with
+its price (AI-read). ``file``: {"base64", "filename", "media_type"}.
 
-Paramètres : `occurred_at`* (string), `kind` (string, défaut `capture`), `title` (string, défaut ``), `description` (string, défaut ``), `count` (integer, défaut `1`), `file_base64` (string | null, défaut `None`), `filename` (string, défaut `preuve.png`), `media_type` (string, défaut `image/png`)
+Paramètres : `occurred_at`* (string), `kind` (string, défaut `capture`), `title` (string, défaut ``), `description` (string, défaut ``), `count` (integer, défaut `1`), `trace` (object | null, défaut `None`), `file` (object | null, défaut `None`)
+
+### `import_traces`
+
+Import app exports as traces (Uber, Uber Eats, Navigo, parking).
+
+``files``: [{"filename": "trips_data.csv", "text": "...", "kind":
+"taxi"}] — kind: transport, taxi, parking, livraison, repas, hotel or
+frais; CSV or JSON text (columns found by their titles). ``meals``
+logs each delivery as a meal with its price. Dry run first, then
+import for real once the user agrees.
+
+Paramètres : `files`* (array), `meals` (boolean, défaut `True`), `dry_run` (boolean, défaut `True`)
 
 ### `delete_evidence`
 

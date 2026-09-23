@@ -78,21 +78,51 @@ async def add_evidence(
     title: str = "",
     description: str = "",
     count: int = 1,
-    file_base64: str | None = None,
-    filename: str = "preuve.png",
-    media_type: str = "image/png",
+    trace: dict[str, Any] | None = None,
+    file: dict[str, str] | None = None,
 ) -> Any:
-    """Add a proof: when, kind, how many (e.g. 12 calls on a screenshot).
+    """Add a proof or a trace: when, kind, how many, what it shows.
 
-    kind: appel, sms, mail, capture, note, document or autre.
+    Proofs: appel, sms, mail, capture, note, document, autre. Traces
+    (a third party saw you): transport, taxi, parking, livraison, repas,
+    hotel, frais. ``trace``: {"ended_at", "place", "amount", "currency",
+    "meal": true} — "meal" logs a delivery / meal bought as a meal with
+    its price (AI-read). ``file``: {"base64", "filename", "media_type"}.
     """
     data = {"occurred_at": occurred_at, "kind": kind, "title": title,
             "description": description, "count": str(count)}  # fmt: skip
+    for key, value in (trace or {}).items():
+        if value is not None:
+            data[key] = (
+                str(value).lower() if isinstance(value, bool) else str(value)
+            )
     files: list[Any] = []
-    if file_base64:
-        raw = base64.b64decode(file_base64)
-        files.append(("file", (filename, raw, media_type)))
+    if file and file.get("base64"):
+        raw = base64.b64decode(file["base64"])
+        name = file.get("filename", "preuve.png")
+        files.append(("file", (name, raw, file.get("media_type", "image/png"))))
     return await client.upload("/evidence", files, data)
+
+
+@mcp.tool()
+async def import_traces(
+    files: list[dict[str, str]], meals: bool = True, dry_run: bool = True
+) -> Any:
+    """Import app exports as traces (Uber, Uber Eats, Navigo, parking).
+
+    ``files``: [{"filename": "trips_data.csv", "text": "...", "kind":
+    "taxi"}] — kind: transport, taxi, parking, livraison, repas, hotel or
+    frais; CSV or JSON text (columns found by their titles). ``meals``
+    logs each delivery as a meal with its price. Dry run first, then
+    import for real once the user agrees.
+    """
+    upload = [
+        ("files", (f["filename"], f["text"].encode(), "text/plain"))
+        for f in files
+    ]
+    data = {"kinds": [f["kind"] for f in files]}
+    flags = f"dry_run={str(dry_run).lower()}&meals={str(meals).lower()}"
+    return await client.upload(f"/traces/import?{flags}", upload, data)
 
 
 @mcp.tool()
