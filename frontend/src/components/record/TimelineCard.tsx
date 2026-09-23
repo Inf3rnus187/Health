@@ -1,9 +1,10 @@
-import { useState } from 'react';
-
 import type { TimelineItem } from '../../api/record';
 import { useRecord } from '../../hooks/useRecord';
 import { KIND_LABELS } from '../../medical/kinds';
 import { shortDate } from '../../utils/format';
+import { useStored } from '../../utils/stored';
+import { usePaging } from '../Paging';
+import { Choice } from '../workfile/fields';
 
 const TYPE_LABEL: Record<TimelineItem['type'], string> = {
   document: 'Document',
@@ -12,7 +13,21 @@ const TYPE_LABEL: Record<TimelineItem['type'], string> = {
   treatment_stop: 'Arrêt de traitement',
   appointment: 'Rendez-vous',
 };
-const STEP = 15;
+/** What the timeline shows (an imported agenda can drown the rest). */
+const SHOW: Record<string, string> = {
+  all: 'Tout',
+  document: 'Documents',
+  condition: 'Diagnostics',
+  treatment: 'Traitements',
+  appointment: 'Rendez-vous',
+  medical: 'Tout sauf les rendez-vous',
+};
+
+function keep(item: TimelineItem, show: string): boolean {
+  if (show === 'all') return true;
+  if (show === 'medical') return item.type !== 'appointment';
+  return item.type.startsWith(show);
+}
 
 function badge(item: TimelineItem): string {
   if (item.type === 'document' && item.kind) {
@@ -32,26 +47,39 @@ function Row({ item }: { item: TimelineItem }) {
   );
 }
 
-/** Documents, diagnoses, treatments and appointments on one timeline. */
-export function TimelineCard() {
-  const [shown, setShown] = useState(STEP);
-  const items = useRecord().data?.timeline ?? [];
-  if (items.length === 0) {
-    return null;
-  }
+function Items({ items }: { items: TimelineItem[] }) {
+  const { page, bar } = usePaging(items, 25);
   return (
-    <section className="card">
-      <h2>Chronologie</h2>
+    <>
+      {bar}
       <ul className="timeline">
-        {items.slice(0, shown).map((item) => (
+        {page.map((item) => (
           <Row key={`${item.type}-${item.id}-${item.date}`} item={item} />
         ))}
       </ul>
-      {items.length > shown && (
-        <button className="btn ghost" onClick={() => setShown(shown + STEP)}>
-          Voir plus
-        </button>
-      )}
+    </>
+  );
+}
+
+/** Documents, diagnoses, treatments and appointments on one timeline. */
+export function TimelineCard() {
+  const items = useRecord().data?.timeline ?? [];
+  const [show, setShow] = useStored(
+    'record.timeline',
+    'all',
+    Object.keys(SHOW),
+  );
+  if (items.length === 0) {
+    return null;
+  }
+  const kept = items.filter((item) => keep(item, show));
+  return (
+    <section className="card">
+      <h2>Chronologie ({kept.length})</h2>
+      <div className="toolbar">
+        <Choice options={SHOW} value={show} onChange={setShow} />
+      </div>
+      <Items items={kept} />
     </section>
   );
 }

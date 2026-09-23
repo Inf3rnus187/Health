@@ -4,6 +4,7 @@ import type { RouteRow } from '../api/types';
 import { useRoutes } from '../hooks/useRecords';
 import { shortDateTime } from '../utils/datetime';
 import { DownloadButton } from './DownloadButton';
+import { PagedRows } from './PagedRows';
 import { RouteViewer } from './RouteViewer';
 
 function Row({ row, onView }: { row: RouteRow; onView: (id: string) => void }) {
@@ -34,15 +35,10 @@ export function RoutesCard() {
   return (
     <section className="card">
       <h2>Tracés GPS ({rows.length})</h2>
-      <div className="table-wrap scroll-y">
-        <table className="data-table">
-          <tbody>
-            {rows.map((row) => (
-              <Row key={row.id} row={row} onView={setSelected} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <PagedRows
+        items={rows}
+        row={(row) => <Row key={row.id} row={row} onView={setSelected} />}
+      />
       {selected && (
         <RouteViewer id={selected} onClose={() => setSelected(null)} />
       )}

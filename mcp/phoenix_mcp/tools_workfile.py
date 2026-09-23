@@ -192,12 +192,13 @@ _BULK = {
     "sessions": "/work/sessions/delete",
     "absences": "/absences/delete",
     "meals": "/meals/delete",
+    "appointments": "/appointments/delete",
 }
 
 
 @mcp.tool()
 async def delete_many(
-    what: Literal["evidence", "sessions", "absences", "meals"],
+    what: Literal["evidence", "sessions", "absences", "meals", "appointments"],
     ids: list[str],
     meals: bool = False,
 ) -> Any:
@@ -205,9 +206,11 @@ async def delete_many(
 
     ``what``: evidence (proofs and traces, their files; ``meals`` also
     deletes the Journal meals deliveries were logged as), sessions (work
-    sessions, their days rebuilt), absences or meals. Take the ids from
-    list_evidence / work_sessions / list_absences / list_meals, show the
-    user what will go and ask before deleting: it cannot be undone.
+    sessions, their days rebuilt), absences, meals or appointments (e.g.
+    the personal events of an agenda imported whole). Take the ids from
+    list_evidence / work_sessions / list_absences / list_meals /
+    list_appointments, show the user what will go and ask before
+    deleting: it cannot be undone.
     """
     body: dict[str, Any] = {"ids": ids}
     if what == "evidence":

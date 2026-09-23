@@ -60,3 +60,16 @@ async def test_overview_of_an_empty_metric(
     assert resp.status_code == 200
     assert resp.json()["latest"] is None
     assert resp.json()["series"] == []
+
+
+async def test_overview_alias_blockers_let_through(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    # EasyPrivacy drops browser requests under /api/v1/metrics: the web
+    # app reads the same overview under /catalog.
+    await _weights(client, auth)
+    path = "/api/v1/{}/body.weight/overview"
+    alias = await client.get(path.format("catalog"), headers=auth)
+    canonical = await client.get(path.format("metrics"), headers=auth)
+    assert alias.status_code == 200
+    assert alias.json() == canonical.json()

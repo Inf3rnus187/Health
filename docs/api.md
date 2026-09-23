@@ -51,6 +51,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 |---|---|---|---|---|
 | GET | `/catalog` | Tout jeton | `domain`?, `source`?, `active`? | Alias of ``GET /metrics`` (avoids client-side 'metrics' blockers). |
 | GET | `/catalog/domains` | Tout jeton | — | French name of every metric domain (tabs, reports, MCP). |
+| GET | `/catalog/{key}/overview` | `read:all` | `key`, `days`? | Alias of ``/metrics/{key}/overview`` that blockers let through. |
 
 ## Métriques
 
@@ -204,6 +205,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 |---|---|---|---|---|
 | GET | `/appointments` | Session / hub:full | — | List the caller's appointments. |
 | POST | `/appointments` | Session / hub:full | JSON `AppointmentIn` (title, starts_at, ends_at, practitioner, location, notes) | Add a manual appointment. |
+| POST | `/appointments/delete` | Session / hub:full | JSON `IdsIn` (ids) | Delete appointments (e.g. the personal events of an imported agenda). |
 | POST | `/appointments/import` | Session / hub:full | form `file` | Import appointments from an Apple Calendar (.ics) export. |
 | DELETE | `/appointments/{aid}` | Session / hub:full | `aid` | Delete an appointment. |
 
@@ -265,6 +267,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 
 | Méthode | Route | Accès | Paramètres | Rôle |
 |---|---|---|---|---|
+| GET | `/journal/days` | `read:all` | `start`?, `end`?, `limit`?, `offset`? | Journal lines of ``start``..``end`` (newest first), a page at a time. |
 | GET | `/journal/urination` | `read:all` | `day`? | A day's urinations (default today) with their times. |
 | POST | `/journal/urination` | `write:measurements` + ?token= | JSON `UrinationIn`? (at) | Record one urination (now unless ``at`` is given). |
 | DELETE | `/journal/urination/{sample_id}` | `write:measurements` | `sample_id` | Delete one urination entry. |

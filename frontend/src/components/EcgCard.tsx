@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { useEcg } from '../hooks/useRecords';
 import { EcgRow } from './EcgRow';
+import { PagedRows } from './PagedRows';
 import { EcgViewer } from './EcgViewer';
 
 export function EcgCard() {
@@ -13,15 +14,10 @@ export function EcgCard() {
   return (
     <section className="card">
       <h2>Électrocardiogrammes ({rows.length})</h2>
-      <div className="table-wrap scroll-y">
-        <table className="data-table">
-          <tbody>
-            {rows.map((row) => (
-              <EcgRow key={row.id} row={row} onView={setSelected} />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <PagedRows
+        items={rows}
+        row={(row) => <EcgRow key={row.id} row={row} onView={setSelected} />}
+      />
       {selected && (
         <EcgViewer id={selected} onClose={() => setSelected(null)} />
       )}

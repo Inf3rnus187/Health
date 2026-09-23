@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-87 outils.
+88 outils.
 
 ## Données et métriques
 
@@ -237,6 +237,18 @@ Observations of the imported CDA record (Mon espace santé).
 Paramètres : `search` (string | null, défaut `None`), `limit` (integer, défaut `50`), `offset` (integer, défaut `0`)
 
 ## Journal : pipi et repas
+
+### `journal_days`
+
+The daily journal, one line per day (newest first), paged.
+
+Per day: the night ended that morning (minutes asleep, ``blocks`` =
+in how many goes, awakenings, bedtime → wake-up), water (bottles of
+1.5 L and litres), coffees, cigarettes, pees, meals (count, energy).
+``start`` / ``end``: YYYY-MM-DD (default: from the first day recorded
+up to today); ``total`` is the number of days of the period.
+
+Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`), `limit` (integer, défaut `31`), `offset` (integer, défaut `0`)
 
 ### `log_urination`
 
@@ -522,9 +534,11 @@ Delete many items at once (5000 at most); answers how many went.
 
 ``what``: evidence (proofs and traces, their files; ``meals`` also
 deletes the Journal meals deliveries were logged as), sessions (work
-sessions, their days rebuilt), absences or meals. Take the ids from
-list_evidence / work_sessions / list_absences / list_meals, show the
-user what will go and ask before deleting: it cannot be undone.
+sessions, their days rebuilt), absences, meals or appointments (e.g.
+the personal events of an agenda imported whole). Take the ids from
+list_evidence / work_sessions / list_absences / list_meals /
+list_appointments, show the user what will go and ask before
+deleting: it cannot be undone.
 
 Paramètres : `what`* (string), `ids`* (array), `meals` (boolean, défaut `False`)
 

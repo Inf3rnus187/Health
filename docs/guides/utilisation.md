@@ -1,9 +1,17 @@
 # Guide — utiliser le hub, page par page
 
 Toutes les pages occupent **toute la largeur de l'écran** (une marge
-qui suit sa taille) et s'adaptent au téléphone : le menu tient sur une
-ligne qui défile, les boutons passent à la ligne, les tableaux larges
-défilent dans leur cadre.
+qui suit sa taille) et s'adaptent au téléphone : en haut, une seule
+ligne fine (Phoenix, thème, « ☰ page ouverte ») ; « ☰ » ouvre la grille
+de toutes les pages avec le compte et « Déconnexion » — rien à faire
+défiler de côté. Les boutons passent à la ligne, les onglets aussi ; le
+Journal devient une fiche par jour. Les longues listes sont **paginées**
+(« Par page », « Précédent / Suivant ») partout.
+
+Si un **bloqueur de publicité / pistage** est actif (uBlock, AdGuard,
+Brave, bloqueurs Safari), rien à régler : les requêtes du site évitent
+les adresses que ces listes bloquent (`/api/v1/metrics…`, lue comme de la
+télémétrie).
 
 ## Le principe : une seule vérité
 
@@ -69,14 +77,17 @@ molette.
 
 ## Santé
 
-Signes vitaux (tendances), séances, ECG (courbe, CSV), parcours GPS (carte,
-GPX), observations du dossier CDA importé.
+Signes vitaux (tendances : fréquence cardiaque, FC de repos, VFC, SpO2,
+fréquence respiratoire, sommeil), séances, ECG (courbe, CSV), parcours
+GPS (carte, GPX) — ces trois listes **paginées** — et observations du
+dossier CDA importé (recherche, pages).
 
 ## Données
 
 - **Tout ce qui est enregistré** : chaque métrique, ses relevés bruts et
   valeurs journalières par source avec leurs dates — c'est l'endroit pour
-  vérifier que Apple, Health Auto Export et les labos concordent.
+  vérifier que Apple, Health Auto Export et les labos concordent. Filtre
+  et pages (25 par défaut).
 - **Réconcilier et recalculer les valeurs journalières** : fusionne les
   clés en double, aligne les données sur le catalogue Apple, recalcule
   chaque valeur journalière depuis le brut. **Aucune IA.** À lancer après
@@ -86,13 +97,27 @@ GPX), observations du dossier CDA importé.
 
 ## Journal
 
-Ce qu'Apple Santé n'enregistre pas : **pipi** et **repas**.
+Un vrai journal de la journée : la nuit, l'eau, le café, les
+cigarettes, le pipi et les repas.
 
-- **Pipi** : « Pipi maintenant » (ou une autre heure du jour) ; la liste des
-  heures du jour, supprimables. Chaque miction est horodatée ; la valeur
-  du jour (`elimination.urination`) est le nombre de mictions — courbes,
-  tableaux de bord, Suivi (diabète, apnée du sommeil) et rapports la
-  voient comme toute autre mesure.
+- **Aujourd'hui** : la nuit (« 6 h 40 de sommeil en 2 fois · 3 réveils ·
+  23:40 → 06:50 », de la montre ou saisie dans Travail › Dossier travail
+  et santé › Nuits), puis une tuile par compteur — **💧 Eau** (bouteilles
+  de 1,5 L, affichées en litres), **☕ Cafés**, **🚬 Cigarettes**,
+  **🚽 Pipi** — avec « +1 » et « − » (retire le dernier). Ce sont les
+  mêmes compteurs que les Raccourcis iPhone (`/sync/tally`). Sous les
+  tuiles : les heures des pipis du jour (× pour en retirer un) et « Pipi
+  à une autre heure ». Chaque miction est horodatée ; la valeur du jour
+  (`elimination.urination`) est leur nombre — courbes, tableaux de bord,
+  Suivi (diabète, apnée du sommeil) et rapports la voient comme toute
+  autre mesure.
+- **Mon journal** : **une ligne par jour** (30 jours par défaut, ou « 7 j
+  … Tout », dates exactes ; la période reste après un rechargement) —
+  sommeil, **en combien de fois** (morceaux séparés d'une heure ou plus
+  d'éveil), **réveils**, coucher → lever, eau, cafés, cigarettes, pipi,
+  repas (nombre et kcal lues par l'IA) ; les moyennes de la page en tête.
+  Paginé (50 par page, 10 sur téléphone, où chaque jour devient une
+  fiche).
 - **Ajouter un repas** : type (petit-déjeuner, déjeuner, collation, dîner),
   date et heure, **description** (quantités, cuisson, « sans huile ni
   beurre »…) et **photo** facultative (sur téléphone, l'appareil photo
@@ -690,6 +715,10 @@ compléter.
 
 ## Dossier
 
+Cinq onglets (le dernier ouvert reste) : **Synthèse** (à confirmer,
+résultats d'examens), **Chronologie**, **Documents** (ajout + liste),
+**Imagerie** (DICOM), **Importer** (prise de sang PDF, dossier CDA).
+
 - **À confirmer — lu dans vos documents** : diagnostics et médicaments que
   l'IA a lus dans vos comptes-rendus / ordonnances (le nom figure dans le
   document) et que vous n'avez pas encore déclarés. « Ajouter aux
@@ -697,12 +726,16 @@ compléter.
   rien n'est ajouté sans vous.
 - **Résultats d'examens** : chaque analyse (biologie, FibroScan) avec
   dernier résultat, précédent, évolution, historique et le document dont
-  elle vient. Clic sur le nom → la courbe dans Données.
+  elle vient. Clic sur le nom → la courbe dans Données. Filtre, 25 par
+  page.
 - **Chronologie** : documents, diagnostics, débuts / arrêts de traitement,
-  rendez-vous.
+  rendez-vous — paginée, avec un filtre (Tout, Documents, Diagnostics,
+  Traitements, Rendez-vous, « Tout sauf les rendez-vous » quand un agenda
+  importé noie le reste).
 - **Ajouter un document médical** : ordonnance, imagerie, compte-rendu,
   prise de sang, EFR, test de marche, vaccination… (PDF ou image).
-- **Documents** : « Analyser (IA) » / « Réanalyser (IA) » un document,
+- **Documents** : recherche (titre, type, date), 10 par page ;
+  « Analyser (IA) » / « Réanalyser (IA) » un document,
   « Analyser tous les documents (IA) ». Sous chaque document : statut de
   lecture, valeurs vérifiées enregistrées, « Résumé IA (non vérifié) »,
   médicaments et diagnostics lus, **propositions rejetées** avec leur raison
@@ -741,7 +774,11 @@ compléter.
   hypertension, apnée du sommeil, dyslipidémie, reins, anémie, thyroïde…
   Un nom inhabituel peut n'avoir aucun indicateur.
 - **À confirmer**, **Maladies**, **Traitements** (arrêter / reprendre),
-  **Rendez-vous** (saisie ou import `.ics`).
+  **Rendez-vous** (saisie ou import `.ics`) : **À venir** (le plus proche
+  d'abord) ou **Passés** (le plus récent d'abord), recherche (praticien,
+  lieu), 10 par page. Un agenda importé en entier (des centaines
+  d'événements personnels) se nettoie d'un coup : chercher, « Tout
+  sélectionner » (toutes pages), « Supprimer la sélection ».
 
 ## Rapports
 

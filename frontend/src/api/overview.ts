@@ -33,7 +33,8 @@ export function fetchOverview(
   key: string,
   days = 365,
 ): Promise<MetricOverview> {
+  // /catalog, not /metrics: tracker blockers drop /api/v1/metrics.
   return api<MetricOverview>(
-    `/metrics/${encodeURIComponent(key)}/overview?days=${days}`,
+    `/catalog/${encodeURIComponent(key)}/overview?days=${days}`,
   );
 }

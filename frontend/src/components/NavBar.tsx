@@ -1,27 +1,17 @@
 import { NavLink } from 'react-router-dom';
 
-const LINKS = [
-  { to: '/', label: 'Accueil', end: true },
-  { to: '/dashboards', label: 'Tableaux de bord', end: false },
-  { to: '/sante', label: 'Santé', end: false },
-  { to: '/donnees', label: 'Données', end: false },
-  { to: '/journal', label: 'Journal', end: false },
-  { to: '/travail', label: 'Travail', end: false },
-  { to: '/dossier', label: 'Dossier', end: false },
-  { to: '/photos', label: 'Photos', end: false },
-  { to: '/suivi', label: 'Suivi', end: false },
-  { to: '/rapports', label: 'Rapports', end: false },
-  { to: '/import', label: 'Import', end: false },
-];
+import { LINKS } from './navLinks';
 
-export function NavBar() {
+/** Every page; ``onPick`` closes the phone menu once one is chosen. */
+export function NavLinks({ onPick }: { onPick?: () => void }) {
   return (
-    <nav className="nav">
+    <>
       {LINKS.map((link) => (
         <NavLink
           key={link.to}
           to={link.to}
           end={link.end}
+          onClick={onPick}
           className={({ isActive }) =>
             isActive ? 'nav-link active' : 'nav-link'
           }
@@ -29,6 +19,15 @@ export function NavBar() {
           {link.label}
         </NavLink>
       ))}
+    </>
+  );
+}
+
+/** The menu row under the header (a wide screen; hidden on a phone). */
+export function NavBar() {
+  return (
+    <nav className="nav">
+      <NavLinks />
     </nav>
   );
 }

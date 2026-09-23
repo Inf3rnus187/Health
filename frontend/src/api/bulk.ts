@@ -1,7 +1,8 @@
 import { api } from './client';
 
 /** What can be deleted many at once. */
-export type Bulk = 'evidence' | 'work/sessions' | 'absences' | 'meals';
+export type Bulk =
+  'evidence' | 'work/sessions' | 'absences' | 'meals' | 'appointments';
 
 export interface Deleted {
   deleted: number;

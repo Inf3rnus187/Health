@@ -83,7 +83,9 @@ async def _scan(
         HealthSample.value_num.is_not(None),
     )
     if since is not None:
-        floor = datetime.combine(since, time.min, tzinfo=tz)
+        # In UTC: SQLite drops the zone of a bound time (local midnight
+        # would then be read as UTC midnight).
+        floor = datetime.combine(since, time.min, tzinfo=tz).astimezone(UTC)
         stmt = stmt.where(HealthSample.start_at >= floor)
     days: Days = {}
     result = await session.stream(stmt.execution_options(yield_per=_STREAM))

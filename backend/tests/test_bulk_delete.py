@@ -142,3 +142,22 @@ async def test_absences_go_at_once(
     )
     assert res.json()["deleted"] == 2
     assert (await client.get(f"{API}/absences", headers=auth)).json() == []
+
+
+async def test_bulk_delete_appointments(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    ids = []
+    for day in ("2026-05-02", "2026-05-03", "2026-05-04"):
+        made = await client.post(
+            f"{API}/appointments",
+            json={"title": "Rendez-vous fictif", "starts_at": f"{day}T10:00"},
+            headers=auth,
+        )
+        ids.append(made.json()["id"])
+    res = await client.post(
+        f"{API}/appointments/delete", json={"ids": ids[:2]}, headers=auth
+    )
+    assert res.json()["deleted"] == 2
+    left = (await client.get(f"{API}/appointments", headers=auth)).json()
+    assert [a["id"] for a in left] == ids[2:]

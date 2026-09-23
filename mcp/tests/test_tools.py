@@ -308,6 +308,20 @@ async def test_many_items_go_at_once() -> None:
     assert json.loads(seen[0].content) == {"ids": ["a", "b"], "meals": True}
     assert seen[1].url.path == "/api/v1/work/sessions/delete"
     assert json.loads(seen[1].content) == {"ids": ["c"]}
+    await tools_workfile.delete_many("appointments", ["d"])
+    assert seen[2].url.path == "/api/v1/appointments/delete"
+
+
+async def test_the_journal_is_read_a_page_of_days_at_a_time() -> None:
+    seen = _capture()
+    await tools_journal.journal_days(start="2026-03-01", limit=10, offset=10)
+    assert seen[0].url.path == "/api/v1/journal/days"
+    assert seen[0].url.params["start"] == "2026-03-01"
+    assert (seen[0].url.params["limit"], seen[0].url.params["offset"]) == (
+        "10",
+        "10",
+    )
+    assert "end" not in seen[0].url.params
 
 
 async def test_two_halves_are_merged() -> None:

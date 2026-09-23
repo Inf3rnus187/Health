@@ -1,4 +1,4 @@
-"""Delete many items at once: proofs and traces, sessions, absences, meals.
+"""Delete many items at once: proofs, sessions, absences, meals, appointments.
 
 Each takes ``{"ids": [...]}`` (5000 at most) and answers how many went;
 ids that are not the user's are ignored.
@@ -63,3 +63,13 @@ async def meals(
     gone = await bulk_delete.meals(session, principal.user.id, body.ids)
     await session.commit()
     return {"deleted": gone}
+
+
+@router.post("/appointments/delete", response_model=Deleted)
+async def appointments(
+    body: IdsIn, principal: UserDep, session: SessionDep
+) -> dict[str, int]:
+    """Delete appointments (e.g. the personal events of an imported agenda)."""
+    done = await bulk_delete.appointments(session, principal.user.id, body.ids)
+    await session.commit()
+    return done

@@ -63,8 +63,8 @@ async def nights(
 ) -> dict[date, Night]:
     """The nights whose wake-up day is in ``first``..``last``."""
     metric = await timed_entries.metric_for(session, SLEEP_RAW)
-    start = datetime.combine(first - timedelta(days=1), _CUT, tzinfo=tz)
-    end = datetime.combine(last, _CUT, tzinfo=tz)
+    start = utc(datetime.combine(first - timedelta(days=1), _CUT, tzinfo=tz))
+    end = utc(datetime.combine(last, _CUT, tzinfo=tz))
     rows = await session.execute(
         select(HealthSample).where(
             HealthSample.user_id == user_id,

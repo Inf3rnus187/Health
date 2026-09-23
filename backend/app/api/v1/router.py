@@ -27,6 +27,7 @@ from app.api.v1 import (
     imports,
     ingest,
     journal,
+    journal_days,
     logs,
     meals,
     meals_edit,
@@ -74,6 +75,7 @@ api_router.include_router(clinical.router)
 api_router.include_router(medical_ai.router)
 api_router.include_router(record.router)
 api_router.include_router(journal.router)
+api_router.include_router(journal_days.router)
 api_router.include_router(meals.router)
 api_router.include_router(meals_edit.router)
 api_router.include_router(work.router)

@@ -1,4 +1,4 @@
-"""Tools: the journal — urinations and meals (photo, AI reading)."""
+"""Tools: the journal — day lines, urinations and meals (photo, AI)."""
 
 from __future__ import annotations
 
@@ -7,6 +7,27 @@ from typing import Any
 
 from phoenix_mcp import client
 from phoenix_mcp.app import mcp
+
+
+@mcp.tool()
+async def journal_days(
+    start: str | None = None,
+    end: str | None = None,
+    limit: int = 31,
+    offset: int = 0,
+) -> Any:
+    """The daily journal, one line per day (newest first), paged.
+
+    Per day: the night ended that morning (minutes asleep, ``blocks`` =
+    in how many goes, awakenings, bedtime → wake-up), water (bottles of
+    1.5 L and litres), coffees, cigarettes, pees, meals (count, energy).
+    ``start`` / ``end``: YYYY-MM-DD (default: from the first day recorded
+    up to today); ``total`` is the number of days of the period.
+    """
+    return await client.get(
+        "/journal/days",
+        {"start": start, "end": end, "limit": limit, "offset": offset},
+    )
 
 
 @mcp.tool()

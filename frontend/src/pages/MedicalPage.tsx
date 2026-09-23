@@ -6,13 +6,20 @@ import { DicomViewer } from '../components/dicom/DicomViewer';
 import { ResultsCard } from '../components/record/ResultsCard';
 import { SuggestionsCard } from '../components/record/SuggestionsCard';
 import { TimelineCard } from '../components/record/TimelineCard';
+import { useStored } from '../utils/stored';
 
-export function MedicalPage() {
+const TABS = {
+  synthese: 'Synthèse',
+  chronologie: 'Chronologie',
+  documents: 'Documents',
+  imagerie: 'Imagerie',
+  importer: 'Importer',
+};
+type Tab = keyof typeof TABS;
+
+function Documents() {
   return (
     <>
-      <SuggestionsCard />
-      <ResultsCard />
-      <TimelineCard />
       <MedicalUpload />
       <section className="card">
         <h2>Documents</h2>
@@ -20,13 +27,53 @@ export function MedicalPage() {
           Ordonnances, imageries et comptes-rendus, prises de sang, EFR, tests
           de marche, dossier CDA… Chaque document est lu par le modèle médical :
           ses valeurs rejoignent vos courbes, ses diagnostics et médicaments
-          sont proposés ci-dessus.
+          sont proposés dans la Synthèse.
         </p>
         <MedicalList />
       </section>
+    </>
+  );
+}
+
+const PAGES: Record<Tab, () => JSX.Element> = {
+  synthese: () => (
+    <>
+      <SuggestionsCard />
+      <ResultsCard />
+    </>
+  ),
+  chronologie: () => <TimelineCard />,
+  documents: () => <Documents />,
+  imagerie: () => <DicomViewer />,
+  importer: () => (
+    <>
       <BiologyImport />
       <CdaImport />
-      <DicomViewer />
+    </>
+  ),
+};
+
+/** The medical record, one tab at a time (no endless page). */
+export function MedicalPage() {
+  const [tab, setTab] = useStored<Tab>(
+    'dossier.tab',
+    'synthese',
+    Object.keys(TABS),
+  );
+  return (
+    <>
+      <div className="tabs">
+        {(Object.entries(TABS) as [Tab, string][]).map(([key, label]) => (
+          <button
+            key={key}
+            className={key === tab ? 'tab active' : 'tab'}
+            onClick={() => setTab(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {PAGES[tab]()}
     </>
   );
 }

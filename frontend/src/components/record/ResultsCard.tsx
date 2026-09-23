@@ -5,6 +5,7 @@ import type { RecordResult, ResultPoint } from '../../api/record';
 import { useRecord } from '../../hooks/useRecord';
 import { colorForMetric } from '../../theme/palette';
 import { frNumber, shortDate, signed } from '../../utils/format';
+import { usePaging } from '../Paging';
 import { Sparkline } from '../Sparkline';
 import { DocLink } from './DocLink';
 
@@ -63,8 +64,10 @@ function matches(result: RecordResult, text: string): boolean {
 }
 
 function Table({ rows }: { rows: RecordResult[] }) {
+  const { page, bar } = usePaging(rows, 25);
   return (
     <div className="inv-scroll">
+      {bar}
       <table className="inv-table">
         <thead>
           <tr>
@@ -75,7 +78,7 @@ function Table({ rows }: { rows: RecordResult[] }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {page.map((row) => (
             <Row key={row.key} result={row} />
           ))}
         </tbody>

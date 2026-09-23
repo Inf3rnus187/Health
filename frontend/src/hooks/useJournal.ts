@@ -15,6 +15,7 @@ import type { Range } from '../utils/range';
 const POLL_MS = 5000;
 /** Metrics the journal feeds (their pages refresh after a change). */
 const FED = [
+  'journal-days',
   'summary',
   'overview',
   'trend',

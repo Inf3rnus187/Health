@@ -73,6 +73,32 @@ body {
   gap: 12px;
 }
 
+/* The phone menu (see the 640 px query): hidden on a wide screen. */
+.menu-button,
+.phone-menu {
+  display: none;
+}
+
+.phone-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.phone-links .nav-link {
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.phone-account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 /* Pages take the screen's whole width (no column in the middle). */
 .content {
   margin: 20px 0;
@@ -691,22 +717,48 @@ progress {
     padding: 0 12px;
     gap: 14px;
   }
+  /* One slim line that stays on top: name, theme, « ☰ page »; the
+     menu opens as a grid of every page (no sideways scrolling). */
   .header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    flex-wrap: nowrap;
+    padding: 8px 12px;
+  }
+  .brand {
+    font-size: 16px;
+    white-space: nowrap;
   }
   .header-right {
-    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .wide-only,
+  .nav {
+    display: none;
+  }
+  .menu-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .phone-menu {
+    display: grid;
+    gap: 12px;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: calc(100vh - 56px);
+    overflow-y: auto;
+    padding: 12px;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
   }
   .dash-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .tabs,
-  .nav {
-    flex-wrap: nowrap; /* one line that scrolls: the sticky menu stays low */
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
   }
   .filters .input {
     max-width: 100%;
@@ -2012,4 +2064,111 @@ img.viewer-file {
 .todo-panel .quick .input {
   max-width: none;
   flex: 1 1 150px;
+}
+
+/* Journal: today's counters, one tile each (−, +1). */
+.counters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 240px));
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.counter {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.counter-label {
+  font-weight: 600;
+}
+
+.counter-value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.counter-hint {
+  font-size: 12px;
+}
+
+.counter-buttons {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.counter-buttons .btn {
+  font-size: 18px;
+  padding: 8px;
+}
+
+.today-night {
+  margin: 4px 0 0;
+}
+
+.pee-times .quick {
+  align-items: center;
+}
+
+.pee-times label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pee-times label .input {
+  width: auto;
+  margin: 0;
+}
+
+/* A wide table that becomes one card per line on a phone: each value
+   with its column title (data-label), no sideways scrolling. */
+@media (max-width: 640px) {
+  .stack-table thead {
+    display: none;
+  }
+  .stack-table,
+  .stack-table tbody,
+  .stack-table tr,
+  .stack-table td {
+    display: block;
+    width: 100%;
+  }
+  .stack-table tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .stack-table td {
+    padding: 2px 0;
+    border: 0;
+    white-space: normal;
+  }
+  .stack-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    color: var(--color-muted);
+  }
+  .stack-table td:first-child {
+    grid-column: 1 / -1;
+    font-weight: 700;
+  }
+  .stack-table td:first-child::before {
+    content: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .counters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

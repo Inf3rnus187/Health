@@ -34,6 +34,19 @@ export default tseslint.config(
         'error',
         { argsIgnorePattern: '^_' },
       ],
+      // Tracker blockers (EasyPrivacy: uBlock, AdGuard, Brave, Safari)
+      // drop every request under /api/v1/metrics: use the /catalog alias.
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Literal[value=/^\\/metrics(\\/|$|\\?)/]',
+          message: 'Blocked by tracker blockers: call /catalog instead.',
+        },
+        {
+          selector: 'TemplateElement[value.raw=/^\\/metrics(\\/|$|\\?)/]',
+          message: 'Blocked by tracker blockers: call /catalog instead.',
+        },
+      ],
     },
   },
 );

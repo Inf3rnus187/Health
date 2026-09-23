@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { InventoryRow, SourceStat } from '../../api/data';
 import { useInventory, useReconcile } from '../../hooks/useData';
 import { shortDate } from '../../utils/format';
+import { usePaging } from '../Paging';
 import { sourceLabel } from './sources';
 
 function Stats({ stats }: { stats: SourceStat[] }) {
@@ -71,8 +72,10 @@ function ReconcileButton() {
 }
 
 function Table({ rows }: { rows: InventoryRow[] }) {
+  const { page, bar } = usePaging(rows, 25);
   return (
     <div className="inv-scroll">
+      {bar}
       <table className="inv-table">
         <thead>
           <tr>
@@ -82,7 +85,7 @@ function Table({ rows }: { rows: InventoryRow[] }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {page.map((row) => (
             <Row key={row.key} row={row} />
           ))}
         </tbody>
@@ -97,7 +100,7 @@ export function InventoryCard() {
   const rows = (data ?? []).filter((row) => matches(row, text));
   return (
     <section className="card">
-      <h2>Tout ce qui est enregistré</h2>
+      <h2>Tout ce qui est enregistré ({rows.length})</h2>
       <p className="muted">
         Une ligne par mesure, avec chaque source. Les valeurs journalières
         (graphiques, accueil, rapports) sont recalculées à partir des relevés

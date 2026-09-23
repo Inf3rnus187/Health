@@ -8,6 +8,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Santé's vital signs showed « Mesure indisponible »** for everyone
+  with a tracker blocker: EasyPrivacy (uBlock, AdGuard, Brave, Safari
+  blockers) drops every browser request under `/api/v1/metrics`. The
+  web app reads a metric's overview at `/catalog/{key}/overview` (the
+  `/metrics` path stays for scripts and MCP), like the catalogue
+  already did; an eslint rule keeps web calls off `/metrics`. The
+  tableaux de bord and « Une mesure en détail » had the same fault.
+- **Phone header and menu**: one slim sticky line (name, theme, « ☰
+  page »); « ☰ » opens a grid of every page with the account and
+  sign-out — no sideways scrolling. Tabs wrap instead of scrolling.
+- **Long lists are paged**: « Tout ce qui est enregistré » (Données),
+  séances / ECG / tracés GPS (Santé), résultats d'examens, chronologie
+  (with a type filter, e.g. without appointments) and documents (with a
+  search) in the Dossier, now split in tabs (Synthèse, Chronologie,
+  Documents, Imagerie, Importer); appointments « À venir » / « Passés »
+  with a search in Suivi.
+- A local day's bounds are bound in UTC (SQLite dropped the zone: a
+  count logged between midnight and 02:00 in Paris was left out of its
+  day in tests).
+
 - **Every page uses the whole screen.** The content was held in a
   960 px column in the middle; it now spans the window, with a side
   margin that follows its size (12 to 32 px). The « À compléter »
@@ -47,6 +67,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A real daily journal** (Journal page). « Aujourd'hui »: last night
+  (asleep, in how many goes, awakenings, bedtime → wake-up) and a tile
+  per counter — water (1.5 L bottles, in litres), coffees, cigarettes,
+  pees — with « +1 » / « − » (the Shortcuts' `/sync/tally`); the pee
+  times under them. « Mon journal »: one line per day (night, water,
+  coffee, cigarettes, pee, meals with their energy), a period, the
+  page's averages, paged server-side (`GET /journal/days`, only the
+  page's days are read; MCP `journal_days`). On a phone each day is a
+  card.
+- **Appointments deleted many at once** (`POST /appointments/delete`,
+  MCP `delete_many("appointments")`): an agenda imported whole brings
+  hundreds of personal events.
 - **« À compléter » as a 12-month calendar** (default view; « Liste »
   keeps the cards one under the other): a pastille per day to complete
   (red without proof, orange with one) and the count per month, a green

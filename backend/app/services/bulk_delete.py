@@ -1,8 +1,9 @@
-"""Delete many items at once: proofs and traces, sessions, absences, meals.
+"""Delete many items at once: proofs, sessions, absences, meals, appointments.
 
 Only the user's own items go (other ids are ignored); the answer says
 how many. A proof's file goes with it, and the meal a delivery was
-logged as when asked; the days of deleted sessions are rebuilt.
+logged as when asked; the days of deleted sessions are rebuilt. An
+agenda imported whole brings hundreds of personal events: they go too.
 """
 
 from __future__ import annotations
@@ -15,13 +16,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.meal import Meal
+from app.models.medical import Appointment
 from app.models.work import Absence, Evidence, WorkSession
 from app.services import meals as meal_service
 from app.services import work_days
 from app.services.daily_rollup import user_zone
 
 _CHUNK = 500
-Row = TypeVar("Row", Evidence, WorkSession, Absence, Meal)
+Row = TypeVar("Row", Evidence, WorkSession, Absence, Meal, Appointment)
 
 
 async def evidence(
@@ -59,6 +61,17 @@ async def absences(
 ) -> dict[str, int]:
     """Delete absences (their evidence stays, unlinked)."""
     rows = await _own(session, Absence, user_id, ids)
+    for row in rows:
+        await session.delete(row)
+    await session.flush()
+    return {"deleted": len(rows)}
+
+
+async def appointments(
+    session: AsyncSession, user_id: str, ids: list[str]
+) -> dict[str, int]:
+    """Delete appointments (typed or imported from an agenda)."""
+    rows = await _own(session, Appointment, user_id, ids)
     for row in rows:
         await session.delete(row)
     await session.flush()

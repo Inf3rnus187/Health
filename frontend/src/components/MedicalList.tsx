@@ -6,8 +6,11 @@ import {
   useDeleteDoc,
   useMedicalDocs,
 } from '../hooks/useMedical';
+import { useState } from 'react';
+
 import { KIND_LABELS } from '../medical/kinds';
 import { DocAnalysis } from './DocAnalysis';
+import { usePaging } from './Paging';
 
 interface RowProps {
   doc: MedicalDoc;
@@ -62,18 +65,22 @@ function AnalyzeAll() {
   );
 }
 
-export function MedicalList() {
-  const docs = useMedicalDocs().data ?? [];
+function matches(doc: MedicalDoc, text: string): boolean {
+  const needle = text.trim().toLowerCase();
+  const kind = KIND_LABELS[doc.kind] ?? doc.kind;
+  const said = `${doc.title} ${kind} ${doc.doc_date ?? ''}`.toLowerCase();
+  return said.includes(needle);
+}
+
+function Rows({ docs }: { docs: MedicalDoc[] }) {
   const del = useDeleteDoc();
   const analyze = useAnalyzeDoc();
-  if (docs.length === 0) {
-    return <p className="muted">Aucun document pour l’instant.</p>;
-  }
+  const { page, bar } = usePaging(docs, 10);
   return (
     <>
-      <AnalyzeAll />
+      {bar}
       <ul className="med-list">
-        {docs.map((doc) => (
+        {page.map((doc) => (
           <Row
             key={doc.id}
             doc={doc}
@@ -82,6 +89,27 @@ export function MedicalList() {
           />
         ))}
       </ul>
+    </>
+  );
+}
+
+/** The documents, searchable (title, kind, date), a page at a time. */
+export function MedicalList() {
+  const docs = useMedicalDocs().data ?? [];
+  const [text, setText] = useState('');
+  if (docs.length === 0) {
+    return <p className="muted">Aucun document pour l’instant.</p>;
+  }
+  return (
+    <>
+      <AnalyzeAll />
+      <input
+        className="input"
+        placeholder="Chercher (titre, type, date)"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <Rows docs={docs.filter((doc) => matches(doc, text))} />
     </>
   );
 }
