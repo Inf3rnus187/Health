@@ -6,6 +6,7 @@ import { useAbsences, useDeleteAbsence } from '../../hooks/useWorkFile';
 import { frNumber, shortDate } from '../../utils/format';
 import { BulkBar, PickBox } from '../Bulk';
 import { AbsenceForm } from './AbsenceForm';
+import { AddProof } from './ProofForm';
 
 /** « du 07/05/2026 après-midi au 08/05/2026 midi (1 j) ». */
 function span(a: Absence): string {
@@ -38,6 +39,11 @@ function Item(props: { absence: Absence; edit: () => void; sel: Selection }) {
       <button className="btn ghost" onClick={drop}>
         Supprimer
       </button>
+      <AddProof
+        when={`${a.start_date}T12:00`}
+        absenceId={a.id}
+        label=" à cette absence"
+      />
     </li>
   );
 }

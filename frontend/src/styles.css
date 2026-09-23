@@ -1695,3 +1695,11 @@ img.viewer-file {
 .pre-line {
   white-space: pre-line;
 }
+
+/* A proof added from a day or an absence, framed apart. */
+.add-proof {
+  margin: 0.5rem 0;
+  padding: 0.75rem;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+}

@@ -5,6 +5,7 @@ import { useEvidence } from '../../hooks/useWorkFile';
 import { localStamp } from '../../utils/datetime';
 import { EvidenceFile } from '../FileButtons';
 import { EvidenceViewer } from './EvidenceViewer';
+import { AddProof } from './ProofForm';
 import { span, viewable } from './evidenceView';
 
 type Field = 'start' | 'end';
@@ -47,15 +48,12 @@ function Line(props: { item: EvidenceItem; view: () => void; pick: Pick }) {
   );
 }
 
-/** The proofs and traces of a day and of the morning after it. */
-export function DayProofs(props: { day: string; pick: Pick }) {
-  const range = { start: props.day, end: nextDay(props.day) };
-  const items = useEvidence(range).data ?? [];
+function List(props: { items: EvidenceItem[]; pick: Pick }) {
   const [shown, setShown] = useState<EvidenceItem | null>(null);
-  if (items.length === 0) return <p className="muted">Aucune preuve.</p>;
+  if (props.items.length === 0) return <p className="muted">Aucune preuve.</p>;
   return (
     <ul className="care-list">
-      {items.map((item) => (
+      {props.items.map((item) => (
         <Line
           key={item.id}
           item={item}
@@ -67,5 +65,17 @@ export function DayProofs(props: { day: string; pick: Pick }) {
         <EvidenceViewer item={viewable(shown)} onClose={() => setShown(null)} />
       )}
     </ul>
+  );
+}
+
+/** The proofs and traces of a day and of the morning after it. */
+export function DayProofs(props: { day: string; pick: Pick }) {
+  const range = { start: props.day, end: nextDay(props.day) };
+  const items = useEvidence(range).data ?? [];
+  return (
+    <>
+      <List items={items} pick={props.pick} />
+      <AddProof when={`${props.day}T12:00`} label=" pour ce jour" />
+    </>
   );
 }

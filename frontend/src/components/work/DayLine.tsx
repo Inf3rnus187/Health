@@ -3,6 +3,7 @@ import { Fragment, useState } from 'react';
 import type { WorkDayLine } from '../../api/work';
 import { money, shortDate } from '../../utils/format';
 import { EvidenceFile } from '../FileButtons';
+import { AddProof } from '../workfile/ProofForm';
 import { hm } from './format';
 
 const WEEKDAYS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
@@ -43,16 +44,19 @@ function State(props: { d: WorkDayLine; toComplete: () => void }) {
 
 function Proofs({ d }: { d: WorkDayLine }) {
   return (
-    <ul className="care-list">
-      {d.proofs.map((p) => (
-        <li key={p.id}>
-          <strong>{p.label}</strong> {p.time ?? 'heure inconnue'}
-          {p.end && ` → ${p.end}`} {p.title}
-          {p.amount != null && ` · ${money(p.amount)} €`}{' '}
-          <EvidenceFile id={p.id} name={p.file_name} />
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="care-list">
+        {d.proofs.map((p) => (
+          <li key={p.id}>
+            <strong>{p.label}</strong> {p.time ?? 'heure inconnue'}
+            {p.end && ` → ${p.end}`} {p.title}
+            {p.amount != null && ` · ${money(p.amount)} €`}{' '}
+            <EvidenceFile id={p.id} name={p.file_name} />
+          </li>
+        ))}
+      </ul>
+      <AddProof when={`${d.date}T12:00`} label=" pour ce jour" />
+    </>
   );
 }
 
@@ -63,10 +67,10 @@ function cells(d: WorkDayLine): string[] {
 }
 
 function Toggle(props: { count: number; open: boolean; on: () => void }) {
-  if (props.count === 0) return null;
+  const title = props.count ? 'Voir les preuves' : 'Ajouter une preuve';
   return (
-    <button className="btn ghost" onClick={props.on}>
-      {props.count} {props.open ? '▴' : '▾'}
+    <button className="btn ghost" title={title} onClick={props.on}>
+      {props.count || '+'} {props.open ? '▴' : '▾'}
     </button>
   );
 }

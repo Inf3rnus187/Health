@@ -8,6 +8,7 @@ import { clockTime } from '../work/format';
 import { Landmarks, ProofBadge, ProofTable } from './DayHints';
 import { DayOthers } from './DayOthers';
 import { Input } from './fields';
+import { AddProof } from './ProofForm';
 
 function Missing() {
   return <span className="day-missing">? à compléter</span>;
@@ -96,6 +97,7 @@ export function DayCard({ row }: { row: IncompleteDay }) {
       <DayOthers row={row} pick={setAt} />
       <h4>Preuves et traces (le lendemain matin compris)</h4>
       <ProofTable row={row} pick={setAt} />
+      <AddProof when={`${row.date_key}T12:00`} label=" pour ce jour" />
       <h4>Repères</h4>
       <Landmarks row={row} pick={setAt} />
       <Kept row={row} at={at} setAt={setAt} />

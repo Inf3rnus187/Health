@@ -262,6 +262,15 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
   - Le message d'erreur nomme la session gênante : « Chevauche la
     session du 02/03/2026 09:02 → 12:30 : choisis une heure en dehors, ou
     réunis les deux sessions ».
+- **Ajouter une preuve après coup**, là où il en manque une : « **+
+  Ajouter une preuve pour ce jour** » sur chaque journée à compléter,
+  dans « Mes journées » (le bouton « + » de la colonne Preuves, ou sous
+  les preuves dépliées) et dans « Modifier » une session ; « + Ajouter
+  une preuve à cette absence » sur chaque arrêt ou absence (la preuve y
+  est rattachée). Le formulaire est celui de « Preuves et traces », daté
+  du jour (à midi, à ajuster) ; un fichier nommé avec sa date et son
+  heure remplit « Quand » tout seul. La preuve apparaît aussitôt dans la
+  journée, avec « Prendre 08:47 ».
 - **Une erreur se corrige** : sous les journées à compléter, « **Corrigées
   à la main** » liste toutes les sessions complétées ou modifiées après
   coup ; « Modifier » rouvre l'embauche, la débauche, le lieu (sur place /
@@ -536,10 +545,14 @@ transport…), « Lire », puis « Importer ».
     travaillé sans pointage, traces tardives, repères des journées à
     compléter), y compris **pendant un arrêt** (le rapport liste les
     preuves datées pendant chaque arrêt) ;
+  - un **appel décroché** (« Appel vocal 3 min », « Appel vidéo 1 h 5
+    min ») compte aussi dans cette activité, jusqu'à sa fin (21:29 + 3
+    min → 21:32) ;
   - un jour avec seulement des **messages reçus** : une preuve « SMS /
-    message » ; les **appels** (vocal, vidéo, manqué) : une preuve
-    « Appel » avec leur nombre (le rapport compte les appels pendant
-    l'arrêt, dont le dimanche) ;
+    message » ; tous les **appels** (vocal, vidéo, manqué) font aussi une
+    preuve « Appel » avec leur nombre et leur durée (« 3 appels (1
+    manqué), 1 h 08 » ; le rapport compte les appels pendant l'arrêt,
+    dont le dimanche) ;
   - chaque jour liste ses messages (heure, auteur, texte) ; l'avis de
     chiffrement est ignoré ; le fichier `.txt` est gardé **intact**
     comme document (SHA-256).

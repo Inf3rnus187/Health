@@ -7,9 +7,10 @@ Both exports are read, in any language:
 
 A line that does not start with a date continues the message before it.
 The end-to-end encryption notice is left out (on the iPhone its sender
-is the chat's name); a call (« Appel vocal manqué », « Voice call ») is
-kept apart. Dates are day first unless the file shows otherwise (a
-second number above 12); times are the phone's, the user's local time.
+is the chat's name); a call (« Appel vocal 3 min », « Appel vocal
+manqué », « Voice call ») is kept apart, with its length. Dates are
+day first unless the file shows otherwise (a second number above 12);
+times are the phone's, the user's local time.
 """
 
 from __future__ import annotations
@@ -37,6 +38,10 @@ _CALL = re.compile(
     r"call|appel manqu[ée])",
     re.IGNORECASE,
 )
+_MISSED = re.compile(r"manqu|missed|sans r[ée]ponse|no answer|refus|declin")
+_HOURS = re.compile(r"(\d+)\s*(?:h|hr|hrs|heures?|hours?)\b", re.IGNORECASE)
+_MINUTES = re.compile(r"(\d+)\s*min", re.IGNORECASE)
+_SECONDS = re.compile(r"(\d+)\s*(?:s|sec|secondes?|seconds?)\b", re.IGNORECASE)
 _FILE_NAME = re.compile(
     r"(?:discussion whatsapp avec|whatsapp chat with|whatsapp chat -)\s*"
     r"(?P<name>.+?)(?:\.txt|\.zip)?$",
@@ -46,12 +51,14 @@ _SAMPLE = 40
 
 
 class Message(NamedTuple):
-    """One message (UTC time); a call is flagged."""
+    """One message (UTC time); a call is flagged, with its length."""
 
     at: datetime
     who: str
     text: str
     call: bool
+    #: How long a call lasted (« Appel vocal 3 min »); 0: missed, unknown.
+    seconds: int = 0
 
 
 class Chat(NamedTuple):
@@ -87,9 +94,22 @@ def read(data: bytes, name: str, tz: ZoneInfo) -> Chat:
         if _NOTICE.search(text):
             notice_by = notice_by or who
             continue
-        messages.append(Message(at, who, text, bool(_CALL.match(text))))
+        call = bool(_CALL.match(text))
+        length = _length(text) if call else 0
+        messages.append(Message(at, who, text, call, length))
     senders = Counter(m.who for m in messages if not m.call).most_common()
     return Chat(_name(name, notice_by, senders), messages, senders)
+
+
+def _length(text: str) -> int:
+    """A call's length in seconds (« 1 h 5 min », « 45 s »); 0 if missed."""
+    if _MISSED.search(text.lower()):
+        return 0
+    total = 0
+    for pattern, unit in ((_HOURS, 3600), (_MINUTES, 60), (_SECONDS, 1)):
+        found = pattern.search(text)
+        total += int(found[1]) * unit if found else 0
+    return total
 
 
 def _raw(text: str) -> list[tuple[str, str, str]]:

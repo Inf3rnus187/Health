@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Add a proof after the fact, where it is missing**: « + Ajouter une
+  preuve pour ce jour » on each day to complete, in « Mes journées »
+  (the « + » of the Preuves column, or under the proofs unfolded) and in
+  a session's editor; « + Ajouter une preuve à cette absence » on each
+  absence (linked to it). The same form as « Preuves et traces », dated
+  that day. WhatsApp calls answered (« Appel vocal 3 min ») count in the
+  day's activity until they end; the « Appel » proof gives their count,
+  the missed ones and the total length.
+
 - **WhatsApp chats as proofs** (`.txt` export, iPhone or Android, any
   date order, messages on several lines): per day, your messages are an
   « Activité pro » trace from the first to the last one you sent

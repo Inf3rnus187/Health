@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from app.services import chat_read
+from app.services import chat_read, chat_traces
 from httpx import AsyncClient
 
 TRACES = "/api/v1/traces/import"
@@ -111,3 +111,20 @@ async def test_the_person_chosen_is_me(
     assert kinds[0] == ("2026-03-02", "activite")
     assert read["preview"][0]["title"].endswith("1 message de moi, 2 reçus")
     assert ("2026-03-09", "activite") in kinds  # « Merci pour hier »
+
+
+def test_a_call_answered_is_activity_with_its_length() -> None:
+    tz = ZoneInfo("Europe/Paris")
+    text = (
+        "[16/09/2025 21:29:25] Moi: ‎Appel vocal  ‎3 min\n"
+        "[16/09/2025 22:05:00] Alex Martin : ‎Appel vocal manqué\n"
+        "[16/09/2025 22:30:00] Alex Martin : ‎Appel vidéo ‎1 h 5 min\n"
+    )
+    found, _ = chat_traces.traces(text.encode(), _NAME, "", tz)
+    work, calls, _original = found
+    assert work.kind == "activite"
+    local = [t.astimezone(tz).strftime("%H:%M") for t in (work.start, work.end)]
+    assert local == ["21:29", "23:35"]  # the video call ends at 23:35
+    assert work.vendor.endswith(": 2 appels (1 h 08)")
+    assert calls.kind == "appel" and calls.actions == 3
+    assert calls.vendor.endswith(": 3 appels (1 manqué), 1 h 08")
