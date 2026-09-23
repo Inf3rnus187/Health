@@ -69,6 +69,20 @@ async def save_work_session(
 
 
 @mcp.tool()
+async def work_days(start: str | None = None, end: str | None = None) -> Any:
+    """One line per day (default: the last 30 days), oldest first.
+
+    The night before (asleep minutes, awakenings, wake-up), first
+    clock-in, last clock-out, hours worked and the remote part, bedtime
+    that evening, absence (arret, conge, repos, autre, ferie; ½ for a
+    half day), the day's proofs and traces, and the state (complet,
+    a_completer, en_cours). The table to read before answering about a
+    given day.
+    """
+    return await client.get("/work/days", {"start": start, "end": end})
+
+
+@mcp.tool()
 async def work_incomplete() -> Any:
     """Days to complete: sessions with a clock-in or clock-out missing.
 

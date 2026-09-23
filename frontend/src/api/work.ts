@@ -81,6 +81,35 @@ export interface WorkStats {
   periods: WorkPeriod[];
 }
 
+/** One day of the journal: the night before, the work, the evening. */
+export interface WorkDayLine {
+  date: string;
+  weekday: number;
+  sleep_min: number | null;
+  awakenings: number | null;
+  wake_time: string | null;
+  bedtime: string | null;
+  start: string | null;
+  end: string | null;
+  hours: number | null;
+  remote: number;
+  sessions: number;
+  /** complet, a_completer, en_cours (null: no work). */
+  state: string | null;
+  /** arret, conge, repos, autre, ferie. */
+  absence: string | null;
+  absence_share: number;
+  proofs: {
+    id: string;
+    kind: string;
+    label: string;
+    time: string | null;
+    title: string;
+    amount: number | null;
+    file_name: string | null;
+  }[];
+}
+
 export interface WorkImport {
   dry_run: boolean;
   sessions: number;
@@ -113,6 +142,8 @@ export const fetchWorkSessions = (range: Range) =>
   api<WorkSession[]>(
     `/work/sessions?start=${range.start || '2000-01-01'}&end=${range.end}`,
   );
+export const fetchWorkDays = (range: Range) =>
+  api<WorkDayLine[]>(`/work/days?${rangeQuery(range)}`);
 export const clockWork = (a: { kind: 'in' | 'out'; place?: Place }) =>
   api<WorkSession>('/work/clock', json('POST', a));
 export const addWorkSession = (body: SessionBody) =>

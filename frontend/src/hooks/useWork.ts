@@ -4,6 +4,7 @@ import {
   addWorkSession,
   clockWork,
   deleteWorkSession,
+  fetchWorkDays,
   fetchWorkSessions,
   fetchWorkStats,
 } from '../api/work';
@@ -13,6 +14,7 @@ import type { Range } from '../utils/range';
 const FED = [
   'work-stats',
   'work-sessions',
+  'work-days',
   'work-health',
   'absences',
   'evidence',
@@ -37,6 +39,12 @@ export const useWorkStats = (range: Range, contract: number) =>
   useQuery({
     queryKey: ['work-stats', range, contract],
     queryFn: () => fetchWorkStats(range, contract),
+  });
+
+export const useWorkDays = (range: Range) =>
+  useQuery({
+    queryKey: ['work-days', range],
+    queryFn: () => fetchWorkDays(range),
   });
 
 export const useWorkSessions = (range: Range) =>

@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-84 outils.
+85 outils.
 
 ## Données et métriques
 
@@ -335,6 +335,19 @@ kept. Overlaps and sessions over 72 h are refused. Confirm with the
 user before fixing.
 
 Paramètres : `start_at` (string | null, défaut `None`), `end_at` (string | null, défaut `None`), `note` (string, défaut ``), `session_id` (string | null, défaut `None`), `remote` (boolean | null, défaut `None`)
+
+### `work_days`
+
+One line per day (default: the last 30 days), oldest first.
+
+The night before (asleep minutes, awakenings, wake-up), first
+clock-in, last clock-out, hours worked and the remote part, bedtime
+that evening, absence (arret, conge, repos, autre, ferie; ½ for a
+half day), the day's proofs and traces, and the state (complet,
+a_completer, en_cours). The table to read before answering about a
+given day.
+
+Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`)
 
 ### `work_incomplete`
 

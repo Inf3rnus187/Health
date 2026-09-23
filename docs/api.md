@@ -281,6 +281,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | Méthode | Route | Accès | Paramètres | Rôle |
 |---|---|---|---|---|
 | POST | `/work/clock` | `write:measurements` + ?token= | JSON `ClockIn` (kind, at, place) | Clock in or out (now unless ``at`` is given). |
+| GET | `/work/days` | `read:all` | `start`?, `end`? | One line per day (default: the last 30), oldest first. |
 | GET | `/work/export` | `read:all` | `start`?, `end`?, `level`?, `format`?, `contract_hours`? | Sessions, days, weeks or months as CSV, JSON or Excel. |
 | GET | `/work/health` | `read:all` | `start`?, `end`?, `contract_hours`? | The work ↔ health file: days, sleep, legal landmarks, absences. |
 | POST | `/work/import` | `write:measurements` + ?token= | `dry_run`?, form `file` | Import past clock-in / clock-out logs (txt, csv, json). |

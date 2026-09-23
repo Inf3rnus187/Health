@@ -8,6 +8,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **« Mes journées »: one line per day**, the Travail page's first tab:
+  the night before (asleep, awakenings), wake-up, first clock-in, last
+  clock-out, hours worked (remote part), bedtime, absence (½ for a half
+  day), the day's proofs (unfolded, « Voir » / « Télécharger ») and the
+  state (« à compléter » leads to the tab). Period, filter, paging,
+  totals. `GET /work/days`, MCP `work_days`. The Travail page is split
+  into tabs: Journées, À compléter (with its count), Sessions,
+  Statistiques, Dossier travail et santé, Importer.
+
 - **See a proof before choosing a time, and fix any correction.**
   - Each day to complete is a clear card: what is known, the day's
     proofs and traces in a table (and the morning after), landmarks, the

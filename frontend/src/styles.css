@@ -1647,3 +1647,23 @@ img.viewer-file {
 .nowrap {
   white-space: nowrap;
 }
+
+/* The day-by-day journal. */
+.days-table th {
+  white-space: nowrap;
+}
+
+.days-table tr.weekend td {
+  background: var(--color-grid);
+}
+
+.badge-warn {
+  border: none;
+  cursor: pointer;
+  background: var(--color-warn-bg);
+  color: var(--color-warn);
+}
+
+.strong {
+  font-weight: 600;
+}

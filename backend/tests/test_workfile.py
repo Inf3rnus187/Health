@@ -346,3 +346,55 @@ async def test_half_days_off_count_half(
     assert (week["absent_days"], week["target"]) == (1.0, 28)
     assert stats["worked_while_off"] == []  # a morning worked, not off
     assert stats["absences"][0]["days"] == 1.0
+
+
+async def test_one_line_per_day(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """The night before, the work, the evening, the absence, the proofs."""
+    async with SessionFactory() as session:
+        user = (await session.execute(select(User))).scalar_one()
+    await _sleep(
+        user.id,
+        [("2026-03-02T23:10+01:00", "2026-03-03T06:40+01:00", "asleepCore"),
+         ("2026-03-03T23:40+01:00", "2026-03-04T06:30+01:00", "asleepCore")],
+    )  # fmt: skip
+    for start, end, place in (
+        ("2026-03-03T08:30", "2026-03-03T18:30", "site"),
+        ("2026-03-03T21:00", "2026-03-03T22:30", "remote"),
+    ):
+        await client.post(
+            "/api/v1/work/sessions",
+            json={"start_at": start, "end_at": end, "place": place},
+            headers=auth,
+        )
+    await client.post(
+        "/api/v1/evidence",
+        data={"occurred_at": "2026-03-03T23:05", "kind": "taxi"},
+        headers=auth,
+    )
+    await client.post(
+        "/api/v1/absences",
+        json={"start_date": "2026-03-04", "end_date": "2026-03-04",
+              "end_half": "am", "kind": "arret_maladie"},
+        headers=auth,
+    )  # fmt: skip
+    lines = (
+        await client.get(
+            "/api/v1/work/days",
+            params={"start": "2026-03-03", "end": "2026-03-04"},
+            headers=auth,
+        )
+    ).json()
+    worked, sick = lines
+    assert (worked["wake_time"], worked["sleep_min"]) == ("06:40", 450)
+    assert (worked["start"], worked["end"], worked["bedtime"]) == (
+        "08:30", "22:30", "23:40",
+    )  # fmt: skip
+    assert (worked["hours"], worked["remote"], worked["state"]) == (
+        11.5, 1.5, "complet",
+    )  # fmt: skip
+    assert [p["time"] for p in worked["proofs"]] == ["23:05"]
+    assert (sick["absence"], sick["absence_share"], sick["hours"]) == (
+        "arret", 0.5, None,
+    )  # fmt: skip

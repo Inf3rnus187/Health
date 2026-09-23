@@ -50,6 +50,7 @@ from app.api.v1 import (
     waveforms,
     work,
     work_data,
+    work_journal,
 )
 
 api_router = APIRouter()
@@ -75,6 +76,7 @@ api_router.include_router(meals.router)
 api_router.include_router(meals_edit.router)
 api_router.include_router(work.router)
 api_router.include_router(work_data.router)
+api_router.include_router(work_journal.router)
 api_router.include_router(logs.router)
 api_router.include_router(absences.router)
 api_router.include_router(evidence.router)

@@ -151,7 +151,32 @@ Les heures de travail comme donnée de santé : amplitude, heures
 supplémentaires et semaines chargées se lisent à côté du sommeil, de la
 VFC ou de la tension — jusqu'à un dossier complet pour faire valoir un
 arrêt, un accident du travail ou une maladie professionnelle. La page a
-trois onglets : **Pointage**, **Dossier travail et santé**, **Importer**.
+six onglets, du plus utile au plus rare :
+
+- **Journées** (ouvert par défaut) : le pointage (embauche sur place / à
+  distance, débauche) puis **Mes journées**, une ligne par jour, la plus
+  récente en haut, dans l'ordre de la journée :
+
+  | Jour | Nuit (avant) | Réveil | Embauche | Débauche | Travaillé | Coucher | Absence | Preuves | État |
+  |---|---|---|---|---|---|---|---|---|---|
+  | mar. 22/09 | 7 h 10 · 3 réveils | 06:50 | 08:40 | 22:45 | **12 h 15** (dist. 1 h 45) | 23:40 | | 1 ▾ | |
+
+  La nuit est celle d'avant le jour (durée, réveils), le coucher celui du
+  soir ; la débauche est la dernière de la journée (à distance
+  comprise, « +1 » après minuit) ; « Arrêt ½ » pour une demi-journée ;
+  le nombre de preuves se déplie (« Voir » / « Télécharger ») ; « à
+  compléter » mène à l'onglet du même nom. Week-ends grisés, filtre (jours
+  travaillés, à compléter, absences, avec preuves), période au choix, et
+  en tête les totaux : jours travaillés, heures (dont à distance),
+  sommeil moyen, journées à compléter.
+- **À compléter (N)** : les journées incomplètes et « Corrigées à la
+  main » (plus bas).
+- **Sessions** : chaque session, à ajouter, modifier ou supprimer.
+- **Statistiques** : heures travaillées, graphique par semaine, court /
+  moyen / long terme, export et rapport PDF.
+- **Dossier travail et santé** : synthèse, arrêts et absences, preuves
+  et traces, nuits.
+- **Importer** : historiques de Raccourcis, traces, absences, pointages.
 
 **Périodes et pages, partout pareil.** Chaque liste ou calcul daté
 (heures travaillées, sessions, synthèse du dossier, preuves et traces,
@@ -162,7 +187,7 @@ listes longues se lisent **page par page** : « Par page » (10 par
 défaut, ou plus) et « Précédent / Suivant ». Les jours s'entendent à
 l'heure locale : un taxi à 00:30 compte pour ce jour-là.
 
-### Pointage
+### Pointage (onglets Journées, À compléter, Sessions, Statistiques)
 
 - **Pointer** : « Embauche maintenant » / « Débauche maintenant », le
   Raccourci iPhone (même règle que les compteurs, voir plus haut, avec le

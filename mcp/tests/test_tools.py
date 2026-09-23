@@ -255,8 +255,10 @@ async def test_days_to_complete_and_every_night() -> None:
     seen = _capture()
     await tools_work.work_incomplete()
     await tools_workfile.sleep_nights(missing=False)
+    await tools_work.work_days("2026-05-01", "2026-05-31")
     assert seen[0].url.path == "/api/v1/work/incomplete"
     assert dict(seen[1].url.params) == {"missing": "false"}
+    assert seen[2].url.path == "/api/v1/work/days"
 
 
 async def test_hr_exports_carry_the_person() -> None:
