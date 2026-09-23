@@ -304,10 +304,12 @@ Paramètres : `meal_id`* (string)
 
 Clock in: start of work (now, or ``at``: ISO date-time).
 
-A second clock-in while already at work is ignored. A time without
-an offset is the user's local time.
+``remote``: working from home ("je bosse à distance") — a session of
+its own, even after a day on site. A second clock-in at the same
+place while at work is ignored. A time without an offset is the
+user's local time.
 
-Paramètres : `at` (string | null, défaut `None`)
+Paramètres : `at` (string | null, défaut `None`), `remote` (boolean, défaut `False`)
 
 ### `clock_out`
 
@@ -326,10 +328,13 @@ Paramètres : `start` (string | null, défaut `None`), `end` (string | null, dé
 Add a work session, or fix one (``session_id``).
 
 Times are ISO date-times (local time without an offset); one of the
-two may be missing (completed later). Overlaps and sessions over
-72 h are refused. Confirm with the user before fixing.
+two may be missing (completed later). ``remote``: worked from home
+("j'ai bossé de 21 h à 23 h 30 à distance") — its own session, even
+on a day already worked on site; left out when fixing, the place is
+kept. Overlaps and sessions over 72 h are refused. Confirm with the
+user before fixing.
 
-Paramètres : `start_at` (string | null, défaut `None`), `end_at` (string | null, défaut `None`), `note` (string, défaut ``), `session_id` (string | null, défaut `None`)
+Paramètres : `start_at` (string | null, défaut `None`), `end_at` (string | null, défaut `None`), `note` (string, défaut ``), `session_id` (string | null, défaut `None`), `remote` (boolean | null, défaut `None`)
 
 ### `work_incomplete`
 

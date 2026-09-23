@@ -7,12 +7,20 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+#: Where the work was done.
+Place = Literal["site", "remote"]
+
 
 class ClockIn(BaseModel):
-    """Clock in or out (now when ``at`` is omitted)."""
+    """Clock in or out (now when ``at`` is omitted).
+
+    ``place``: a clock-in on site or remote (a clock-out closes the
+    session open, wherever it is).
+    """
 
     kind: Literal["in", "out"]
     at: datetime | None = None
+    place: Place = "site"
 
 
 class WorkSessionIn(BaseModel):
@@ -21,6 +29,8 @@ class WorkSessionIn(BaseModel):
     start_at: datetime | None = None
     end_at: datetime | None = None
     note: str = Field(default="", max_length=200)
+    #: remote: worked from home (even on a day already worked on site).
+    place: Place = "site"
 
 
 class WorkSessionUpdate(BaseModel):
@@ -29,6 +39,7 @@ class WorkSessionUpdate(BaseModel):
     start_at: datetime | None = None
     end_at: datetime | None = None
     note: str | None = Field(default=None, max_length=200)
+    place: Place | None = None
 
 
 class WorkSessionOut(BaseModel):
@@ -43,3 +54,5 @@ class WorkSessionOut(BaseModel):
     status: str
     source: str
     note: str
+    #: site or remote.
+    place: str = "site"

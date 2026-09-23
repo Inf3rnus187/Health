@@ -91,6 +91,7 @@ def periods(
                 "days": length,
                 "total_hours": stats["total_hours"],
                 "days_worked": stats["days_worked"],
+                "remote_hours": stats["remote_hours"],
                 "absent_days": sum(1 for k in away if k != "ferie"),
                 "week_average": (
                     round(stats["total_hours"] / (present / 5), 2)

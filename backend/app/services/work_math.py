@@ -23,11 +23,15 @@ _WEEKDAYS = 5
 
 
 class Day(NamedTuple):
-    """One worked day: hours, first clock-in, last clock-out (decimal)."""
+    """One worked day: hours, first clock-in, last clock-out (decimal).
+
+    ``remote``: the part of ``hours`` worked remote.
+    """
 
     hours: float
     start: float | None
     end: float | None
+    remote: float = 0.0
 
 
 def daily(rows: list[WorkSession], tz: ZoneInfo) -> dict[date, Day]:
@@ -42,6 +46,7 @@ def daily(rows: list[WorkSession], tz: ZoneInfo) -> dict[date, Day]:
             values.get(work_days.HOURS.key, 0.0),
             values.get(work_days.START.key),
             values.get(work_days.END.key),
+            values.get(work_days.REMOTE.key, 0.0),
         )
     return dict(sorted(days.items()))
 
@@ -85,6 +90,7 @@ def _week(
         "week": f"{year}-W{week:02d}",
         "monday": monday,
         "hours": hours,
+        "remote": round(sum(v.remote for v in values), 2),
         "days": sum(1 for v in values if v.hours > 0),
         "overtime": round(max(0.0, hours - contract), 2),
         "over_48h": hours > MAX_WEEK_HOURS,
@@ -105,9 +111,11 @@ def months(days: dict[date, Day], contract: float) -> list[dict[str, Any]]:
     out: dict[str, dict[str, Any]] = {}
     for day, value in days.items():
         month = out.setdefault(
-            f"{day:%Y-%m}", {"month": f"{day:%Y-%m}", "hours": 0.0, "days": 0}
+            f"{day:%Y-%m}",
+            {"month": f"{day:%Y-%m}", "hours": 0.0, "remote": 0.0, "days": 0},
         )
         month["hours"] = round(month["hours"] + value.hours, 2)
+        month["remote"] = round(month["remote"] + value.remote, 2)
         month["days"] += value.hours > 0
     for week in weeks(days, contract):
         target = out.get(f"{week['monday']:%Y-%m}")
@@ -144,6 +152,19 @@ def summary(
         "weeks_over_48h": sum(w["over_48h"] for w in listed),
         "overtime_hours": round(sum(w["overtime"] for w in listed), 2),
         **_off_part(worked, listed, off or {}),
+        **_remote_part(worked),
+    }
+
+
+def _remote_part(worked: dict[date, Day]) -> dict[str, Any]:
+    """Hours worked remote, and the days they came on top of the site."""
+    remote = {d: v for d, v in worked.items() if v.remote > 0}
+    return {
+        "remote_hours": round(sum(v.remote for v in remote.values()), 2),
+        "remote_days": len(remote),
+        "remote_after_site": [
+            d for d, v in remote.items() if v.hours - v.remote > 0
+        ],
     }
 
 

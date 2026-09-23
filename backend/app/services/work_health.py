@@ -134,6 +134,7 @@ def _row(
         "worked": work is not None,
         "partial": partial,
         "hours": work.hours if work and work.hours > 0 else None,
+        "remote": work.remote if work and work.remote > 0 else None,
         "start": work.start if work else None,
         "end": work.end if work else None,
         "night": sleep_nights.as_dict(night) if night else None,

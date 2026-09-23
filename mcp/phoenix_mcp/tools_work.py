@@ -9,13 +9,18 @@ from phoenix_mcp.app import mcp
 
 
 @mcp.tool()
-async def clock_in(at: str | None = None) -> Any:
+async def clock_in(at: str | None = None, remote: bool = False) -> Any:
     """Clock in: start of work (now, or ``at``: ISO date-time).
 
-    A second clock-in while already at work is ignored. A time without
-    an offset is the user's local time.
+    ``remote``: working from home ("je bosse à distance") — a session of
+    its own, even after a day on site. A second clock-in at the same
+    place while at work is ignored. A time without an offset is the
+    user's local time.
     """
-    return await client.post("/work/clock", {"kind": "in", "at": at})
+    place = "remote" if remote else "site"
+    return await client.post(
+        "/work/clock", {"kind": "in", "at": at, "place": place}
+    )
 
 
 @mcp.tool()
@@ -38,14 +43,24 @@ async def save_work_session(
     end_at: str | None = None,
     note: str = "",
     session_id: str | None = None,
+    remote: bool | None = None,
 ) -> Any:
     """Add a work session, or fix one (``session_id``).
 
     Times are ISO date-times (local time without an offset); one of the
-    two may be missing (completed later). Overlaps and sessions over
-    72 h are refused. Confirm with the user before fixing.
+    two may be missing (completed later). ``remote``: worked from home
+    ("j'ai bossé de 21 h à 23 h 30 à distance") — its own session, even
+    on a day already worked on site; left out when fixing, the place is
+    kept. Overlaps and sessions over 72 h are refused. Confirm with the
+    user before fixing.
     """
-    body = {"start_at": start_at, "end_at": end_at, "note": note}
+    body: dict[str, Any] = {
+        "start_at": start_at,
+        "end_at": end_at,
+        "note": note,
+    }
+    if remote is not None:
+        body["place"] = "remote" if remote else "site"
     if session_id:
         return await client.request(
             "PUT", f"/work/sessions/{session_id}", body=body

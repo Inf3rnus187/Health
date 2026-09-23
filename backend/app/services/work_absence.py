@@ -91,7 +91,7 @@ def present_weekdays(off: dict[date, str], first: date, last: date) -> int:
 
 
 def texts(work: dict[str, Any]) -> list[str]:
-    """The days-off lines of a report (French)."""
+    """The days-off and remote-work lines of a report (French)."""
     parts = [
         f"{a['label']} {a['days']} j ({a['workdays']} ouvrés)"
         for a in work.get("absences", [])
@@ -103,6 +103,7 @@ def texts(work: dict[str, Any]) -> list[str]:
         "Heures au-delà du contrat, jours d'absence et fériés déduits de "
         f"l'objectif de la semaine : {work['beyond_target_hours']:g} h.",
     ]
+    out += _remote(work)
     during = work["worked_while_off"]
     if during:
         days = ", ".join(f"{d['date']:%d/%m/%Y}" for d in during[:_LISTED])
@@ -112,3 +113,15 @@ def texts(work: dict[str, Any]) -> list[str]:
             f"({days}{more})."
         )
     return out
+
+
+def _remote(work: dict[str, Any]) -> list[str]:
+    """The remote-work line (none without remote work)."""
+    if not work.get("remote_hours"):
+        return []
+    after = work["remote_after_site"]
+    return [
+        f"Travail à distance : {work['remote_hours']:g} h sur "
+        f"{work['remote_days']} jours, dont {len(after)} en plus d'une "
+        "journée sur place."
+    ]

@@ -1,26 +1,48 @@
+import type { Place, WorkSession } from '../../api/work';
 import { useClock, useWorkStats } from '../../hooks/useWork';
 import { localToday } from '../../utils/format';
 import { clockTime, hm } from './format';
 
-function Buttons({ open }: { open: boolean }) {
+const ACTIONS: {
+  label: string;
+  body: { kind: 'in' | 'out'; place?: Place };
+  off: (open: WorkSession | null) => boolean;
+  ghost?: boolean;
+}[] = [
+  {
+    label: 'Embauche maintenant',
+    body: { kind: 'in', place: 'site' },
+    off: (open) => open !== null,
+  },
+  {
+    label: 'Embauche à distance',
+    body: { kind: 'in', place: 'remote' },
+    off: (open) => open?.place === 'remote',
+    ghost: true,
+  },
+  {
+    label: 'Débauche maintenant',
+    body: { kind: 'out' },
+    off: (open) => open === null,
+  },
+];
+
+/** Clock in on site or remote (remote also after the office), out. */
+function Buttons({ open }: { open: WorkSession | null }) {
   const clock = useClock();
   return (
     <>
       <div className="quick">
-        <button
-          className="btn"
-          disabled={clock.isPending || open}
-          onClick={() => clock.mutate('in')}
-        >
-          Embauche maintenant
-        </button>
-        <button
-          className="btn"
-          disabled={clock.isPending || !open}
-          onClick={() => clock.mutate('out')}
-        >
-          Débauche maintenant
-        </button>
+        {ACTIONS.map((a) => (
+          <button
+            key={a.label}
+            className={a.ghost ? 'btn ghost' : 'btn'}
+            disabled={clock.isPending || a.off(open)}
+            onClick={() => clock.mutate(a.body)}
+          >
+            {a.label}
+          </button>
+        ))}
       </div>
       {clock.error && <p className="error">{clock.error.message}</p>}
     </>
@@ -37,10 +59,11 @@ export function ClockCard() {
       <h2>Travail — aujourd’hui : {hm(stats?.total_hours ?? 0)}</h2>
       <p className="muted">
         {open
-          ? `Au travail depuis ${clockTime(open.start_at)}.`
+          ? `Au travail depuis ${clockTime(open.start_at)}` +
+            (open.place === 'remote' ? ' (à distance).' : '.')
           : 'Pas en poste.'}
       </p>
-      <Buttons open={open !== null} />
+      <Buttons open={open} />
     </section>
   );
 }

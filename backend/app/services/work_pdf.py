@@ -15,6 +15,7 @@ from app.services.work_math import MAX_WEEK_HOURS
 _CHART_WEEKS = 52
 _BLUE, _GREEN, _RED = (37, 99, 235), (22, 163, 74), (220, 38, 38)
 _ORANGE = (245, 158, 11)
+_PURPLE = (139, 92, 246)
 
 
 def work_pdf(stats: dict[str, Any]) -> bytes:
@@ -44,22 +45,23 @@ def _tables(stats: dict[str, Any]) -> list[tuple[str, list[str], list[Any]]]:
         for p in stats["periods"]
     ]  # fmt: skip
     weeks = [
-        [w["week"], w["hours"], w["days"], w["overtime"],
+        [w["week"], w["hours"], w["remote"] or "", w["days"], w["overtime"],
          "oui" if w["over_48h"] else "", w["absent_days"] or "",
          w["target"]]
         for w in stats["weeks"]
     ]  # fmt: skip
     months = [
-        [m["month"], m["hours"], m["days"], m["overtime"]]
+        [m["month"], m["hours"], m["remote"] or "", m["days"], m["overtime"]]
         for m in stats["months"]
     ]
     return [
         ("Court, moyen et long terme",
          ["Période", "Heures", "Jours", "Absent (j)", "Moy./sem. présente",
           "Heures sup"], periods),
-        ("Semaines", ["Semaine", "Heures", "Jours", "Heures sup", "> 48 h",
-                      "Absent (j)", "Objectif"], weeks),
-        ("Mois", ["Mois", "Heures", "Jours", "Heures sup"], months),
+        ("Semaines", ["Semaine", "Heures", "Distance", "Jours", "Heures sup",
+                      "> 48 h", "Absent (j)", "Objectif"], weeks),
+        ("Mois", ["Mois", "Heures", "Distance", "Jours", "Heures sup"],
+         months),
     ]  # fmt: skip
 
 
@@ -107,7 +109,8 @@ def _chart(pdf: FPDF, weeks: list[dict[str, Any]], contract: float) -> None:
         pdf,
         4,
         f"Vert : contrat ({contract:g} h). Rouge : 48 h. Barre orange : "
-        "semaine avec absence ou jour férié (trait vert : objectif réduit).",
+        "semaine avec absence ou jour férié (trait vert : objectif réduit). "
+        "Violet : heures à distance.",
     )
     pdf.set_font("Helvetica", size=10)
 
@@ -129,6 +132,9 @@ def _bars(
         left = x + index * step + 0.3
         width = max(step - 0.6, 0.4)
         pdf.rect(left, y + h - height, width, height, "F")
+        if week.get("remote"):  # the part worked remote, on top
+            pdf.set_fill_color(*_PURPLE)
+            pdf.rect(left, y + h - height, width, week["remote"] / top * h, "F")
         if week.get("absent_days"):  # the week's reduced target
             level = y + h - week["target"] / top * h
             pdf.set_draw_color(*_GREEN)

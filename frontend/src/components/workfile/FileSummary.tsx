@@ -63,6 +63,9 @@ function OffLine({ work }: { work: WorkHealth['work'] }) {
     <li>
       {off.length ? off.join(' · ') : 'Aucune absence enregistrée'}
       {during > 0 && ` · travaillé pendant une absence : ${during} j`}
+      {work.remote_hours > 0 &&
+        ` · à distance : ${work.remote_hours} h sur ${work.remote_days} j` +
+          ` (${work.remote_after_site.length} en plus du sur place)`}
     </li>
   );
 }

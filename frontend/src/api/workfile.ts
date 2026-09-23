@@ -53,6 +53,9 @@ export interface WorkHealth {
     beyond_target_hours: number;
     absences: { kind: string; label: string; days: number }[];
     worked_while_off: { date: string; kind: string; hours: number }[];
+    remote_hours: number;
+    remote_days: number;
+    remote_after_site: string[];
   };
   sources: {
     sessions: number;

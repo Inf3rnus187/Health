@@ -1,8 +1,9 @@
 """Daily work values rebuilt from the sessions (one truth).
 
-The sessions are the raw data. Each local day gets three daily values,
+The sessions are the raw data. Each local day gets its daily values,
 like any other metric (charts, dashboards, exports, reports, MCP):
-``work.hours`` (hours worked, closed sessions), ``work.start`` (first
+``work.hours`` (hours worked, closed sessions, remote included),
+``work.remote_hours`` (the part worked remote), ``work.start`` (first
 clock-in) and ``work.end`` (last clock-out), both in decimal hours of the
 day (8.25 = 08:15; past midnight, 25.5 = 01:30 the next day). A session
 belongs to the day it starts.
@@ -32,7 +33,10 @@ START = MetricSpec(
     "work.start", "Heure d'embauche", "work", "float", "h", "avg"
 )
 END = MetricSpec("work.end", "Heure de débauche", "work", "float", "h", "avg")
-SPECS = (HOURS, START, END)
+REMOTE = MetricSpec(
+    "work.remote_hours", "Heures à distance", "work", "float", "h", "sum"
+)
+SPECS = (HOURS, START, END, REMOTE)
 #: A clock-in without clock-out is "at work now" this long; after it the
 #: clock-out is "missing", and a new clock-in starts a new session.
 OPEN_FOR = timedelta(hours=16)
@@ -105,9 +109,12 @@ def day_values(
         values[START.key] = _hour(min(starts), midnight)
     if ends:
         values[END.key] = _hour(max(ends), midnight)
-    closed = [length for r in rows if (length := hours(r)) is not None]
+    closed = [(r, length) for r in rows if (length := hours(r)) is not None]
     if closed:
-        values[HOURS.key] = round(sum(closed), 2)
+        values[HOURS.key] = round(sum(n for _, n in closed), 2)
+    remote = [n for r, n in closed if r.place == "remote"]
+    if remote:
+        values[REMOTE.key] = round(sum(remote), 2)
     return values
 
 
@@ -131,6 +138,7 @@ def view(row: WorkSession, tz: ZoneInfo) -> dict[str, Any]:
         "status": _status(row),
         "source": row.source,
         "note": row.note or "",
+        "place": row.place or "site",
     }
 
 

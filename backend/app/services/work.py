@@ -28,6 +28,8 @@ MAX_SESSION = timedelta(hours=72)
 _TIMES = ("start_at", "end_at")
 #: A lone clock-in and a lone clock-out this close are one session.
 _HALF = timedelta(hours=20)
+#: Where the work was done: on site, or remote.
+PLACES = ("site", "remote")
 
 
 async def clock(
@@ -36,11 +38,13 @@ async def clock(
     kind: str,
     at: datetime | None,
     source: str,
+    place: str = "site",
 ) -> dict[str, Any]:
     """Clock in (open a session) or out (close the open one).
 
-    A repeated clock-in is ignored; a clock-out with nothing open is kept
-    as a session whose clock-in is missing.
+    A repeated clock-in is ignored; a clock-in at another place (remote
+    after the office) opens a new session. A clock-out closes the latest
+    open session, or is kept as a session whose clock-in is missing.
     """
     tz = await user_zone(session, user_id)
     when = _instant(at, tz) if at else utcnow()
@@ -50,13 +54,14 @@ async def clock(
     elif (
         kind == "out"
         or current is None
+        or current.place != place
         or when - utc(current.start_at or when) > work_days.OPEN_FOR
     ):
         start = None if kind == "out" else when
         end = when if kind == "out" else None
         current = WorkSession(
             id=new_uuid(), user_id=user_id, start_at=start, end_at=end,
-            source=source,
+            source=source, place=place,
         )  # fmt: skip
         session.add(current)
     await work_days.refresh(session, user_id, {_day(current, tz)}, tz)
@@ -69,15 +74,20 @@ async def add(
     fields: dict[str, Any],
     source: str,
 ) -> dict[str, Any]:
-    """Add a session; the same start (or lone end) updates that one."""
+    """Add a session; the same start (or lone end) updates that one.
+
+    ``place`` remote: worked from home — a session of its own, even on a
+    day already worked on site (it may not overlap it).
+    """
     tz = await user_zone(session, user_id)
     times = {
         k: _instant(fields[k], tz) if fields.get(k) else None for k in _TIMES
     }
+    place = fields.get("place") or "site"
     row = (
-        await _same(session, user_id, times)
-        or await _other_half(session, user_id, times)
-        or WorkSession(id=new_uuid(), user_id=user_id)
+        await _same(session, user_id, times, place)
+        or await _other_half(session, user_id, times, place)
+        or WorkSession(id=new_uuid(), user_id=user_id, place=place)
     )
     times = {k: times[k] or _utc_or_none(getattr(row, k)) for k in _TIMES}
     row.source = source
@@ -140,6 +150,8 @@ async def _apply(
         setattr(row, key, _instant(value, tz) if value else None)
     if fields.get("note") is not None:
         row.note = str(fields["note"]).strip()[:200]
+    if fields.get("place") in PLACES:
+        row.place = fields["place"]
     if row.start_at is None and row.end_at is None:
         raise InvalidInputError("Il faut au moins l'embauche ou la débauche.")
     if row.start_at is not None and row.end_at is not None:
@@ -181,10 +193,12 @@ def _span(row: WorkSession) -> tuple[datetime, datetime]:
 
 
 async def _same(
-    session: AsyncSession, user_id: str, times: dict[str, Any]
+    session: AsyncSession, user_id: str, times: dict[str, Any], place: str
 ) -> WorkSession | None:
     """The session an added one replaces: same start, or same lone end."""
-    query = select(WorkSession).where(WorkSession.user_id == user_id)
+    query = select(WorkSession).where(
+        WorkSession.user_id == user_id, WorkSession.place == place
+    )
     if times["start_at"] is not None:
         query = query.where(WorkSession.start_at == times["start_at"])
     elif times["end_at"] is not None:
@@ -197,13 +211,15 @@ async def _same(
 
 
 async def _other_half(
-    session: AsyncSession, user_id: str, times: dict[str, Any]
+    session: AsyncSession, user_id: str, times: dict[str, Any], place: str
 ) -> WorkSession | None:
     """A session missing exactly the half being added (20 h around it)."""
     start, end = times["start_at"], times["end_at"]
     if (start is None) == (end is None):
         return None
-    query = select(WorkSession).where(WorkSession.user_id == user_id)
+    query = select(WorkSession).where(
+        WorkSession.user_id == user_id, WorkSession.place == place
+    )
     if start is not None:
         query = query.where(
             WorkSession.start_at.is_(None),

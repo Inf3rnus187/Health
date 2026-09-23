@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import type { WorkSession } from '../../api/work';
+import type { Place, WorkSession } from '../../api/work';
 import {
   useAddSession,
   useDeleteSession,
@@ -27,6 +27,9 @@ function Row({ row }: { row: WorkSession }) {
       <td>{clockTime(row.start_at)}</td>
       <td>{row.end_at ? clockTime(row.end_at) : 'en cours'}</td>
       <td>{hm(row.hours)}</td>
+      <td>
+        {row.place === 'remote' && <span className="badge">à distance</span>}
+      </td>
       <td className="muted">{SOURCE[row.source] ?? row.source}</td>
       <td>
         <button
@@ -58,19 +61,35 @@ function When(props: {
   );
 }
 
+function Remote(props: { on: boolean; set: (on: boolean) => void }) {
+  return (
+    <label className="muted">
+      <input
+        type="checkbox"
+        checked={props.on}
+        onChange={(e) => props.set(e.target.checked)}
+      />{' '}
+      À distance (même après une journée sur place)
+    </label>
+  );
+}
+
 function AddSession() {
   const add = useAddSession();
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
+  const [remote, setRemote] = useState(false);
+  const place: Place = remote ? 'remote' : 'site';
   const save = () =>
     add.mutate(
-      { start_at: start, end_at: end || null },
+      { start_at: start, end_at: end || null, place },
       { onSuccess: () => setEnd('') },
     );
   return (
     <div className="quick">
       <When label="Embauche" value={start} onChange={setStart} />
       <When label="Débauche" value={end} onChange={setEnd} />
+      <Remote on={remote} set={setRemote} />
       <button className="btn" disabled={!start} onClick={save}>
         Ajouter la session
       </button>

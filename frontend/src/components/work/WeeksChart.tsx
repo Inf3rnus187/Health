@@ -25,6 +25,11 @@ const OFF: Record<string, string> = {
   ferie: 'férié',
 };
 
+/** A week with its on-site part (the remote part stacks on top). */
+function split(week: WorkWeek) {
+  return { ...week, site: Math.round((week.hours - week.remote) * 100) / 100 };
+}
+
 function color(week: WorkWeek): string {
   if (week.over_48h) return 'var(--color-danger)';
   if (week.absence === 'arret') return 'var(--color-warn)';
@@ -47,7 +52,7 @@ export function WeeksChart(props: { weeks: WorkWeek[]; contract: number }) {
   }
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <ComposedChart data={props.weeks} margin={MARGIN}>
+      <ComposedChart data={props.weeks.map(split)} margin={MARGIN}>
         <CartesianGrid stroke="var(--color-grid)" vertical={false} />
         <XAxis dataKey="week" fontSize={11} />
         <YAxis fontSize={11} width={44} />
@@ -57,11 +62,23 @@ export function WeeksChart(props: { weeks: WorkWeek[]; contract: number }) {
         />
         <ReferenceLine y={props.contract} stroke="var(--color-ok)" />
         <ReferenceLine y={MAX_WEEK} stroke="var(--color-danger)" />
-        <Bar dataKey="hours" name="Heures" isAnimationActive={false}>
+        <Bar
+          dataKey="site"
+          name="Sur place"
+          stackId="h"
+          isAnimationActive={false}
+        >
           {props.weeks.map((week) => (
             <Cell key={week.week} fill={color(week)} />
           ))}
         </Bar>
+        <Bar
+          dataKey="remote"
+          name="À distance"
+          stackId="h"
+          fill="var(--color-remote)"
+          isAnimationActive={false}
+        />
         <Line
           dataKey="target"
           name="Objectif (absences déduites)"

@@ -11,12 +11,18 @@ export interface WorkSession {
   status: string;
   source: string;
   note: string;
+  /** site (on site) or remote. */
+  place: Place;
 }
+
+export type Place = 'site' | 'remote';
 
 export interface WorkWeek {
   week: string;
   monday: string;
   hours: number;
+  /** The part worked remote. */
+  remote: number;
   days: number;
   overtime: number;
   over_48h: boolean;
@@ -33,6 +39,7 @@ export interface WorkPeriod {
   days: number;
   total_hours: number;
   days_worked: number;
+  remote_hours: number;
   absent_days: number;
   /** Per week present (weekdays off left out); null if all off. */
   week_average: number | null;
@@ -63,6 +70,10 @@ export interface WorkStats {
   overtime_hours: number;
   /** Full weeks worked (no day off): the base of avg_week_hours. */
   full_weeks: number;
+  remote_hours: number;
+  remote_days: number;
+  /** Days worked remote on top of a day on site. */
+  remote_after_site: string[];
   beyond_target_hours: number;
   absences: WorkOff[];
   worked_while_off: { date: string; kind: string; hours: number }[];
@@ -87,6 +98,7 @@ export interface SessionBody {
   start_at: string;
   end_at: string | null;
   note?: string;
+  place?: Place;
 }
 
 const json = (method: string, body?: unknown): RequestInit => ({
@@ -101,8 +113,8 @@ export const fetchWorkSessions = (range: Range) =>
   api<WorkSession[]>(
     `/work/sessions?start=${range.start || '2000-01-01'}&end=${range.end}`,
   );
-export const clockWork = (kind: 'in' | 'out') =>
-  api<WorkSession>('/work/clock', json('POST', { kind }));
+export const clockWork = (a: { kind: 'in' | 'out'; place?: Place }) =>
+  api<WorkSession>('/work/clock', json('POST', a));
 export const addWorkSession = (body: SessionBody) =>
   api<WorkSession>('/work/sessions', json('POST', body));
 export const deleteWorkSession = (id: string) =>

@@ -280,15 +280,15 @@ signale qu'il est aussi accepté en paramètre d'URL.
 
 | Méthode | Route | Accès | Paramètres | Rôle |
 |---|---|---|---|---|
-| POST | `/work/clock` | `write:measurements` + ?token= | JSON `ClockIn` (kind, at) | Clock in or out (now unless ``at`` is given). |
+| POST | `/work/clock` | `write:measurements` + ?token= | JSON `ClockIn` (kind, at, place) | Clock in or out (now unless ``at`` is given). |
 | GET | `/work/export` | `read:all` | `start`?, `end`?, `level`?, `format`?, `contract_hours`? | Sessions, days, weeks or months as CSV, JSON or Excel. |
 | GET | `/work/health` | `read:all` | `start`?, `end`?, `contract_hours`? | The work ↔ health file: days, sleep, legal landmarks, absences. |
 | POST | `/work/import` | `write:measurements` + ?token= | `dry_run`?, form `file` | Import past clock-in / clock-out logs (txt, csv, json). |
 | GET | `/work/incomplete` | `read:all` | — | Sessions with a missing half, each with the day's context. |
 | GET | `/work/sessions` | `read:all` | `start`?, `end`? | Sessions between two days (default: the last 30), newest first. |
-| POST | `/work/sessions` | `write:measurements` | JSON `WorkSessionIn` (start_at, end_at, note) | Add a session typed by hand (same start: that session is updated). |
+| POST | `/work/sessions` | `write:measurements` | JSON `WorkSessionIn` (start_at, end_at, note, place) | Add a session typed by hand (same start: that session is updated). |
 | DELETE | `/work/sessions/{session_id}` | `write:measurements` | `session_id` | Delete a session. |
-| PUT | `/work/sessions/{session_id}` | `write:measurements` | `session_id`, JSON `WorkSessionUpdate` (start_at, end_at, note) | Fix a session's times or note. |
+| PUT | `/work/sessions/{session_id}` | `write:measurements` | `session_id`, JSON `WorkSessionUpdate` (start_at, end_at, note, place) | Fix a session's times or note. |
 | GET | `/work/stats` | `read:all` | `start`?, `end`?, `contract_hours`? | Totals, averages, overtime, weeks, months, 7/30/90/365 days. |
 
 ## Import d'historiques de Raccourcis

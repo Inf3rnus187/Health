@@ -26,7 +26,19 @@ function tiles(stats: WorkStats): Tile[] {
     ['Jours > 10 h', String(stats.days_over_10h)],
     ['Semaines > 48 h', String(stats.weeks_over_48h)],
     ['Plus longue journée', longest ? hm(longest.hours) : '—'],
-    ...offTiles(stats),
+    ...remoteTiles(stats).concat(offTiles(stats)),
+  ];
+}
+
+function remoteTiles(stats: WorkStats): Tile[] {
+  if (!stats.remote_hours) return [];
+  const after = stats.remote_after_site.length;
+  return [
+    [
+      'Dont à distance',
+      hm(stats.remote_hours),
+      `${stats.remote_days} jours, dont ${after} en plus du sur place`,
+    ],
   ];
 }
 
@@ -65,6 +77,7 @@ export function StatsTiles({ stats }: { stats: WorkStats }) {
 const HEAD = [
   'Période',
   'Heures',
+  'Dont distance',
   'Jours',
   'Absences (j)',
   'Moy. / semaine présente',
@@ -75,6 +88,7 @@ function cells(p: WorkStats['periods'][number]): string[] {
   return [
     p.label,
     hm(p.total_hours),
+    p.remote_hours ? hm(p.remote_hours) : '—',
     String(p.days_worked),
     String(p.absent_days),
     hm(p.week_average),

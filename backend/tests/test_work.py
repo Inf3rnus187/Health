@@ -200,3 +200,70 @@ def test_lines_are_read_whatever_their_layout() -> None:
         assert [e.kind for e in events] == kinds, line
     night, _ = work_parse.read_line("06/03/2026;22:00;06:00", 1)
     assert night[1].at.day == 7
+
+
+async def test_remote_work_after_a_day_on_site(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """Back home, work goes on: a remote session on top of the day."""
+    await _session(client, auth, "2026-03-02T08:00", "2026-03-02T18:00")
+    remote = await client.post(
+        f"{WORK}/sessions",
+        json={"start_at": "2026-03-02T21:00", "end_at": "2026-03-02T23:30",
+              "place": "remote"},
+        headers=auth,
+    )  # fmt: skip
+    assert remote.status_code == 201, remote.text
+    assert remote.json()["place"] == "remote"
+    assert (await _day(client, auth, "work.hours"))["value"] == 12.5
+    assert (await _day(client, auth, "work.remote_hours"))["value"] == 2.5
+    assert (await _day(client, auth, "work.end"))["value"] == 23.5
+    overlap = await client.post(
+        f"{WORK}/sessions",
+        json={"start_at": "2026-03-02T17:00", "end_at": "2026-03-02T19:00",
+              "place": "remote"},
+        headers=auth,
+    )  # fmt: skip
+    assert overlap.status_code == 422  # not at home and at the office
+    stats = (
+        await client.get(
+            f"{WORK}/stats",
+            params={"start": "2026-03-02", "end": "2026-03-08"},
+            headers=auth,
+        )
+    ).json()
+    assert (stats["remote_hours"], stats["remote_days"]) == (2.5, 1)
+    assert stats["remote_after_site"] == ["2026-03-02"]
+    assert stats["weeks"][0]["remote"] == 2.5
+
+
+async def test_a_remote_clock_in_opens_its_own_session(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """On site clocked in (the clock-out forgotten), then remote tonight."""
+    clock = f"{WORK}/clock"
+    await client.post(
+        clock, json={"kind": "in", "at": "2026-03-02T08:00"}, headers=auth
+    )
+    home = await client.post(
+        clock,
+        json={"kind": "in", "at": "2026-03-02T21:00", "place": "remote"},
+        headers=auth,
+    )
+    assert home.json()["place"] == "remote"
+    done = await client.post(
+        clock, json={"kind": "out", "at": "2026-03-02T23:00"}, headers=auth
+    )
+    assert (done.json()["place"], done.json()["hours"]) == ("remote", 2.0)
+    march = {"start": "2026-03-01", "end": "2026-03-31"}
+    listed = (
+        await client.get(f"{WORK}/sessions", params=march, headers=auth)
+    ).json()
+    assert [(s["place"], s["status"]) for s in listed] == [
+        ("remote", "complete"),
+        ("site", "missing_end"),  # the office clock-out, to complete
+    ]
+    tap = await client.post(
+        TALLY, json={"metric": "work.remote_start"}, headers=auth
+    )
+    assert tap.json()["detail"].startswith("Embauche à distance ")

@@ -110,7 +110,8 @@ valeur de `metric` change d'un raccourci à l'autre.
 | Envie de fumer cassée | `habit.urges_broken` |
 | Pipi | `elimination.urination` (noté à l'heure de l'appui) |
 | Embauche | `work.start` (pointe l'arrivée maintenant) |
-| Débauche | `work.end` (clôt la session ouverte) |
+| Embauche à distance | `work.remote_start` (ouvre une session à distance, même après la journée sur place) |
+| Débauche | `work.end` (clôt la session ouverte, sur place ou à distance) |
 
 Chaque appui **ajoute** au total du jour et n'efface jamais rien ; la
 réponse donne le total avant (`previous`) et après (`total`). Pour
@@ -170,6 +171,20 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
   (pause déjeuner) s'additionnent. Une session appartient au jour où elle
   commence ; **72 h au plus** (48 h sans partir, ça arrive) ; deux
   sessions ne se chevauchent pas.
+- **Travail à distance** : « Embauche à distance » (bouton, Raccourci
+  `work.remote_start`, ou l'assistant : « je bosse à distance »), ou une
+  session ajoutée avec « À distance » coché (« de 21:00 à 23:30 ») —
+  **même un jour déjà travaillé sur place** : c'est une session à part,
+  marquée « à distance ». Elle compte dans les heures du jour, la
+  débauche, l'amplitude et le repos de 11 h (c'est du temps de travail),
+  et à part dans `work.remote_hours`. Une embauche à distance pendant
+  qu'une session sur place est encore ouverte (débauche oubliée) ouvre
+  sa propre session ; la session sur place devient une journée à
+  compléter. Le tableau de bord montre « **Dont à distance** » (heures,
+  jours, et combien **en plus d'une journée sur place**), le graphique
+  empile la part à distance en violet ; exports (colonne « lieu », « dont
+  distance »), rapport PDF et dossier travail ↔ santé (« dont 2,5 h à
+  distance » dans le journal du jour) la reprennent.
 - **Rien n'est perdu** : une débauche sans embauche en cours (retour de
   pause non pointé, GPS muet) est gardée comme session « embauche
   manquante » ; une embauche jamais close devient « débauche manquante »
@@ -197,7 +212,8 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
   quelles heures ont été saisies).
 - **Valeurs du jour**, comme toute mesure (courbes, Données, tableaux de
   bord, exports, rapports) : `work.hours` (heures des sessions
-  complètes), `work.start` (première embauche) et `work.end` (dernière
+  complètes, à distance comprise), `work.remote_hours` (la part à
+  distance), `work.start` (première embauche) et `work.end` (dernière
   débauche), ces deux-là en heures décimales (8,25 = 08:15 ; 25,5 = 01:30
   le lendemain). Une journée incomplète n'a pas d'heures : les totaux sont
   des **minimums**.

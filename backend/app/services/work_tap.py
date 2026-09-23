@@ -1,7 +1,9 @@
 """Clocking in or out on the one-tap counter path (``/sync/tally``).
 
 Every Shortcut follows one rule: ``{"metric": key}``. For work the keys
-are ``work.start`` (clock in now) and ``work.end`` (clock out now).
+are ``work.start`` (clock in now, on site), ``work.remote_start`` (clock
+in now, remote) and ``work.end`` (clock out now; ``work.remote_end`` is
+the same).
 """
 
 from __future__ import annotations
@@ -17,8 +19,13 @@ from app.models.base import utcnow
 from app.services import work, work_days
 from app.services.daily_rollup import user_zone
 
-#: Tally key → clock direction.
-KINDS = {work_days.START.key: "in", work_days.END.key: "out"}
+#: Tally key → clock direction and place.
+KINDS = {
+    work_days.START.key: ("in", "site"),
+    work_days.END.key: ("out", "site"),
+    "work.remote_start": ("in", "remote"),
+    "work.remote_end": ("out", "remote"),
+}
 
 
 async def tap(
@@ -37,7 +44,8 @@ async def tap(
             "on the Travail page"
         )
     before = await _hours(session, user_id, today, tz)
-    row = await work.clock(session, user_id, KINDS[metric_key], None, "tap")
+    kind, place = KINDS[metric_key]
+    row = await work.clock(session, user_id, kind, None, "tap", place)
     after = await _hours(session, user_id, today, tz)
     return before, after, _line(row, after, tz)
 
@@ -45,7 +53,8 @@ async def tap(
 def _line(row: dict[str, Any], after: float, tz: ZoneInfo) -> str:
     """The notification: what was logged and the day's hours."""
     if row["end_at"] is None:
-        return f"Embauche {row['start_at'].astimezone(tz):%H:%M}"
+        where = " à distance" if row["place"] == "remote" else ""
+        return f"Embauche{where} {row['start_at'].astimezone(tz):%H:%M}"
     worked = int(round(after * 60))
     text = (
         f"Débauche {row['end_at'].astimezone(tz):%H:%M} — "

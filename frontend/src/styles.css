@@ -12,6 +12,7 @@
   --color-ok-bg: #dcfce7;
   --color-warn: #b45309;
   --color-warn-bg: #fef3c7;
+  --color-remote: #7c3aed;
   --color-high: #b91c1c;
   --color-high-bg: #fee2e2;
   --radius: 10px;
@@ -32,6 +33,7 @@
   --color-ok-bg: rgba(74, 222, 128, 0.14);
   --color-warn: #fbbf24;
   --color-warn-bg: rgba(251, 191, 36, 0.14);
+  --color-remote: #a78bfa;
   --color-high: #f87171;
   --color-high-bg: rgba(248, 113, 113, 0.14);
 }

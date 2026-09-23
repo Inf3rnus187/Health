@@ -259,7 +259,9 @@ def _period(p: dict[str, Any]) -> list[Any]:
 def _day(row: dict[str, Any], feasts: set[date]) -> list[Any]:
     """One journal row."""
     night = row["night"] or {}
+    remote = row.get("remote")
     notes = [
+        f"dont {remote:g} h à distance" if remote else "",
         "incomplète" if row["partial"] else "",
         "absence" if row["absence"] else "",
         "dimanche" if row["weekday"] == 6 else "",  # noqa: PLR2004

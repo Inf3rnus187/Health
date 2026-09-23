@@ -32,7 +32,7 @@ async def clock(
 ) -> dict[str, Any]:
     """Clock in or out (now unless ``at`` is given)."""
     row = await work.clock(
-        session, principal.user.id, body.kind, body.at, "manual"
+        session, principal.user.id, body.kind, body.at, "manual", body.place
     )
     await session.commit()
     return row

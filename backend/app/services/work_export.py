@@ -55,6 +55,7 @@ def _day(d: dict[str, Any]) -> dict[str, Any]:
         "embauche": d["start_text"] or "",
         "debauche": d["end_text"] or "",
         "heures": d["hours"],
+        "dont_distance": d.get("remote", 0.0),
         "absence": LABELS.get(d.get("absence") or "", ""),
     }
 
@@ -65,6 +66,7 @@ def _week(w: dict[str, Any]) -> dict[str, Any]:
         "semaine": w["week"],
         "lundi": w["monday"],
         "heures": w["hours"],
+        "dont_distance": w["remote"],
         "jours": w["days"],
         "heures_sup": w["overtime"],
         "plus_de_48h": "oui" if w["over_48h"] else "non",
@@ -80,19 +82,21 @@ def _month(m: dict[str, Any]) -> dict[str, Any]:
     return {
         "mois": m["month"],
         "heures": m["hours"],
+        "dont_distance": m["remote"],
         "jours": m["days"],
         "heures_sup": m["overtime"],
     }
 
 
 def _session(row: dict[str, Any], tz: ZoneInfo) -> dict[str, Any]:
-    """One session with local times."""
-    end = row["end_at"]
+    """One session with local times (a missing half left empty)."""
+    start, end = row["start_at"], row["end_at"]
     return {
         "jour": row["date_key"],
-        "embauche": f"{row['start_at'].astimezone(tz):%H:%M}",
+        "embauche": f"{start.astimezone(tz):%H:%M}" if start else "",
         "debauche": f"{end.astimezone(tz):%H:%M}" if end else "",
         "heures": row["hours"],
+        "lieu": "à distance" if row.get("place") == "remote" else "sur place",
         "source": row["source"],
         "note": row["note"],
     }

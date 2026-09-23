@@ -49,9 +49,10 @@ export function WorkStatsCard() {
       <p className="muted">
         Vert : contrat ; pointillés : objectif de la semaine, jours d’absence et
         fériés déduits. Orange : semaine avec arrêt ; gris : congés, repos,
-        férié. Rouge : 48 h, le maximum légal par semaine (10 h par jour). La
-        moyenne par semaine ne compte que les semaines complètes ; les « Heures
-        sup » suivent la règle légale (heures faites au-delà du contrat).
+        férié ; violet, empilé : heures à distance. Rouge : 48 h, le maximum
+        légal par semaine (10 h par jour). La moyenne par semaine ne compte que
+        les semaines complètes ; les « Heures sup » suivent la règle légale
+        (heures faites au-delà du contrat).
       </p>
       {stats && <PeriodsTable stats={stats} />}
       <WorkExport range={range} contract={contract} />

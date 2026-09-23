@@ -8,6 +8,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Remote work.** A work session is on site or remote (migration 0015).
+  A remote session can be added or clocked (« Embauche à distance »,
+  Shortcut key `work.remote_start`, MCP `clock_in(remote=True)`,
+  `save_work_session(remote=True)`) even on a day already worked on
+  site; it counts as work time (hours, clock-out, legal landmarks) and
+  apart in the new daily value `work.remote_hours`. A remote clock-in
+  while an on-site session is still open starts its own session. Stats
+  show the remote hours, days and days worked remote on top of the
+  site; the weekly chart stacks the remote part; exports, the hours PDF
+  and the work ↔ health file show it too.
+
 - **Days off in the hours worked.** Sick leave (and work accident,
   occupational disease), holidays, rest days, other absences and public
   holidays now count in the work stats, the export, the hours PDF and the
@@ -250,6 +261,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Exporting sessions failed on a session whose clock-in is missing.
 - CSV files whose quoted cells contain doubled quotes (a ticket comment)
   were split into wrong rows: doubled quotes are now always read as one.
 - « Au travail depuis » and the disabled « Embauche maintenant » came

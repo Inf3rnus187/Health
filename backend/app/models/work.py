@@ -40,6 +40,10 @@ class WorkSession(UUIDMixin, TimestampMixin, Base):
     #: edited (times completed or fixed by hand).
     source: Mapped[str] = mapped_column(String(16), default="manual")
     note: Mapped[str] = mapped_column(String(200), default="")
+    #: site (on site) or remote (from home, the evening after the office…).
+    place: Mapped[str] = mapped_column(
+        String(12), default="site", server_default="site"
+    )
 
     __table_args__ = (
         Index("uq_work_user_start", "user_id", "start_at", unique=True),

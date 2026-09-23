@@ -237,9 +237,13 @@ async def test_work_clock_and_dry_run_import() -> None:
     await tools_work.clock_out("2026-03-02T17:30")
     bodies = [json.loads(r.content) for r in seen]
     assert bodies == [
-        {"kind": "in", "at": None},
+        {"kind": "in", "at": None, "place": "site"},
         {"kind": "out", "at": "2026-03-02T17:30"},
     ]
+    await tools_work.save_work_session(
+        "2026-03-02T21:00", "2026-03-02T23:30", remote=True
+    )
+    assert json.loads(seen[-1].content)["place"] == "remote"
     await tools_work.import_work_log("02/03/2026;08:00;17:00")
     upload = seen[-1]
     assert upload.url.path == "/api/v1/work/import"
