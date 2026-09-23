@@ -17,7 +17,8 @@ async def generate_report(
     """Generate a report, then poll get_report.
 
     Types: synthesis (AI clinical synthesis + clinical PDF, takes
-    minutes), clinical_pdf, csv, json, xlsx, fhir.
+    minutes), clinical_pdf, work (hours worked PDF: totals, overtime,
+    weeks, months; default last 365 days), csv, json, xlsx, fhir.
     """
     body = {
         "type": report_type,

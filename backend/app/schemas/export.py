@@ -7,7 +7,15 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-_REPORT_TYPES = {"clinical_pdf", "synthesis", "csv", "json", "xlsx", "fhir"}
+_REPORT_TYPES = {
+    "clinical_pdf",
+    "synthesis",
+    "work",
+    "csv",
+    "json",
+    "xlsx",
+    "fhir",
+}
 
 
 class ReportCreate(BaseModel):

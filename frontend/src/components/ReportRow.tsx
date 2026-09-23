@@ -5,6 +5,7 @@ import { DownloadButton } from './DownloadButton';
 const EXT: Record<string, string> = {
   synthesis: 'pdf',
   clinical_pdf: 'pdf',
+  work: 'pdf',
   csv: 'csv',
   json: 'json',
   xlsx: 'xlsx',
@@ -14,6 +15,7 @@ const EXT: Record<string, string> = {
 const TYPE_LABEL: Record<string, string> = {
   synthesis: 'Synthèse clinique IA',
   clinical_pdf: 'PDF clinique',
+  work: 'Heures travaillées',
   csv: 'CSV',
   json: 'JSON',
   xlsx: 'Excel',

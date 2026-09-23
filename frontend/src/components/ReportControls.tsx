@@ -7,6 +7,7 @@ const TYPES = [
       'Synthèse clinique IA + PDF clinique (modèle médical, quelques minutes)',
   },
   { value: 'clinical_pdf', label: 'PDF clinique' },
+  { value: 'work', label: 'Heures travaillées (PDF, 1 an)' },
   { value: 'csv', label: 'CSV' },
   { value: 'json', label: 'JSON' },
   { value: 'xlsx', label: 'Excel (XLSX)' },

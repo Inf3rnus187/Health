@@ -14,6 +14,8 @@ Start with health_summary, medical_record and data_inventory. Metric keys
 are canonical (body.weight, bio.hba1c, liver.cap…): use list_metrics /
 metric_overview. Values from documents are verified against the text;
 AI summaries are not diagnoses. Answer the user in French.
+Work hours: clock_in / clock_out ("j'embauche", "je débauche"), past
+logs with import_work_log (dry run first), work_stats for overtime.
 Writing: to count something (a bottle of water, a coffee, a cigarette,
 a pee) use add_to_counter, which ADDS to the day. record_measurement REPLACES
 the day's value: it refuses to erase one unless replace=true, which you

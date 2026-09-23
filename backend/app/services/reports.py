@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +21,8 @@ from app.services import (
     export,
     export_formats,
     reports_pdf,
+    work_pdf,
+    work_stats,
 )
 from app.services import conditions as cond_svc
 from app.services import medical as med_svc
@@ -94,23 +96,42 @@ async def list_reports(session: AsyncSession, user_id: str) -> list[Report]:
 async def build(session: AsyncSession, report: Report) -> None:
     """Generate the report file and mark it ready (or error)."""
     try:
-        rows = await export.tidy_rows(
-            session,
-            report.user_id,
-            start=report.period_start,
-            end=report.period_end,
-        )
-        meta = await _metric_meta(session, {r["metric_key"] for r in rows})
-        care = await _care(session, report.user_id)
-        if report.type == "synthesis":
-            facts = await clinical_facts.gather(session, report.user_id)
-            report.summary = await clinical_synthesis.synthesize(facts)
-        data, ext = _render(report, rows, meta, care)
+        if report.type == "work":
+            data, ext = await _work(session, report), "pdf"
+        else:
+            data, ext = await _health(session, report)
         report.file_path = str(_write(report, ext, data))
         report.status = "ready"
     except Exception as exc:  # noqa: BLE001
         report.status = "error"
         _log.warning("report_failed", report_id=report.id, error=str(exc))
+
+
+async def _health(session: AsyncSession, report: Report) -> tuple[bytes, str]:
+    """A health report or export over the period."""
+    rows = await export.tidy_rows(
+        session,
+        report.user_id,
+        start=report.period_start,
+        end=report.period_end,
+    )
+    meta = await _metric_meta(session, {r["metric_key"] for r in rows})
+    care = await _care(session, report.user_id)
+    if report.type == "synthesis":
+        facts = await clinical_facts.gather(session, report.user_id)
+        report.summary = await clinical_synthesis.synthesize(facts)
+    return _render(report, rows, meta, care)
+
+
+async def _work(session: AsyncSession, report: Report) -> bytes:
+    """The work-hours report (default: the last 365 days, 35 h contract)."""
+    last = report.period_end or date.today()
+    first = report.period_start or last - timedelta(days=364)
+    contract = float((report.params or {}).get("contract_hours") or 35)
+    stats = await work_stats.stats(
+        session, report.user_id, first, last, contract
+    )
+    return work_pdf.work_pdf(stats)
 
 
 async def _metric_meta(session: AsyncSession, keys: set[str]) -> dict[str, Any]:

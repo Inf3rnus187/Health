@@ -69,6 +69,8 @@ class TallyResult(BaseModel):
     date_key: date
     previous: float = 0.0
     total: float
+    #: A readable line (e.g. "Débauche 17:31 — 8 h 49 aujourd'hui").
+    detail: str = ""
 
 
 class MappingCreate(BaseModel):

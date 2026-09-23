@@ -17,6 +17,7 @@ from phoenix_mcp import (
     tools_journal,
     tools_record,
     tools_reports,
+    tools_work,
 )
 from phoenix_mcp.app import mcp
 
@@ -227,3 +228,19 @@ async def test_a_meal_is_sent_as_a_form_with_its_photo() -> None:
     body = seen[0].content
     assert seen[0].url.path == "/api/v1/meals"
     assert b"salade, poulet" in body and b'filename="repas.jpg"' in body
+
+
+async def test_work_clock_and_dry_run_import() -> None:
+    seen = _capture()
+    await tools_work.clock_in()
+    await tools_work.clock_out("2026-03-02T17:30")
+    bodies = [json.loads(r.content) for r in seen]
+    assert bodies == [
+        {"kind": "in", "at": None},
+        {"kind": "out", "at": "2026-03-02T17:30"},
+    ]
+    await tools_work.import_work_log("02/03/2026;08:00;17:00")
+    upload = seen[-1]
+    assert upload.url.path == "/api/v1/work/import"
+    assert dict(upload.url.params) == {"dry_run": "true"}
+    assert b"02/03/2026;08:00;17:00" in upload.content

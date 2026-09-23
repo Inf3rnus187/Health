@@ -30,14 +30,15 @@ async def delete_urination(entry_id: str) -> Any:
 @mcp.tool()
 async def log_meal(
     description: str,
-    meal_type: str = "lunch",
+    meal_type: str = "",
     eaten_at: str | None = None,
     photo_base64: str | None = None,
     photo_filename: str = "repas.jpg",
 ) -> Any:
     """Log a meal, then the AI reads it (minutes; poll get_meal).
 
-    meal_type: breakfast, lunch, snack or dinner. The description is
+    meal_type: breakfast, lunch, snack or dinner (empty: from the hour
+    it was eaten). The description is
     authoritative (quantities, cooking, no fat…); an optional photo helps
     estimate portions. Nutrients go to Apple's nutrition metrics.
     """

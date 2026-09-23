@@ -43,7 +43,7 @@ and tested:
 | **Photo pipeline** (upload → EXIF‑strip/normalize → Ollama vision → compare) | ✅ |
 | **Dashboards** per domain (`/dashboard/{domain}` + React domain tabs) | ✅ |
 | **Exports** CSV/JSON/XLSX/FHIR + async **clinical PDF** reports | ✅ |
-| **MCP server** — 63 tools covering the whole hub, as a REST‑API client (each client uses its own `hub:full` token) | ✅ |
+| **MCP server** — 71 tools covering the whole hub, as a REST‑API client (each client uses its own `hub:full` token) | ✅ |
 | **Automations** (trigger→action: reminder/capture) + run endpoint | ✅ |
 | **Hardening**: optional TOTP MFA, at‑rest media encryption, RGPD erasure | ✅ |
 | **Supply chain**: gitleaks, pip‑audit, pnpm audit, Trivy, syft SBOM (CI) | ✅ |
@@ -59,6 +59,8 @@ and tested:
 | **Suivi**: each condition with its indicators and documents | ✅ |
 | **Évolution**: validated markers (FibroScan, FLI, FIB-4, HbA1c…), weight milestones, longitudinal photo method | ✅ |
 | **AI clinical synthesis** report: every sentence cites the record's facts, unproven ones removed | ✅ |
+| **Journal**: pee (one tap) and meals (photo + description, AI nutrition reading) | ✅ |
+| **Travail**: clock in / out (GPS Shortcut, web, assistant), hours worked per day, overtime, 10 h / 48 h flags, 7 d → 1 y stats, CSV / Excel / PDF, import of past txt / csv / json logs | ✅ |
 
 **All 9 specification phases are implemented.** Remaining follow‑ups
 (signed container images, encrypted off‑site backups, an automated retention
@@ -122,7 +124,7 @@ Every variable is explained in the
 | [Ingestion](docs/guides/ingestion.md) | Apple Santé, Health Auto Export, Raccourcis, montre, PPC, photos. |
 | [MCP](docs/guides/mcp.md) | Brancher un assistant (Claude Desktop / Code, stdio) de façon sûre. |
 | [Référence API](docs/api.md) | Toutes les routes, leurs paramètres et le droit exigé (générée depuis le code). |
-| [Outils MCP](docs/mcp-tools.md) | Les 63 outils et leurs paramètres (générée depuis le serveur). |
+| [Outils MCP](docs/mcp-tools.md) | Les 71 outils et leurs paramètres (générée depuis le serveur). |
 | [Architecture](docs/architecture.md), [modèle de données](docs/data-model.md), [ADR](docs/adr/) | Conception. |
 
 ---
@@ -363,7 +365,7 @@ phoenix-health-hub/
 │   └── app/{core,models,schemas,services,api,workers,seed}
 ├── frontend/               # React + Vite + TS (theme, api, components)
 ├── nginx/                  # reverse proxy + React build image
-├── mcp/                    # MCP server (63 tools, API client)
+├── mcp/                    # MCP server (71 tools, API client)
 ├── tools/                  # custom code-limit checker
 └── docs/                   # architecture, data model, guides, ADRs
 ```

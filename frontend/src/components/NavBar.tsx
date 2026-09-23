@@ -6,6 +6,7 @@ const LINKS = [
   { to: '/sante', label: 'Santé', end: false },
   { to: '/donnees', label: 'Données', end: false },
   { to: '/journal', label: 'Journal', end: false },
+  { to: '/travail', label: 'Travail', end: false },
   { to: '/dossier', label: 'Dossier', end: false },
   { to: '/photos', label: 'Photos', end: false },
   { to: '/suivi', label: 'Suivi', end: false },

@@ -13,6 +13,7 @@ import { LoginPage } from './pages/LoginPage';
 import { MedicalPage } from './pages/MedicalPage';
 import { PhotosPage } from './pages/PhotosPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { WorkPage } from './pages/WorkPage';
 
 function AppRoutes() {
   return (
@@ -24,6 +25,7 @@ function AppRoutes() {
         <Route path="donnees" element={<DataPage />} />
         <Route path="dossier" element={<MedicalPage />} />
         <Route path="journal" element={<JournalPage />} />
+        <Route path="travail" element={<WorkPage />} />
         <Route path="photos" element={<PhotosPage />} />
         <Route path="suivi" element={<CarePage />} />
         <Route path="rapports" element={<ReportsPage />} />

@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-63 outils.
+71 outils.
 
 ## Données et métriques
 
@@ -260,11 +260,12 @@ Paramètres : `entry_id`* (string)
 
 Log a meal, then the AI reads it (minutes; poll get_meal).
 
-meal_type: breakfast, lunch, snack or dinner. The description is
+meal_type: breakfast, lunch, snack or dinner (empty: from the hour
+it was eaten). The description is
 authoritative (quantities, cooking, no fat…); an optional photo helps
 estimate portions. Nutrients go to Apple's nutrition metrics.
 
-Paramètres : `description`* (string), `meal_type` (string, défaut `lunch`), `eaten_at` (string | null, défaut `None`), `photo_base64` (string | null, défaut `None`), `photo_filename` (string, défaut `repas.jpg`)
+Paramètres : `description`* (string), `meal_type` (string, défaut ``), `eaten_at` (string | null, défaut `None`), `photo_base64` (string | null, défaut `None`), `photo_filename` (string, défaut `repas.jpg`)
 
 ### `list_meals`
 
@@ -295,6 +296,72 @@ Paramètres : `meal_id`* (string)
 Delete a meal, its photo and its nutrients.
 
 Paramètres : `meal_id`* (string)
+
+## Travail : heures d'embauche et de débauche
+
+### `clock_in`
+
+Clock in: start of work (now, or ``at``: ISO date-time).
+
+A second clock-in while already at work is ignored. A time without
+an offset is the user's local time.
+
+Paramètres : `at` (string | null, défaut `None`)
+
+### `clock_out`
+
+Clock out: end of work (now, or ``at``); closes the open session.
+
+Paramètres : `at` (string | null, défaut `None`)
+
+### `work_sessions`
+
+Work sessions between two days (default: last 30), newest first.
+
+Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`)
+
+### `save_work_session`
+
+Add a work session, or fix one (``session_id``).
+
+Times are ISO date-times (local time without an offset). Overlaps and
+sessions over 24 h are refused. Confirm with the user before fixing.
+
+Paramètres : `start_at`* (string), `end_at` (string | null, défaut `None`), `note` (string, défaut ``), `session_id` (string | null, défaut `None`)
+
+### `delete_work_session`
+
+Delete one work session (ask the user first).
+
+Paramètres : `session_id`* (string)
+
+### `work_stats`
+
+Hours worked: totals, averages, overtime, weeks, months, periods.
+
+Default: the last 365 days. Overtime is per week beyond the contract;
+flags: days over 10 h, weeks over 48 h (French legal maximums).
+``periods`` gives 7 days / 30 days / 3 months / 1 year.
+
+Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`), `contract_hours` (number, défaut `35`)
+
+### `import_work_log`
+
+Import past clock-in / clock-out logs (txt, csv or json text).
+
+First call with dry_run=true: it shows what it read (sessions, hours,
+skipped lines); import for real (dry_run=false) once the user agrees.
+Importing twice is harmless (same start = same session).
+
+Paramètres : `text`* (string), `filename` (string, défaut `pointage.csv`), `dry_run` (boolean, défaut `True`)
+
+### `export_work`
+
+Work hours as text: level sessions / days / weeks / months, csv or json.
+
+For a PDF use generate_report(report_type="work").
+
+Paramètres : `level` (string, défaut `days`), `export_format` (string, défaut `csv`), `start` (string | null, défaut `None`), `end` (string | null, défaut `None`), `contract_hours` (number, défaut `35`)
 
 ## Évolution, photos, données Apple
 
@@ -365,7 +432,8 @@ Apple Health import jobs with their status and counts.
 Generate a report, then poll get_report.
 
 Types: synthesis (AI clinical synthesis + clinical PDF, takes
-minutes), clinical_pdf, csv, json, xlsx, fhir.
+minutes), clinical_pdf, work (hours worked PDF: totals, overtime,
+weeks, months; default last 365 days), csv, json, xlsx, fhir.
 
 Paramètres : `report_type` (string, défaut `synthesis`), `period_start` (string | null, défaut `None`), `period_end` (string | null, défaut `None`)
 

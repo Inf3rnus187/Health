@@ -34,6 +34,7 @@ from app.models.report import Report
 from app.models.session import AuthSession
 from app.models.token import ApiToken
 from app.models.user import User
+from app.models.work import WorkSession
 
 __all__ = [
     "ApiToken",
@@ -60,5 +61,6 @@ __all__ = [
     "Report",
     "RouteFile",
     "User",
+    "WorkSession",
     "Workout",
 ]

@@ -121,6 +121,7 @@ async def tally_counter(
         date_key=day,
         previous=step.previous,
         total=step.total,
+        detail=step.detail,
     )
 
 

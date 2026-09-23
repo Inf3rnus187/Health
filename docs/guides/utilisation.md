@@ -31,7 +31,7 @@ poids, pas, **km marchés / courus** (`activity.distance`, total du jour),
 FC au repos, fréquence cardiaque, VFC, sommeil, SpO2, fréquence
 respiratoire, énergie active, minutes d'exercice, cigarettes, cafés,
 **pipi** (`elimination.urination` : nombre du jour et heure du dernier),
-eau (litres = bouteilles × 1,5). Une tuile montre le dernier jour qui a une
+**heures travaillées** (`work.hours`), eau (litres = bouteilles × 1,5). Une tuile montre le dernier jour qui a une
 valeur, avec sa date. La liste est `HEADLINE_KEYS` dans
 `backend/app/services/summary.py`.
 
@@ -108,9 +108,21 @@ valeur de `metric` change d'un raccourci à l'autre.
 | Cigarette | `habit.cigarettes` |
 | Envie de fumer cassée | `habit.urges_broken` |
 | Pipi | `elimination.urination` (noté à l'heure de l'appui) |
+| Embauche | `work.start` (pointe l'arrivée maintenant) |
+| Débauche | `work.end` (clôt la session ouverte) |
 
 Chaque appui **ajoute** au total du jour et n'efface jamais rien ; la
-réponse donne le total avant (`previous`) et après (`total`).
+réponse donne le total avant (`previous`) et après (`total`). Pour
+l'embauche et la débauche, `total` est le nombre d'heures travaillées du
+jour et `detail` une phrase à afficher en notification (« Débauche 17:31
+— 8 h 49 aujourd'hui »).
+
+**Pointer automatiquement avec le GPS** : Raccourcis › Automatisation ›
+« Arrivée » (lieu : le travail) › action « Obtenir le contenu de l'URL »
+ci-dessus avec `metric` = `work.start` ; une seconde automatisation
+« Départ » avec `work.end`. Désactiver « Demander avant d'exécuter ». Un
+deuxième déclenchement d'arrivée pendant qu'une session est ouverte est
+ignoré.
 
 ### Noter un repas : description + photo
 
@@ -130,6 +142,56 @@ L'analyse IA apparaît ensuite dans **Journal**.
 > Un raccourci déjà réglé sur `POST /api/v1/journal/urination?token=…`
 > (sans corps) continue de marcher : c'est la route du bouton « Pipi
 > maintenant ». Pour un nouveau raccourci, suivre la règle ci-dessus.
+
+## Travail
+
+Les heures de travail comme donnée de santé : amplitude, heures
+supplémentaires et semaines chargées se lisent à côté du sommeil, de la
+VFC ou de la tension.
+
+- **Pointer** : « Embauche maintenant » / « Débauche maintenant », le
+  Raccourci iPhone (même règle que les compteurs, voir plus haut, avec le
+  GPS), ou l'assistant MCP (« j'embauche », « je débauche »). Une
+  **session** va de l'embauche à la débauche ; plusieurs sessions par jour
+  (pause déjeuner) s'additionnent. Une session appartient au jour où elle
+  commence ; 24 h au plus ; deux sessions ne se chevauchent pas.
+- **Valeurs du jour**, comme toute mesure (courbes, Données, tableaux de
+  bord, exports, rapports) : `work.hours` (heures travaillées),
+  `work.start` (première embauche) et `work.end` (dernière débauche), ces
+  deux-là en heures décimales (8,25 = 08:15 ; 25,5 = 01:30 le lendemain).
+- **Heures travaillées** sur 7 jours, 30 jours, 3 mois, 1 an ou tout :
+  total, jours travaillés, moyenne par jour et par semaine, embauche et
+  débauche moyennes, **heures supplémentaires** (par semaine, au-delà du
+  contrat — 35 h par défaut, réglable), **jours de plus de 10 h** et
+  **semaines de plus de 48 h** (maximums du Code du travail), plus longue
+  journée ; graphique par semaine (vert : contrat, rouge : 48 h) et
+  tableau court / moyen / long terme.
+- **Exporter** la période par jour, semaine, mois ou session, en CSV,
+  Excel ou JSON ; **Rapport PDF** (aussi dans Rapports › « Heures
+  travaillées »).
+- **Sessions (30 derniers jours)** : vérifier, ajouter une session oubliée
+  (embauche + débauche), supprimer.
+- **Importer d'anciens pointages** : un fichier txt, csv ou json. Il est
+  d'abord **lu** (sessions trouvées, jours, heures, aperçu, lignes
+  ignorées et pourquoi), puis importé sur « Importer ». Réimporter le même
+  fichier ne crée pas de doublon (même début = même session).
+
+Formats compris à l'import (une ligne = un pointage ou une journée) :
+
+| Exemple | Lu comme |
+|---------|----------|
+| `Date;Embauche;Débauche` puis `02/03/2025;08:12;17:30` | l'en-tête nomme les colonnes |
+| `02/03/2025 08:12 17:30` (sans mot) | deux heures = embauche puis débauche (quatre = deux sessions) |
+| `Embauche le 2 mars 2025 à 08:12` / `Débauche le 2 mars 2025 à 17:31` | une ligne par pointage (Raccourci iOS) |
+| `Arrivée au travail, 3 mars 2025 à 07:58` / `Départ …` | arrivée, entrée, début, in, start… / départ, sortie, fin, out, end… |
+| `2025-03-04T08:05:00+01:00 in` | date-heure ISO (avec ou sans fuseau) |
+| `06/03/2025;22:00;06:00` | nuit : la débauche passe au lendemain |
+| `[{"date": "2025-03-09", "embauche": "08:00", "debauche": "16:00"}]` | JSON : un enregistrement par ligne, les clés nomment les heures |
+| `total 8h30`, `pause 00:45` | durées : ignorées |
+
+Les heures sans fuseau sont celles de votre fuseau (Europe/Paris par
+défaut). Une embauche sans débauche (ou l'inverse) est listée dans les
+lignes ignorées ; ajoutez la session à la main si besoin.
 
 ## Dossier
 
@@ -218,4 +280,6 @@ L'analyse IA apparaît ensuite dans **Journal**.
 | Compter eau, café, cigarettes, pipi | Raccourci iPhone : `POST /api/v1/sync/tally?token=<jeton>` avec `{"metric": "<clé>"}` ([Raccourcis iPhone](#raccourcis-iphone--une-seule-règle)). Par l'assistant MCP : « ajoute une clope » (outil `add_to_counter`, qui ajoute et n'efface jamais). |
 | Noter un pipi | Journal › « Pipi maintenant », ou le Raccourci avec `{"metric": "elimination.urination"}`. |
 | Noter un repas et savoir s'il était sain | Journal › Ajouter un repas (description + photo), ou le Raccourci repas › l'analyse s'affiche sous le repas. |
+| Suivre mes heures de travail | Travail (ou Raccourci GPS `work.start` / `work.end`, ou l'assistant) ; heures sup et semaines > 48 h dans « Heures travaillées ». |
+| Importer mes anciens pointages | Travail › Importer d'anciens pointages › Lire le fichier › Importer. |
 | Vérifier que tout concorde | Données › Tout ce qui est enregistré. |

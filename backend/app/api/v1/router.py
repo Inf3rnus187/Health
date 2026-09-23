@@ -43,6 +43,8 @@ from app.api.v1 import (
     treatments,
     trends,
     waveforms,
+    work,
+    work_data,
 )
 
 api_router = APIRouter()
@@ -66,6 +68,8 @@ api_router.include_router(record.router)
 api_router.include_router(journal.router)
 api_router.include_router(meals.router)
 api_router.include_router(meals_edit.router)
+api_router.include_router(work.router)
+api_router.include_router(work_data.router)
 api_router.include_router(medical.router)
 api_router.include_router(conditions.router)
 api_router.include_router(treatments.router)

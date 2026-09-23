@@ -275,3 +275,16 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | PUT | `/meals/{meal_id}` | `write:measurements` | `meal_id`, JSON `MealUpdate` (meal_type, eaten_at, description) | Change type, time or description, then read the meal again. |
 | POST | `/meals/{meal_id}/analyze` | `write:measurements` | `meal_id` | Read the meal again with the current models. |
 | GET | `/meals/{meal_id}/photo` | `read:all` | `meal_id` | The meal's photo (JPEG, EXIF removed). |
+
+## Travail (heures d'embauche et de débauche)
+
+| Méthode | Route | Accès | Paramètres | Rôle |
+|---|---|---|---|---|
+| POST | `/work/clock` | `write:measurements` + ?token= | JSON `ClockIn` (kind, at) | Clock in or out (now unless ``at`` is given). |
+| GET | `/work/export` | `read:all` | `start`?, `end`?, `level`?, `format`?, `contract_hours`? | Sessions, days, weeks or months as CSV, JSON or Excel. |
+| POST | `/work/import` | `write:measurements` + ?token= | `dry_run`?, form `file` | Import past clock-in / clock-out logs (txt, csv, json). |
+| GET | `/work/sessions` | `read:all` | `start`?, `end`? | Sessions between two days (default: the last 30), newest first. |
+| POST | `/work/sessions` | `write:measurements` | JSON `WorkSessionIn` (start_at, end_at, note) | Add a session typed by hand (same start: that session is updated). |
+| DELETE | `/work/sessions/{session_id}` | `write:measurements` | `session_id` | Delete a session. |
+| PUT | `/work/sessions/{session_id}` | `write:measurements` | `session_id`, JSON `WorkSessionUpdate` (start_at, end_at, note) | Fix a session's times or note. |
+| GET | `/work/stats` | `read:all` | `start`?, `end`?, `contract_hours`? | Totals, averages, overtime, weeks, months, 7/30/90/365 days. |

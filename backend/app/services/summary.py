@@ -31,6 +31,7 @@ HEADLINE_KEYS = (
     "habit.cigarettes",
     "habit.coffee",
     "elimination.urination",
+    "work.hours",
 )
 
 #: Units not worth printing next to a number ("5", not "5 count").

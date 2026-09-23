@@ -54,6 +54,7 @@ SECTIONS = {
     "automations": "Automatisations",
     "journal": "Journal (pipi, repas)",
     "meals": "Journal (pipi, repas)",
+    "work": "Travail (heures d'embauche et de débauche)",
 }
 _INTRO = """# Référence de l'API
 

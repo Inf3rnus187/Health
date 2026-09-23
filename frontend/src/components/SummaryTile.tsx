@@ -11,6 +11,11 @@ function fmtValue(tile: Tile): string {
     const m = String(total % 60).padStart(2, '0');
     return `${h} h ${m}`;
   }
+  if (tile.unit === 'h') {
+    const minutes = Math.round(tile.value * 60);
+    const rest = String(minutes % 60).padStart(2, '0');
+    return `${Math.floor(minutes / 60)} h ${rest}`;
+  }
   const num = Number.isInteger(tile.value)
     ? String(tile.value)
     : tile.value.toFixed(1);

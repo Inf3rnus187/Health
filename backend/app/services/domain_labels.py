@@ -21,6 +21,7 @@ _HUB = {
     "workout": "Séances",
     "walk": "Marche",
     "habit": "Habitudes (tabac, café…)",
+    "work": "Travail (heures)",
     "state": "État et ressenti",
     "food": "Alimentation",
     "hydration": "Hydratation",

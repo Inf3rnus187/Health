@@ -8,6 +8,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Travail — work hours as health data.** Clock in / out by the same
+  Shortcut rule as every count (`POST /sync/tally` with `work.start` /
+  `work.end`, GPS automations welcome), from the new **Travail** page or
+  by the assistant (`clock_in` / `clock_out`). Sessions (`/work/sessions`,
+  table `work_sessions`, migration 0011) feed three daily metrics
+  (`work.hours`, `work.start`, `work.end`) like any other data, and a home
+  tile. Statistics (`/work/stats`): totals, averages, overtime per week
+  beyond the contract (35 h, adjustable), days over 10 h and weeks over
+  48 h (French legal maximums), weeks, months and 7 d / 30 d / 3 m / 1 y
+  periods. Export per session / day / week / month in CSV, Excel or JSON
+  (`/work/export`), PDF report type `work`. Import of past logs in txt,
+  csv or json (`/work/import`, dry run first): French and English dates,
+  embauche / débauche words, CSV headers, JSON records, night shifts;
+  re-importing never duplicates. Eight MCP tools (71 in all).
+
 - **Longitudinal photo method v2 (abdominal fat / liver / diabetes
   follow-up)**. Replaces the single-photo free-text analysis, which could
   not measure an evolution:

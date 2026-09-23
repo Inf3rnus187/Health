@@ -6,7 +6,8 @@ reads the current day total, adds the amount and upserts the sum, so each
 tap (or an assistant's "add one") adds to the running total for the day.
 A negative amount takes back a wrong entry; the total never goes below 0.
 A pee (``elimination.urination``) is a timed journal entry: each one is
-logged with its time, the day's value is their count.
+logged with its time, the day's value is their count. ``work.start`` /
+``work.end`` clock in / out now (:mod:`work_tap`).
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import InvalidInputError
 from app.schemas.measurement import MeasurementIn
-from app.services import audit, urination
+from app.services import audit, urination, work_tap
 from app.services import measurement_values as values
 from app.services import measurements as measure
 from app.services import metrics as metrics_service
@@ -31,6 +32,8 @@ class Tally:
 
     previous: float
     total: float
+    #: A line for the Shortcut's notification (work taps).
+    detail: str = ""
 
 
 async def increment(
@@ -43,11 +46,10 @@ async def increment(
     token_id: str | None = None,
 ) -> Tally:
     """Add ``amount`` to a metric's daily total; return both totals."""
-    if canonical(metric_key) == urination.SPEC.key:
-        before, after = await urination.tap(session, user_id, amount, day)
-        step = Tally(previous=before, total=after)
-        await _log(session, user_id, urination.SPEC.key, day, step, token_id)
-        return step
+    timed = await _timed(session, user_id, metric_key, amount, day)
+    if timed is not None:
+        await _log(session, user_id, metric_key, day, timed, token_id)
+        return timed
     metric = await metrics_service.get_metric(session, metric_key)
     previous = await _current(session, user_id, metric_key, day)
     total = previous + amount
@@ -64,6 +66,25 @@ async def increment(
     step = Tally(previous=previous, total=total)
     await _log(session, user_id, metric_key, day, step, token_id)
     return step
+
+
+async def _timed(
+    session: AsyncSession,
+    user_id: str,
+    metric_key: str,
+    amount: float,
+    day: date,
+) -> Tally | None:
+    """A tap kept with its time (pee, clock in / out), else None."""
+    if metric_key in work_tap.KINDS:
+        before, after, line = await work_tap.tap(
+            session, user_id, metric_key, amount, day
+        )
+        return Tally(previous=before, total=after, detail=line)
+    if canonical(metric_key) == urination.SPEC.key:
+        count = await urination.tap(session, user_id, amount, day)
+        return Tally(previous=count[0], total=count[1])
+    return None
 
 
 async def _log(

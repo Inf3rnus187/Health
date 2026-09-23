@@ -15,7 +15,8 @@ other sources). Required token scope per route:
 | Health Auto Export (daily JSON) | `POST /sync/auto-export` | `write:measurements` (+ `?token=`) |
 | SimpleHealthExportCSV (zip of CSV) | `POST /imports/apple-health` | `write:measurements` (+ `?token=`) |
 | iPhone Shortcut (flat map) | `POST /sync/health` | `ingest:watch` |
-| One-tap counts: `{"metric": key, "amount"?}` — water bottle, coffee, cigarette, pee (`elimination.urination`, timed) | `POST /sync/tally` | `write:measurements` (+ `?token=`) |
+| One-tap counts: `{"metric": key, "amount"?}` — water bottle, coffee, cigarette, pee (`elimination.urination`, timed), clock in / out (`work.start` / `work.end`) | `POST /sync/tally` | `write:measurements` (+ `?token=`) |
+| Past clock-in / clock-out logs (txt, csv, json; `?dry_run=true` reads only) | `POST /work/import` | `write:measurements` (+ `?token=`) |
 | Watch / HealthKit samples | `POST /ingest/watch` | `ingest:watch` |
 | CPAP | `POST /ingest/ppc` | `ingest:ppc` |
 | Progress photos | `POST /ingest/photo` | `ingest:photo` |
