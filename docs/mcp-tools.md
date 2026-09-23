@@ -468,8 +468,13 @@ report PDF gives one trace per expense (its comment kept) and keeps
 the PDF untouched as a document. A ticket export (NinjaOne…) gives
 ``person``'s actions, one trace a day from the first to the last
 (default: the most active author; the dry run lists the others —
-ask the user which name is theirs). ``meals`` logs deliveries as
-priced meals. Dry run first, then import once the user agrees.
+ask the user which name is theirs). Uber's own exports
+(rider_lifetime_trips, user_orders) are read column by column: ride
+pickup → drop-off at the exact time, addresses, km, price paid; Eats
+order: establishment, order and delivery times, items, price (the
+city column is the account's zone, never the place). ``meals`` logs
+deliveries as priced meals. Dry run first (its preview and skipped
+lines show what will be stored), then import once the user agrees.
 
 Paramètres : `files`* (array), `meals` (boolean, défaut `True`), `dry_run` (boolean, défaut `True`), `person` (string, défaut ``)
 

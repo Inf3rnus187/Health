@@ -1,11 +1,13 @@
 """Traces that are meals: a delivery or a meal bought becomes a meal.
 
-The meal gets the order's time, vendor, items and price; the AI reads it
-like any meal (nutrients, score), so the file can show what long days
-cost — in money and in food quality.
+The meal gets the delivery time (else the order's), vendor, items and
+price; the AI reads it like any meal (nutrients, score), so the file
+can show what long days cost — in money and in food quality.
 """
 
 from __future__ import annotations
+
+from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,7 +25,7 @@ async def add_meal(session: AsyncSession, row: Evidence, items: str) -> Meal:
     vendor = row.place or row.title
     what = items or row.description or row.title or "repas"
     fields = {
-        "eaten_at": utc(row.occurred_at),
+        "eaten_at": utc(_eaten(row)),
         "description": f"{vendor} : {what}" if vendor else what,
         "price": row.amount,
         "vendor": vendor,
@@ -32,6 +34,13 @@ async def add_meal(session: AsyncSession, row: Evidence, items: str) -> Meal:
     row.meal_id = meal.id
     await session.flush()
     return meal
+
+
+def _eaten(row: Evidence) -> datetime:
+    """A delivery is eaten when delivered; a meal bought, when bought."""
+    if row.kind == "livraison" and row.ended_at is not None:
+        return row.ended_at
+    return row.occurred_at
 
 
 async def read_meal(session: AsyncSession, meal: Meal) -> None:

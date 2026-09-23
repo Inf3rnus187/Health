@@ -46,7 +46,8 @@ function Proofs({ d }: { d: WorkDayLine }) {
     <ul className="care-list">
       {d.proofs.map((p) => (
         <li key={p.id}>
-          <strong>{p.label}</strong> {p.time ?? 'heure inconnue'} {p.title}
+          <strong>{p.label}</strong> {p.time ?? 'heure inconnue'}
+          {p.end && ` → ${p.end}`} {p.title}
           {p.amount != null && ` · ${money(p.amount)} €`}{' '}
           <EvidenceFile id={p.id} name={p.file_name} />
         </li>

@@ -11,8 +11,8 @@ interface Picked {
 }
 
 const GUESS: [string[], string][] = [
-  [['eats', 'deliveroo', 'livraison', 'commande'], 'livraison'],
-  [['trip', 'uber', 'taxi', 'g7', 'vtc', 'bolt', 'heetch'], 'taxi'],
+  [['eats', 'user_orders', 'deliveroo', 'livraison', 'commande'], 'livraison'],
+  [['trip', 'rider', 'uber', 'taxi', 'g7', 'vtc', 'bolt', 'heetch'], 'taxi'],
   [['navigo', 'metro', 'ratp', 'transport', 'sncf', 'train'], 'transport'],
   [['parking', 'indigo', 'onepark', 'zenpark', 'paybyphone'], 'parking'],
   [['hotel', 'booking', 'airbnb'], 'hotel'],
@@ -127,9 +127,13 @@ const INTRO =
   'Exports CSV, Excel ou JSON (Uber, Uber Eats, Navigo, parking, notes ' +
   'de frais, relevé bancaire, tickets NinjaOne), reçus ou factures en ' +
   'PDF ou photo, notes de frais Lucca en PDF (une trace par dépense, le ' +
-  'PDF gardé intact). Les colonnes sont reconnues par leur titre ; un ' +
-  'reçu et la ligne de note de frais du même trajet (même jour, même ' +
-  'montant) ne font qu’une trace : le reçu apporte l’heure et le fichier.';
+  'PDF gardé intact). Les exports Uber (rider_lifetime_trips, ' +
+  'user_orders) sont lus colonne par colonne : heures exactes, départ → ' +
+  'arrivée, établissement, prix ; la colonne ville d’Uber (zone du ' +
+  'compte) n’est pas prise pour le lieu. Les autres colonnes sont ' +
+  'reconnues par leur titre ; un reçu et la ligne de note de frais du ' +
+  'même trajet (même jour, même montant) ne font qu’une trace : le reçu ' +
+  'apporte l’heure et le fichier.';
 
 function MealsBox(props: { on: boolean; set: (on: boolean) => void }) {
   return (

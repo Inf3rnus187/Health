@@ -418,7 +418,8 @@ choisir **tous les fichiers ensemble** ; le type est deviné du nom
 Navigo, parking, hôtel, notes de frais, relevé bancaire en CSV, Excel
 (.xlsx) ou JSON, et **reçus / factures en PDF ou en photo**. Choisir les
 fichiers, vérifier le **type** de chacun (« Deviner » par défaut ; sinon
-deviné du nom : `trips_data` → taxi, `eats` → repas livré, `navigo` →
+deviné du nom : `trips` → taxi, `eats`, `user_orders` → repas livré,
+`navigo` →
 transport…), « Lire », puis « Importer ».
 
 - **Reçus et factures** (PDF avec texte, PDF scanné ou photo lus par
@@ -460,6 +461,35 @@ transport…), « Lire », puis « Importer ».
   d'après la dernière action (« 23:10 tickets »), indices des Journées à
   compléter (début et fin d'activité). Un export plus récent complète
   les jours déjà importés.
+- **Uber (courses) et Uber Eats** : les fichiers de « Télécharger mes
+  données » sont lus colonne par colonne, sans rien deviner.
+  - `rider_lifetime_trips-0.csv` : une trace **Taxi / VTC** par course
+    faite, de la **prise en charge** au **dépôt**, aux heures exactes
+    (colonnes `_utc` : les colonnes `_local` sont des heures locales
+    marquées à tort « Z », elles décaleraient d'1 ou 2 h). Titre :
+    « Uber UberX : adresse de départ → adresse d'arrivée » telles
+    qu'Uber les a écrites ; lieu : l'adresse de départ. Détails : heure
+    de la demande, de la prise en charge et du dépôt, distance (km) et
+    durée, **prix payé** (celui affiché à la réservation, remise
+    déduite ; « avant remise » s'il diffère), pourboire à part, « profil
+    pro » pour un profil Business, points GPS du départ et du dépôt
+    réel. Les demandes **annulées** ou **sans chauffeur** ne sont pas
+    des courses : non importées, listées dans l'aperçu avec l'heure et
+    les adresses (« course annulée par toi — demandée le 05/02/2026
+    21:15 : … »).
+  - `user_orders-0.csv` : une ligne par article ; les lignes d'une
+    même commande (même établissement, même heure) font **une trace
+    Repas livré** : l'**établissement**, l'heure de **commande** et
+    celle de **livraison**, les articles (« 2× Pizza 4 fromages,
+    Nuggets (15 pièces, Ketchup) ») et le **prix de la commande**. Le
+    repas ajouté au Journal prend l'heure de livraison. Les commandes
+    annulées sont ignorées.
+  - La colonne ville (`city_name`, `City_Name`) est la **zone du compte
+    Uber** (« Paris » pour un établissement à 60 km de Paris) : elle n'est
+    jamais prise pour le lieu.
+  - L'aperçu montre les premières traces telles qu'elles seront
+    enregistrées et, dépliables, les lignes non importées avec la
+    raison.
 
 **Absences : export de l'outil RH** (Lucca, Figgo…) — carte
 « Importer des absences » : l'export des absences en CSV, Excel ou JSON.
@@ -501,7 +531,7 @@ Où trouver ces historiques (en général) :
 
 | Source | Comment l'obtenir |
 |--------|-------------------|
-| Uber, Uber Eats | Application › Compte › Confidentialité › télécharger vos données : un ZIP avec un CSV des courses (`trips_data`) et des commandes Uber Eats. |
+| Uber, Uber Eats | Application › Compte › Confidentialité › télécharger vos données : un ZIP avec le CSV des courses (`rider_lifetime_trips-0.csv`, anciennement `trips_data`) et celui des commandes Uber Eats (`user_orders-0.csv`). |
 | Navigo / transports | Historique de validations du passe (espace personnel Navigo ou demande RGPD à Île-de-France Mobilités). |
 | Parkings (Indigo, Onepark, Zenpark, PayByPhone…) | Historique ou factures dans le compte de l'application. |
 | Taxis (G7…), hôtels | Reçus et factures (mails) : à ajouter en traces avec le fichier. |

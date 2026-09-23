@@ -92,17 +92,19 @@ def _clock(at: datetime, day: date, tz: ZoneInfo) -> str:
 def _proofs(
     items: list[Evidence], tz: ZoneInfo
 ) -> dict[date, list[dict[str, Any]]]:
-    """The proofs and traces of each local day."""
+    """The proofs and traces of each local day (a ride: pickup → drop-off)."""
     out: dict[date, list[dict[str, Any]]] = defaultdict(list)
     for item in items:
         at = utc(item.occurred_at).astimezone(tz)
         known = item.time_known is not False
+        end = item.ended_at
         out[at.date()].append(
             {
                 "id": item.id,
                 "kind": item.kind,
                 "label": evidence.KINDS.get(item.kind, item.kind),
                 "time": f"{at:%H:%M}" if known else None,
+                "end": _clock(end, at.date(), tz) if end and known else None,
                 "title": item.title or item.place,
                 "amount": item.amount,
                 "file_name": item.file_name,

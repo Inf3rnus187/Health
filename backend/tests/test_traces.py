@@ -80,7 +80,8 @@ async def test_exports_are_read_by_their_columns(
     assert rides["total"] == 59.2
     assert metro["preview"][0] == {
         "day": "2026-03-02", "time": "07:52", "end": None,
-        "kind": "transport", "place": "Châtelet", "amount": None, "what": "",
+        "kind": "transport", "title": "Châtelet", "place": "Châtelet",
+        "amount": None, "what": "",
     }  # fmt: skip
     assert expenses["total"] == 89.5
     done = await _import(client, auth, files)

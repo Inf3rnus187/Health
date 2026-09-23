@@ -1,3 +1,10 @@
+import {
+  type PreviewRow,
+  Skipped,
+  type SkippedRow,
+  TracePreview,
+} from './TracePreview';
+
 /** What a trace import read, file by file. */
 export interface FileReport {
   name: string;
@@ -9,6 +16,8 @@ export interface FileReport {
   total: number;
   skipped_count: number;
   columns: Record<string, unknown>;
+  preview: PreviewRow[];
+  skipped: SkippedRow[];
 }
 
 export interface TraceReport {
@@ -38,6 +47,7 @@ const FIELD: Record<string, string> = {
   extras: 'autres',
   document: 'document',
   tickets: 'tickets',
+  ignored: 'non lu',
 };
 
 function line(f: FileReport): string {
@@ -87,6 +97,8 @@ export function Outcome(props: {
         <div key={f.name}>
           <p>{line(f)}</p>
           <People file={f} onPerson={props.onPerson} />
+          <TracePreview rows={f.preview} />
+          <Skipped rows={f.skipped} count={f.skipped_count} />
         </div>
       ))}
       {!report.dry_run && <p>{report.meals} repas ajoutés au Journal.</p>}

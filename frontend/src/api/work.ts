@@ -104,6 +104,8 @@ export interface WorkDayLine {
     kind: string;
     label: string;
     time: string | null;
+    /** The end (drop-off, delivery), "+1" the next day. */
+    end: string | null;
     title: string;
     amount: number | null;
     file_name: string | null;

@@ -8,6 +8,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Uber rides and Uber Eats orders read from Uber's own export**
+  (`rider_lifetime_trips`, `user_orders`), column by column:
+  - a ride: pickup → drop-off at the exact time (the `_utc` columns; the
+    `_local` ones carry a false « Z »), the pickup and destination
+    addresses as Uber wrote them, request time, km, duration, the price
+    paid (the price shown at booking, discount taken off), the tip
+    apart, business profile, GPS points. Cancelled or unserved requests
+    are listed, not imported;
+  - an Eats order: the establishment, order and delivery times, the
+    items with their options, the order price; the meal logged takes
+    the delivery time;
+  - the city column (the Uber account's zone, « Paris » for an order
+    60 km away) is never taken for the place;
+  - the import preview shows the first traces as they will be stored
+    and why each left-out line was left out.
+
 - **« Mes journées »: one line per day**, the Travail page's first tab:
   the night before (asleep, awakenings), wake-up, first clock-in, last
   clock-out, hours worked (remote part), bedtime, absence (½ for a half

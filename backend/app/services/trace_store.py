@@ -209,9 +209,10 @@ def _preview(trace: Trace, tz: ZoneInfo) -> dict[str, Any]:
         "time": f"{local:%H:%M}" if trace.time_known else None,
         "end": f"{trace.end.astimezone(tz):%d/%m %H:%M}" if trace.end else None,
         "kind": trace.kind,
+        "title": trace.vendor or trace.place,
         "place": trace.place or trace.vendor,
         "amount": trace.amount,
-        "what": trace.what[:120],
+        "what": trace.what[:300],
     }
 
 

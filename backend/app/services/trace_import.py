@@ -2,13 +2,15 @@
 
 A file is either a table (CSV, Excel, JSON: Uber, Uber Eats, Navigo,
 parking, expense reports, bank statements) or a receipt / invoice (PDF,
-photo: :mod:`receipt_read`, the file kept as the proof). Columns are
-found by their titles (:mod:`trace_columns`); a column naming each
-line's kind (taxi, parking, dîner…) wins over the file's kind; a
-"du … au …" text gives a start and an end; cancelled rows are skipped;
-one order's rows are merged. The same trace met twice — an expense line
-and its receipt: same kind, same day, same amount, times equal or one
-unknown — is kept once, the receipt adding its time and its file.
+photo: :mod:`receipt_read`, the file kept as the proof). Uber's own
+exports are read by their exact columns (:mod:`uber_read`); other
+tables' columns are found by their titles (:mod:`trace_columns`); a
+column naming each line's kind (taxi, parking, dîner…) wins over the
+file's kind; a "du … au …" text gives a start and an end; cancelled
+rows are skipped; one order's rows are merged. The same trace met
+twice — an expense line and its receipt: same kind, same day, same
+amount, times equal or one unknown — is kept once, the receipt adding
+its time and its file.
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ from app.services import (
     table_read,
     trace_columns,
     trace_sources,
+    uber_read,
     work_parse,
 )
 from app.services.trace_columns import Columns
@@ -48,6 +51,9 @@ def read(
     tickets = trace_sources.tickets(rows, person, tz)
     if tickets is not None:
         return tickets[0], [], tickets[1]
+    uber = uber_read.read(rows, tz)
+    if uber is not None:
+        return uber
     columns = trace_columns.find(rows)
     found, skipped = _table(rows, columns, kind, tz)
     return _orders(found), skipped, _about(columns)
