@@ -52,9 +52,12 @@ async def merge(
     The first clock-in and the last clock-out of the two are kept (a lone
     embauche of 09:02 and a lone débauche of 19:12 become 09:02 → 19:12);
     the other session is deleted and the note says what it held.
+    ``start_at`` / ``end_at``: times just typed for this session, used
+    instead of its stored ones.
     """
+    typed = body.model_dump(include={"start_at", "end_at"})
     row = await work_merge.merge(
-        session, principal.user.id, session_id, body.other_id
+        session, principal.user.id, (session_id, body.other_id), typed
     )
     await session.commit()
     return row

@@ -177,7 +177,14 @@ six onglets, du plus utile au plus rare :
 - **Statistiques** : heures travaillées, graphique par semaine, court /
   moyen / long terme, export et rapport PDF.
 - **Dossier travail et santé** : synthèse, arrêts et absences, preuves
-  et traces, nuits.
+  et traces, nuits. Le rapport PDF a une section **« Journées les plus
+  significatives »** (20 au plus, les plus marquantes d'abord) : date,
+  arrivée, départ (« +1 » le lendemain), amplitude (et travail si des
+  pauses), pourquoi — session continue de 24 h ou plus, amplitude > 13 h
+  (repos de 11 h impossible), plus de 10 h de travail, samedi, dimanche
+  ou jour férié travaillé, travail pendant un arrêt, fin après 21 h ou
+  minuit — et les notes saisies sur les sessions du jour. Les tableaux
+  du rapport passent à la ligne au lieu de déborder.
 - **Importer** : historiques de Raccourcis, traces, absences, pointages.
 
 **Périodes et pages, partout pareil.** Chaque liste ou calcul daté
@@ -262,6 +269,13 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
   - Le message d'erreur nomme la session gênante : « Chevauche la
     session du 02/03/2026 09:02 → 12:30 : choisis une heure en dehors, ou
     réunis les deux sessions ».
+  - Dans « **Modifier** » une session, les sessions que les heures tapées
+    chevauchent s'affichent en direct, avec leur note, et « **Réunir :
+    02/04 12:01 → 03/04 21:22** » : une session continue de 33 h 21 se
+    saisit en étirant celle du 03/04 jusqu'au 02/04 12:01, puis en la
+    réunissant avec celle du 02/04 (les heures tapées sont gardées ; la
+    note garde ce que l'autre contenait). Une session finie un autre jour
+    affiche ce jour dans la liste (« 21:22 (03/04) »).
 - **Ajouter une preuve après coup**, là où il en manque une : « **+
   Ajouter une preuve pour ce jour** » sur chaque journée à compléter,
   dans « Mes journées » (le bouton « + » de la colonne Preuves, ou sous

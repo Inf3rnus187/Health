@@ -8,6 +8,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **« Réunir » from a session's editor.** The sessions the typed times
+  overlap show live, with their note, and « Réunir : 02/04 12:01 →
+  03/04 21:22 » makes one session of both, keeping the times typed
+  (`POST /work/sessions/{id}/merge` takes `start_at` / `end_at`): a
+  33 h 21 continuous session can be entered over an existing one. A
+  session ending another day shows that day in the list.
+- **« Journées les plus significatives »** in the work ↔ health report
+  (and `highlights` in `/work/health`): up to 20 days, the most striking
+  first — continuous sessions of 24 h or more, amplitude over 13 h, more
+  than 10 h worked, Saturdays, Sundays and public holidays worked, work
+  during an absence, late ends — with arrival, departure (« +1 »),
+  amplitude and the notes typed that day. Report tables now wrap long
+  cells and keep their colours after a chart; « +2 » after two days.
+
 - **Add a proof after the fact, where it is missing**: « + Ajouter une
   preuve pour ce jour » on each day to complete, in « Mes journées »
   (the « + » of the Preuves column, or under the proofs unfolded) and in

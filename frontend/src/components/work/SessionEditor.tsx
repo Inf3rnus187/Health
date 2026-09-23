@@ -4,6 +4,7 @@ import type { Place, WorkSession } from '../../api/work';
 import { useCompleteSession } from '../../hooks/useWorkFile';
 import { localStamp } from '../../utils/datetime';
 import { DayProofs } from '../workfile/DayProofs';
+import { SessionClashes } from './SessionClashes';
 
 function When(props: {
   label: string;
@@ -80,15 +81,21 @@ export function SessionEditor(props: { row: WorkSession; onDone: () => void }) {
         />
       </div>
       {save.error && <p className="error">{save.error.message}</p>}
-      <Proofs row={props.row} plan={plan} />
+      <Proofs row={props.row} plan={plan} onDone={props.onDone} />
     </div>
   );
 }
 
-function Proofs(props: { row: WorkSession; plan: Plan }) {
+function Proofs(props: { row: WorkSession; plan: Plan; onDone: () => void }) {
   const { plan } = props;
   return (
     <>
+      <SessionClashes
+        row={props.row}
+        start={plan.start}
+        end={plan.end}
+        onDone={props.onDone}
+      />
       <p className="muted">Preuves et traces du jour et du lendemain matin :</p>
       <DayProofs
         day={props.row.date_key}

@@ -239,8 +239,14 @@ export type IncompleteDay = WorkSession & { context: DayContext };
 export const fetchIncomplete = () => api<IncompleteDay[]>('/work/incomplete');
 
 /** Make another session part of this one (first in → last out). */
-export const mergeSession = (a: { id: string; other: string }) =>
+export const mergeSession = (a: {
+  id: string;
+  other: string;
+  /** Times just typed for this session, kept in the union. */
+  start_at?: string | null;
+  end_at?: string | null;
+}) =>
   api<WorkSession>(
     `/work/sessions/${a.id}/merge`,
-    json('POST', { other_id: a.other }),
+    json('POST', { other_id: a.other, start_at: a.start_at, end_at: a.end_at }),
   );

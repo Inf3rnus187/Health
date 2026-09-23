@@ -292,7 +292,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | POST | `/work/sessions/delete` | `write:measurements` | JSON `IdsIn` (ids) | Delete work sessions and rebuild their days. |
 | DELETE | `/work/sessions/{session_id}` | `write:measurements` | `session_id` | Delete a session. |
 | PUT | `/work/sessions/{session_id}` | `write:measurements` | `session_id`, JSON `WorkSessionUpdate` (start_at, end_at, note, place) | Fix a session's times or note. |
-| POST | `/work/sessions/{session_id}/merge` | `write:measurements` | `session_id`, JSON `MergeIn` (other_id) | Make another session of the same place part of this one. |
+| POST | `/work/sessions/{session_id}/merge` | `write:measurements` | `session_id`, JSON `MergeIn` (other_id, start_at, end_at) | Make another session of the same place part of this one. |
 | GET | `/work/stats` | `read:all` | `start`?, `end`?, `contract_hours`? | Totals, averages, overtime, weeks, months, 7/30/90/365 days. |
 
 ## Import d'historiques de Raccourcis

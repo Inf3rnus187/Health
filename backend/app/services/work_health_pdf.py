@@ -13,7 +13,11 @@ from typing import Any
 
 from fpdf import FPDF
 
-from app.services import work_absence, work_health_pdf_traces
+from app.services import (
+    work_absence,
+    work_health_pdf_days,
+    work_health_pdf_traces,
+)
 from app.services import work_health_pdf_more as more
 from app.services.pdf_blocks import table
 from app.services.pdf_text import heading, line
@@ -36,6 +40,7 @@ def build(data: dict[str, Any], images: dict[str, bytes]) -> bytes:
     _method(pdf, data)
     _work(pdf, data)
     _legal(pdf, data)
+    work_health_pdf_days.significant(pdf, data)
     more.sleep(pdf, data)
     more.periods(pdf, data)
     more.absences(pdf, data)

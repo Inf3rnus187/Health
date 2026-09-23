@@ -38,12 +38,16 @@ function Line(props: { item: EvidenceItem; view: () => void; pick: Pick }) {
   const kind = EVIDENCE_KINDS[item.kind] ?? item.kind;
   return (
     <li>
-      <strong>{kind}</strong> {span(item)} {item.title}{' '}
-      <EvidenceFile id={item.id} name={item.file_name} />
-      <button className="btn ghost" onClick={props.view}>
-        Détails
-      </button>
-      <Take item={item} pick={props.pick} />
+      <div>
+        <strong>{kind}</strong> {span(item)} {item.title}
+      </div>
+      <div className="quick">
+        <EvidenceFile id={item.id} name={item.file_name} />
+        <button className="btn ghost" onClick={props.view}>
+          Détails
+        </button>
+        <Take item={item} pick={props.pick} />
+      </div>
     </li>
   );
 }

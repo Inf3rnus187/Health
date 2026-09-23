@@ -201,12 +201,13 @@ def _off_part(
 
 
 def clock_text(hour: float | None) -> str | None:
-    """Decimal hours of the day as HH:MM (25.5 → 01:30 +1)."""
+    """Decimal hours of the day as HH:MM (25.5 → 01:30 +1, 49 → 01:00 +2)."""
     if hour is None:
         return None
     minutes = int(round(hour * 60))
     text = f"{minutes // 60 % 24:02d}:{minutes % 60:02d}"
-    return f"{text} +1" if minutes >= 24 * 60 else text
+    later = minutes // (24 * 60)
+    return f"{text} +{later}" if later else text
 
 
 def _mean(values: list[float | None]) -> float | None:

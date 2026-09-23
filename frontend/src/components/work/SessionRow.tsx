@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { WorkSession } from '../../api/work';
 import type { Selection } from '../../hooks/useSelection';
 import { useDeleteSession } from '../../hooks/useWork';
+import { localStamp } from '../../utils/datetime';
 import { shortDate } from '../../utils/format';
 import { PickBox } from '../Bulk';
 import { clockTime, hm } from './format';
@@ -16,8 +17,10 @@ const SOURCE: Record<string, string> = {
 };
 
 function end(row: WorkSession): string {
-  if (row.end_at) return clockTime(row.end_at);
-  return row.status === 'open' ? 'en cours' : '? à compléter';
+  if (!row.end_at) return row.status === 'open' ? 'en cours' : '? à compléter';
+  const day = localStamp(row.end_at).slice(0, 10);
+  const later = day !== row.date_key ? ` (${shortDate(day).slice(0, 5)})` : '';
+  return clockTime(row.end_at) + later;
 }
 
 function Buttons(props: { row: WorkSession; edit: () => void }) {

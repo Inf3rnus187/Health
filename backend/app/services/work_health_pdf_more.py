@@ -137,7 +137,7 @@ def journal(pdf: FPDF, data: dict[str, Any]) -> None:
             "Blocs",
         ],
         [_day(r, feasts) for r in rows],
-        [0.12, 0.08, 0.08, 0.07, 0.15, 0.25, 0.09, 0.08, 0.08],
+        [0.11, 0.09, 0.09, 0.07, 0.14, 0.25, 0.09, 0.08, 0.08],
     )
 
 

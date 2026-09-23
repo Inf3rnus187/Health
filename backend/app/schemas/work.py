@@ -59,6 +59,12 @@ class WorkSessionOut(BaseModel):
 
 
 class MergeIn(BaseModel):
-    """The other session to make one with (it is deleted)."""
+    """The other session to make one with (it is deleted).
+
+    ``start_at`` / ``end_at``: the times just typed for this session (in
+    its editor), kept in the union instead of the stored ones.
+    """
 
     other_id: str = Field(min_length=1, max_length=64)
+    start_at: datetime | None = None
+    end_at: datetime | None = None

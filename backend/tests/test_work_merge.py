@@ -104,3 +104,39 @@ async def test_an_overlap_names_the_session_and_leaves_room_after_it(
         headers=auth,
     )
     assert mixed.status_code == 422
+
+
+async def test_a_session_stretched_over_another_merges_with_the_times_typed(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """02/04 12:01 → 22:22 and « ? → 03/04 21:22 »: one 33 h 21 session."""
+    first = (await client.post(
+        f"{WORK}/sessions",
+        json={"start_at": "2026-04-02T12:01", "end_at": "2026-04-02T22:22",
+              "note": "Taxi aller retour"},
+        headers=auth,
+    )).json()  # fmt: skip
+    late = (await client.post(
+        f"{WORK}/clock", json={"kind": "out", "at": "2026-04-03T21:22"},
+        headers=auth,
+    )).json()  # fmt: skip
+    typed = {"start_at": "2026-04-02T12:01", "end_at": "2026-04-03T21:22"}
+    refused = await client.put(
+        f"{WORK}/sessions/{late['id']}", json=typed, headers=auth
+    )
+    assert refused.status_code == 422
+    merged = await client.post(
+        f"{WORK}/sessions/{late['id']}/merge",
+        json={"other_id": first["id"], **typed},
+        headers=auth,
+    )
+    assert merged.status_code == 200, merged.text
+    body = merged.json()
+    assert (body["hours"], body["date_key"]) == (33.35, "2026-04-02")
+    assert "Taxi aller retour" in body["note"]
+    left = await client.get(
+        f"{WORK}/sessions",
+        params={"start": "2026-04-01", "end": "2026-04-04"},
+        headers=auth,
+    )
+    assert [s["id"] for s in left.json()] == [late["id"]]

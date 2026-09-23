@@ -9,7 +9,7 @@ and where every number comes from.
 
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import date, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -28,6 +28,7 @@ from app.services import (
     work_absence,
     work_corr,
     work_days,
+    work_highlights,
     work_legal,
     work_math,
     work_traces,
@@ -67,6 +68,7 @@ async def gather(
         "absences": [_absence(a, table, items, tz) for a in leaves],
         "evidence": [_item(e, leaves, tz) for e in items],
         "days": table,
+        "highlights": work_highlights.significant(table),
     }
 
 
@@ -109,11 +111,15 @@ def _rows(
         for r in rows
         if r.start_at is None or r.end_at is None
     }
+    notes: dict[date, list[str]] = defaultdict(list)
+    for r in rows:
+        if r.note:
+            notes[work_days.view(r, tz)["date_key"]].append(r.note)
     out = []
     day = first
     while day <= last:
         row = _row(day, days.get(day), day in partial, nights, health, leaves)
-        out.append({**row, "traces": marks.get(day, [])})
+        out.append({**row, "traces": marks.get(day, []), "notes": notes[day]})
         day += timedelta(days=1)
     return out
 
