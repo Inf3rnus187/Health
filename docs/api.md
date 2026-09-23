@@ -23,6 +23,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | POST | `/auth/mfa/enable` | Session uniquement | JSON `MfaVerify` (code) | Enable MFA after verifying a code. |
 | POST | `/auth/mfa/setup` | Session uniquement | — | Assign a TOTP secret and return its otpauth URI (not yet enabled). |
 | POST | `/auth/refresh` | Public | JSON `RefreshRequest` (refresh_token) | Rotate a refresh token and return a new pair. |
+| GET | `/auth/scopes` | Tout jeton | — | How the caller is authenticated and what it may do (MCP gate). |
 
 ## Compte
 

@@ -43,7 +43,7 @@ and tested:
 | **Photo pipeline** (upload → EXIF‑strip/normalize → Ollama vision → compare) | ✅ |
 | **Dashboards** per domain (`/dashboard/{domain}` + React domain tabs) | ✅ |
 | **Exports** CSV/JSON/XLSX/FHIR + async **clinical PDF** reports | ✅ |
-| **MCP server** — 53 tools covering the whole hub, as a REST‑API client (`hub:full` token + access secret) | ✅ |
+| **MCP server** — 53 tools covering the whole hub, as a REST‑API client (each client uses its own `hub:full` token) | ✅ |
 | **Automations** (trigger→action: reminder/capture) + run endpoint | ✅ |
 | **Hardening**: optional TOTP MFA, at‑rest media encryption, RGPD erasure | ✅ |
 | **Supply chain**: gitleaks, pip‑audit, pnpm audit, Trivy, syft SBOM (CI) | ✅ |
@@ -105,7 +105,7 @@ commented [`.env.example`](.env.example). Key settings:
 | `ACCESS_TOKEN_TTL_MIN` / `REFRESH_TOKEN_TTL_DAYS` | Token lifetimes. |
 | `OLLAMA_URL` / `OLLAMA_*_MODEL` | AI endpoint + one model per task (photos, documents, synthesis — MedGemma recommended). |
 | `WEB_PORT` | Host port for the web tier (default 8082). |
-| `PHOENIX_API_TOKEN` / `MCP_AUTH_TOKEN` / `MCP_BIND` | MCP server (optional). |
+| `MCP_BIND` / `MCP_PORT` / `MCP_TRANSPORT` | MCP server (optional; clients use their own `hub:full` token). |
 
 Every variable is explained in the
 [configuration guide](docs/guides/configuration.md).
@@ -383,7 +383,7 @@ Argon2id passwords, short JWTs with rotating/revocable refresh sessions,
 hashed scoped tokens, strict input validation, security headers + CSP,
 an append‑only audit log, optional TOTP MFA and media encryption, SBOM and
 image/dependency scans in CI. Tokens that only send data cannot read it
-(`read:all`); the MCP server requires its own secret. See
+(`read:all`); the MCP server only accepts `hub:full` tokens. See
 [SECURITY.md](SECURITY.md).
 
 ## License

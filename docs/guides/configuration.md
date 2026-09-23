@@ -116,11 +116,10 @@ lancer ensuite « Réanalyser tout l'historique ».
 
 | Variable | Rôle |
 |----------|------|
-| `PHOENIX_API_TOKEN` | Jeton avec le scope `hub:full`. |
-| `MCP_AUTH_TOKEN` | Secret que chaque client MCP doit envoyer (obligatoire en réseau). |
 | `MCP_BIND` | `127.0.0.1` (défaut) ou `0.0.0.0` pour le réseau local. |
 | `MCP_PORT` | `9000`. |
 | `MCP_TRANSPORT` | `streamable-http` (recommandé : une requête, une réponse JSON — un simple `curl` marche), `sse` ou `stdio`. |
+| `PHOENIX_API_TOKEN` | Seulement en `stdio`. En réseau, chaque client envoie son propre jeton `hub:full` : rien de secret dans `.env`. |
 
 Détails : [guide MCP](mcp.md).
 

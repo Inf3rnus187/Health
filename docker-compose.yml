@@ -103,8 +103,8 @@ services:
       - "${WEB_PORT:-8082}:80"
     restart: unless-stopped
 
-  # MCP server (Phase 7). Enable with: docker compose --profile mcp up -d
-  # Set PHOENIX_API_TOKEN (hub:full token) and MCP_AUTH_TOKEN in .env first.
+  # MCP server. Enable with: docker compose --profile mcp up -d
+  # Clients authenticate with their own hub:full API token (no secret here).
   mcp:
     build:
       context: ./mcp

@@ -1,14 +1,17 @@
 """HTTP client wrapping the Phoenix REST API for the MCP tools.
 
 The MCP server is a *client of the API* — never a parallel path to the
-database (§9). It authenticates with an API token; a ``hub:full`` token
-lets it do everything the web app does (except managing tokens, MFA and
-the account). API errors are raised with the API's own message.
+database (§9). Over the network each request carries the caller's own
+``hub:full`` API token (created in the web app), which the gate stores in
+:data:`REQUEST_TOKEN` and every API call reuses: one token, nothing to
+configure, each user sees their own data. ``PHOENIX_API_TOKEN`` is only
+the fallback for stdio. API errors are raised with the API's message.
 """
 
 from __future__ import annotations
 
 import os
+from contextvars import ContextVar
 from typing import Any
 
 import httpx
@@ -19,6 +22,10 @@ _TRANSPORT: httpx.AsyncBaseTransport | None = None
 _TIMEOUT = 120.0
 #: A synthesis report without a worker runs the text model inline.
 LONG = 1200.0
+#: The API token of the MCP request being served (set by the auth gate).
+REQUEST_TOKEN: ContextVar[str | None] = ContextVar(
+    "request_token", default=None
+)
 
 
 class ApiError(RuntimeError):
@@ -69,10 +76,11 @@ async def post(path: str, body: Any = None) -> Any:
 
 
 def _new_client(timeout: float, *, json: bool = True) -> httpx.AsyncClient:
-    """An async HTTP client with the token."""
+    """An async HTTP client with the caller's token (or the stdio one)."""
     headers = {"Content-Type": "application/json"} if json else {}
-    if _TOKEN:
-        headers["Authorization"] = f"Bearer {_TOKEN}"
+    token = REQUEST_TOKEN.get() or _TOKEN
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     return httpx.AsyncClient(
         base_url=_BASE, headers=headers, transport=_TRANSPORT, timeout=timeout
     )

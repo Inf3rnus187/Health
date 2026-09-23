@@ -63,3 +63,20 @@ async def test_other_tokens_stay_out_of_the_record(
     ingest = await _token(client, auth, ["write:measurements"])
     record = await client.get("/api/v1/medical/record", headers=ingest)
     assert record.status_code == 403
+
+
+async def test_scopes_tell_the_mcp_gate_what_a_token_may_do(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    full = await _token(client, auth, ["hub:full"])
+    ingest = await _token(client, auth, ["ingest:watch"])
+    got = (await client.get("/api/v1/auth/scopes", headers=full)).json()
+    assert got == {
+        "source": "token",
+        "scopes": ["hub:full"],
+        "full_access": True,
+    }
+    got = (await client.get("/api/v1/auth/scopes", headers=ingest)).json()
+    assert got["full_access"] is False
+    got = (await client.get("/api/v1/auth/scopes", headers=auth)).json()
+    assert got["source"] == "jwt" and got["full_access"] is True

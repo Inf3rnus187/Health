@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.core.deps import PrincipalDep, SessionDep
+from app.core.scopes import HUB_FULL
 from app.models.user import User
 from app.schemas.auth import (
     LoginRequest,
@@ -49,3 +50,14 @@ async def logout(body: RefreshRequest, session: SessionDep) -> Message:
 async def me(principal: PrincipalDep) -> User:
     """Return the currently authenticated user."""
     return principal.user
+
+
+@router.get("/scopes")
+async def scopes(principal: PrincipalDep) -> dict[str, object]:
+    """How the caller is authenticated and what it may do (MCP gate)."""
+    full = principal.source == "jwt" or principal.has_scope(HUB_FULL)
+    return {
+        "source": principal.source,
+        "scopes": sorted(principal.scopes),
+        "full_access": full,
+    }

@@ -165,10 +165,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   history and resetting the Apple import now need a login or `hub:full`
   (previously any token, for photos, or a `write:measurements` token,
   for the reset).
-- The MCP server's network transports now require `MCP_AUTH_TOKEN`
-  (`Authorization: Bearer …`, 401 otherwise) and refuse to start without
-  it; compose publishes its port on 127.0.0.1 unless `MCP_BIND` says
-  otherwise. Previously anyone on the network could use its token.
+- The MCP server no longer holds a shared token anyone on the network
+  could use: each client sends its own `hub:full` API token (checked with
+  `GET /auth/scopes`, 401 / 403 otherwise, cached one minute) and the
+  tools call the API with it — one token created in the web app, nothing
+  secret in `.env`, each user sees only their data, revoking the token
+  cuts the access. Compose publishes the port on 127.0.0.1 unless
+  `MCP_BIND` says otherwise.
 
 ### Changed
 

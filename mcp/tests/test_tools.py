@@ -12,7 +12,7 @@ from starlette.types import Receive, Scope, Send
 from phoenix_mcp import (
     auth,
     client,
-    server,
+    server,  # noqa: F401 - importing registers every tool
     tools_data,
     tools_record,
     tools_reports,
@@ -117,26 +117,52 @@ async def test_upload_sends_a_multipart_form() -> None:
     assert b"%PDF-" in body
 
 
-async def _ok(scope: Scope, receive: Receive, send: Send) -> None:
-    await send({"type": "http.response.start", "status": 200, "headers": []})
-    await send({"type": "http.response.body", "body": b"ok"})
+Seen_tokens = list[str | None]
 
 
-async def test_network_access_needs_the_secret() -> None:
-    gated = auth.bearer_gate(_ok, "s3cret")
-    transport = httpx.ASGITransport(app=gated)
+def _api(seen: Seen_tokens) -> None:
+    """A fake API answering /auth/scopes per token."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        token = request.headers.get("authorization", "").removeprefix("Bearer ")
+        seen.append(token)
+        if token == "full":
+            return httpx.Response(200, json={"full_access": True})
+        if token == "ingest":
+            return httpx.Response(200, json={"full_access": False})
+        return httpx.Response(401, json={"detail": "Invalid credentials"})
+
+    client.configure("http://test/api/v1", "", httpx.MockTransport(handler))
+    auth._verified.clear()
+
+
+def _app(used: Seen_tokens) -> Any:
+    async def app(scope: Scope, receive: Receive, send: Send) -> None:
+        used.append(client.REQUEST_TOKEN.get())
+        start = {"type": "http.response.start", "status": 200, "headers": []}
+        await send(start)
+        await send({"type": "http.response.body", "body": b"ok"})
+
+    return app
+
+
+async def _get(app: Any, token: str | None) -> int:
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://t") as h:
-        assert (await h.get("/sse")).status_code == 401
-        bad = {"Authorization": "Bearer nope"}
-        assert (await h.get("/sse", headers=bad)).status_code == 401
-        good = {"Authorization": "Bearer s3cret"}
-        assert (await h.get("/sse", headers=good)).status_code == 200
+        return (await h.get("/mcp", headers=headers)).status_code
 
 
-def test_network_transport_refuses_to_start_without_a_secret(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("MCP_TRANSPORT", "sse")
-    monkeypatch.delenv("MCP_AUTH_TOKEN", raising=False)
-    with pytest.raises(SystemExit, match="MCP_AUTH_TOKEN"):
-        server.main()
+async def test_the_callers_hub_token_is_checked_and_used() -> None:
+    api_calls: Seen_tokens = []
+    used: Seen_tokens = []
+    _api(api_calls)
+    gated = auth.bearer_gate(_app(used))
+    assert await _get(gated, None) == 401
+    assert await _get(gated, "revoked") == 401
+    assert await _get(gated, "ingest") == 403
+    assert await _get(gated, "full") == 200
+    assert await _get(gated, "full") == 200  # cached: no second API check
+    assert used == ["full", "full"]
+    assert api_calls.count("full") == 1
+    assert client.REQUEST_TOKEN.get() is None  # reset after the request

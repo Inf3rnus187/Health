@@ -11,28 +11,26 @@ exactement ce que voient les pages.
 > sur la machine ou le réseau local ; pour un accès à distance, passez par
 > un VPN (WireGuard, Tailscale…), jamais par un port ouvert sur Internet.
 
-## 1. Créer le jeton API
+## 1. Créer le jeton (le seul secret)
 
 Site › **Import › « Jetons d'accès (API) »** › cocher **« Accès complet —
-MCP / assistant »** (scope `hub:full`) › Créer. Copier le secret (affiché
-une seule fois).
+MCP / assistant »** (scope `hub:full`) › Créer. Copier le jeton (affiché
+une seule fois). C'est lui que le client MCP envoie ; il n'y a **rien de
+secret à mettre dans `.env`**.
 
-Ce jeton peut tout faire **sauf** gérer les jetons, la 2FA et le compte
-(réservés à une connexion web).
+Le serveur MCP vérifie ce jeton auprès de l'API à chaque connexion (401 si
+inconnu ou révoqué, 403 s'il n'a pas `hub:full`) puis appelle l'API avec
+lui : chaque utilisateur du hub ne voit que ses données, et **révoquer le
+jeton coupe l'accès** (effectif en une minute au plus). Ce jeton peut tout
+faire **sauf** gérer les jetons, la 2FA et le compte.
 
-## 2. Configurer `.env`
+## 2. Configurer `.env` (facultatif)
 
 ```bash
-PHOENIX_API_TOKEN=<le jeton hub:full>
-MCP_AUTH_TOKEN=<secret généré par : openssl rand -hex 32>
-MCP_BIND=127.0.0.1      # 0.0.0.0 pour y accéder depuis un autre appareil du réseau
-MCP_PORT=9000
-MCP_TRANSPORT=streamable-http   # recommandé ; ou sse
+MCP_BIND=127.0.0.1               # 0.0.0.0 pour y accéder depuis un autre appareil du réseau
+MCP_PORT=9000                    # port publié sur la machine
+MCP_TRANSPORT=streamable-http    # recommandé ; ou sse
 ```
-
-`MCP_AUTH_TOKEN` est **obligatoire** en SSE / HTTP : sans lui le serveur
-refuse de démarrer, et toute requête sans l'en-tête
-`Authorization: Bearer <MCP_AUTH_TOKEN>` reçoit un 401.
 
 ## 3. Démarrer
 
@@ -41,11 +39,11 @@ docker compose --profile mcp up -d --build mcp
 docker compose logs mcp --since 5m
 ```
 
-Vérifier depuis la machine cliente (mode `streamable-http`, un seul
+Vérifier depuis la machine cliente (mode `streamable-http` : un seul
 `curl` par appel, réponse JSON directe) :
 
 ```bash
-TOKEN='<MCP_AUTH_TOKEN>'
+TOKEN='<jeton hub:full>'
 # lister les outils
 curl -s http://<IP>:9000/mcp -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" -H "Accept: application/json" \
@@ -56,21 +54,20 @@ curl -s http://<IP>:9000/mcp -H "Authorization: Bearer $TOKEN" \
   -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"metric_overview","arguments":{"key":"body.weight","days":30}}}'
 ```
 
-Sans l'en-tête `Authorization` : 401 (normal). En mode `sse`, les réponses
-arrivent dans le flux `/sse` ouvert à part : `curl` ne suffit plus, il faut
-un client MCP.
+En mode `sse`, les réponses arrivent dans le flux `/sse` ouvert à part :
+`curl` ne suffit plus, il faut un client MCP.
 
 ## 4. Brancher un client
 
 Points d'entrée : `http://<IP>:9000/mcp` (`MCP_TRANSPORT=streamable-http`)
-ou `http://<IP>:9000/sse` (`MCP_TRANSPORT=sse`). En-tête obligatoire :
-`Authorization: Bearer <MCP_AUTH_TOKEN>`.
+ou `http://<IP>:9000/sse` (`MCP_TRANSPORT=sse`). En-tête :
+`Authorization: Bearer <jeton hub:full>`.
 
 ### Claude Code
 
 ```bash
 claude mcp add --transport http phoenix http://<IP>:9000/mcp \
-  --header "Authorization: Bearer <MCP_AUTH_TOKEN>"
+  --header "Authorization: Bearer <jeton hub:full>"
 # en mode sse : --transport sse … http://<IP>:9000/sse
 ```
 
@@ -88,7 +85,7 @@ Dans `claude_desktop_config.json` (Node.js requis) :
         "--allow-http",
         "--header", "Authorization:${AUTH_HEADER}"
       ],
-      "env": { "AUTH_HEADER": "Bearer <MCP_AUTH_TOKEN>" }
+      "env": { "AUTH_HEADER": "Bearer <jeton hub:full>" }
     }
   }
 }
@@ -99,11 +96,12 @@ réseau local.
 
 ### Sans réseau : stdio
 
-Un client qui lance lui-même le serveur (stdio) n'a besoin ni de port ni de
-secret. Sur la machine du hub, depuis le dossier du dépôt :
+Un client qui lance lui-même le serveur (stdio) n'a pas besoin de port.
+Pas d'en-tête HTTP en stdio : le jeton se passe en variable. Sur la
+machine du hub, depuis le dossier du dépôt :
 
 ```bash
-docker compose run --rm -T -e MCP_TRANSPORT=stdio mcp
+docker compose run --rm -T -e MCP_TRANSPORT=stdio -e PHOENIX_API_TOKEN=<jeton hub:full> mcp
 ```
 
 Depuis un autre poste, la même commande à travers SSH :
@@ -113,7 +111,7 @@ Depuis un autre poste, la même commande à travers SSH :
   "mcpServers": {
     "phoenix": {
       "command": "ssh",
-      "args": ["moi@serveur", "cd /chemin/phoenix-health-hub && docker compose run --rm -T -e MCP_TRANSPORT=stdio mcp"]
+      "args": ["moi@serveur", "cd /chemin/phoenix-health-hub && docker compose run --rm -T -e MCP_TRANSPORT=stdio -e PHOENIX_API_TOKEN=<jeton hub:full> mcp"]
     }
   }
 }
@@ -143,8 +141,7 @@ retirées ».
 
 | Symptôme | Action |
 |----------|--------|
-| Le conteneur `mcp` s'arrête aussitôt | `MCP_AUTH_TOKEN` vide : le définir (ou `MCP_TRANSPORT=stdio`). |
-| 401 côté client | En-tête absent ou secret différent de `MCP_AUTH_TOKEN`. |
-| Outils en erreur `403: User session or hub:full token required` | `PHOENIX_API_TOKEN` n'a pas le scope `hub:full`. |
-| Outils en erreur `401` de l'API | Jeton révoqué / mal copié : en créer un nouveau. |
+| `401 Unauthorized` | En-tête absent, jeton mal copié ou révoqué : en créer un nouveau. |
+| `403 Forbidden: the token needs the hub:full scope` | Le jeton n'a pas « Accès complet — MCP / assistant ». |
+| `502 API unreachable` | Le conteneur `mcp` ne joint pas l'API : `docker compose ps`, `docker compose logs mcp`. |
 | Injoignable depuis un autre appareil | `MCP_BIND=0.0.0.0`, puis `docker compose --profile mcp up -d mcp`. |
