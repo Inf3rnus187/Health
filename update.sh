@@ -6,9 +6,11 @@
 #                               git pull && docker compose up -d --build …)
 #   ./update.sh --check         fetch; write what an update would bring
 #                               (run/update.json, read by the web page)
-#   ./update.sh --cron          for cron, every minute: check once an hour,
-#                               run the update asked for on the web page
+#   ./update.sh --cron          for cron, every minute: check GitHub every
+#                               15 min, run the update asked for on the page
 #   ./update.sh --install-cron  add that cron line for the current user
+#   … --auto                    (with --cron / --install-cron) also install
+#                               a waiting update by itself, without the click
 #
 # The web page never touches Docker: its « Installer » button only drops
 # run/update-request; this script, run by you or by cron on the host,
@@ -25,7 +27,7 @@ export GIT_TERMINAL_PROMPT=0
 
 RUN="run"
 COMPOSE="${COMPOSE:-docker compose}"
-CHECK_EVERY=3600
+CHECK_EVERY=900
 
 mkdir -p "$RUN"
 chmod 1777 "$RUN" 2>/dev/null || true  # the API (uid 10001) drops requests
@@ -118,23 +120,28 @@ cron() {
     [ -f "$RUN/update.json" ] && last="$(date -r "$RUN/update.json" +%s)"
     if [ $(( $(date +%s) - last )) -ge "$CHECK_EVERY" ]; then
         check >/dev/null || true
+        if [ "${1:-}" = "--auto" ] && [ "$(waiting)" -gt 0 ]; then
+            update || true
+        fi
     fi
 }
 
+waiting() {  # changes waiting, from the last check
+    grep -o '"behind": [0-9]*' "$RUN/update.json" 2>/dev/null | grep -o '[0-9]*$' || echo 0
+}
+
 install_cron() {
-    local line="* * * * * cd $(pwd) && ./update.sh --cron >> run/update.log 2>&1"
-    if crontab -l 2>/dev/null | grep -Fq "./update.sh --cron"; then
-        echo "Déjà installé : $(crontab -l | grep -F './update.sh --cron')"
-        return 0
-    fi
-    (crontab -l 2>/dev/null; echo "$line") | crontab -
+    local mode="--cron${1:+ $1}"
+    local line="* * * * * cd $(pwd) && ./update.sh $mode >> run/update.log 2>&1"
+    # one line only: an earlier one (with or without --auto) is replaced
+    (crontab -l 2>/dev/null | grep -Fv "./update.sh --cron"; echo "$line") | crontab -
     echo "Installé : $line"
 }
 
 case "${1:-}" in
     --check) check ;;
-    --cron) cron ;;
-    --install-cron) install_cron ;;
+    --cron) cron "${2:-}" ;;
+    --install-cron) install_cron "${2:-}" ;;
     "") update ;;
-    *) echo "Usage: $0 [--check | --cron | --install-cron]" >&2; exit 2 ;;
+    *) echo "Usage: $0 [--check | --cron [--auto] | --install-cron [--auto]]" >&2; exit 2 ;;
 esac

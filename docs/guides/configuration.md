@@ -42,8 +42,13 @@ Recharger** ». Pour être prévenu **avant**, et installer d'un clic :
 # * * * * * cd <dossier> && ./update.sh --cron >> run/update.log 2>&1
 ```
 
-Chaque minute, le cron exécute une mise à jour demandée depuis la page ; une
-fois par heure, il regarde GitHub (`git fetch`). La page affiche alors
+Chaque minute, le cron exécute une mise à jour demandée depuis la page ;
+toutes les 15 minutes, il regarde GitHub (`git fetch`) — `./update.sh --check`
+le fait tout de suite. Rien ne s'installe sans votre clic, sauf en mode
+automatique : `./update.sh --install-cron --auto` (remplace la ligne cron)
+installe seul chaque mise à jour trouvée ; `./update.sh --install-cron` revient
+au clic. Le bandeau n'apparaît que s'il y a des changements à installer sur
+la branche suivie par l'hôte (`git status` la nomme). La page affiche alors
 « **Mise à jour disponible** : 3 changements — à reconstruire sur l'hôte :
 interface web, API et worker » (ou « rien à reconstruire, documentation
 seulement »), la liste des changements, « **Installer** » et « Plus tard ».
