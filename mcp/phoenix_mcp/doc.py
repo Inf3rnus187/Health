@@ -63,6 +63,7 @@ def _names(module: ModuleType) -> list[str]:
         for name, obj in vars(module).items()
         if inspect.iscoroutinefunction(obj)
         and obj.__module__ == module.__name__
+        and not name.startswith("_")
     ]
 
 

@@ -271,3 +271,20 @@ async def test_auto_export_stores_raw_samples_idempotently(
         MEAS, params={"metric_key": "activity.steps"}, headers=auth
     )
     assert meas.json()[0]["value_num"] == 120
+
+
+async def test_tally_reports_previous_and_takes_back(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """Adding never erases; a negative amount corrects, never below 0."""
+    url = f"{SYNC}/tally"
+    body = {"metric": "habit.cigarettes", "date_key": "2026-09-20"}
+    added = await client.post(url, json={**body, "amount": 7}, headers=auth)
+    assert added.json()["previous"] == 0.0
+    one = await client.post(url, json=body, headers=auth)
+    assert (one.json()["previous"], one.json()["total"]) == (7.0, 8.0)
+    back = await client.post(url, json={**body, "amount": -1}, headers=auth)
+    assert back.json()["total"] == 7.0
+    too_far = await client.post(url, json={**body, "amount": -9}, headers=auth)
+    assert too_far.status_code == 422
+    assert "below 0" in too_far.json()["detail"]

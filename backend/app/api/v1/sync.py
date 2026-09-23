@@ -17,6 +17,7 @@ from app.core.deps import (
 )
 from app.core.deps_query import require_scope_flex
 from app.core.scopes import INGEST_WATCH, WRITE_MEASUREMENTS
+from app.models.base import utcnow
 from app.schemas.ingest import (
     HealthSyncPayload,
     IngestPayload,
@@ -25,7 +26,14 @@ from app.schemas.ingest import (
     TallyPayload,
     TallyResult,
 )
-from app.services import audit, auto_export, ingest, shortcut, tally
+from app.services import (
+    audit,
+    auto_export,
+    ingest,
+    shortcut,
+    tally,
+    timed_entries,
+)
 from app.services import tokens as tokens_svc
 
 router = APIRouter(prefix="/sync", tags=["sync"])
@@ -90,18 +98,30 @@ async def sync_health(
 async def tally_counter(
     body: TallyPayload, principal: FlexWriteDep, session: SessionDep
 ) -> TallyResult:
-    """Add to a daily counter (café, cigarette, bouteille d'eau)."""
-    day = body.date_key or date.today()
-    total = await tally.increment(
+    """Add to a daily counter (café, cigarette, bouteille d'eau).
+
+    Never erases the day's total; a negative amount takes back a wrong
+    entry. Each step is audited with the day's total before and after.
+    """
+    user_id = principal.user.id
+    day = body.date_key or await timed_entries.local_day(
+        session, user_id, utcnow()
+    )
+    step = await tally.increment(
         session,
-        principal.user.id,
+        user_id,
         body.metric,
         body.amount,
         day,
         token_id=principal.token_id,
     )
     await session.commit()
-    return TallyResult(metric=body.metric, date_key=day, total=total)
+    return TallyResult(
+        metric=body.metric,
+        date_key=day,
+        previous=step.previous,
+        total=step.total,
+    )
 
 
 @router.post("/auto-export", response_model=IngestResult)

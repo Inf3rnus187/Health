@@ -3,7 +3,7 @@
 Le serveur MCP donne à un assistant (Claude Desktop, Claude Code, tout
 client MCP) **l'accès à tout le hub** : données Apple Santé, Dossier,
 Suivi, documents et leur texte, marqueurs, poids, photos, rapports avec
-synthèse, automatisations — 62 outils, listés avec leurs paramètres dans
+synthèse, automatisations — 63 outils, listés avec leurs paramètres dans
 [`mcp-tools.md`](../mcp-tools.md). Chaque outil appelle l'API REST : il voit
 exactement ce que voient les pages.
 
@@ -127,6 +127,12 @@ Depuis un autre poste, la même commande à travers SSH :
   maladie ou un traitement, ajouter un rendez-vous, envoyer un document puis
   le faire lire, relancer une lecture IA, réconcilier les données, générer
   un rapport (synthèse clinique), lancer une automatisation.
+- **Compter / saisir sans rien effacer** : « ajoute une clope », « un café
+  de plus » → `add_to_counter`, qui **ajoute** au total du jour et répond
+  le total avant et après (montant négatif pour retirer une erreur,
+  jamais sous 0). `record_measurement` **remplace** la valeur du jour
+  (poids, sommeil…) : s'il y en a déjà une différente, il refuse tant que
+  l'utilisateur n'a pas confirmé la nouvelle valeur (`replace=true`).
 - **Tout le reste** : `api_get` / `api_call` atteignent n'importe quelle
   route de la [référence API](../api.md). Les routes destructrices agissent
   sur de vraies données : l'assistant doit demander confirmation.
@@ -144,4 +150,5 @@ retirées ».
 | `401 Unauthorized` | En-tête absent, jeton mal copié ou révoqué : en créer un nouveau. |
 | `403 Forbidden: the token needs the hub:full scope` | Le jeton n'a pas « Accès complet — MCP / assistant ». |
 | `502 API unreachable` | Le conteneur `mcp` ne joint pas l'API : `docker compose ps`, `docker compose logs mcp`. |
+| Une valeur a été remplacée par erreur | Chaque valeur remplacée reste dans le journal d'audit (champs `replaced` / `previous`) : `docker compose exec db psql -U phoenix phoenix -c "select created_at, payload from audit_log where entity = 'measurement' order by created_at desc limit 20"` (`POSTGRES_USER` / `POSTGRES_DB` de `.env`), puis remettre la bonne valeur. |
 | Injoignable depuis un autre appareil | `MCP_BIND=0.0.0.0`, puis `docker compose --profile mcp up -d mcp`. |

@@ -141,6 +141,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The MCP could erase a count.** « Ajoute une clope » went through
+  `record_measurement`, which *replaces* the day's value: the total was
+  overwritten (1, then 11). Now:
+  - new MCP tool **`add_to_counter`** (`POST /sync/tally`) adds to the
+    day's total and never erases it; a negative amount takes back a
+    wrong entry, never below 0; it returns the total before and after;
+  - `record_measurement` refuses to replace a different value unless
+    `replace=true`, passed only after the user confirmed, and returns
+    the value it replaced; the server instructions say so;
+  - `/sync/tally` counts on the user's local day (was the server's UTC
+    day) and answers `previous` with `total`;
+  - every overwrite is recoverable: `POST /measurements` logs the values
+    it replaces in the audit log (`replaced`), each tally step logs the
+    total before and after.
 - Home tiles showed raw sample units (lb, SpO2 fraction) and ignored a
   newer typed weigh-in; QuickWeight used the UTC date and refreshed
   nothing.

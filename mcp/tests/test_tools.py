@@ -87,6 +87,58 @@ def test_daily_values_carry_their_metric_name() -> None:
     assert named["value"] == 4.0
 
 
+def _day_holds(value: float | None) -> Seen:
+    """GET /measurements answers ``value`` (none if None); POST echoes."""
+    seen: Seen = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        if request.method == "GET":
+            rows = [] if value is None else [_row(value)]
+            return httpx.Response(200, json=rows)
+        return httpx.Response(201, json=[{"ok": 1}])
+
+    client.configure("http://test/api/v1", "tok", httpx.MockTransport(handler))
+    return seen
+
+
+def _row(value: float) -> dict[str, Any]:
+    return {"metric_id": "m1", "event_id": None, "value_num": value}
+
+
+async def test_counts_are_added_never_replaced() -> None:
+    seen = _capture(payload={"previous": 7.0, "total": 8.0})
+    result = await tools_data.add_to_counter("habit.cigarettes")
+    request = seen[0]
+    assert (request.method, request.url.path) == ("POST", "/api/v1/sync/tally")
+    body = json.loads(request.content)
+    assert body == {"metric": "habit.cigarettes", "amount": 1}
+    assert result["total"] == 8.0
+
+
+async def test_record_refuses_to_erase_a_value() -> None:
+    seen = _day_holds(7.0)
+    with pytest.raises(tools_data.OverwriteError, match="already holds 7.0"):
+        await tools_data.record_measurement("habit.cigarettes", 1, "2026-09-20")
+    assert [r.method for r in seen] == ["GET"]
+
+
+async def test_record_replaces_once_confirmed() -> None:
+    seen = _day_holds(7.0)
+    result = await tools_data.record_measurement(
+        "habit.cigarettes", 9, "2026-09-20", replace=True
+    )
+    assert [r.method for r in seen] == ["GET", "POST"]
+    assert result["previous"] == 7.0
+
+
+async def test_record_writes_an_empty_or_equal_day() -> None:
+    for held, value in ((None, 72.4), (5.0, "5")):
+        seen = _day_holds(held)
+        await tools_data.record_measurement("body.weight", value, "2026-09-20")
+        assert [r.method for r in seen] == ["GET", "POST"]
+
+
 async def test_save_condition_creates_or_replaces() -> None:
     seen = _capture()
     await tools_record.save_condition("Asthme")

@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-62 outils.
+63 outils.
 
 ## Données et métriques
 
@@ -77,11 +77,29 @@ Rebuild one truth from the stored data (no AI).
 Merges duplicate keys, aligns with the HealthKit catalog and
 recomputes every daily value from raw samples (in the worker).
 
+### `add_to_counter`
+
+ADD to a day's count: cigarettes, coffees, water bottles, urges.
+
+Use it for "ajoute une clope / un café / une bouteille": it adds
+``amount`` to the day's total (default: the user's today) and never
+erases it. A negative amount takes back a wrong entry (never below
+0). Returns the total before (``previous``) and after (``total``).
+Keys: habit.cigarettes, habit.coffee, water.bottles_1_5,
+habit.urges_broken (list_metrics domain "habit" for others).
+
+Paramètres : `metric_key`* (string), `amount` (number, défaut `1`), `date_key` (string | null, défaut `None`)
+
 ### `record_measurement`
 
-Record one value (weight, cigarettes, symptom…); idempotent per day.
+SET a metric's value for a day (weight, sleep, a symptom…).
 
-Paramètres : `metric_key`* (string), `value`* (any), `date_key` (string | null, défaut `None`)
+It REPLACES the day's value: never use it to add to a count (use
+add_to_counter). When the day already holds a different value it
+refuses, unless ``replace`` is true — pass it only after the user
+confirmed the new value. Returns the value it replaced (``previous``).
+
+Paramètres : `metric_key`* (string), `value`* (any), `date_key` (string | null, défaut `None`), `replace` (boolean, défaut `False`)
 
 ### `delete_measurement`
 

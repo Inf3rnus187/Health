@@ -63,10 +63,11 @@ class TallyPayload(BaseModel):
 
 
 class TallyResult(BaseModel):
-    """The metric's running daily total after the increment."""
+    """The metric's daily total before and after the increment."""
 
     metric: str
     date_key: date
+    previous: float = 0.0
     total: float
 
 

@@ -162,7 +162,7 @@ Depuis l'iPhone, un Raccourci « Pipi » en un appui :
 | Une ordonnance → mes traitements | Dossier › Ajouter le document, attendre la lecture, puis « Ajouter aux traitements ». |
 | Suivre une maladie | Suivi › déclarer la maladie (ou la confirmer depuis « À confirmer »). |
 | Un rapport pour le médecin | Rapports › « Synthèse clinique IA » › Générer, puis Télécharger. |
-| Compter mes cigarettes | Raccourci iPhone : `POST /api/v1/sync/tally?token=<jeton write:measurements>` avec `{"metric":"habit.cigarettes"}` — chaque appui ajoute 1 au total du jour (`amount` pour un autre pas). |
+| Compter mes cigarettes | Raccourci iPhone : `POST /api/v1/sync/tally?token=<jeton write:measurements>` avec `{"metric":"habit.cigarettes"}` — chaque appui ajoute 1 au total du jour (`amount` pour un autre pas, négatif pour retirer une erreur). Par l'assistant MCP : « ajoute une clope » (outil `add_to_counter`, qui ajoute et n'efface jamais). |
 | Noter un pipi | Journal › « Pipi maintenant », ou le Raccourci iPhone ci-dessus. |
 | Noter un repas et savoir s'il était sain | Journal › Ajouter un repas (description + photo) › l'analyse s'affiche sous le repas. |
 | Vérifier que tout concorde | Données › Tout ce qui est enregistré. |

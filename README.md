@@ -43,7 +43,7 @@ and tested:
 | **Photo pipeline** (upload → EXIF‑strip/normalize → Ollama vision → compare) | ✅ |
 | **Dashboards** per domain (`/dashboard/{domain}` + React domain tabs) | ✅ |
 | **Exports** CSV/JSON/XLSX/FHIR + async **clinical PDF** reports | ✅ |
-| **MCP server** — 62 tools covering the whole hub, as a REST‑API client (each client uses its own `hub:full` token) | ✅ |
+| **MCP server** — 63 tools covering the whole hub, as a REST‑API client (each client uses its own `hub:full` token) | ✅ |
 | **Automations** (trigger→action: reminder/capture) + run endpoint | ✅ |
 | **Hardening**: optional TOTP MFA, at‑rest media encryption, RGPD erasure | ✅ |
 | **Supply chain**: gitleaks, pip‑audit, pnpm audit, Trivy, syft SBOM (CI) | ✅ |
@@ -122,7 +122,7 @@ Every variable is explained in the
 | [Ingestion](docs/guides/ingestion.md) | Apple Santé, Health Auto Export, Raccourcis, montre, PPC, photos. |
 | [MCP](docs/guides/mcp.md) | Brancher un assistant (Claude Desktop / Code, stdio) de façon sûre. |
 | [Référence API](docs/api.md) | Toutes les routes, leurs paramètres et le droit exigé (générée depuis le code). |
-| [Outils MCP](docs/mcp-tools.md) | Les 62 outils et leurs paramètres (générée depuis le serveur). |
+| [Outils MCP](docs/mcp-tools.md) | Les 63 outils et leurs paramètres (générée depuis le serveur). |
 | [Architecture](docs/architecture.md), [modèle de données](docs/data-model.md), [ADR](docs/adr/) | Conception. |
 
 ---
@@ -363,7 +363,7 @@ phoenix-health-hub/
 │   └── app/{core,models,schemas,services,api,workers,seed}
 ├── frontend/               # React + Vite + TS (theme, api, components)
 ├── nginx/                  # reverse proxy + React build image
-├── mcp/                    # MCP server (62 tools, API client)
+├── mcp/                    # MCP server (63 tools, API client)
 ├── tools/                  # custom code-limit checker
 └── docs/                   # architecture, data model, guides, ADRs
 ```

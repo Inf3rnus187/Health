@@ -98,7 +98,18 @@ async def daily_summary(date_key: str | None = None) -> Any:
 def named(row: dict[str, Any], metrics: dict[str, Any]) -> dict[str, Any]:
     """A daily value with its metric key, label and unit."""
     metric = metrics.get(row["metric_id"], {})
-    value = next(
+    return {
+        "key": metric.get("key"),
+        "label": metric.get("label"),
+        "unit": metric.get("unit"),
+        "value": value_of(row),
+        "source": row.get("source"),
+    }
+
+
+def value_of(row: dict[str, Any]) -> Any:
+    """Whichever typed column holds a daily row's value."""
+    return next(
         (
             row[k]
             for k in ("value_num", "value_text", "value_bool")
@@ -106,13 +117,6 @@ def named(row: dict[str, Any], metrics: dict[str, Any]) -> dict[str, Any]:
         ),
         row.get("value_time") or row.get("value_json"),
     )
-    return {
-        "key": metric.get("key"),
-        "label": metric.get("label"),
-        "unit": metric.get("unit"),
-        "value": value,
-        "source": row.get("source"),
-    }
 
 
 @mcp.tool()
@@ -135,17 +139,71 @@ async def reconcile_data() -> Any:
     return await client.post("/data/reconcile")
 
 
+class OverwriteError(RuntimeError):
+    """A write that would silently erase data."""
+
+
+@mcp.tool()
+async def add_to_counter(
+    metric_key: str, amount: float = 1, date_key: str | None = None
+) -> Any:
+    """ADD to a day's count: cigarettes, coffees, water bottles, urges.
+
+    Use it for "ajoute une clope / un café / une bouteille": it adds
+    ``amount`` to the day's total (default: the user's today) and never
+    erases it. A negative amount takes back a wrong entry (never below
+    0). Returns the total before (``previous``) and after (``total``).
+    Keys: habit.cigarettes, habit.coffee, water.bottles_1_5,
+    habit.urges_broken (list_metrics domain "habit" for others).
+    """
+    body = {"metric": metric_key, "amount": amount}
+    if date_key:
+        body["date_key"] = date_key
+    return await client.post("/sync/tally", body)
+
+
 @mcp.tool()
 async def record_measurement(
-    metric_key: str, value: Any, date_key: str | None = None
+    metric_key: str,
+    value: Any,
+    date_key: str | None = None,
+    replace: bool = False,
 ) -> Any:
-    """Record one value (weight, cigarettes, symptom…); idempotent per day."""
-    item = {
-        "metric_key": metric_key,
-        "date_key": today(date_key),
-        "value": value,
-    }
-    return await client.post("/measurements", {"items": [item]})
+    """SET a metric's value for a day (weight, sleep, a symptom…).
+
+    It REPLACES the day's value: never use it to add to a count (use
+    add_to_counter). When the day already holds a different value it
+    refuses, unless ``replace`` is true — pass it only after the user
+    confirmed the new value. Returns the value it replaced (``previous``).
+    """
+    day = today(date_key)
+    previous = await _stored(metric_key, day)
+    if previous is not None and not replace and not same(previous, value):
+        raise OverwriteError(
+            f"{metric_key} already holds {previous} on {day}; nothing was "
+            "written. To add to a count use add_to_counter. To replace "
+            "it, confirm the new value with the user, then call again "
+            "with replace=true."
+        )
+    item = {"metric_key": metric_key, "date_key": day, "value": value}
+    rows = await client.post("/measurements", {"items": [item]})
+    return {"previous": previous, "recorded": rows}
+
+
+async def _stored(metric_key: str, day: str) -> Any:
+    """The value a metric already holds for ``day`` (None if empty)."""
+    params = {"metric_key": metric_key, "start": day, "end": day}
+    rows = await client.get("/measurements", params)
+    daily = [row for row in rows if row.get("event_id") is None]
+    return value_of(daily[0]) if daily else None
+
+
+def same(stored_value: Any, value: Any) -> bool:
+    """Whether a new value equals the stored one (5 == 5.0 == "5")."""
+    try:
+        return float(stored_value) == float(value)
+    except (TypeError, ValueError):
+        return str(stored_value) == str(value)
 
 
 @mcp.tool()

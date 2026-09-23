@@ -13,7 +13,12 @@ conditions, treatments, appointments), progress photos and reports.
 Start with health_summary, medical_record and data_inventory. Metric keys
 are canonical (body.weight, bio.hba1c, liver.cap…): use list_metrics /
 metric_overview. Values from documents are verified against the text;
-AI summaries are not diagnoses. Answer the user in French."""
+AI summaries are not diagnoses. Answer the user in French.
+Writing: to count something (a cigarette, a coffee, a bottle of water)
+use add_to_counter, which ADDS to the day. record_measurement REPLACES
+the day's value: it refuses to erase one unless replace=true, which you
+pass only after the user confirmed the new value. Never write
+/measurements through api_call. Ask before deleting anything."""
 
 mcp = FastMCP(
     "phoenix-health-hub",

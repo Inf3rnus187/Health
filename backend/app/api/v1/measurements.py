@@ -21,7 +21,7 @@ from app.schemas.measurement import (
     Series,
     SeriesPoint,
 )
-from app.services import audit
+from app.services import audit, overwrites
 from app.services import measurements as svc
 
 router = APIRouter(prefix="/measurements", tags=["measurements"])
@@ -37,8 +37,13 @@ WriteDep = Annotated[Principal, Depends(require_scope(WRITE_MEASUREMENTS))]
 async def create(
     body: MeasurementBatch, principal: WriteDep, session: SessionDep
 ) -> list[Measurement]:
-    """Record one or more measurements (idempotent, batch)."""
+    """Record one or more measurements (idempotent, batch).
+
+    A day's value is **replaced**, not added to: use ``/sync/tally`` to
+    add to a count. The values replaced are kept in the audit log.
+    """
     is_user = principal.source == "jwt"
+    previous = await overwrites.replaced(session, principal.user.id, body.items)
     rows = await svc.record_batch(
         session,
         principal.user.id,
@@ -52,7 +57,7 @@ async def create(
         entity="measurement",
         user_id=principal.user.id,
         source="api" if is_user else "token",
-        payload={"count": len(rows)},
+        payload={"count": len(rows), "replaced": previous},
     )
     await session.commit()
     return rows
