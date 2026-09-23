@@ -18,6 +18,10 @@
 # ============================================================================
 set -euo pipefail
 cd "$(dirname "$0")"
+# cron starts with a bare PATH: find docker where NAS and distros put it.
+export PATH="$PATH:/usr/local/bin:/usr/bin:/bin:/snap/bin"
+# git must never wait for a password under cron (it would hang).
+export GIT_TERMINAL_PROMPT=0
 
 RUN="run"
 COMPOSE="${COMPOSE:-docker compose}"
