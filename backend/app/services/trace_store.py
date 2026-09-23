@@ -9,6 +9,7 @@ a meal bought can also be logged as a meal with its price.
 
 from __future__ import annotations
 
+import hashlib
 from datetime import date, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -21,9 +22,11 @@ from app.models.work import Evidence
 from app.services import evidence, evidence_files, trace_import, traces
 from app.services.daily_rollup import user_zone
 from app.services.timed_entries import day_bounds, utc
-from app.services.trace_import import Trace
+from app.services.trace_model import Trace
 
 MAX_LISTED = 50
+#: Kinds kept as one trace a day (a day of tickets).
+DAILY = {"activite"}
 _SAME_TIME = timedelta(minutes=1)
 
 
@@ -34,13 +37,17 @@ async def import_traces(
     *,
     dry_run: bool,
     meals: bool,
+    person: str = "",
 ) -> tuple[dict[str, Any], list[Meal]]:
-    """Import ``(file name, kind, content)`` files; meals to read after."""
+    """Import ``(file name, kind, content)`` files; meals to read after.
+
+    ``person``: whose actions to keep from a ticket export.
+    """
     tz = await user_zone(session, user_id)
     report: dict[str, Any] = {"dry_run": dry_run, "files": []}
     logged: list[Meal] = []
     for name, kind, data in files:
-        found, skipped, columns = trace_import.read(data, name, kind, tz)
+        found, skipped, about = trace_import.read(data, name, kind, tz, person)
         counts = {"new": 0, "merged": 0, "duplicates": 0}
         for trace in found:
             state, meal = await _save(
@@ -50,7 +57,7 @@ async def import_traces(
             logged += [meal] if meal else []
         found_all = (found, skipped, counts)
         report["files"].append(
-            _summary(name, kind, found_all, columns, tz, dry_run)
+            _summary(name, kind, found_all, about, tz, dry_run)
         )
     return report, logged
 
@@ -92,40 +99,57 @@ async def _match(
             Evidence.occurred_at < end,
         )
     )
-    for row in rows.scalars():
-        same_amount = (row.amount is None and trace.amount is None) or (
-            row.amount is not None
-            and trace.amount is not None
-            and abs(row.amount - trace.amount) < 0.005  # noqa: PLR2004
-        )
-        close = abs(utc(row.occurred_at) - trace.start) <= _SAME_TIME
-        if same_amount and (
-            close or not row.time_known or not trace.time_known
-        ):
-            return row
-    return None
+    return next((row for row in rows.scalars() if _same(row, trace)), None)
+
+
+def _same(row: Evidence, trace: Trace) -> bool:
+    """Whether a stored item of that kind and day is this trace.
+
+    A day of tickets is the same whatever its times (a later export has
+    more actions); a document, only with the same file.
+    """
+    if trace.kind in DAILY:
+        return True
+    if trace.kind in evidence.PROOFS:
+        return trace.file is not None and row.sha256 == _sha(trace.file[2])
+    same_amount = (row.amount is None and trace.amount is None) or (
+        row.amount is not None
+        and trace.amount is not None
+        and abs(row.amount - trace.amount) < 0.005  # noqa: PLR2004
+    )
+    close = abs(utc(row.occurred_at) - trace.start) <= _SAME_TIME
+    return same_amount and (close or not row.time_known or not trace.time_known)
 
 
 def _brings(row: Evidence, trace: Trace) -> bool:
-    """Whether a trace met again adds something (time, end, file)."""
+    """Whether a trace met again adds something (time, end, file, text)."""
+    if trace.kind in DAILY:
+        return trace.actions > (row.count or 1)
     return bool(
         (trace.time_known and not row.time_known)
         or (trace.end and not row.ended_at)
         or (trace.file and not row.file_path)
+        or bool(_new_parts(row, trace))
     )
 
 
 def _merge(row: Evidence, trace: Trace) -> None:
     """Complete a stored trace with what the new one brings."""
+    if trace.kind in DAILY:  # the day seen again, with more actions
+        row.occurred_at, row.ended_at = trace.start, trace.end
+        row.description, row.count = trace.what, trace.actions
+        row.title = trace.vendor[:200]
+        return
     if trace.time_known and not row.time_known:
         row.occurred_at, row.time_known = trace.start, True
     if trace.end and not row.ended_at:
         row.ended_at = trace.end
     if trace.file and not row.file_path:
         evidence_files.attach(row, trace.file)
-    if trace.what and trace.what not in (row.description or ""):
-        row.description = " ; ".join(
-            p for p in (row.description, trace.what) if p
+    added = _new_parts(row, trace)
+    if added:
+        row.description = " · ".join([row.description or "", *added]).strip(
+            " ·"
         )[:8000]
     have = [p for p in (row.title or "").split(" — ") if p]
     extra = [p for p in trace.vendor.split(" — ") if p and p not in have]
@@ -145,6 +169,7 @@ def _fields(trace: Trace) -> dict[str, Any]:
         "place": (trace.place or trace.vendor)[:300],
         "amount": trace.amount,
         "currency": trace.currency,
+        "count": trace.actions,
     }
 
 
@@ -152,7 +177,7 @@ def _summary(
     name: str,
     kind: str,
     parts: tuple[list[Trace], list[dict[str, Any]], dict[str, int]],
-    columns: Any,
+    about: dict[str, Any],
     tz: ZoneInfo,
     dry_run: bool,
 ) -> dict[str, Any]:
@@ -169,19 +194,11 @@ def _summary(
         "first_day": days[0] if days else None,
         "last_day": days[-1] if days else None,
         "total": round(sum(t.amount or 0 for t in found), 2),
-        "columns": _columns(columns),
+        "columns": about,
         "preview": [_preview(t, tz) for t in found[:8]],
         "skipped_count": len(skipped),
         "skipped": skipped[:MAX_LISTED],
     }  # fmt: skip
-
-
-def _columns(columns: Any) -> dict[str, Any]:
-    """The columns found (a receipt: the document was read)."""
-    if columns is None:
-        return {"document": "reçu / facture lu"}
-    found = {k: v for k, v in columns._asdict().items() if v}
-    return {**found, "extras": list(found.get("extras", ()))}
 
 
 def _preview(trace: Trace, tz: ZoneInfo) -> dict[str, Any]:
@@ -196,3 +213,14 @@ def _preview(trace: Trace, tz: ZoneInfo) -> dict[str, Any]:
         "amount": trace.amount,
         "what": trace.what[:120],
     }
+
+
+def _new_parts(row: Evidence, trace: Trace) -> list[str]:
+    """What a trace met again says that the stored one does not."""
+    have = row.description or ""
+    return [p for p in trace.what.split(" · ") if p.strip() and p not in have]
+
+
+def _sha(data: bytes) -> str:
+    """A file's SHA-256, as stored with the evidence."""
+    return hashlib.sha256(data).hexdigest()

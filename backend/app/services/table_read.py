@@ -18,6 +18,7 @@ from openpyxl import load_workbook
 
 Row = dict[str, str]
 _MIN_HEADERS = 2
+_MAX_DEPTH = 3
 
 
 def rows_of(data: bytes, filename: str) -> list[Row]:
@@ -55,6 +56,7 @@ def _csv(text: str) -> list[list[str]]:
     sample = text[:4096]
     try:
         dialect: Any = csv.Sniffer().sniff(sample, delimiters=",;\t|")
+        dialect.doublequote = True  # "" inside a quoted cell (a comment)
     except csv.Error:
         dialect = csv.excel
     return [row for row in csv.reader(io.StringIO(text), dialect)]
@@ -101,18 +103,28 @@ def _table(cells: list[list[str]]) -> list[Row]:
     ]
 
 
-def _json(value: Any) -> list[Row]:
-    """A JSON list of records (or a record holding one)."""
+def _json(value: Any, depth: int = 0) -> list[Row]:
+    """A JSON list of records (or a record holding one, even deep)."""
     if isinstance(value, dict):
         lists = [v for v in value.values() if isinstance(v, list)]
-        return _json(lists[0]) if lists else [_flat(value)]
+        if lists:
+            return _json(lists[0], depth + 1)
+        inner = [v for v in value.values() if isinstance(v, dict)]
+        if inner and depth < _MAX_DEPTH:  # {"data": {"items": [...]}}
+            found = _json(inner[0], depth + 1)
+            if len(found) > 1 or (found and found[0]):
+                return found
+        return [_flat(value)]
     return [_flat(item) for item in value if isinstance(item, dict)]
 
 
-def _flat(record: dict[str, Any]) -> Row:
-    """A record's scalar fields as text."""
-    return {
-        str(k): "" if v is None else str(v)
-        for k, v in record.items()
-        if not isinstance(v, list | dict)
-    }
+def _flat(record: dict[str, Any], prefix: str = "") -> Row:
+    """A record's fields as text; a nested record as ``parent.child``."""
+    out: Row = {}
+    for key, value in record.items():
+        name = f"{prefix}{key}"
+        if isinstance(value, dict) and not prefix:
+            out.update(_flat(value, f"{name}."))
+        elif not isinstance(value, list | dict):
+            out[name] = "" if value is None else str(value)
+    return out

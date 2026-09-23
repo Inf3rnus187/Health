@@ -4,6 +4,7 @@ import { ClockCard } from '../components/work/ClockCard';
 import { SessionList } from '../components/work/SessionList';
 import { WorkImport } from '../components/work/WorkImport';
 import { WorkStatsCard } from '../components/work/WorkStatsCard';
+import { AbsenceImport } from '../components/workfile/AbsenceImport';
 import { AbsencesCard } from '../components/workfile/AbsencesCard';
 import { EvidenceCard } from '../components/workfile/EvidenceCard';
 import { FileSummary } from '../components/workfile/FileSummary';
@@ -40,6 +41,7 @@ const CONTENT: Record<Tab, () => JSX.Element> = {
     <>
       <LogsImport />
       <TraceImport />
+      <AbsenceImport />
       <WorkImport />
     </>
   ),

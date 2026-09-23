@@ -103,7 +103,11 @@ async def test_the_expense_line_after_its_receipt_is_not_doubled(
     receipt = await _import(client, auth, RECEIPT, _invoice())
     assert receipt["new"] == 1 and receipt["preview"][0]["amount"] == 45.5
     sheet = await _import(client, auth, "note_de_frais.xlsx", _expenses())
-    assert (sheet["new"], sheet["duplicates"]) == (2, 1)
+    assert (sheet["new"], sheet["merged"]) == (2, 1)  # the ride: its reason
+    ride = next(e for e in await _evidence(client, auth) if e["kind"] == "taxi")
+    assert "Heures supp" in ride["description"]
+    again = await _import(client, auth, "note_de_frais.xlsx", _expenses())
+    assert again["duplicates"] == 3
     health = await client.get(
         "/api/v1/work/health",
         params={"start": "2026-03-09", "end": "2026-03-13"},

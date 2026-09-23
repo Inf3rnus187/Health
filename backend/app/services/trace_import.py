@@ -14,51 +14,49 @@ unknown — is kept once, the receipt adding its time and its file.
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime, time
-from typing import Any, NamedTuple
+from datetime import UTC, datetime
+from typing import Any
 from zoneinfo import ZoneInfo
 
-from app.services import receipt_read, table_read, trace_columns, work_parse
+from app.services import (
+    receipt_read,
+    table_read,
+    trace_columns,
+    trace_sources,
+    work_parse,
+)
 from app.services.trace_columns import Columns
+from app.services.trace_model import Trace, noon
 from app.services.traces import MEAL_KINDS
 
-#: The time given to a trace known only by its date.
-_NOON = time(12, 0)
 _SPAN = re.compile(r"\s(?:au|a|to|->|→|jusqu'au)\s", re.IGNORECASE)
 
 
-class Trace(NamedTuple):
-    """One trace read from a file (times in UTC)."""
-
-    start: datetime
-    end: datetime | None
-    time_known: bool
-    kind: str
-    place: str
-    vendor: str
-    amount: float | None
-    currency: str
-    what: str
-    group: str
-    #: (file name, media type, bytes) — a receipt is its own proof.
-    file: tuple[str, str, bytes] | None = None
-
-
 def read(
-    data: bytes, name: str, kind: str, tz: ZoneInfo
-) -> tuple[list[Trace], list[dict[str, Any]], Columns | None]:
-    """The traces of a file, the rows left out and the columns found."""
+    data: bytes, name: str, kind: str, tz: ZoneInfo, person: str = ""
+) -> tuple[list[Trace], list[dict[str, Any]], dict[str, Any]]:
+    """The traces of a file, the rows left out and what was read.
+
+    A ticket export gives the ``person``'s activity (default: the most
+    active author, the others listed to choose from).
+    """
     if receipt_read.is_receipt(data, name):
-        receipt = receipt_read.read(data, name, tz)
-        if receipt is None:
-            return [], [{"line": 1, "reason": "aucune date lisible"}], None
-        return [_from_receipt(receipt, kind, (name, data))], [], None
+        return trace_sources.document(data, name, kind, tz)
     rows = table_read.rows_of(data, name)
     if not rows:
-        return [], [{"line": 1, "reason": "fichier illisible ou vide"}], None
+        return [], [{"line": 1, "reason": "fichier illisible ou vide"}], {}
+    tickets = trace_sources.tickets(rows, person, tz)
+    if tickets is not None:
+        return tickets[0], [], tickets[1]
     columns = trace_columns.find(rows)
     found, skipped = _table(rows, columns, kind, tz)
-    return _orders(found), skipped, columns
+    return _orders(found), skipped, _about(columns)
+
+
+def _about(columns: Columns) -> dict[str, Any]:
+    """The columns found, for the preview."""
+    found = {k: v for k, v in columns._asdict().items() if v}
+    return {**found, "extras": list(found.get("extras", ()))}
 
 
 def _table(
@@ -110,26 +108,6 @@ def _trace(
     )
 
 
-def _from_receipt(
-    receipt: receipt_read.Receipt, kind: str, file: tuple[str, bytes]
-) -> Trace:
-    """A receipt as a trace, its file attached."""
-    name, data = file
-    return Trace(
-        start=receipt.start.astimezone(UTC),
-        end=None,
-        time_known=receipt.time_known,
-        kind=(receipt.kind or "frais") if kind == "auto" else kind,
-        place="",
-        vendor=receipt.vendor,
-        amount=receipt.amount,
-        currency="EUR",
-        what=receipt.what,
-        group=name,
-        file=(name, receipt.media_type, data),
-    )
-
-
 def _when(
     row: table_read.Row, c: Columns, tz: ZoneInfo
 ) -> tuple[datetime, bool] | None:
@@ -150,7 +128,7 @@ def _stamp(text: str, tz: ZoneInfo) -> tuple[datetime, bool] | None:
     day = work_parse.day_of(text)  # a date alone: an expense, a hotel
     if day is None:
         return None
-    return datetime.combine(day, _NOON, tzinfo=tz).astimezone(UTC), False
+    return noon(day, tz), False
 
 
 def _span(text: str, tz: ZoneInfo) -> tuple[datetime, datetime] | None:

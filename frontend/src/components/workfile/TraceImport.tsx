@@ -3,28 +3,11 @@ import { useState } from 'react';
 import { postForm, TRACE_KINDS } from '../../api/workfile';
 import { useWorkRefresh } from '../../hooks/useWork';
 import { Choice } from './fields';
+import { Outcome, type TraceReport } from './TraceOutcome';
 
 interface Picked {
   file: File;
   kind: string;
-}
-
-interface FileReport {
-  name: string;
-  label: string;
-  traces: number;
-  new: number;
-  merged: number;
-  duplicates: number;
-  total: number;
-  skipped_count: number;
-  columns: Record<string, string | string[]>;
-}
-
-interface Report {
-  dry_run: boolean;
-  meals: number;
-  files: FileReport[];
 }
 
 const GUESS: [string[], string][] = [
@@ -48,58 +31,25 @@ function guess(name: string): string {
   return hit ? hit[1] : 'auto';
 }
 
-const FIELD: Record<string, string> = {
-  start: 'début',
-  end: 'fin',
-  date: 'date',
-  time: 'heure',
-  amount: 'montant',
-  currency: 'devise',
-  place: 'lieu',
-  what: 'détail',
-  status: 'statut',
-  order: 'commande',
-  vendor: 'société',
-  kind: 'type',
-  extras: 'autres',
-  document: 'document',
-};
-
-function line(f: FileReport): string {
-  const found =
-    Object.entries(f.columns)
-      .map(([key, title]) => `${FIELD[key] ?? key} : « ${String(title)} »`)
-      .join(', ') || 'aucune';
-  return (
-    `${f.name} (${f.label}) : ${f.traces} traces, ${f.new} nouvelles, ` +
-    `${f.merged} rapprochées d’une trace déjà là (reçu ↔ note de frais), ` +
-    `${f.duplicates} déjà là, ${f.total} €, ${f.skipped_count} lignes ` +
-    `ignorées — colonnes lues : ${found}.`
-  );
-}
-
-function Outcome({ report }: { report: Report }) {
-  return (
-    <div className="muted">
-      {report.files.map((f) => (
-        <p key={f.name}>{line(f)}</p>
-      ))}
-      {!report.dry_run && <p>{report.meals} repas ajoutés au Journal.</p>}
-    </div>
-  );
+function formOf(picked: Picked[], person: string): FormData {
+  const form = new FormData();
+  picked.forEach((p) => form.append('files', p.file));
+  picked.forEach((p) => form.append('kinds', p.kind));
+  form.append('person', person);
+  return form;
 }
 
 function useTraceImport(picked: Picked[], meals: boolean) {
-  const [report, setReport] = useState<Report | null>(null);
+  const [report, setReport] = useState<TraceReport | null>(null);
+  const [person, setPerson] = useState('');
   const [error, setError] = useState('');
   const refresh = useWorkRefresh();
-  const run = (dryRun: boolean) => {
-    const form = new FormData();
-    picked.forEach((p) => form.append('files', p.file));
-    picked.forEach((p) => form.append('kinds', p.kind));
+  const run = (dryRun: boolean, who = person) => {
+    setPerson(who);
+    const form = formOf(picked, who);
     const query = `dry_run=${dryRun}&meals=${meals}`;
     setError('');
-    postForm<Report>(`/traces/import?${query}`, form).then(
+    postForm<TraceReport>(`/traces/import?${query}`, form).then(
       (r) => {
         setReport(r);
         if (!dryRun) refresh();
@@ -107,7 +57,25 @@ function useTraceImport(picked: Picked[], meals: boolean) {
       (e: Error) => setError(e.message),
     );
   };
-  return { report, error, run, reset: () => setReport(null) };
+  const reset = () => {
+    setReport(null);
+    setPerson('');
+  };
+  return { report, error, run, reset };
+}
+
+function Head(props: { pick: (list: FileList | null) => void }) {
+  return (
+    <>
+      <h2>Importer des traces (Uber, Navigo, parking, frais, tickets)</h2>
+      <p className="muted">{INTRO}</p>
+      <input
+        type="file"
+        multiple
+        onChange={(e) => props.pick(e.target.files)}
+      />
+    </>
+  );
 }
 
 function Files(props: {
@@ -157,10 +125,11 @@ function Buttons(props: {
 
 const INTRO =
   'Exports CSV, Excel ou JSON (Uber, Uber Eats, Navigo, parking, notes ' +
-  'de frais, relevé bancaire) et reçus ou factures en PDF ou photo. Les ' +
-  'colonnes sont reconnues par leur titre ; un reçu et la ligne de note ' +
-  'de frais du même trajet (même jour, même montant) ne font qu’une ' +
-  'trace : le reçu apporte l’heure et le fichier.';
+  'de frais, relevé bancaire, tickets NinjaOne), reçus ou factures en ' +
+  'PDF ou photo, notes de frais Lucca en PDF (une trace par dépense, le ' +
+  'PDF gardé intact). Les colonnes sont reconnues par leur titre ; un ' +
+  'reçu et la ligne de note de frais du même trajet (même jour, même ' +
+  'montant) ne font qu’une trace : le reçu apporte l’heure et le fichier.';
 
 function MealsBox(props: { on: boolean; set: (on: boolean) => void }) {
   return (
@@ -198,9 +167,7 @@ export function TraceImport() {
   const { pick, setKind } = pickers(picked, setPicked, reset);
   return (
     <section className="card">
-      <h2>Importer des traces (Uber, Uber Eats, Navigo, parking, frais)</h2>
-      <p className="muted">{INTRO}</p>
-      <input type="file" multiple onChange={(e) => pick(e.target.files)} />
+      <Head pick={pick} />
       <Files picked={picked} onKind={setKind} />
       <MealsBox on={meals} set={setMeals} />
       <Buttons
@@ -209,7 +176,9 @@ export function TraceImport() {
         run={run}
       />
       {error && <p className="error">{error}</p>}
-      {report && <Outcome report={report} />}
+      {report && (
+        <Outcome report={report} onPerson={(name) => run(true, name)} />
+      )}
     </section>
   );
 }

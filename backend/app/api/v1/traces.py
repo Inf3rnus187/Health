@@ -21,6 +21,7 @@ async def import_traces(
     kinds: Annotated[list[str], Form()],
     dry_run: Annotated[bool, Query()] = False,
     meals: Annotated[bool, Query()] = False,
+    person: Annotated[str, Form()] = "",
 ) -> dict[str, Any]:
     """Import exports (CSV, Excel, JSON) and receipts (PDF, photo).
 
@@ -29,6 +30,10 @@ async def import_traces(
     line's kind, a receipt's content). Uber, Uber Eats, Navigo, parking
     apps and expense reports are read by their column titles; a receipt
     met again as an expense line (same kind, day, amount) is merged.
+    An expense report PDF (Lucca « Note de frais ») gives one trace per
+    expense and keeps the PDF untouched as a document. A ticket export
+    (NinjaOne…) gives ``person``'s actions, one trace a day (default:
+    the most active author; the preview lists the others).
     ``meals=true`` logs each delivery / meal bought as a meal (with its
     price) for the AI to read. ``dry_run=true`` only reads.
     """
@@ -40,7 +45,12 @@ async def import_traces(
         for upload, kind in zip(files, kinds, strict=True)
     ]
     report, logged = await trace_store.import_traces(
-        session, principal.user.id, batch, dry_run=dry_run, meals=meals
+        session,
+        principal.user.id,
+        batch,
+        dry_run=dry_run,
+        meals=meals,
+        person=person,
     )
     if not dry_run:
         await session.commit()

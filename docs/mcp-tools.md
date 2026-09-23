@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-83 outils.
+84 outils.
 
 ## Données et métriques
 
@@ -401,7 +401,8 @@ Paramètres : `start` (string | null, défaut `None`), `end` (string | null, dé
 
 Record (or replace, with ``absence_id``) an absence.
 
-kind: arret_maladie, accident_travail, maladie_pro, conge or autre.
+kind: arret_maladie, accident_travail, maladie_pro, conge, repos
+(RTT, récupération) or autre.
 
 Paramètres : `start_date`* (string), `end_date`* (string), `kind` (string, défaut `arret_maladie`), `cause` (string, défaut ``), `note` (string, défaut ``), `absence_id` (string | null, défaut `None`)
 
@@ -431,17 +432,35 @@ Paramètres : `occurred_at`* (string), `kind` (string, défaut `capture`), `titl
 
 ### `import_traces`
 
-Import app exports and receipts as traces (Uber, Navigo, parking).
+Import app exports, receipts, expense reports and ticket exports.
 
 ``files``: [{"filename": "trips_data.csv", "text": "...", "kind":
-"auto"}] — or "base64" instead of "text" for a PDF / photo receipt.
-kind: auto (guessed from a type column or the receipt), transport,
-taxi, parking, livraison, repas, hotel or frais. A receipt and the
-expense-report line of the same ride (same day, same amount) become
-one trace. ``meals`` logs deliveries as priced meals. Dry run first,
-then import for real once the user agrees.
+"auto"}] — or "base64" instead of "text" for a PDF / photo. kind:
+auto (guessed), transport, taxi, parking, livraison, repas, hotel,
+frais or activite. A receipt and the expense-report line of the same
+ride (same day, same amount) become one trace. A Lucca expense
+report PDF gives one trace per expense (its comment kept) and keeps
+the PDF untouched as a document. A ticket export (NinjaOne…) gives
+``person``'s actions, one trace a day from the first to the last
+(default: the most active author; the dry run lists the others —
+ask the user which name is theirs). ``meals`` logs deliveries as
+priced meals. Dry run first, then import once the user agrees.
 
-Paramètres : `files`* (array), `meals` (boolean, défaut `True`), `dry_run` (boolean, défaut `True`)
+Paramètres : `files`* (array), `meals` (boolean, défaut `True`), `dry_run` (boolean, défaut `True`), `person` (string, défaut ``)
+
+### `import_absences`
+
+Import rest days, leave and sick leave from an HR export (Lucca…).
+
+``files``: [{"filename": "absences.xlsx", "base64": "..."}] or
+"text" for a CSV / JSON. Start and end days (or one day per row,
+joined), the kind (congés payés → conge, RTT → repos, maladie →
+arret_maladie, accident → accident_travail), refused / cancelled
+rows and remote work skipped. A manager's export: ``person`` kept
+(default: the one with the most rows). Dry run first, then import
+once the user agrees; nothing is added twice.
+
+Paramètres : `files`* (array), `dry_run` (boolean, défaut `True`), `person` (string, défaut ``)
 
 ### `delete_evidence`
 

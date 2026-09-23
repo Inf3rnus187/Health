@@ -19,6 +19,7 @@ SHORT = {
     "repas": "repas",
     "hotel": "hôtel",
     "frais": "frais",
+    "activite": "tickets",
 }
 _MONTH_KINDS = (
     "livraison",
@@ -74,7 +75,8 @@ def _facts(tr: dict[str, Any]) -> list[str]:
     """Presence without clocking, late traces, what meals cost."""
     d = tr["deliveries"]
     return [
-        f"Jours sans pointage où une trace vous place quelque part : "
+        f"Jours sans pointage où une trace vous place quelque part ou "
+        f"montre votre activité (tickets) : "
         f"{len(tr['unclocked_days'])} ({_dates(tr['unclocked_days'])}).",
         f"Traces après 21 h un jour travaillé : {len(tr['late'])} ("
         + ", ".join(

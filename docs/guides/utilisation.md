@@ -226,7 +226,8 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
   « **Générer le rapport PDF complet** » (aussi dans Rapports ›
   « work_health » via l'API ou l'assistant).
 - **Arrêts et absences** : arrêt maladie, accident du travail, maladie
-  professionnelle, congés, autre — dates, **cause**, notes. Le rapport
+  professionnelle, congés, **repos** (RTT, récupération), autre — dates,
+  **cause**, notes ; ou importées de votre outil RH (voir Importer). Le rapport
   liste pour chacun le **travail pointé pendant l'arrêt** et les **preuves
   datées pendant l'arrêt** (appels, dont le dimanche).
 - **Preuves et traces**. Preuves : appel, SMS, mail, capture d'écran,
@@ -289,8 +290,8 @@ l'ordre :
    par jour.
 6. **Arrêts et absences** avec travail, preuves et traces pendant chacun.
 7. **Traces et dépenses** : nombre et montant par type ; jours **sans
-   pointage où une trace vous place quelque part** (présence attestée par
-   un tiers) ; traces après 21 h un jour travaillé ; repas livrés ou
+   pointage où une trace vous place quelque part ou montre votre
+   activité** (présence attestée par un tiers, tickets traités) ; traces après 21 h un jour travaillé ; repas livrés ou
    achetés (nombre, montant, après 21 h, les jours longs — plus de 10 h ou
    débauche après 21 h —, note moyenne IA) ; lien heures travaillées /
    dépense repas du jour ; dépenses par mois et par type.
@@ -336,7 +337,7 @@ transport…), « Lire », puis « Importer ».
 - **Reçus et factures** (PDF avec texte, PDF scanné ou photo lus par
   OCR) : la date, **l'heure** (tirée du nom du fichier quand il la porte,
   comme les reçus Uber `09-05-2026-03H47-….pdf`, sinon du texte), le
-  **montant total payé**, qui a facturé (« Uber — H PRETIGE 41 »), les
+  **montant total payé**, qui a facturé (« Uber — TRANSPORTS TEST »), les
   lignes facturées et le numéro de facture. Le fichier est gardé comme
   preuve (SHA-256).
 - **Un reçu et sa ligne de note de frais ne font qu'une trace** : même
@@ -347,10 +348,51 @@ transport…), « Lire », puis « Importer ».
 - **Notes de frais** : une colonne qui nomme le type de chaque ligne
   (taxi, parking, dîner, déjeuner, hôtel, train…) l'emporte sur le type
   du fichier ; les colonnes sans titre ou non reconnues (motif, « Heures
-  supp suite piratage », plateforme…) sont gardées dans la description ;
+  supp suite incident », plateforme…) sont gardées dans la description ;
   un texte « parking du 2/04/26 10h05 au 05/04/2026 23h32 » donne le
   **début et la fin** exacts. Un séjour de 6 h ou plus (parking, hôtel)
   compte comme **présence sur chaque jour** qu'il couvre.
+- **Notes de frais Lucca en PDF** (l'archive `NDF-…pdf` à valeur
+  probante, ou la note imprimée) : une trace par dépense — jour, nature
+  (taxi, hôtel, autres frais…), fournisseur, montant TTC, montant payé
+  en devise, et le **commentaire** (« Heures tardives suite incident »).
+  Une note de frais ne donne que le jour : l'heure vient du reçu ou de
+  l'export Uber du même trajet, rapproché (même jour, même montant). Le
+  PDF est gardé **intact** comme document (SHA-256) : le cachet
+  électronique d'une archive reste vérifiable sur l'original. Importer
+  l'archive puis la note imprimée ne crée aucun doublon (la seconde
+  n'ajoute que ce qui manquait, par exemple « payé 49,00 $ »).
+- **Tickets (NinjaOne…)** : l'export CSV des tickets et de leurs
+  commentaires. Seuls **vos** commentaires comptent : l'auteur le plus
+  actif est proposé, choisissez votre nom dans la liste de l'aperçu
+  (« Alex Martin (120 actions) »). Une trace **Activité pro** par jour, de la
+  première à la dernière action (l'heure de début saisie dans le ticket
+  compte), chaque action listée — heure, n° et objet du ticket, « privé »
+  — sans le texte des commentaires ni les coordonnées des demandeurs.
+  Elle sert partout : jours travaillés sans pointage, **traces tardives**
+  d'après la dernière action (« 23:10 tickets »), indices des Journées à
+  compléter (début et fin d'activité). Un export plus récent complète
+  les jours déjà importés.
+
+**Absences : export de l'outil RH** (Lucca, Figgo…) — carte
+« Importer des absences » : l'export des absences en CSV, Excel ou JSON.
+
+- Colonnes reconnues par leur titre : **date de début / de fin** (ou un
+  jour par ligne, comme l'API Lucca : les jours se suivant — un week-end
+  entre deux ne coupe pas — sont regroupés en une absence), **compte /
+  type d'absence**, **statut**, **collaborateur**, commentaire.
+- Le type décide : congés payés, congé familial… → **Congés** ; RTT,
+  récupération, repos compensateur → **Repos** ; maladie, arrêt →
+  **Arrêt maladie** ; accident (de travail, de trajet) → **Accident du
+  travail** ; maladie professionnelle ; sinon **Autre** (le nom d'origine
+  en cause). Le nom d'origine est gardé dans la note (« Import : RTT »).
+- Refusées et annulées : ignorées ; en attente : importées avec la
+  mention « en attente de validation ». Télétravail, formation,
+  déplacement, mission : du travail, pas une absence — ignorés.
+- Export d'un manager (plusieurs personnes) : la personne ayant le plus
+  de lignes est proposée, choisissez-vous dans la liste.
+- Une absence du même type couvrant déjà ces jours n'est pas ajoutée
+  deux fois.
 
 - Les colonnes sont reconnues **par leur titre**, en français ou en
   anglais (heure de début / fin, date, heure, montant, devise, lieu ou

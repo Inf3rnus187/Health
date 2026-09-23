@@ -8,6 +8,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **HR and tool exports.**
+  - Lucca expense-report PDFs (the sealed archive or the printed report)
+    give one trace per expense: day, nature, supplier, amount, amount
+    paid in another currency, and the comment. The PDF is kept untouched
+    as a document, so its seal stays verifiable. Lines met again (an
+    Uber ride, the other layout of the same report) are merged and
+    complete each other.
+  - Ticket exports (NinjaOne…) give the chosen person's actions: one
+    « Activité pro » trace a day, from the first to the last action,
+    each action listed without the comment text. They count as attested
+    activity on unclocked days, as late traces by their last action, and
+    as hints for days to complete.
+  - `POST /absences/import` reads an HR export (Lucca…: CSV, Excel,
+    JSON): start and end days, or one day per record joined across
+    weekends; the kind (congés payés → congés, RTT → new « repos » kind,
+    maladie → arrêt maladie…); refused, cancelled and remote-work rows
+    are skipped; pending rows are noted; a manager's export keeps one
+    person; nothing is added twice.
+  - Web: an « Importer des absences » card, and the person choice for
+    tickets. MCP: `import_absences`, and `import_traces` takes `person`.
+
 - **Exact periods and pages everywhere.** Hours worked, sessions, the
   work ↔ health summary, proofs and traces, nights, meals and reports
   share one period picker: 7 d / 30 d / 3 months / 1 year / all, plus
@@ -217,6 +238,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- CSV files whose quoted cells contain doubled quotes (a ticket comment)
+  were split into wrong rows: doubled quotes are now always read as one.
 - « Au travail depuis » and the disabled « Embauche maintenant » came
   from any clock-in never closed, even weeks old: only a session opened
   less than 16 h ago is open now.

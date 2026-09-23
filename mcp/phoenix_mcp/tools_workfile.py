@@ -48,7 +48,8 @@ async def save_absence(
 ) -> Any:
     """Record (or replace, with ``absence_id``) an absence.
 
-    kind: arret_maladie, accident_travail, maladie_pro, conge or autre.
+    kind: arret_maladie, accident_travail, maladie_pro, conge, repos
+    (RTT, récupération) or autre.
     """
     body = {"start_date": start_date, "end_date": end_date, "kind": kind,
             "cause": cause, "note": note}  # fmt: skip
@@ -106,25 +107,56 @@ async def add_evidence(
 
 @mcp.tool()
 async def import_traces(
-    files: list[dict[str, str]], meals: bool = True, dry_run: bool = True
+    files: list[dict[str, str]],
+    meals: bool = True,
+    dry_run: bool = True,
+    person: str = "",
 ) -> Any:
-    """Import app exports and receipts as traces (Uber, Navigo, parking).
+    """Import app exports, receipts, expense reports and ticket exports.
 
     ``files``: [{"filename": "trips_data.csv", "text": "...", "kind":
-    "auto"}] — or "base64" instead of "text" for a PDF / photo receipt.
-    kind: auto (guessed from a type column or the receipt), transport,
-    taxi, parking, livraison, repas, hotel or frais. A receipt and the
-    expense-report line of the same ride (same day, same amount) become
-    one trace. ``meals`` logs deliveries as priced meals. Dry run first,
-    then import for real once the user agrees.
+    "auto"}] — or "base64" instead of "text" for a PDF / photo. kind:
+    auto (guessed), transport, taxi, parking, livraison, repas, hotel,
+    frais or activite. A receipt and the expense-report line of the same
+    ride (same day, same amount) become one trace. A Lucca expense
+    report PDF gives one trace per expense (its comment kept) and keeps
+    the PDF untouched as a document. A ticket export (NinjaOne…) gives
+    ``person``'s actions, one trace a day from the first to the last
+    (default: the most active author; the dry run lists the others —
+    ask the user which name is theirs). ``meals`` logs deliveries as
+    priced meals. Dry run first, then import once the user agrees.
     """
     upload = [
         ("files", (f["filename"], _content(f), "application/octet-stream"))
         for f in files
     ]
-    data = {"kinds": [f.get("kind", "auto") for f in files]}
+    data = {"kinds": [f.get("kind", "auto") for f in files], "person": person}
     flags = f"dry_run={str(dry_run).lower()}&meals={str(meals).lower()}"
     return await client.upload(f"/traces/import?{flags}", upload, data)
+
+
+@mcp.tool()
+async def import_absences(
+    files: list[dict[str, str]], dry_run: bool = True, person: str = ""
+) -> Any:
+    """Import rest days, leave and sick leave from an HR export (Lucca…).
+
+    ``files``: [{"filename": "absences.xlsx", "base64": "..."}] or
+    "text" for a CSV / JSON. Start and end days (or one day per row,
+    joined), the kind (congés payés → conge, RTT → repos, maladie →
+    arret_maladie, accident → accident_travail), refused / cancelled
+    rows and remote work skipped. A manager's export: ``person`` kept
+    (default: the one with the most rows). Dry run first, then import
+    once the user agrees; nothing is added twice.
+    """
+    upload = [
+        ("files", (f["filename"], _content(f), "application/octet-stream"))
+        for f in files
+    ]
+    flag = "true" if dry_run else "false"
+    return await client.upload(
+        f"/absences/import?dry_run={flag}", upload, {"person": person}
+    )
 
 
 def _content(file: dict[str, str]) -> bytes:

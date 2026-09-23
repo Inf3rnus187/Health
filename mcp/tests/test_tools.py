@@ -255,6 +255,21 @@ async def test_days_to_complete_and_every_night() -> None:
     assert dict(seen[1].url.params) == {"missing": "false"}
 
 
+async def test_hr_exports_carry_the_person() -> None:
+    seen = _capture()
+    await tools_workfile.import_traces(
+        [{"filename": "Tous_les_tickets.csv", "text": "Id,Objet"}],
+        person="Alex Martin",
+    )
+    await tools_workfile.import_absences(
+        [{"filename": "absences.csv", "text": "Date de début;Compte"}]
+    )
+    assert b'name="person"' in seen[0].content
+    assert b"Alex Martin" in seen[0].content
+    assert seen[1].url.path == "/api/v1/absences/import"
+    assert dict(seen[1].url.params) == {"dry_run": "true"}
+
+
 async def test_shortcut_logs_are_sent_together() -> None:
     seen = _capture()
     await tools_workfile.import_logs(

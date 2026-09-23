@@ -23,7 +23,7 @@ from app.services.traces import MEAL_KINDS
 #: A trace at or after this hour on a working day is "late".
 LATE = time(21, 0)
 #: Traces that place you somewhere (not a meal, not a document).
-PRESENCE = {"transport", "taxi", "parking", "hotel"}
+PRESENCE = {"transport", "taxi", "parking", "hotel", "activite"}
 _LONG_DAY_H = 10.0
 #: A trace this long (a parking or hotel stay) also marks the next days.
 _STAY = timedelta(hours=6)
@@ -57,11 +57,14 @@ def _entry(
 ) -> dict[str, Any]:
     """A trace on its first day."""
     known = item.time_known is not False
+    same_day = end is not None and end.date() == start.date()
+    last = end if end is not None and same_day else start  # tickets: the last
     return {
         "kind": item.kind,
         "time": f"{start:%H:%M}" if known else None,
         "end": f"{end:%d/%m %H:%M}" if end else None,
-        "late": known and start.time() >= LATE,
+        "late": known and last.time() >= LATE,
+        "late_at": f"{last:%H:%M}",
         "place": item.place,
         "amount": item.amount,
         "meal_id": item.meal_id,
@@ -110,7 +113,7 @@ def _late(row: dict[str, Any], trace: dict[str, Any]) -> dict[str, Any]:
     """A late trace on a working day."""
     return {
         "date": row["date"],
-        "time": trace["time"],
+        "time": trace.get("late_at") or trace["time"],
         "kind": trace["kind"],
         "place": trace["place"],
     }

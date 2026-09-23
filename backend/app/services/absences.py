@@ -18,6 +18,7 @@ KINDS = {
     "accident_travail": "Accident du travail",
     "maladie_pro": "Maladie professionnelle",
     "conge": "Congés",
+    "repos": "Repos (RTT, récupération)",
     "autre": "Autre absence",
 }
 

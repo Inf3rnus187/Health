@@ -79,6 +79,7 @@ export const ABSENCE_KINDS: Record<string, string> = {
   accident_travail: 'Accident du travail',
   maladie_pro: 'Maladie professionnelle',
   conge: 'Congés',
+  repos: 'Repos (RTT, récupération)',
   autre: 'Autre absence',
 };
 
@@ -91,6 +92,7 @@ export const TRACE_KINDS: Record<string, string> = {
   repas: 'Repas acheté',
   hotel: 'Hôtel',
   frais: 'Note de frais',
+  activite: 'Activité pro (tickets, outils)',
 };
 
 export const EVIDENCE_KINDS: Record<string, string> = {

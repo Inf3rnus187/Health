@@ -14,7 +14,12 @@ from pydantic import (
 )
 
 AbsenceKind = Literal[
-    "arret_maladie", "accident_travail", "maladie_pro", "conge", "autre"
+    "arret_maladie",
+    "accident_travail",
+    "maladie_pro",
+    "conge",
+    "repos",
+    "autre",
 ]
 
 
