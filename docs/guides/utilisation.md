@@ -111,11 +111,21 @@ cigarettes, le pipi et les repas.
   (`elimination.urination`) est leur nombre — courbes, tableaux de bord,
   Suivi (diabète, apnée du sommeil) et rapports la voient comme toute
   autre mesure.
+- **💊 Médicaments du jour** : chaque traitement actif (Suivi ›
+  Traitements) avec « 1/2 aujourd'hui · dernier à 08:10 » et quatre
+  boutons — **✔ Pris** (maintenant), **Pris à…** (une autre heure),
+  **✗ Non pris** (oublié, refusé : le déclarer fait partie d'un relevé
+  honnête), **↶ Annuler** (retire la dernière prise notée du jour).
+  Chaque prise garde **l'heure de prise**, **l'heure de saisie** et **le
+  canal** (site, raccourci iPhone, MCP) : une prise tapée des jours plus
+  tard se voit comme telle. C'est la preuve de l'observance — voir
+  Suivi › Traitements et les rapports.
 - **Mon journal** : **une ligne par jour** (30 jours par défaut, ou « 7 j
   … Tout », dates exactes ; la période reste après un rechargement) —
   sommeil, **en combien de fois** (morceaux séparés d'une heure ou plus
   d'éveil), **réveils**, coucher → lever, eau, cafés, cigarettes, pipi,
-  repas (nombre et kcal lues par l'IA) ; les moyennes de la page en tête.
+  repas (nombre et kcal lues par l'IA), **médicaments** (prises notées,
+  « non pris » déclarés) ; les moyennes de la page en tête.
   Paginé (50 par page, 10 sur téléphone, où chaque jour devient une
   fiche).
 Trois onglets (le dernier ouvert reste après un rechargement) :
@@ -248,6 +258,37 @@ ci-dessus avec `metric` = `work.start` ; une seconde automatisation
 « Départ » avec `work.end`. Désactiver « Demander avant d'exécuter ». Un
 deuxième déclenchement d'arrivée pendant qu'une session est ouverte est
 ignoré.
+
+### Noter une prise de médicament
+
+Même jeton (`write:measurements`). Un raccourci par médicament (ou un
+menu) :
+
+- Action **« Obtenir le contenu de l'URL »**
+- URL : `https://<hub>/api/v1/medications/take?token=<jeton>`
+- Méthode **POST**, corps **JSON** : `treatment` (Texte) = le nom du
+  traitement tel que dans Suivi › Traitements (majuscules et accents
+  ignorés ; le début d'un mot suffit : « parox »), et facultatifs
+  `taken_at` (Texte, ISO : une autre heure), `status` (`skipped` = non
+  pris), `note`.
+- **Afficher la notification** « Prise notée ».
+
+Automatisation possible : Raccourcis › Automatisation › « Heure de la
+journée » (08:00) → « Demander avant d'exécuter » activé → le raccourci
+ci-dessus : l'iPhone demande à 8 h, un appui note la prise **à l'heure
+réelle**. Chaque prise garde l'heure de saisie et le canal
+« raccourci ».
+
+En ligne de commande :
+
+```bash
+curl -s -X POST "http://<hub>/api/v1/medications/take?token=$TOKEN" \
+  -H 'Content-Type: application/json' -d '{"treatment": "Paroxétine"}'
+```
+
+Ailleurs : Journal › Médicaments du jour (site), outils MCP
+`log_medication`, `medications_today`, `medication_intakes`,
+`medication_adherence`, `delete_medication_intake`.
 
 ### Noter un repas : description + photo
 
@@ -911,6 +952,15 @@ résultats d'examens), **Chronologie**, **Documents** (ajout + liste),
   diabète → HbA1c, glycémie ; tabac → cigarettes, souffle, SpO2 ;
   hypertension, apnée du sommeil, dyslipidémie, reins, anémie, thyroïde…
   Un nom inhabituel peut n'avoir aucun indicateur.
+- **Traitements** : nom, dose, fréquence et **prises / jour** (le nombre
+  prévu : 1, 2, 3… ; vide = à la demande). Chaque traitement montre son
+  **observance sur 30 jours** : « 30 j : 93 % (56/60) · 2 j sans rien
+  noté · vers 08:10 » — prises notées ÷ prévues (chaque jour compté au
+  plus pour ses prises prévues), jours sans aucune saisie, heure
+  habituelle (médiane). Le détail (prises non prises, plus long trou,
+  saisies en retard, par semaine) est dans `GET /medications/adherence`
+  et les rapports. Les prises se notent dans Journal › Aujourd'hui ›
+  Médicaments du jour, un raccourci iPhone ou MCP.
 - **À confirmer**, **Maladies**, **Traitements** (arrêter / reprendre),
   **Rendez-vous** (saisie ou import `.ics`) : **À venir** (le plus proche
   d'abord) ou **Passés** (le plus récent d'abord), recherche (praticien,

@@ -29,6 +29,7 @@ from app.models.medical import (
     MedicalDocument,
     Treatment,
 )
+from app.models.medication import MedicationIntake
 from app.models.metric import MetricDefinition
 from app.models.photo import Photo, PhotoAnalysis
 from app.models.report import Report
@@ -56,6 +57,7 @@ __all__ = [
     "ImportJob",
     "IngestMapping",
     "Meal",
+    "MedicationIntake",
     "Measurement",
     "MedicalDocument",
     "MetricDefinition",

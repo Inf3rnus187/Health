@@ -219,6 +219,8 @@ export interface Treatment {
   name: string;
   dose: string | null;
   frequency: string | null;
+  /** Doses planned per day (null: as needed). */
+  doses_per_day: number | null;
   start_date: string | null;
   end_date: string | null;
   active: boolean;

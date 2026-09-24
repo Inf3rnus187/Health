@@ -23,6 +23,9 @@ export interface JournalDay {
   pee: number | null;
   meals: number;
   meal_kcal: number | null;
+  /** Medication doses taken, and declared not taken. */
+  meds_taken: number;
+  meds_skipped: number;
 }
 
 export interface JournalPage {

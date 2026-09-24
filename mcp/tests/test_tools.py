@@ -16,6 +16,7 @@ from phoenix_mcp import (
     tools_data,
     tools_foods,
     tools_journal,
+    tools_meds,
     tools_record,
     tools_reports,
     tools_work,
@@ -277,6 +278,13 @@ async def test_a_meal_with_its_sachet_and_a_food_of_the_list() -> None:
     await tools_foods.search_ciqual("tomate crue")
     assert seen[3].url.path == "/api/v1/ciqual"
     assert seen[3].url.params["q"] == "tomate crue"
+
+
+async def test_a_dose_is_logged_by_name() -> None:
+    seen = _capture()
+    await tools_meds.log_medication("parox", status="skipped")
+    assert seen[0].url.path == "/api/v1/medications/take"
+    assert json.loads(seen[0].content)["status"] == "skipped"
 
 
 async def test_work_clock_and_dry_run_import() -> None:

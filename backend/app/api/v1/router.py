@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     absences,
     account,
+    adherence,
     appointments,
     auth,
     automations,
@@ -38,6 +39,7 @@ from app.api.v1 import (
     measurements,
     medical,
     medical_ai,
+    medications,
     metrics,
     mfa,
     overview,
@@ -101,6 +103,8 @@ api_router.include_router(traces.router)
 api_router.include_router(medical.router)
 api_router.include_router(conditions.router)
 api_router.include_router(treatments.router)
+api_router.include_router(medications.router)
+api_router.include_router(adherence.router)
 api_router.include_router(appointments.router)
 api_router.include_router(biology.router)
 api_router.include_router(capture.router)

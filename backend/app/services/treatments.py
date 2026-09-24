@@ -34,7 +34,7 @@ async def update(
     session: AsyncSession, user_id: str, tid: str, data: TreatmentIn
 ) -> Treatment:
     """Replace a treatment's fields."""
-    row = await _get(session, user_id, tid)
+    row = await get(session, user_id, tid)
     for key, value in data.model_dump().items():
         setattr(row, key, value)
     await session.flush()
@@ -43,12 +43,12 @@ async def update(
 
 async def delete(session: AsyncSession, user_id: str, tid: str) -> None:
     """Delete one of the user's treatments."""
-    row = await _get(session, user_id, tid)
+    row = await get(session, user_id, tid)
     await session.delete(row)
     await session.flush()
 
 
-async def _get(session: AsyncSession, user_id: str, tid: str) -> Treatment:
+async def get(session: AsyncSession, user_id: str, tid: str) -> Treatment:
     """Return the user's treatment or raise NotFound."""
     row = await session.get(Treatment, tid)
     if row is None or row.user_id != user_id:

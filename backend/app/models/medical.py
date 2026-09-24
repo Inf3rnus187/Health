@@ -82,6 +82,8 @@ class Treatment(UUIDMixin, TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(200))
     dose: Mapped[str | None] = mapped_column(String(80), nullable=True)
     frequency: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    #: Doses planned per day (adherence: taken ÷ planned); None: as needed.
+    doses_per_day: Mapped[int | None] = mapped_column(Integer, nullable=True)
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)

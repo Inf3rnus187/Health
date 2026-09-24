@@ -20,6 +20,7 @@ const HEADS = [
   'Cigarettes',
   'Pipi',
   'Repas',
+  'Médicaments',
 ];
 
 const count = (n: number | null) => (n == null ? '—' : frNumber(n, 0));
@@ -41,6 +42,12 @@ function mealText(d: JournalDay): string {
   return `${d.meals}${kcal}`;
 }
 
+function medsText(d: JournalDay): string {
+  if (!d.meds_taken && !d.meds_skipped) return '—';
+  const not = d.meds_skipped ? ` · ${d.meds_skipped} non pris` : '';
+  return `${d.meds_taken} pris${not}`;
+}
+
 function cells(d: JournalDay): string[] {
   return [
     shortDate(d.date),
@@ -50,6 +57,7 @@ function cells(d: JournalDay): string[] {
     count(d.cigarettes),
     count(d.pee),
     mealText(d),
+    medsText(d),
   ];
 }
 

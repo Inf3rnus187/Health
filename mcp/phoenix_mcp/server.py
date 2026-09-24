@@ -21,6 +21,7 @@ from phoenix_mcp import (  # noqa: F401 - importing registers the tools
     tools_data,
     tools_foods,
     tools_journal,
+    tools_meds,
     tools_record,
     tools_reports,
     tools_work,

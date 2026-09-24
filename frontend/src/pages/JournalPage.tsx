@@ -5,6 +5,7 @@ import { FoodsCard } from '../components/journal/FoodsCard';
 import { JournalDays } from '../components/journal/JournalDays';
 import { type MealDraft, MealForm } from '../components/journal/MealForm';
 import { MealList } from '../components/journal/MealList';
+import { MedsToday } from '../components/journal/MedsToday';
 import { TodayCard } from '../components/journal/TodayCard';
 import { useStored } from '../utils/stored';
 
@@ -59,6 +60,7 @@ export function JournalPage() {
       {tab === 'jour' && (
         <>
           <TodayCard />
+          <MedsToday />
           <JournalDays />
         </>
       )}

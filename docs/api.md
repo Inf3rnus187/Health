@@ -195,9 +195,10 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | Méthode | Route | Accès | Paramètres | Rôle |
 |---|---|---|---|---|
 | GET | `/treatments` | Session / hub:full | — | List the caller's treatments. |
-| POST | `/treatments` | Session / hub:full | JSON `TreatmentIn` (name, dose, frequency, start_date, end_date, active, notes) | Add a treatment. |
+| POST | `/treatments` | Session / hub:full | JSON `TreatmentIn` (name, dose, frequency, doses_per_day, start_date, end_date, active, notes) | Add a treatment. |
 | DELETE | `/treatments/{tid}` | Session / hub:full | `tid` | Delete a treatment. |
-| PUT | `/treatments/{tid}` | Session / hub:full | `tid`, JSON `TreatmentIn` (name, dose, frequency, start_date, end_date, active, notes) | Replace a treatment (e.g. toggle active, change dose). |
+| PUT | `/treatments/{tid}` | Session / hub:full | `tid`, JSON `TreatmentIn` (name, dose, frequency, doses_per_day, start_date, end_date, active, notes) | Replace a treatment (e.g. toggle active, change dose). |
+| POST | `/treatments/{tid}/intakes` | `write:measurements` + ?token= | `tid`, JSON `IntakeIn` (taken_at, status, dose, note) | Record a dose of a treatment: now, or ``taken_at``. |
 
 ## Rendez-vous
 
@@ -354,6 +355,11 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | POST | `/foods/{food_id}/photos` | `write:measurements` | `food_id`, form `file`, form `kind` | Add a photo: ``kind`` = ``pack`` (the box) or ``label`` (values). |
 | DELETE | `/foods/{food_id}/photos/{photo_id}` | `write:measurements` | `food_id`, `photo_id` | Delete one of the food's photos. |
 | GET | `/foods/{food_id}/photos/{photo_id}` | `read:all` | `food_id`, `photo_id` | One of the food's photos (JPEG, EXIF removed). |
+| GET | `/medications/adherence` | `read:all` | `start`?, `end`? | Adherence per treatment over a period (default: the last 30 days). |
+| GET | `/medications/intakes` | `read:all` | `start`?, `end`?, `treatment_id`? | The doses of a period (default: the last 30 days), newest first. |
+| DELETE | `/medications/intakes/{intake_id}` | `write:measurements` | `intake_id` | Delete a dose entered by mistake (the audit log keeps the trace). |
+| POST | `/medications/take` | `write:measurements` + ?token= | JSON `TakeIn` (taken_at, status, dose, note, treatment) | Record a dose by the treatment's name (an iPhone Shortcut). |
+| GET | `/medications/today` | `read:all` | — | The active treatments with today's doses (taken, not taken, last). |
 | GET | `/openfoodfacts/{barcode}` | `write:measurements` | `barcode` | A packaged food by its barcode, from Open Food Facts. |
 | GET | `/spending/meals` | `read:all` | `start`?, `end`?, `kind`?, `bucket`? | Spending on meals paid for over ``start``..``end``. |
 | GET | `/system/update` | Session uniquement | — | Changes waiting on GitHub, the parts to rebuild, the last update. |

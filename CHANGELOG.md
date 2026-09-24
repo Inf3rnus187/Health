@@ -120,6 +120,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Medication doses and adherence**: each dose taken — or declared not
+  taken — is recorded with the time it was taken, the time it was
+  entered and the channel (web, iPhone Shortcut, MCP, token id): the
+  proof a treatment is followed, and that it was noted at the time.
+  Journal › Aujourd'hui › « 💊 Médicaments du jour » (✔ Pris, Pris à…,
+  ✗ Non pris, ↶ Annuler); Suivi › Traitements gains « prises / jour »
+  and a 30-day adherence line (rate, days without any record, usual
+  time); the journal line counts the doses. `POST /medications/take`
+  (by name, `?token=` for a Shortcut), `POST /treatments/{id}/intakes`,
+  `GET /medications/intakes`, `/medications/today`,
+  `/medications/adherence` (planned, taken, skipped, rate, days
+  complete, days without record, longest gap, usual time, entered late,
+  per week), `DELETE /medications/intakes/{id}` (audited). MCP
+  `log_medication`, `medications_today`, `medication_intakes`,
+  `medication_adherence`, `delete_medication_intake`. Migration `0019`
+  (a deleted treatment keeps its doses, name and dose copied).
 - **Edit a meal afterwards** (Journal › Repas › « Modifier »): type, date
   and time, description, foods of the list, and its photos — remove one
   (the plate's too) or add some later (a meal without a plate photo

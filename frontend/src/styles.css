@@ -2396,3 +2396,27 @@ img.viewer-file {
   text-align: left;
   cursor: pointer;
 }
+
+/* Journal › Médicaments du jour: one line per active treatment. */
+.med-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.med-row {
+  display: grid;
+  gap: 6px;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-grid);
+}
+
+.med-row .quick {
+  margin-top: 0;
+}
+
+.med-row .row-actions {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin: 0;
+}

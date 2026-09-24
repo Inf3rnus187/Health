@@ -40,6 +40,8 @@ class TreatmentIn(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     dose: str | None = Field(default=None, max_length=80)
     frequency: str | None = Field(default=None, max_length=80)
+    #: Doses planned per day, for the adherence (None: as needed).
+    doses_per_day: int | None = Field(default=None, ge=1, le=12)
     start_date: date | None = None
     end_date: date | None = None
     active: bool = True

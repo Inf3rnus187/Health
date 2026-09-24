@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-98 outils.
+103 outils.
 
 ## Données et métriques
 
@@ -400,6 +400,46 @@ Paramètres : `photo_base64`* (string)
 Attach a photo to a food: ``kind`` pack (the box) or label.
 
 Paramètres : `food_id`* (string), `photo_base64`* (string), `kind` (string, défaut `pack`)
+
+## Médicaments : prises et observance
+
+### `log_medication`
+
+Record a dose of a treatment, by its name (part of it is enough).
+
+``taken_at``: ISO date-time (default now; without offset: local).
+``status``: ``taken`` or ``skipped`` (not taken: forgotten, refused…).
+The dose keeps when it was entered and that it came from MCP.
+
+Paramètres : `treatment`* (string), `taken_at` (string | null, défaut `None`), `status` (string, défaut `taken`), `note` (string, défaut ``)
+
+### `medications_today`
+
+Active treatments with today's doses (taken, not taken, last).
+
+### `medication_intakes`
+
+Doses of a period (default: last 30 days), newest first.
+
+Each: when taken, when entered (``created_at``), how (``source``:
+web, raccourci, mcp), taken or not.
+
+Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`), `treatment_id` (string | null, défaut `None`)
+
+### `medication_adherence`
+
+Adherence per treatment (default: last 30 days).
+
+Planned doses, taken, not taken, rate %, days complete, days without
+any record, longest gap, usual time, doses entered late, per week.
+
+Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`)
+
+### `delete_medication_intake`
+
+Delete a dose entered by mistake (the audit log keeps a trace).
+
+Paramètres : `intake_id`* (string)
 
 ## Travail : heures d'embauche et de débauche
 

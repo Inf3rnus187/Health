@@ -6,7 +6,8 @@ Per local day, newest first:
   asleep, in how many goes (blocks), awakenings, bedtime → wake-up;
 * the counters: water (bottles of 1.5 L, given in litres too), coffees,
   cigarettes, pees;
-* the meals noted: how many, and their energy when the AI read them.
+* the meals noted: how many, and their energy when the AI read them;
+* the medication doses: taken, and declared not taken.
 
 The days of the period are paged (``limit`` / ``offset``): only the days
 of the page are read.
@@ -23,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.meal import Meal
 from app.models.measurement import Measurement
+from app.models.medication import MedicationIntake
 from app.models.metric import MetricDefinition
 from app.services import daily_rollup, sleep_nights
 
@@ -54,10 +56,12 @@ async def page(
     nights = await sleep_nights.nights(session, user_id, bottom, top, tz)
     counts = await _counters(session, user_id, bottom, top)
     meals = await _meals(session, user_id, bottom, top)
+    meds = await _doses(session, user_id, bottom, top)
     items = []
     day = top
     while day >= bottom:
-        items.append(_line(day, nights.get(day), counts[day], meals[day]))
+        line = _line(day, nights.get(day), counts[day], meals[day])
+        items.append({**line, **meds[day]})
         day -= timedelta(days=1)
     return {"items": items, "total": total}
 
@@ -137,4 +141,29 @@ async def _meals(
         totals = (analysis or {}).get("totals") or {}
         kcal = totals.get("energy_kcal")
         out[day].append(float(kcal) if isinstance(kcal, int | float) else None)
+    return out
+
+
+async def _doses(
+    session: AsyncSession, user_id: str, first: date, last: date
+) -> defaultdict[date, dict[str, int]]:
+    """Each day's medication doses: taken and declared not taken."""
+    rows = await session.execute(
+        select(
+            MedicationIntake.date_key,
+            MedicationIntake.status,
+            func.count(),
+        )
+        .where(
+            MedicationIntake.user_id == user_id,
+            MedicationIntake.date_key.between(first, last),
+        )
+        .group_by(MedicationIntake.date_key, MedicationIntake.status)
+    )
+    out: defaultdict[date, dict[str, int]] = defaultdict(
+        lambda: {"meds_taken": 0, "meds_skipped": 0}
+    )
+    for day, state, count in rows:
+        key = "meds_taken" if state == "taken" else "meds_skipped"
+        out[day][key] = int(count)
     return out
