@@ -5,8 +5,9 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from fastapi.responses import Response
+from starlette.datastructures import UploadFile as Upload
 
 from app.core.deps import Principal, ReaderDep, SessionDep
 from app.core.deps_query import require_scope_flex
@@ -29,24 +30,25 @@ async def create(
     meal_type: Annotated[str, Form()] = "",
     eaten_at: Annotated[str, Form()] = "",
     description: Annotated[str, Form()] = "",
-    price: Annotated[float | None, Form(ge=0, le=10000)] = None,
-    file: UploadFile | None = None,
+    price: Annotated[str, Form()] = "",
+    file: Annotated[UploadFile | str | None, File()] = None,
 ) -> Meal:
     """Log a meal (photo and/or description), then read it with the AI.
 
-    Form fields: ``description``, ``file`` (photo), and optionally
-    ``meal_type`` (default: from the hour), ``eaten_at`` (default: now)
-    and ``price`` (what it cost).
+    Form fields: ``description``, ``file`` (photo: JPEG, HEIC, PNG…), and
+    optionally ``meal_type`` (default: from the hour), ``eaten_at``
+    (default: now; ``2026-09-23T20:30``, with or without an offset, or
+    ``23/09/2026 20:30`` — a time without offset is local) and ``price``
+    (what it cost, « 12,50 » accepted). An empty field (an iPhone
+    Shortcut without photo) counts as absent.
     """
     fields = {
         "meal_type": meal_type,
         "eaten_at": _when(eaten_at),
         "description": description,
-        "price": price,
+        "price": _price(price),
     }
-    photo = None
-    if file is not None and file.filename:
-        photo = (await file.read(), file.content_type or "")
+    photo = await _photo(file)
     meal = await meals.create(session, principal.user.id, fields, photo)
     await session.commit()
     await meal_ai.queue(session, meal)
@@ -86,11 +88,53 @@ async def photo(
     return Response(content=data, media_type="image/jpeg")
 
 
+#: Day-first forms a Shortcut may send besides ISO (« 23/09/2026 20:30 »).
+_DAY_FIRST = ("%d/%m/%Y %H:%M", "%d/%m/%Y %H:%M:%S", "%d/%m/%Y")
+
+
 def _when(value: str) -> datetime | None:
-    """A form date-time (ISO, local time allowed) or None."""
-    if not value.strip():
+    """A form date-time (ISO or day first, local time allowed) or None."""
+    text = value.strip()
+    if not text:
         return None
     try:
-        return datetime.fromisoformat(value.strip())
+        return datetime.fromisoformat(text)
+    except ValueError:
+        pass
+    for form in _DAY_FIRST:
+        try:
+            return datetime.strptime(text, form)
+        except ValueError:
+            continue
+    raise InvalidInputError(
+        "eaten_at must be a date-time: 2026-09-23T20:30 or 23/09/2026 20:30"
+    )
+
+
+def _price(value: str) -> float | None:
+    """A price (« 12,50 », « 12.5 € »), None when empty."""
+    text = value.replace("€", "").replace(",", ".").strip()
+    if not text:
+        return None
+    try:
+        amount = float(text)
     except ValueError as exc:
-        raise InvalidInputError("eaten_at must be an ISO date-time") from exc
+        raise InvalidInputError("price must be a number") from exc
+    if not 0 <= amount <= 10000:  # noqa: PLR2004
+        raise InvalidInputError("price must be between 0 and 10000")
+    return amount
+
+
+async def _photo(file: Upload | str | None) -> tuple[bytes, str] | None:
+    """The photo sent, None when the field is missing or empty.
+
+    A file without an image type (``application/octet-stream``) is still
+    tried: the image decoder decides.
+    """
+    if not isinstance(file, Upload):
+        return None
+    data = await file.read()
+    if not data:
+        return None
+    kind = file.content_type or ""
+    return data, kind if kind.startswith("image/") else "image/unknown"

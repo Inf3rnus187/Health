@@ -182,17 +182,58 @@ ignoré.
 ### Noter un repas : description + photo
 
 Le seul autre chemin, parce qu'un repas transporte une photo — même jeton.
+Il prend **la date et l'heure** : un repas d'hier se note après coup.
 
-- Action **« Obtenir le contenu de l'URL »**
-- URL : `https://<hub>/api/v1/meals?token=<jeton>`
-- Méthode **POST**, Corps de la requête **Formulaire**
-- Champs : `description` (Texte, p. ex. le résultat de « Demander une
-  entrée ») et `file` (Fichier, le résultat de « Prendre une photo ») —
-  l'un des deux suffit. Facultatifs : `meal_type` (`breakfast`, `lunch`,
-  `snack`, `dinner` ; sinon déduit de l'heure) et `eaten_at` (sinon
-  maintenant).
+**L'appel** — `POST /api/v1/meals?token=<jeton>`, corps **Formulaire**
+(`multipart/form-data`) :
 
-L'analyse IA apparaît ensuite dans **Journal**.
+| Champ | Type | Obligatoire | Valeur |
+|-------|------|-------------|--------|
+| `description` | Texte | l'un des deux | ce que tu as mangé : quantités, cuisson, « sans huile » (fait foi pour l'IA) |
+| `file` | Fichier | l'un des deux | la photo (JPEG, HEIC, PNG… 15 Mo max ; EXIF et GPS retirés) |
+| `eaten_at` | Texte | non | vide = maintenant ; `2026-09-23T20:30`, `2026-09-23T20:30:00+02:00` ou `23/09/2026 20:30` (sans fuseau = heure locale) |
+| `meal_type` | Texte | non | `breakfast`, `lunch`, `snack`, `dinner` ; vide = d'après l'heure (avant 10:30, 15:00, 18:00) |
+| `price` | Texte | non | ce qu'il a coûté (« 12,50 ») |
+
+Un champ laissé vide (pas de photo, pas de prix) compte comme absent. La
+réponse (201) donne le repas : `date_key`, `meal_type`, `has_photo`,
+`analysis_status` (`queued`). L'analyse IA (une à quelques minutes)
+apparaît ensuite dans **Journal**.
+
+**Le raccourci** (un seul, pour maintenant comme pour hier) :
+
+1. **Demander une entrée** — type *Date et heure*, question « Heure du
+   repas ? », valeur par défaut *Date actuelle* (on valide, ou on
+   remonte à hier).
+2. **Formater la date** — *Entrée fournie*, format *ISO 8601*, avec
+   l'heure (donne `2026-09-23T20:30:00+02:00`).
+3. **Demander une entrée** — type *Texte*, « Qu'as-tu mangé ? ».
+4. **Choisir dans le menu** « Photo ? » :
+   « Prendre une photo » → action *Prendre une photo* ;
+   « Depuis Photos » → *Sélectionner des photos* (un repas d'hier) ;
+   « Sans photo » → action *Texte* vide.
+5. *(facultatif)* **Choisir dans le menu** « Repas ? » : une action
+   *Texte* par branche — `breakfast`, `lunch`, `snack`, `dinner`, ou
+   vide pour « Selon l'heure ».
+6. **Obtenir le contenu de l'URL** — URL
+   `http://<hub>/api/v1/meals?token=<jeton>`, méthode **POST**, corps
+   **Formulaire** : `description` (Texte = réponse de l'étape 3),
+   `eaten_at` (Texte = *Date formatée*), `file` (**Fichier** = *Menu
+   « Photo ? »*), et si l'étape 5 existe `meal_type` (Texte = *Menu
+   « Repas ? »*).
+7. **Afficher la notification** « Repas noté, analyse en cours ».
+
+En ligne de commande, le même appel :
+
+```bash
+curl -s -X POST "http://<hub>/api/v1/meals?token=$TOKEN" \
+  -F description="2 œufs, pain complet, café sans sucre" \
+  -F eaten_at="2026-09-23T20:30" -F meal_type=dinner -F file=@repas.jpg
+```
+
+Ailleurs : **Journal › Ajouter un repas** dans le site (type, date et
+heure, description, prix, photo) ; outil MCP `log_meal` (`description`,
+`meal_type`, `eaten_at` ISO, `photo_base64`, `price`).
 
 > Un raccourci déjà réglé sur `POST /api/v1/journal/urination?token=…`
 > (sans corps) continue de marcher : c'est la route du bouton « Pipi

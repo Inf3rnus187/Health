@@ -237,3 +237,40 @@ async def test_meal_type_defaults_to_the_hour(
         )
         kinds.append(made.json()["meal_type"])
     assert kinds == ["breakfast", "lunch", "dinner"]
+
+
+async def test_a_meal_shortcut_like_the_iphone_sends_it(
+    client: AsyncClient, auth: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Token in the URL, yesterday's time day first, empty optional fields."""
+
+    async def no_worker(*_: Any) -> bool:
+        return False
+
+    monkeypatch.setattr(meal_ai, "enqueue", no_worker)
+    made = await client.post(
+        "/api/v1/tokens",
+        json={"name": "repas", "scopes": ["write:measurements"]},
+        headers=auth,
+    )
+    url = f"{MEALS}?token={made.json()['token']}"
+    bare = await client.post(
+        url,
+        data={"description": "pâtes", "eaten_at": "23/09/2026 20:30",
+              "file": "", "price": "", "meal_type": ""},
+    )  # fmt: skip
+    assert bare.status_code == 201, bare.text
+    meal = bare.json()
+    assert (meal["date_key"], meal["meal_type"]) == ("2026-09-23", "dinner")
+    assert not meal["has_photo"] and meal["price"] is None
+    shot = await client.post(
+        url,
+        data={"description": "salade", "eaten_at": "2026-09-23T12:15:00+02:00",
+              "price": "12,50"},
+        files={"file": ("IMG_0001.JPG", _jpeg(), "application/octet-stream")},
+    )  # fmt: skip
+    assert shot.status_code == 201, shot.text
+    assert shot.json()["has_photo"] and shot.json()["price"] == 12.5
+    assert shot.json()["meal_type"] == "lunch"
+    wrong = await client.post(url, data={"eaten_at": "hier"})
+    assert wrong.status_code == 422

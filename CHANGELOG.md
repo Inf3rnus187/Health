@@ -8,6 +8,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A meal Shortcut without photo was refused (422)**: an empty `file`
+  or `price` field (an iPhone Shortcut's « Sans photo » branch) now
+  counts as absent. `eaten_at` also takes `23/09/2026 20:30` (day
+  first, local time) besides ISO; `price` takes « 12,50 »; a photo sent
+  as `application/octet-stream` is still read (the decoder decides).
+  The guide gives the whole Shortcut, yesterday's meal included.
 - **Santé's vital signs showed « Mesure indisponible »** for everyone
   with a tracker blocker: EasyPrivacy (uBlock, AdGuard, Brave, Safari
   blockers) drops every browser request under `/api/v1/metrics`. The
