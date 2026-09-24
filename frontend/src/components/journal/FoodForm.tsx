@@ -12,8 +12,10 @@ import {
   type FoodDraft,
   foodIn,
   VALUES,
+  withCiqual,
   withReading,
 } from './foodDraft';
+import { BarcodeLookup, CiqualSearch } from './FoodSources';
 import { ShotButton, ShotPreview, StoredShot } from './Shots';
 
 type Set = (change: Partial<FoodDraft>) => void;
@@ -39,27 +41,34 @@ function Line(props: {
   );
 }
 
+/** The sheet's text fields: key, label, numeric, example. */
+const IDENTITY: [keyof FoodDraft, string, boolean, string?][] = [
+  ['name', 'Nom', false],
+  ['brand', 'Marque', false],
+  ['package_g', 'Poids de la boîte / du sachet (g)', true],
+  ['unit_name', 'Unité (tomate, tranche, pavé…)', false],
+  ['unit_g', "Poids d'une unité (g)", true],
+  [
+    'aliases',
+    'Autres noms dans un repas (séparés par des virgules)',
+    false,
+    'riz sachet, riz micro-ondes',
+  ],
+];
+
 function Identity({ draft, set }: { draft: FoodDraft; set: Set }) {
   return (
     <div className="fields">
-      <Line label="Nom" value={draft.name} onChange={(name) => set({ name })} />
-      <Line
-        label="Marque"
-        value={draft.brand}
-        onChange={(brand) => set({ brand })}
-      />
-      <Line
-        label="Poids de la boîte / du sachet (g)"
-        numeric
-        value={draft.package_g}
-        onChange={(package_g) => set({ package_g })}
-      />
-      <Line
-        label="Autres noms dans un repas (séparés par des virgules)"
-        placeholder="riz sachet, riz micro-ondes"
-        value={draft.aliases}
-        onChange={(aliases) => set({ aliases })}
-      />
+      {IDENTITY.map(([key, label, numeric, example]) => (
+        <Line
+          key={key}
+          label={label}
+          numeric={numeric}
+          placeholder={example}
+          value={String(draft[key])}
+          onChange={(value) => set({ [key]: value })}
+        />
+      ))}
     </div>
   );
 }
@@ -67,7 +76,8 @@ function Identity({ draft, set }: { draft: FoodDraft; set: Set }) {
 function Values({ draft, set }: { draft: FoodDraft; set: Set }) {
   return (
     <fieldset className="food-values">
-      <legend>Valeurs pour 100 g (l’étiquette)</legend>
+      <legend>Valeurs pour 100 g</legend>
+      {draft.source && <p className="muted small">Source : {draft.source}</p>}
       <div className="fields">
         {VALUES.map(([key, label]) => (
           <Line
@@ -153,6 +163,47 @@ function usePhotos(onLabel: (file: File) => void) {
   return { photos, add, drop };
 }
 
+type Panel = 'ciqual' | 'barcode';
+const PANELS: [Panel, string][] = [
+  ['ciqual', '🔎 Table Ciqual (aliment courant)'],
+  ['barcode', '▥ Code-barres (Open Food Facts)'],
+];
+
+/** Fill the sheet from the Ciqual table or a barcode (one panel open). */
+function Fill(props: {
+  onCiqual: Parameters<typeof CiqualSearch>[0]['onPick'];
+  onFound: Parameters<typeof BarcodeLookup>[0]['onFound'];
+}) {
+  const [open, setOpen] = useState<Panel | null>(null);
+  return (
+    <>
+      <div className="quick">
+        {PANELS.map(([panel, label]) => (
+          <button
+            key={panel}
+            type="button"
+            className="btn ghost"
+            onClick={() => setOpen(open === panel ? null : panel)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {open === 'ciqual' && <CiqualSearch onPick={props.onCiqual} />}
+      {open === 'barcode' && <BarcodeLookup onFound={props.onFound} />}
+    </>
+  );
+}
+
+function useFill(setDraft: (next: (now: FoodDraft) => FoodDraft) => void) {
+  return {
+    onCiqual: (ref: Parameters<typeof withCiqual>[1]) =>
+      setDraft((now) => withCiqual(now, ref)),
+    onFound: (found: Parameters<typeof withReading>[1]) =>
+      setDraft((now) => withReading(now, found)),
+  };
+}
+
 function useFoodForm(food: Food | null, onDone: () => void) {
   const [draft, setDraft] = useState(() => draftOf(food));
   const set: Set = (change) => setDraft((now) => ({ ...now, ...change }));
@@ -171,7 +222,8 @@ function useFoodForm(food: Food | null, onDone: () => void) {
       { onSuccess: onDone },
     );
   };
-  return { draft, set, read, shots, save, onSubmit };
+  const fill = useFill(setDraft);
+  return { draft, set, read, shots, save, onSubmit, fill };
 }
 
 function Photos(props: {
@@ -204,6 +256,7 @@ export function FoodForm(props: { food: Food | null; onDone: () => void }) {
   return (
     <form className="form-box food-form" onSubmit={f.onSubmit}>
       <Photos food={props.food} shots={f.shots} reading={f.read.isPending} />
+      <Fill onCiqual={f.fill.onCiqual} onFound={f.fill.onFound} />
       {f.read.isSuccess && (
         <p className="muted">Valeurs lues par l’IA : vérifiez-les.</p>
       )}

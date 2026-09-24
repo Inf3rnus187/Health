@@ -27,8 +27,11 @@ function Summary({ food }: { food: Food }) {
       {food.brand && <span className="muted"> · {food.brand}</span>}
       <div className="muted small">
         {food.package_g != null && `${frNumber(food.package_g, 0)} g · `}
+        {food.unit_g != null &&
+          `1 ${food.unit_name || 'unité'} = ${frNumber(food.unit_g, 0)} g · `}
         {per100(food) || 'valeurs à compléter'} (100 g)
         {food.photos.length > 0 && ` · ${food.photos.length} photo(s)`}
+        {food.source && ` · ${food.source.split(' · ')[0]}`}
       </div>
     </div>
   );
@@ -58,9 +61,9 @@ function Row(props: { food: Food; onEdit: () => void }) {
 }
 
 const ABOUT =
-  'Les boîtes et sachets que vous mangez souvent : leur fiche se remplit ' +
-  'une fois (poids, valeurs pour 100 g, photos). Un repas qui les nomme ' +
-  'ou les choisit est calculé avec l’étiquette, sans estimation.';
+  'Une fiche par aliment courant (sachet, tomate, comté…), remplie une ' +
+  'fois : valeurs pour 100 g et poids d’une unité. Un repas qui le nomme ' +
+  'est calculé avec : mêmes chiffres à chaque fois.';
 
 /** The sheet being edited: a new one, or one of the list (kept fresh). */
 function Editor(props: {

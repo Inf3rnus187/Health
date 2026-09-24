@@ -1,5 +1,7 @@
 """Read a nutrition label photo with the vision model: a proposal.
 
+:func:`values` and :func:`grams` also check Open Food Facts' values.
+
 The answer only pre-fills the food's form (name, brand, net weight,
 values per 100 g); the user checks it and saves. Numbers are kept only
 when plausible (the schema's bounds); « 12,5 g » and « < 0,5 g » read.
@@ -45,19 +47,19 @@ async def read(data: bytes) -> dict[str, Any]:
     return {
         "name": str(answer.get("name") or "")[:200],
         "brand": str(answer.get("brand") or "")[:120],
-        "package_g": _grams(answer.get("net_g")),
-        "per_100g": _values(answer.get("per_100g")),
+        "package_g": grams(answer.get("net_g")),
+        "per_100g": values(answer.get("per_100g")),
     }
 
 
-def _values(raw: Any) -> dict[str, float]:
+def values(raw: Any) -> dict[str, float]:
     """The plausible values per 100 g (sodium from salt when absent)."""
     found = raw if isinstance(raw, dict) else {}
-    values = {k: _number(v) for k, v in found.items()}
-    salt = values.pop("salt_g", None)
-    if values.get("sodium_mg") is None and salt is not None:
-        values["sodium_mg"] = round(salt * 400, 1)  # 1 g salt = 400 mg Na
-    kept = {k: v for k, v in values.items() if v is not None}
+    read = {k: _number(v) for k, v in found.items()}
+    salt = read.pop("salt_g", None)
+    if read.get("sodium_mg") is None and salt is not None:
+        read["sodium_mg"] = round(salt * 400, 1)  # 1 g salt = 400 mg Na
+    kept = {k: v for k, v in read.items() if v is not None}
     try:
         checked = Per100g.model_validate(kept)
     except ValidationError:
@@ -77,7 +79,7 @@ def _each(values: dict[str, float]) -> dict[str, float]:
     return out
 
 
-def _grams(raw: Any) -> float | None:
+def grams(raw: Any) -> float | None:
     """A net weight in grams, when plausible."""
     value = _number(raw)
     return value if value is not None and 0 < value <= 10000 else None  # noqa: PLR2004

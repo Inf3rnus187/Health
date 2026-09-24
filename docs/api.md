@@ -342,15 +342,18 @@ signale qu'il est aussi accepté en paramètre d'URL.
 
 | Méthode | Route | Accès | Paramètres | Rôle |
 |---|---|---|---|---|
+| GET | `/ciqual` | `read:all` | `q`, `limit`? | Foods of the Ciqual table whose name has every word of ``q``. |
+| GET | `/ciqual/{code}` | `read:all` | `code` | One food of the Ciqual table. |
 | GET | `/foods` | `read:all` | — | The user's foods, by name. |
-| POST | `/foods` | `write:measurements` | JSON `FoodIn` (name, brand, aliases, package_g, per_100g, note) | Add a food: name, brand, aliases, package weight, values per 100 g. |
+| POST | `/foods` | `write:measurements` | JSON `FoodIn` (name, brand, aliases, package_g, unit_name, unit_g, per_100g, note, source, barcode) | Add a food: name, brand, aliases, package weight, values per 100 g. |
 | POST | `/foods/read-label` | `write:measurements` | form `file` | Read a pack or its nutrition table with the vision model. |
 | DELETE | `/foods/{food_id}` | `write:measurements` | `food_id` | Delete a food and its photos. |
 | GET | `/foods/{food_id}` | `read:all` | `food_id` | One food. |
-| PUT | `/foods/{food_id}` | `write:measurements` | `food_id`, JSON `FoodIn` (name, brand, aliases, package_g, per_100g, note) | Change a food (every field; the meals already read keep theirs). |
+| PUT | `/foods/{food_id}` | `write:measurements` | `food_id`, JSON `FoodIn` (name, brand, aliases, package_g, unit_name, unit_g, per_100g, note, source, barcode) | Change a food (every field; the meals already read keep theirs). |
 | POST | `/foods/{food_id}/photos` | `write:measurements` | `food_id`, form `file`, form `kind` | Add a photo: ``kind`` = ``pack`` (the box) or ``label`` (values). |
 | DELETE | `/foods/{food_id}/photos/{photo_id}` | `write:measurements` | `food_id`, `photo_id` | Delete one of the food's photos. |
 | GET | `/foods/{food_id}/photos/{photo_id}` | `read:all` | `food_id`, `photo_id` | One of the food's photos (JPEG, EXIF removed). |
+| GET | `/openfoodfacts/{barcode}` | `write:measurements` | `barcode` | A packaged food by its barcode, from Open Food Facts. |
 | GET | `/spending/meals` | `read:all` | `start`?, `end`?, `kind`?, `bucket`? | Spending on meals paid for over ``start``..``end``. |
 | GET | `/system/update` | Session uniquement | — | Changes waiting on GitHub, the parts to rebuild, the last update. |
 | POST | `/system/update` | Session uniquement | — | Ask the host to update now (its cron runs ./update.sh). |

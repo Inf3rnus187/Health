@@ -2,11 +2,15 @@
 
 1. With a photo, the vision model (e.g. MedGemma 1.5) lists the foods and
    estimates the portions; the user's description takes precedence.
-2. The text model (e.g. MedGemma 27B) estimates each food's nutrients
-   (Ciqual reference values) and judges the meal for the user's declared
-   conditions (score 0-10, verdict, positives, points to watch).
-3. :mod:`meal_nutrition` keeps only plausible foods and recomputes the
-   energy; the totals feed Apple's nutrition metrics (:mod:`meal_nutrients`).
+2. The text model (e.g. MedGemma 27B) names each food, its grams and
+   its Ciqual reference among a short list (:mod:`meal_ciqual`), and
+   judges the meal for the user's declared conditions (score 0-10,
+   verdict, positives, points to watch).
+3. Values come from the Ciqual table for a referenced food, from the
+   label for a food of the user's list (:mod:`meal_foods`, grams read
+   from the description), else from the model's estimate, checked by
+   :mod:`meal_nutrition`; the totals feed Apple's nutrition metrics
+   (:mod:`meal_nutrients`).
 
 States: queued → running → done | failed (with the error), a time limit,
 and readings a worker restart interrupted are re-queued.
@@ -27,6 +31,7 @@ from app.models.base import utcnow
 from app.models.meal import Meal
 from app.services import (
     conditions,
+    meal_ciqual,
     meal_foods,
     meal_nutrients,
     meal_nutrition,
@@ -81,8 +86,7 @@ async def analyze(session: AsyncSession, meal: Meal) -> dict[str, Any]:
     answer = await ollama.text_json(
         meal_prompt.nutrition(context), max_tokens=_TOKENS
     )
-    items, rejected = meal_nutrition.check(answer.get("items"))
-    items = meal_foods.apply(items, portions)
+    items, rejected = _valued(answer, context["refs"], portions)
     totals = meal_nutrition.totals(items)
     await meal_nutrients.record(session, meal, totals)
     return {
@@ -99,6 +103,18 @@ async def analyze(session: AsyncSession, meal: Meal) -> dict[str, Any]:
     }
 
 
+def _valued(
+    answer: dict[str, Any],
+    refs: list[dict[str, str]],
+    portions: list[meal_foods.Portion],
+) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    """The model's foods valued: Ciqual, checked, then the user's labels."""
+    offered = {ref["code"] for ref in refs}
+    raw = meal_ciqual.fill(answer.get("items"), offered)
+    items, rejected = meal_nutrition.check(raw)
+    return meal_foods.apply(items, portions), rejected
+
+
 async def requeue_stale(session: AsyncSession) -> int:
     """Re-queue readings a worker restart left queued / running."""
     result = await session.execute(
@@ -111,7 +127,11 @@ async def requeue_stale(session: AsyncSession) -> int:
 async def _context(
     session: AsyncSession, meal: Meal, seen: list[dict[str, Any]]
 ) -> dict[str, Any]:
-    """What the text model is told: meal, time, text, photo, conditions."""
+    """What the text model is told about the meal.
+
+    Meal, time, text, photo, conditions, and the Ciqual references its
+    words may stand for.
+    """
     current = await conditions.list_all(session, meal.user_id)
     tz = await user_zone(session, meal.user_id)
     return {
@@ -120,6 +140,9 @@ async def _context(
         "description": meal.description,
         "seen": seen,
         "conditions": [c.name for c in current if c.status != "resolved"],
+        "refs": meal_ciqual.refs(
+            [meal.description, *(str(i.get("name", "")) for i in seen)]
+        ),
     }
 
 

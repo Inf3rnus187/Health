@@ -26,13 +26,16 @@ _NUTRITION = """Tu es diététicien et médecin nutritionniste. Analyse ce repas
 Repas : {meal} de {time}.
 Description du patient (fait foi) : « {description} »
 Aliments repérés sur la photo : {seen}
-{foods}Maladies déclarées du patient : {conditions}
+{foods}{refs}Maladies déclarées du patient : {conditions}
 
-Pour chaque aliment, estime la quantité (g) puis ses nutriments à partir \
-des valeurs de référence (table Ciqual) ramenées à cette quantité ; pour \
-un produit dont l'étiquette est donnée ci-dessus, utilise ses valeurs \
-(elles font foi : n'écris pas qu'il faudrait vérifier sa composition) et \
-rends son "food_id". \
+Pour chaque aliment, estime la quantité (g) — une quantité donnée \
+ci-dessus pour un produit fait foi — puis ses nutriments ramenés à \
+cette quantité. Pour un produit dont l'étiquette est donnée ci-dessus, \
+utilise ses valeurs (elles font foi : n'écris pas qu'il faudrait \
+vérifier sa composition) et rends son "food_id". Pour les autres, \
+choisis dans la liste Ciqual la référence la plus proche (même aliment, \
+même cuisson ou préparation) et rends son code dans "ciqual" (null si \
+aucune ne convient) : ses valeurs seront celles de la table. \
 Respecte la description : si elle dit sans huile, beurre, sauce ou \
 graisse, n'en ajoute pas. N'invente aucun aliment absent de la \
 description et de la photo.
@@ -40,7 +43,7 @@ Puis juge le repas pour CE patient (maladies ci-dessus) : note de 0 \
 (à éviter) à 10 (idéal), un verdict en une phrase, les points positifs, \
 les points à surveiller. Pas de posologie ni de prescription.
 Réponds uniquement en JSON :
-{{"items": [{{"name": "...", "food_id": null, "grams": 0, \
+{{"items": [{{"name": "...", "food_id": null, "ciqual": null, "grams": 0, \
 "protein_g": 0, "carbs_g": 0, \
 "sugars_g": 0, "fat_g": 0, "sat_fat_g": 0, "fiber_g": 0, \
 "sodium_mg": 0}}], "score": 0, "verdict": "...", \
@@ -65,6 +68,7 @@ def nutrition(context: dict[str, Any]) -> str:
         description=context.get("description") or "(aucune)",
         seen=json.dumps(seen, ensure_ascii=False) if seen else "(pas de photo)",
         foods=_foods(context.get("foods") or [], context.get("labels") or []),
+        refs=_refs(context.get("refs") or []),
         conditions=", ".join(context.get("conditions") or []) or "aucune",
     )
 
@@ -83,4 +87,13 @@ def _foods(foods: list[dict[str, Any]], labels: list[dict[str, Any]]) -> str:
         lines.append(
             "- photographiée : " + json.dumps(label, ensure_ascii=False)
         )
+    return "\n".join(lines) + "\n"
+
+
+def _refs(refs: list[dict[str, str]]) -> str:
+    """The Ciqual references the model picks from (code : name)."""
+    if not refs:
+        return ""
+    lines = ["Références Ciqual (ANSES) possibles, code : nom :"]
+    lines += [f"- {r['code']} : {r['name']}" for r in refs]
     return "\n".join(lines) + "\n"

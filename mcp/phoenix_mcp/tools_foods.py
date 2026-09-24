@@ -29,24 +29,56 @@ async def save_food(
     aliases: str = "",
     note: str = "",
     food_id: str | None = None,
+    unit_name: str = "",
+    unit_g: float | None = None,
+    source: str = "",
+    barcode: str = "",
 ) -> Any:
     """Add a food (or replace ``food_id``'s sheet).
 
     ``per_100g``: energy_kcal, protein_g, carbs_g, sugars_g, fat_g,
     sat_fat_g, fiber_g, sodium_mg (1 g of salt = 400 mg of sodium).
     ``aliases``: other names used in meals, comma separated.
+    ``unit_name`` / ``unit_g``: how it is counted (« tomate », 120):
+    « 2 tomates » in a meal is then 240 g. ``source``: where the values
+    come from (« étiquette », « Ciqual 2025 · 20385 · … »).
     """
     body = {
         "name": name,
         "brand": brand,
         "aliases": aliases,
         "package_g": package_g,
+        "unit_name": unit_name,
+        "unit_g": unit_g,
         "per_100g": per_100g or {},
         "note": note,
+        "source": source,
+        "barcode": barcode,
     }
     if food_id:
         return await client.request("PUT", f"/foods/{food_id}", body=body)
     return await client.post("/foods", body)
+
+
+@mcp.tool()
+async def search_ciqual(query: str, limit: int = 20) -> Any:
+    """Search the ANSES Ciqual 2025 table (offline, ~3,500 foods).
+
+    Every word of ``query`` must appear (« saumon vapeur »); generic
+    foods first. Each: code, name, group, per_100g — e.g. to fill
+    save_food with reference values.
+    """
+    return await client.get("/ciqual", {"q": query, "limit": limit})
+
+
+@mcp.tool()
+async def lookup_barcode(barcode: str) -> Any:
+    """A packaged food by barcode on Open Food Facts (if the hub allows).
+
+    Needs FOOD_LOOKUP_ONLINE=true on the hub; only the barcode is sent.
+    A proposal to check, then save_food.
+    """
+    return await client.get(f"/openfoodfacts/{barcode}")
 
 
 @mcp.tool()

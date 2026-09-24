@@ -3,19 +3,24 @@
 A food is kept only if it is physically possible: 0 < grams ≤ 1500,
 no negative value, protein + carbs + fat + fibre not heavier than the
 food, sugars ≤ carbs, saturated fat ≤ fat, sodium plausible. Anything
-else is dropped with its reason. Energy is always recomputed from the
-macros (Atwater: 4 kcal/g protein and carbs, 9 fat, 2 fibre), so the
-totals are consistent by construction.
+else is dropped with its reason. The model's energy is recomputed from
+the macros (Atwater: 4 kcal/g protein and carbs, 9 fat, 2 fibre); a
+food valued from the Ciqual table (:mod:`meal_ciqual`) keeps the
+table's values and energy (only its grams are checked).
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+from app.services import ciqual
+
 MACROS = ("protein_g", "carbs_g", "sugars_g", "fat_g", "sat_fat_g", "fiber_g")
 _MAX_GRAMS = 1500.0
 _SODIUM_PER_G = 40.0  # mg per gram of food: above table salt density
 _TEXT = 200
+#: Keys an item keeps besides its values (set by code, not the model).
+_KEPT = {"food_id": 36, "ciqual": 12, "source": 40, "reference": 160}
 
 
 def check(items: Any) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
@@ -55,22 +60,43 @@ def _item(raw: Any) -> tuple[dict[str, Any] | None, str]:
         return None, "aliment sans nom"
     values = {k: _number(raw.get(k)) or 0.0 for k in (*MACROS, "sodium_mg")}
     grams = _number(raw.get("grams")) or 0.0
-    reason = _implausible(grams, values)
+    table = _from_table(raw)
+    reason = _implausible(grams, values) if not table else _quantity(grams)
     if reason:
         return None, reason
-    energy = 4 * (values["protein_g"] + values["carbs_g"])
-    energy += 9 * values["fat_g"] + 2 * values["fiber_g"]
+    energy = _number(raw.get("energy_kcal")) if table else None
+    if energy is None:
+        energy = 4 * (values["protein_g"] + values["carbs_g"])
+        energy += 9 * values["fat_g"] + 2 * values["fiber_g"]
     name = str(raw["name"]).strip()[:80]
     item = {"name": name, "grams": grams, "energy_kcal": energy, **values}
-    if isinstance(raw.get("food_id"), str):  # a catalogue food
-        item["food_id"] = raw["food_id"][:36]
+    for key, size in _KEPT.items():
+        if isinstance(raw.get(key), str):
+            item[key] = raw[key][:size]
     return item, ""
+
+
+def _from_table(raw: dict[str, Any]) -> bool:
+    """Whether the item's values were taken from the Ciqual table."""
+    code = raw.get("ciqual")
+    return (
+        raw.get("source") == "Ciqual"
+        and isinstance(code, str)
+        and ciqual.get(code) is not None
+    )
+
+
+def _quantity(grams: float) -> str:
+    """Why a quantity is impossible ('' if it is not)."""
+    return (
+        "" if 0 < grams <= _MAX_GRAMS else f"quantité impossible ({grams:g} g)"
+    )
 
 
 def _implausible(grams: float, v: dict[str, float]) -> str:
     """Why these values cannot describe a real food ('' if they can)."""
-    if not 0 < grams <= _MAX_GRAMS:
-        return f"quantité impossible ({grams:g} g)"
+    if _quantity(grams):
+        return _quantity(grams)
     if any(value < 0 for value in v.values()):
         return "valeur négative"
     mass = v["protein_g"] + v["carbs_g"] + v["fat_g"] + v["fiber_g"]

@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     # vision model, which also reads scanned pages.
     ollama_document_model: str = ""
     max_upload_mb: int = 15
+    #: Look a packaged food up by its barcode on Open Food Facts (only
+    #: the barcode leaves the hub). Off by default: nothing goes out.
+    food_lookup_online: bool = False
+    openfoodfacts_url: str = "https://world.openfoodfacts.org"
     media_encryption_key: str | None = None
     mfa_issuer: str = "Phoenix Health Hub"
     retention_days: int = 0

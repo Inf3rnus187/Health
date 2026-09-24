@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-94 outils.
+96 outils.
 
 ## Données et métriques
 
@@ -321,7 +321,7 @@ Delete a meal, its photo and its nutrients.
 
 Paramètres : `meal_id`* (string)
 
-## Mes aliments : boîtes et sachets, leur étiquette
+## Mes aliments : fiches, table Ciqual, code-barres
 
 ### `list_foods`
 
@@ -338,8 +338,30 @@ Add a food (or replace ``food_id``'s sheet).
 ``per_100g``: energy_kcal, protein_g, carbs_g, sugars_g, fat_g,
 sat_fat_g, fiber_g, sodium_mg (1 g of salt = 400 mg of sodium).
 ``aliases``: other names used in meals, comma separated.
+``unit_name`` / ``unit_g``: how it is counted (« tomate », 120):
+« 2 tomates » in a meal is then 240 g. ``source``: where the values
+come from (« étiquette », « Ciqual 2025 · 20385 · … »).
 
-Paramètres : `name`* (string), `per_100g` (object | null, défaut `None`), `package_g` (number | null, défaut `None`), `brand` (string, défaut ``), `aliases` (string, défaut ``), `note` (string, défaut ``), `food_id` (string | null, défaut `None`)
+Paramètres : `name`* (string), `per_100g` (object | null, défaut `None`), `package_g` (number | null, défaut `None`), `brand` (string, défaut ``), `aliases` (string, défaut ``), `note` (string, défaut ``), `food_id` (string | null, défaut `None`), `unit_name` (string, défaut ``), `unit_g` (number | null, défaut `None`), `source` (string, défaut ``), `barcode` (string, défaut ``)
+
+### `search_ciqual`
+
+Search the ANSES Ciqual 2025 table (offline, ~3,500 foods).
+
+Every word of ``query`` must appear (« saumon vapeur »); generic
+foods first. Each: code, name, group, per_100g — e.g. to fill
+save_food with reference values.
+
+Paramètres : `query`* (string), `limit` (integer, défaut `20`)
+
+### `lookup_barcode`
+
+A packaged food by barcode on Open Food Facts (if the hub allows).
+
+Needs FOOD_LOOKUP_ONLINE=true on the hub; only the barcode is sent.
+A proposal to check, then save_food.
+
+Paramètres : `barcode`* (string)
 
 ### `delete_food`
 

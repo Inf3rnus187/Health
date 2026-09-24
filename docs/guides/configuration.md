@@ -154,7 +154,9 @@ docker compose ps
 |----------|------|
 | `MEDIA_DIR` / `EXPORTS_DIR` | Photos, documents, rapports (dans les conteneurs). |
 | `MEDIA_ENCRYPTION_KEY` | Chiffrement au repos des fichiers (clé Fernet ; vide = désactivé). |
-| `MAX_UPLOAD_MB` | Taille maximale d'une photo (`15`). |
+| `MAX_UPLOAD_MB` | Taille maximale d'une photo (`15`) : corps, repas, aliments. |
+| `FOOD_LOOKUP_ONLINE` | `false` (défaut) : le hub ne sort pas sur Internet. `true` : « Code-barres (Open Food Facts) » dans Mes aliments interroge `OPENFOODFACTS_URL` avec **le code-barres seul** (ni compte, ni repas, ni donnée de santé). |
+| `OPENFOODFACTS_URL` | `https://world.openfoodfacts.org` (une instance miroir possible). |
 | `RETENTION_DAYS` | `0` = tout garder. |
 
 ### IA (Ollama) — un modèle par tâche

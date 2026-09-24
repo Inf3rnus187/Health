@@ -48,11 +48,16 @@ function Remarks({ a }: { a: MealAnalysis }) {
   );
 }
 
+/** Where an item's values come from, as shown after its grams. */
+function origin(source?: string): string {
+  if (source === 'étiquette') return ', étiquette 🏷️';
+  if (source === 'Ciqual') return ', Ciqual';
+  return ', estimé';
+}
+
 function Foods({ a }: { a: MealAnalysis }) {
   const kept = (a.items ?? []).map(
-    (i) =>
-      `${i.name} (${frNumber(i.grams, 0)} g` +
-      `${i.source === 'étiquette' ? ', étiquette 🏷️' : ''})`,
+    (i) => `${i.name} (${frNumber(i.grams, 0)} g${origin(i.source)})`,
   );
   const dropped = (a.rejected ?? []).map((r) => `${r.name} (${r.reason})`);
   return (
@@ -77,9 +82,10 @@ export function MealAnalysisView({ a }: { a: MealAnalysis }) {
       {a.totals && <NutrientTable totals={a.totals} />}
       <Foods a={a} />
       <p className="muted small">
-        Estimation IA ({a.model}
-        {a.vision_model ? ` + photo : ${a.vision_model}` : ''}) — indicative,
-        énergie recalculée depuis les macronutriments.
+        Aliments et quantités : IA ({a.model}
+        {a.vision_model ? ` + photo : ${a.vision_model}` : ''}) et votre
+        description. Valeurs : vos étiquettes 🏷️, la table Ciqual 2025 (ANSES),
+        sinon estimées par l’IA.
       </p>
     </div>
   );

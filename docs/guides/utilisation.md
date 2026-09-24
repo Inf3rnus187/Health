@@ -137,14 +137,30 @@ formulaire et la liste) et **Mes aliments**.
   (EXIF et GPS retirés), redimensionnées (2048 px pour l'emballage, pour
   que les petits caractères restent lisibles) et chiffrées si le
   chiffrement est activé.
-- **Analyse IA du repas** (une à quelques minutes) : aliments et
-  quantités, **nutriments** (énergie, protéines, glucides dont sucres,
-  lipides dont saturés, fibres, sodium), **note 0–10**, verdict, points
-  positifs et à surveiller **pour vos maladies déclarées** (stéatose,
-  diabète…). Un aliment de « Mes aliments » (choisi, ou **nommé dans la
-  description** : son nom ou un de ses autres noms) est **calculé avec
-  son étiquette** pour les grammes mangés (le poids du paquet si rien
-  n'est dit), marqué « étiquette 🏷️ » : plus de « vérifier la
+- **Analyse du repas** (une à quelques minutes) — **l'IA reconnaît et
+  pèse, les tables comptent** : l'IA liste les aliments et leurs
+  grammes, puis les **valeurs** viennent, dans cet ordre :
+  1. **vos aliments** (« Mes aliments ») : choisis dans le formulaire ou
+     **nommés dans la description** (leur nom ou un de leurs autres
+     noms, singulier ou pluriel) — calculés avec **leur fiche** ; leurs
+     **grammes sont lus par le code** dans la description : « 100g »,
+     « 150 g de riz », sinon un compte × le poids de leur unité
+     (« 2 tomates » = 2 × 120 g, « un demi concombre », « une tranche de
+     comté », « ½ sachet de riz » = ½ × le paquet) — marqués
+     « étiquette 🏷️ » ;
+  2. la **table Ciqual 2025 de l'ANSES** (≈ 3 500 aliments génériques,
+     embarquée dans le hub, rien n'est envoyé dehors) : l'IA choisit la
+     référence la plus proche (même aliment, même cuisson) dans une
+     courte liste tirée de vos mots, le code prend ses valeurs pour les
+     grammes — marqués « Ciqual » ;
+  3. sinon l'**estimation de l'IA**, contrôlée (marquée « estimé »).
+
+  Puis les **nutriments** (énergie, protéines, glucides dont sucres,
+  lipides dont saturés, fibres, sodium), une **note 0–10**, un verdict,
+  les points positifs et à surveiller **pour vos maladies déclarées**.
+  **Le même repas donne les mêmes chiffres** dès que ses aliments sont
+  dans vos fiches ou dans la table ; seul l'avis (texte, note) peut
+  varier si la description change de mots. Plus de « vérifier la
   composition du sachet ». Voir le [guide IA](ia-medicale.md#repas).
 - Les nutriments d'un repas rejoignent les **mêmes mesures nutrition
   qu'Apple Santé** (`nutrition.energy`, protéines, glucides…) ; modifier,
@@ -158,17 +174,31 @@ formulaire et la liste) et **Mes aliments**.
   des repas (ou « Tout sélectionner » : tous ceux de la période) puis
   « Supprimer la sélection » les retire d'un coup, avec photos et
   nutriments.
-- **Mes aliments** : les boîtes et sachets mangés souvent, **une fiche
-  remplie une fois** — nom, marque, **autres noms** utilisés dans un
-  repas (« riz sachet, riz micro-ondes », séparés par des virgules),
-  **poids de la boîte ou du sachet**, **valeurs pour 100 g** (énergie,
-  protéines, glucides dont sucres, lipides dont saturés, fibres, **sel**
-  tel qu'imprimé : il est converti en sodium) et une note (« je mange la
-  moitié du sachet »). « 🏷️ Photo des valeurs (lecture IA) » lit
-  l'étiquette et **pré-remplit** la fiche (nom, marque, poids net,
-  valeurs plausibles seulement) : on vérifie puis on enregistre ;
-  « 📦 Photo de la boîte » garde la photo de l'emballage. Chaque fiche
-  est à son utilisateur seul.
+- **Mes aliments** : ce que vous mangez souvent — boîtes et sachets,
+  mais aussi tomate, comté, pavé de saumon… **Une fiche remplie une
+  fois** : nom, marque, **autres noms** utilisés dans un repas (« riz
+  sachet, riz micro-ondes », séparés par des virgules), **poids de la
+  boîte ou du sachet**, **unité et poids d'une unité** (« tomate » =
+  120 g, « tranche » = 30 g, « pavé » = 125 g : c'est ce qui rend
+  « 2 tomates » identique à chaque repas), **valeurs pour 100 g**
+  (énergie, protéines, glucides dont sucres, lipides dont saturés,
+  fibres, **sel** tel qu'imprimé : converti en sodium), une note (« je
+  mange la moitié du sachet ») et la **source** des valeurs. Pour
+  remplir les valeurs :
+  - « 🏷️ Photo des valeurs (lecture IA) » lit l'étiquette et
+    pré-remplit (nom, marque, poids net, valeurs plausibles seulement) ;
+  - « 🔎 Table Ciqual (aliment courant) » : chercher « tomate crue »,
+    « saumon vapeur »… et toucher un résultat prend ses valeurs
+    (source « Ciqual 2025 · code · nom ») ;
+  - « ▥ Code-barres (Open Food Facts) » : les 13 chiffres sous le code
+    → nom, marque, poids, valeurs du produit. **Désactivé par défaut**
+    (le hub ne sort pas sur Internet) : l'administrateur l'active avec
+    `FOOD_LOOKUP_ONLINE=true` ; seul le code-barres est envoyé.
+    Collaboratif : vérifiez contre le paquet ;
+  - « 📦 Photo de la boîte » garde la photo de l'emballage.
+
+  On vérifie puis on enregistre. Chaque fiche est à son utilisateur
+  seul.
 
 Depuis l'iPhone : voir [Raccourcis iPhone](#raccourcis-iphone--une-seule-règle).
 

@@ -120,6 +120,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Same meal, same numbers — the Ciqual table**: the ANSES Ciqual 2025
+  table (3,484 generic foods, Licence Ouverte, shipped with the hub,
+  read offline; provenance in `backend/app/data/README.md`). The meal
+  reading now works as « the AI recognises and weighs, the tables
+  count »: the model picks each food's closest Ciqual reference from a
+  short list built from the description's words (prepared as said —
+  « cuit », « vapeur », « cru » — generic first), and code computes its
+  values for the grams; a code outside the list, or anything the model
+  writes as a source, is ignored. Values shown per food: « étiquette
+  🏷️ », « Ciqual » or « estimé ». `GET /ciqual?q=` and `/ciqual/{code}`,
+  MCP `search_ciqual`.
+- **Quantities read by code**: for a food of « Mes aliments », the
+  grams come from the description — « saumon 100g », « 150 g de riz »,
+  « 2 tomates » (× the food's unit), « un demi concombre », « une
+  tranche de comté », « ½ sachet de riz » (× the package) — never
+  guessed twice differently. Food sheets gain a unit (« tomate » =
+  120 g), a source and a barcode (migration `0018`).
+- **Open Food Facts by barcode (opt-in)**: « Code-barres » in Mes
+  aliments fills a sheet from a product's barcode when
+  `FOOD_LOOKUP_ONLINE=true` (off by default; only the barcode is sent).
+  `GET /openfoodfacts/{barcode}`, MCP `lookup_barcode`.
 - **Mes aliments** (Journal › Mes aliments, `/foods`, MCP `list_foods`,
   `save_food`, `read_food_label`, `add_food_photo`, `delete_food`): the
   boxes and sachets eaten often, a sheet filled once — name, brand,

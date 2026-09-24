@@ -1,17 +1,17 @@
 """The catalogue foods of a meal, and their label values in its reading.
 
 A meal's foods are those the user picked, plus those its description
-names (the food's name, or one of its aliases: « riz uncle bens »). The
-model is told their label values as authoritative, and its answer is
-then corrected: a catalogue food's nutrients come from its label for
-the grams eaten (the package's weight when none is said); a picked
-food the model forgot is added.
+names (the food's name, or one of its aliases: « riz sachet »). Their
+grams: the form's, else what the description says (:mod:`meal_quantity`:
+« 2 tomates » = 2 × the food's unit). The model is told their label
+values and grams as authoritative, and its answer is then corrected: a
+catalogue food's nutrients come from its label for the grams eaten (else
+the model's estimate, else the package's weight); a picked food the
+model forgot is added.
 """
 
 from __future__ import annotations
 
-import re
-import unicodedata
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.food import Food
 from app.models.meal import Meal
 from app.services import foods as food_service
+from app.services.meal_quantity import grams_in
+from app.services.text_norm import singular, tokens
 
 #: The label values copied onto an item (energy apart: from the label).
 NUTRIENTS = (
@@ -32,26 +34,25 @@ async def of_meal(session: AsyncSession, meal: Meal) -> list[Portion]:
     """The foods picked for the meal, then those its description names."""
     known = await food_service.list_foods(session, meal.user_id)
     by_id = {food.id: food for food in known}
+    said = meal.description or ""
     picked: list[Portion] = []
     for entry in meal.foods or []:
         food = by_id.get(str(entry.get("food_id")))
         if food is not None:
-            picked.append((food, entry.get("grams")))
+            picked.append((food, entry.get("grams") or grams_in(food, said)))
     taken = {food.id for food, _ in picked}
-    named = [
-        f for f in known if f.id not in taken and named_in(f, meal.description)
-    ]
-    return picked + [(food, None) for food in named]
+    named = [f for f in known if f.id not in taken and named_in(f, said)]
+    return picked + [(food, grams_in(food, said)) for food in named]
 
 
 def named_in(food: Food, text: str) -> bool:
     """Whether ``text`` names the food (all words of its name, or an alias)."""
-    words = set(_norm(text).split())
-    name = [w for w in _norm(food.name).split() if len(w) > 2]  # noqa: PLR2004
+    words = set(_plain(text).split())
+    name = [w for w in _plain(food.name).split() if len(w) > 2]  # noqa: PLR2004
     if name and all(w in words for w in name):
         return True
-    said = f" {_norm(text)} "
-    aliases = [_norm(a) for a in food.aliases.split(",")]
+    said = f" {_plain(text)} "
+    aliases = [_plain(a) for a in food.aliases.split(",")]
     return any(a and f" {a} " in said for a in aliases)
 
 
@@ -62,6 +63,9 @@ def context(portions: list[Portion]) -> list[dict[str, Any]]:
             "id": food.id,
             "name": f"{food.name} ({food.brand})" if food.brand else food.name,
             "package_g": food.package_g,
+            "unit": f"1 {food.unit_name or 'unité'} = {food.unit_g:g} g"
+            if food.unit_g
+            else None,
             "grams": grams,
             "per_100g": food.per_100g,
             "note": food.note,
@@ -121,7 +125,6 @@ def _labelled(portion: Portion, eaten: Any) -> dict[str, Any]:
     }
 
 
-def _norm(text: str) -> str:
-    """Lower case, no accents, words only."""
-    plain = unicodedata.normalize("NFKD", text).encode("ascii", "ignore")
-    return re.sub(r"[^a-z0-9]+", " ", plain.decode().lower()).strip()
+def _plain(text: str) -> str:
+    """Lower case, no accents, singular words (« Tomates » → « tomate »)."""
+    return " ".join(singular(w) for w in tokens(text))

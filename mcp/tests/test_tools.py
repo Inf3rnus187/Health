@@ -274,6 +274,9 @@ async def test_a_meal_with_its_sachet_and_a_food_of_the_list() -> None:
     assert json.loads(seen[1].content)["per_100g"] == {"energy_kcal": 150}
     await tools_foods.read_food_label("SGVsbG8=")
     assert seen[2].url.path == "/api/v1/foods/read-label"
+    await tools_foods.search_ciqual("tomate crue")
+    assert seen[3].url.path == "/api/v1/ciqual"
+    assert seen[3].url.params["q"] == "tomate crue"
 
 
 async def test_work_clock_and_dry_run_import() -> None:

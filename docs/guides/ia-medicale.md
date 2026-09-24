@@ -84,26 +84,43 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    foi** (quantités, cuisson, absence de matière grasse).
 2. **Mes aliments** → les aliments choisis dans le formulaire et ceux
    que la description **nomme** (tous les mots de leur nom, ou un de
-   leurs autres noms, sans tenir compte des accents) sont donnés au
-   modèle texte avec leurs **valeurs d'étiquette**, « elles font foi » :
-   il ne doit plus répondre « vérifier la composition du sachet ».
-3. **Modèle texte** (`OLLAMA_TEXT_MODEL`) → nutriments de chaque aliment
-   (valeurs de l'étiquette quand il y en a, sinon valeurs de référence
-   Ciqual ramenées à la quantité), puis un avis **pour vos maladies
+   leurs autres noms, sans accents, singulier ou pluriel) sont donnés
+   au modèle texte avec leurs **valeurs** et leurs **grammes**, « ils
+   font foi ». Les grammes sont **lus par le code** dans la description
+   (`meal_quantity`) : grammes écrits à côté (« saumon 100g », « 150 g
+   de riz »), sinon un compte (« 2 », « deux », « un demi », « ½ »,
+   « 1/2 ») × le poids d'une unité de la fiche, ou × le paquet pour
+   « sachet », « boîte », « pot »…
+3. **Table Ciqual** → pour les mots de la description et de la photo, le
+   code cherche dans la table Ciqual 2025 de l'ANSES (embarquée, hors
+   ligne) les références possibles : noms qui commencent par le mot,
+   préparées comme le dit le texte (« cuit », « vapeur », « cru »…),
+   génériques (« aliment moyen ») d'abord. Cette courte liste (code :
+   nom) est donnée au modèle.
+4. **Modèle texte** (`OLLAMA_TEXT_MODEL`, décodage glouton, graine
+   fixe : la même entrée donne la même sortie) → pour chaque aliment :
+   nom, grammes, `food_id` (un de vos aliments) ou `ciqual` (une
+   référence **de la liste** : un code hors liste est ignoré), une
+   estimation des nutriments ; puis un avis **pour vos maladies
    déclarées** : note 0–10, verdict, points positifs, points à
    surveiller. Aucune posologie ni prescription.
-4. **Contrôle** (code, pas d'IA) : un aliment est **écarté**, avec sa
+5. **Valeurs par le code** : un aliment avec une référence Ciqual prend
+   les valeurs de la table pour ses grammes (énergie de la table,
+   « < x » compté x/2, « traces » 0, inconnu 0) ; ce que le modèle
+   écrit dans `source` est ignoré.
+6. **Contrôle** (code, pas d'IA) : un aliment **estimé** est **écarté**, avec sa
    raison, si c'est physiquement impossible — quantité nulle ou > 1,5 kg,
    nutriments plus lourds que l'aliment, sucres > glucides, saturés >
    lipides, sodium impossible. L'**énergie est recalculée** depuis les
    macronutriments (4 kcal/g protéines et glucides, 9 lipides, 2 fibres) :
-   les totaux sont cohérents par construction. Un aliment de « Mes
+   les totaux sont cohérents par construction ; un aliment de la table
+   ne voit contrôlée que sa quantité. Un aliment de « Mes
    aliments » est ensuite **recalculé par le code** depuis son étiquette
    pour les grammes mangés (ceux du formulaire, sinon ceux estimés,
    sinon le poids du paquet) et marqué « étiquette » ; un aliment choisi
    que le modèle a oublié est ajouté (s'il a des grammes ou un poids de
    paquet).
-5. Les totaux deviennent des relevés `meal` à l'heure du repas, dans les
+7. Les totaux deviennent des relevés `meal` à l'heure du repas, dans les
    mesures nutrition d'Apple Santé ; ce sont des **estimations**
    (±20–30 % typiquement sur les portions), affichées comme telles.
 

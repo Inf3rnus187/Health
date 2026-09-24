@@ -28,6 +28,14 @@ class Food(UUIDMixin, TimestampMixin, Base):
     aliases: Mapped[str] = mapped_column(Text, default="")
     #: What a box / sachet weighs (g), when it is eaten whole.
     package_g: Mapped[float | None] = mapped_column(Float, nullable=True)
+    #: One unit as the user counts it: « tomate » = 120 g, « tranche »
+    #: = 30 g — « 2 tomates » in a meal is then 240 g, every time.
+    unit_name: Mapped[str] = mapped_column(String(40), default="")
+    unit_g: Mapped[float | None] = mapped_column(Float, nullable=True)
+    #: Where the values come from: « étiquette », « Ciqual 2025 · 20385
+    #: Tomate… », « Open Food Facts · 3017620422003 », « saisie ».
+    source: Mapped[str] = mapped_column(String(200), default="")
+    barcode: Mapped[str] = mapped_column(String(20), default="")
     #: energy_kcal, protein_g, carbs_g, sugars_g, fat_g, sat_fat_g,
     #: fiber_g, sodium_mg — per 100 g, from the label.
     per_100g: Mapped[dict[str, Any]] = mapped_column(JSONColumn, default=dict)

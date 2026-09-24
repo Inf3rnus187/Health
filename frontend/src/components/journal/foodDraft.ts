@@ -1,4 +1,10 @@
-import type { Food, FoodIn, LabelReading, Per100g } from '../../api/foods';
+import type {
+  CiqualRef,
+  Food,
+  FoodIn,
+  LabelReading,
+  Per100g,
+} from '../../api/foods';
 
 /** The label lines of the form: salt as printed (sodium is stored). */
 export const VALUES = [
@@ -20,7 +26,11 @@ export interface FoodDraft {
   brand: string;
   aliases: string;
   package_g: string;
+  unit_name: string;
+  unit_g: string;
   note: string;
+  source: string;
+  barcode: string;
   values: Record<ValueKey, string>;
 }
 
@@ -38,26 +48,44 @@ function valuesOf(per: Per100g): Record<ValueKey, string> {
   return out;
 }
 
-const EMPTY = { aliases: '', note: '' };
+const BLANK: LabelReading = {
+  name: '',
+  brand: '',
+  package_g: null,
+  per_100g: {},
+};
+type Own = Pick<Food, 'aliases' | 'note' | 'unit_name' | 'unit_g'>;
+const EMPTY: Own = { aliases: '', note: '', unit_name: '', unit_g: null };
 
+/** The sheet of a saved food, of a reading (label, barcode), or blank. */
 export function draftOf(food: Food | LabelReading | null): FoodDraft {
-  if (!food) {
-    return {
-      name: '',
-      brand: '',
-      package_g: '',
-      ...EMPTY,
-      values: valuesOf({}),
-    };
-  }
-  const known = 'aliases' in food ? food : EMPTY;
+  const read: LabelReading = food ?? BLANK;
+  const known: Own = food && 'aliases' in food ? food : EMPTY;
   return {
-    name: food.name,
-    brand: food.brand,
+    name: read.name,
+    brand: read.brand,
     aliases: known.aliases,
-    package_g: text(food.package_g),
+    package_g: text(read.package_g),
+    unit_name: known.unit_name,
+    unit_g: text(known.unit_g),
     note: known.note,
-    values: valuesOf(food.per_100g),
+    source: read.source ?? '',
+    barcode: read.barcode ?? '',
+    values: valuesOf(read.per_100g),
+  };
+}
+
+/** A Ciqual food: its values, its name when the sheet has none. */
+export function withCiqual(draft: FoodDraft, ref: CiqualRef): FoodDraft {
+  const per: Per100g = {};
+  for (const [key, value] of Object.entries(ref.per_100g)) {
+    if (value != null) per[key as keyof Per100g] = value;
+  }
+  return {
+    ...draft,
+    name: draft.name || (ref.name.split(',')[0] ?? ref.name),
+    values: valuesOf(per),
+    source: `Ciqual 2025 · ${ref.code} · ${ref.name}`,
   };
 }
 
@@ -73,6 +101,8 @@ export function withReading(draft: FoodDraft, read: LabelReading): FoodDraft {
     name: draft.name || found.name,
     brand: draft.brand || found.brand,
     package_g: found.package_g || draft.package_g,
+    source: read.source ?? 'étiquette',
+    barcode: read.barcode ?? draft.barcode,
     values,
   };
 }
@@ -95,7 +125,11 @@ export function foodIn(draft: FoodDraft): FoodIn {
     brand: draft.brand.trim(),
     aliases: draft.aliases.trim(),
     package_g: num(draft.package_g),
+    unit_name: draft.unit_name.trim(),
+    unit_g: num(draft.unit_g),
     per_100g: per,
     note: draft.note.trim(),
+    source: draft.source.trim() || 'saisie',
+    barcode: draft.barcode.replace(/\D/g, ''),
   };
 }

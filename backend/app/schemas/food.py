@@ -28,8 +28,13 @@ class FoodIn(BaseModel):
     brand: str = Field(default="", max_length=120)
     aliases: str = Field(default="", max_length=1000)
     package_g: float | None = Field(default=None, gt=0, le=10000)
+    #: « 2 tomates » = 2 × unit_g ; unit_name is how it is counted.
+    unit_name: str = Field(default="", max_length=40)
+    unit_g: float | None = Field(default=None, gt=0, le=5000)
     per_100g: Per100g = Field(default_factory=Per100g)
     note: str = Field(default="", max_length=4000)
+    source: str = Field(default="", max_length=200)
+    barcode: str = Field(default="", max_length=20, pattern=r"^\d{0,20}$")
 
 
 class FoodOut(BaseModel):
@@ -42,8 +47,12 @@ class FoodOut(BaseModel):
     brand: str
     aliases: str
     package_g: float | None
+    unit_name: str = ""
+    unit_g: float | None = None
     per_100g: dict[str, Any]
     note: str
+    source: str = ""
+    barcode: str = ""
     photos: list[dict[str, Any]]
     created_at: datetime
 

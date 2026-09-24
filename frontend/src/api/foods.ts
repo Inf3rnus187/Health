@@ -19,8 +19,14 @@ export interface FoodIn {
   brand: string;
   aliases: string;
   package_g: number | null;
+  /** How it is counted: « tomate », « tranche » (unit_g grams each). */
+  unit_name: string;
+  unit_g: number | null;
   per_100g: Per100g;
   note: string;
+  /** Where the values come from (étiquette, Ciqual, Open Food Facts). */
+  source: string;
+  barcode: string;
 }
 
 export interface Food extends FoodIn {
@@ -29,12 +35,22 @@ export interface Food extends FoodIn {
   created_at: string;
 }
 
-/** What the AI read on a label: a proposal to check. */
+/** What the AI read on a label (or Open Food Facts): a proposal. */
 export interface LabelReading {
   name: string;
   brand: string;
   package_g: number | null;
   per_100g: Per100g;
+  barcode?: string;
+  source?: string;
+}
+
+/** A food of the ANSES Ciqual table (values per 100 g, null: unknown). */
+export interface CiqualRef {
+  code: string;
+  name: string;
+  group: string;
+  per_100g: Record<keyof Per100g, number | null>;
 }
 
 /** A catalogue food in a meal (grams: null → the AI estimates). */
@@ -73,6 +89,13 @@ export function addFoodPhoto(id: string, file: File, kind: PhotoKind) {
   form.set('kind', kind);
   return send<Food>(`/foods/${id}/photos`, form);
 }
+
+export const searchCiqual = (q: string) =>
+  api<{ version: string; items: CiqualRef[] }>(
+    `/ciqual?q=${encodeURIComponent(q)}&limit=12`,
+  );
+export const lookupBarcode = (code: string) =>
+  api<LabelReading>(`/openfoodfacts/${encodeURIComponent(code)}`);
 
 /** Read a label with the AI (nothing saved). */
 export function readLabel(file: File) {

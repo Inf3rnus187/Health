@@ -67,6 +67,10 @@ def _fields(data: FoodIn) -> dict[str, Any]:
         "brand": data.brand.strip(),
         "aliases": data.aliases.strip(),
         "package_g": data.package_g,
+        "unit_name": data.unit_name.strip(),
+        "unit_g": data.unit_g,
         "per_100g": values,
         "note": data.note.strip(),
+        "source": data.source.strip(),
+        "barcode": data.barcode,
     }

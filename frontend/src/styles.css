@@ -2370,3 +2370,29 @@ img.viewer-file {
     font-size: 18px;
   }
 }
+
+/* Mes aliments: fill a sheet from the Ciqual table or a barcode. */
+.food-source {
+  display: grid;
+  gap: 6px;
+}
+
+.food-refs {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.linklike {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
