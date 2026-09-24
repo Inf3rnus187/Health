@@ -123,9 +123,11 @@ cigarettes, le pipi et les repas.
   Travail et son repas arrive ici marqué « 🧾 Note de frais » :
   type (petit-déjeuner, déjeuner, collation, dîner),
   date et heure, **description** (quantités, cuisson, « sans huile ni
-  beurre »…) et **photo** facultative (sur téléphone, l'appareil photo
-  s'ouvre). La photo est nettoyée (EXIF et GPS retirés), redimensionnée et
-  chiffrée si le chiffrement est activé.
+  beurre »…) et **photo** facultative : « 📷 Prendre une photo »
+  (l'appareil photo) ou « 🖼️ Galerie » (une photo déjà prise, par
+  exemple le repas d'hier), avec un aperçu et « Retirer la photo ». La
+  photo est nettoyée (EXIF et GPS retirés), redimensionnée et chiffrée si
+  le chiffrement est activé.
 - **Analyse IA du repas** (une à quelques minutes) : aliments et
   quantités, **nutriments** (énergie, protéines, glucides dont sucres,
   lipides dont saturés, fibres, sodium), **note 0–10**, verdict, points

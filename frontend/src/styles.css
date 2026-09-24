@@ -1552,8 +1552,33 @@ a.tile:hover {
 }
 
 .meal-form .meal-text,
-.meal-form .meal-file {
+.meal-form .photo-pick {
   grid-column: 1 / -1;
+}
+
+/* Photo of a meal: camera or gallery (two buttons), then a preview. */
+.photo-pick {
+  display: grid;
+  gap: 6px;
+}
+
+.photo-pick .quick {
+  margin-top: 0;
+}
+
+.photo-pick-chosen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.photo-pick-preview {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
 }
 
 .meal-text {
@@ -1563,13 +1588,6 @@ a.tile:hover {
 
 .meal-day h3 {
   margin: 0;
-}
-
-.meal-file {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  color: var(--color-muted);
 }
 
 .meal-day {

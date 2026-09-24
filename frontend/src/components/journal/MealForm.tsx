@@ -1,7 +1,8 @@
-import type { FormEvent } from 'react';
+import { type FormEvent, useState } from 'react';
 
 import { MEAL_TYPES } from '../../api/journal';
 import { useCreateMeal } from '../../hooks/useJournal';
+import { PhotoPick } from './PhotoPick';
 import { mealOfNow, nowLocal } from './time';
 
 const HINT =
@@ -30,18 +31,12 @@ function When() {
 
 function What() {
   return (
-    <>
-      <textarea
-        className="input meal-text"
-        name="description"
-        rows={3}
-        placeholder={HINT}
-      />
-      <label className="meal-file">
-        Photo du repas (facultative)
-        <input type="file" name="file" accept="image/*" capture="environment" />
-      </label>
-    </>
+    <textarea
+      className="input meal-text"
+      name="description"
+      rows={3}
+      placeholder={HINT}
+    />
   );
 }
 
@@ -63,20 +58,34 @@ function Help() {
   );
 }
 
-/** Log a meal: type, time, what was eaten, photo → AI reading. */
-export function MealForm() {
+/** Send the form with the photo picked (camera and gallery: one photo). */
+function useSend() {
   const create = useCreateMeal();
+  const [photo, setPhoto] = useState<File | null>(null);
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
-    create.mutate(new FormData(form), { onSuccess: () => form.reset() });
+    const data = new FormData(form);
+    if (photo) data.set('file', photo);
+    const done = () => {
+      form.reset();
+      setPhoto(null);
+    };
+    create.mutate(data, { onSuccess: done });
   };
+  return { create, photo, setPhoto, onSubmit };
+}
+
+/** Log a meal: type, time, what was eaten, photo → AI reading. */
+export function MealForm() {
+  const { create, photo, setPhoto, onSubmit } = useSend();
   return (
     <section className="card">
       <h2>Ajouter un repas (suivi santé)</h2>
       <form className="meal-form" onSubmit={onSubmit}>
         <When />
         <What />
+        <PhotoPick photo={photo} onPick={setPhoto} />
         <button className="btn" disabled={create.isPending}>
           {create.isPending ? 'Envoi…' : 'Enregistrer et analyser'}
         </button>

@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A meal photo from the gallery**: on a phone the Journal's photo field
+  opened the camera only. It now offers « 📷 Prendre une photo » and
+  « 🖼️ Galerie », shows the photo picked and lets it be taken back.
 - **A meal Shortcut without photo was refused (422)**: an empty `file`
   field (an iPhone Shortcut's « Sans photo » branch) now counts as
   absent. `eaten_at` also takes `23/09/2026 20:30` (day first, local
