@@ -74,3 +74,24 @@ async def test_update_metric(client: AsyncClient, auth: dict[str, str]) -> None:
     )
     assert response.status_code == 200
     assert response.json()["label"] == "Poids (test)"
+
+
+async def test_only_the_administrator_changes_the_shared_catalogue(
+    client: AsyncClient, auth: dict[str, str], member: dict[str, str]
+) -> None:
+    """A unit, bounds or « active » changed would change everybody's data."""
+    change = {"label": "Poids (autre)"}
+    res = await client.patch(
+        f"{METRICS}/body.weight", json=change, headers=member
+    )
+    assert res.status_code == 403
+    new = {"key": "custom.test", "label": "Test", "domain": "custom",
+           "data_type": "float"}  # fmt: skip
+    assert (
+        await client.post(METRICS, json=new, headers=member)
+    ).status_code == 403
+    assert (await client.get(METRICS, headers=member)).status_code == 200
+    mine = await client.patch(
+        f"{METRICS}/body.weight", json=change, headers=auth
+    )
+    assert mine.status_code == 200

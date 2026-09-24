@@ -4,23 +4,16 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Query, status
 
-from app.core.deps import (
-    Principal,
-    PrincipalDep,
-    SessionDep,
-    require_scope,
-)
-from app.core.scopes import WRITE_METRICS
+from app.core.deps import PrincipalDep, SessionDep
+from app.core.deps_admin import CatalogDep
 from app.models.metric import MetricDefinition
 from app.schemas.metric import MetricCreate, MetricOut, MetricUpdate
 from app.services import audit
 from app.services import metrics as svc
 
 router = APIRouter(prefix="/metrics", tags=["metrics"])
-
-WriteDep = Annotated[Principal, Depends(require_scope(WRITE_METRICS))]
 
 
 @router.get("", response_model=list[MetricOut])
@@ -39,9 +32,9 @@ async def index(
 
 @router.post("", response_model=MetricOut, status_code=status.HTTP_201_CREATED)
 async def create(
-    body: MetricCreate, principal: WriteDep, session: SessionDep
+    body: MetricCreate, principal: CatalogDep, session: SessionDep
 ) -> MetricDefinition:
-    """Register a new metric at runtime."""
+    """Register a new metric at runtime (administrator: shared catalogue)."""
     metric = await svc.create_metric(session, principal.user.id, body)
     await audit.record(
         session,
@@ -66,10 +59,13 @@ async def detail(
 async def update(
     key: str,
     body: MetricUpdate,
-    principal: WriteDep,
+    principal: CatalogDep,
     session: SessionDep,
 ) -> MetricDefinition:
-    """Update a metric's label, bounds, options or active flag."""
+    """Update a metric's label, bounds, options or active flag.
+
+    Administrator only: the catalogue is shared by every user.
+    """
     metric = await svc.update_metric(session, key, body)
     await audit.record(
         session,

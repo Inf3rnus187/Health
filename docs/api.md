@@ -58,7 +58,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | Méthode | Route | Accès | Paramètres | Rôle |
 |---|---|---|---|---|
 | GET | `/metrics` | Tout jeton | `domain`?, `source`?, `active`? | List metric definitions, filterable by domain/source/active. |
-| POST | `/metrics` | `write:metrics` | JSON `MetricCreate` (key, label, domain, data_type, unit, source, enum_options, min_value, max_value, aggregation_hint, formula) | Register a new metric at runtime. |
+| POST | `/metrics` | `write:metrics` | JSON `MetricCreate` (key, label, domain, data_type, unit, source, enum_options, min_value, max_value, aggregation_hint, formula) | Register a new metric at runtime (administrator: shared catalogue). |
 | GET | `/metrics/{key}` | Tout jeton | `key` | Return one metric definition by key. |
 | PATCH | `/metrics/{key}` | `write:metrics` | `key`, JSON `MetricUpdate` (label, unit, enum_options, min_value, max_value, aggregation_hint, formula, is_active) | Update a metric's label, bounds, options or active flag. |
 | GET | `/metrics/{key}/overview` | `read:all` | `key`, `days`? | Latest reading, day value, averages, sources and daily series. |

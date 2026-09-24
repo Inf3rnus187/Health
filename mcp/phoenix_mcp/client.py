@@ -6,13 +6,19 @@ database (§9). Over the network each request carries the caller's own
 :data:`REQUEST_TOKEN` and every API call reuses: one token, nothing to
 configure, each user sees their own data. ``PHOENIX_API_TOKEN`` is only
 the fallback for stdio. API errors are raised with the API's message.
+
+Only API paths are called (``/metrics``, relative to ``/api/v1``): a full
+URL (``https://…``, ``//host/…``) or a ``..`` segment is refused before
+any request, so the caller's token never leaves for another host.
 """
 
 from __future__ import annotations
 
 import os
+import re
 from contextvars import ContextVar
 from typing import Any
+from urllib.parse import unquote
 
 import httpx
 
@@ -30,6 +36,21 @@ REQUEST_TOKEN: ContextVar[str | None] = ContextVar(
 
 class ApiError(RuntimeError):
     """The API refused a call (status and its detail message)."""
+
+
+#: An API path: one slash then a letter (never ``//host``), no scheme.
+_API_PATH = re.compile(r"^/[A-Za-z0-9_][^\s\\]*$")
+
+
+def _api_path(path: str) -> str:
+    """``path`` when it is an API path (``/metrics``), else ApiError."""
+    plain = unquote(path).split("?", 1)[0]
+    if not _API_PATH.match(path) or "/../" in f"{plain}/" or "://" in path:
+        raise ApiError(
+            f"{path!r}: an API path is expected, e.g. /metrics "
+            "(relative to /api/v1, never a full URL)"
+        )
+    return path
 
 
 def configure(
@@ -53,7 +74,7 @@ async def request(
     """Call the API; return its JSON (or text) body."""
     async with _new_client(timeout) as client:
         response = await client.request(
-            method, path, params=_clean(params), json=body
+            method, _api_path(path), params=_clean(params), json=body
         )
     return _body(method, path, response)
 
@@ -61,7 +82,9 @@ async def request(
 async def upload(path: str, files: Any, data: dict[str, Any]) -> Any:
     """POST a multipart form (a document, a lab PDF…)."""
     async with _new_client(_TIMEOUT, json=False) as client:
-        response = await client.post(path, files=files, data=_clean(data))
+        response = await client.post(
+            _api_path(path), files=files, data=_clean(data)
+        )
     return _body("POST", path, response)
 
 

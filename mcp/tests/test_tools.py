@@ -227,6 +227,27 @@ async def test_the_callers_hub_token_is_checked_and_used() -> None:
     assert client.REQUEST_TOKEN.get() is None  # reset after the request
 
 
+@pytest.mark.parametrize(
+    "path",
+    [
+        "https://attacker.example/steal",
+        "//attacker.example/steal",
+        "http:/attacker.example",
+        "/../../health",
+        "/metrics/%2e%2e/%2e%2e/x",
+        "metrics",
+        "/\\attacker.example",
+    ],
+)
+async def test_the_token_never_leaves_for_another_url(path: str) -> None:
+    seen = _capture()
+    with pytest.raises(client.ApiError, match="API path is expected"):
+        await tools_reports.api_get(path)
+    with pytest.raises(client.ApiError):
+        await tools_reports.api_call("POST", path, body={"a": 1})
+    assert seen == []  # nothing sent, the token stayed here
+
+
 async def test_a_meal_is_sent_as_a_form_with_its_photo() -> None:
     seen = _capture()
     await tools_journal.log_meal("salade, poulet", photo_base64="SGVsbG8=")

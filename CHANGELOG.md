@@ -6,6 +6,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security
+
+- **No token in the logs**: an iPhone Shortcut sends its API token in the
+  URL (`?token=…`); the API's access log and nginx's now write
+  `token=***` (the token stays valid, it just never lands in a log file).
+- **The MCP never sends a token elsewhere**: `api_get` / `api_call` (and
+  every tool) accept only API paths (`/metrics`, relative to `/api/v1`);
+  a full URL, `//host`, `..` or a backslash is refused before any
+  request.
+- **The metric catalogue is the administrator's**: creating or changing
+  a metric (unit, bounds, « active ») changes everybody's data, so
+  `POST /metrics` and `PATCH /metrics/{key}` need the `admin` role
+  (session, or an admin's `write:metrics` token); reading is unchanged.
+
 ### Fixed
 
 - **Updates are the administrator's**: `/system/update` (state and
