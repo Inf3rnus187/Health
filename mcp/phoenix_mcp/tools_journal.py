@@ -55,23 +55,24 @@ async def log_meal(
     eaten_at: str | None = None,
     photo_base64: str | None = None,
     photo_filename: str = "repas.jpg",
-    price: float | None = None,
 ) -> Any:
     """Log a meal, then the AI reads it (minutes; poll get_meal).
 
     meal_type: breakfast, lunch, snack or dinner (empty: from the hour
     it was eaten). The description is
     authoritative (quantities, cooking, no fat…); an optional photo helps
-    estimate portions. ``price``: what it cost (a delivery). Nutrients go
-    to Apple's nutrition metrics.
+    estimate portions. Nutrients go to Apple's nutrition metrics.
+
+    Health follow-up only: never a work proof, no price. A meal paid
+    for (receipt, delivery, expense report) is a proof: add_evidence
+    with kind « repas » or « livraison » and trace={"amount": …,
+    "meal": True} — it logs the meal here too.
     """
     data = {
         "meal_type": meal_type,
         "eaten_at": eaten_at or "",
         "description": description,
     }
-    if price is not None:
-        data["price"] = str(price)
     files = {}
     if photo_base64:
         raw = base64.b64decode(photo_base64)

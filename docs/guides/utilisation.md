@@ -118,7 +118,10 @@ cigarettes, le pipi et les repas.
   repas (nombre et kcal lues par l'IA) ; les moyennes de la page en tête.
   Paginé (50 par page, 10 sur téléphone, où chaque jour devient une
   fiche).
-- **Ajouter un repas** : type (petit-déjeuner, déjeuner, collation, dîner),
+- **Ajouter un repas (suivi santé)** — jamais une preuve de travail, sans
+  prix ; une note de frais (reçu, livraison) s'ajoute comme preuve dans
+  Travail et son repas arrive ici marqué « 🧾 Note de frais » :
+  type (petit-déjeuner, déjeuner, collation, dîner),
   date et heure, **description** (quantités, cuisson, « sans huile ni
   beurre »…) et **photo** facultative (sur téléphone, l'appareil photo
   s'ouvre). La photo est nettoyée (EXIF et GPS retirés), redimensionnée et
@@ -184,6 +187,14 @@ ignoré.
 Le seul autre chemin, parce qu'un repas transporte une photo — même jeton.
 Il prend **la date et l'heure** : un repas d'hier se note après coup.
 
+C'est le **suivi santé** (« j'ai mangé ça ») : ce repas ne devient
+**jamais une preuve de travail** et n'a pas de prix. Une **note de
+frais** (reçu, livraison, repas payé) est une autre chose, ajoutée
+ponctuellement comme **preuve** dans Travail › Dossier travail et santé
+(genre « Repas » ou « Livraison », montant, reçu) : « Ajouter au
+Journal » (coché par défaut) crée alors aussi son repas ici, pour la
+santé, marqué « 🧾 Note de frais ».
+
 **L'appel** — `POST /api/v1/meals?token=<jeton>`, corps **Formulaire**
 (`multipart/form-data`) :
 
@@ -193,9 +204,8 @@ Il prend **la date et l'heure** : un repas d'hier se note après coup.
 | `file` | Fichier | l'un des deux | la photo (JPEG, HEIC, PNG… 15 Mo max ; EXIF et GPS retirés) |
 | `eaten_at` | Texte | non | vide = maintenant ; `2026-09-23T20:30`, `2026-09-23T20:30:00+02:00` ou `23/09/2026 20:30` (sans fuseau = heure locale) |
 | `meal_type` | Texte | non | `breakfast`, `lunch`, `snack`, `dinner` ; vide = d'après l'heure (avant 10:30, 15:00, 18:00) |
-| `price` | Texte | non | ce qu'il a coûté (« 12,50 ») |
 
-Un champ laissé vide (pas de photo, pas de prix) compte comme absent. La
+Un champ laissé vide (pas de photo) compte comme absent. La
 réponse (201) donne le repas : `date_key`, `meal_type`, `has_photo`,
 `analysis_status` (`queued`). L'analyse IA (une à quelques minutes)
 apparaît ensuite dans **Journal**.
@@ -231,9 +241,10 @@ curl -s -X POST "http://<hub>/api/v1/meals?token=$TOKEN" \
   -F eaten_at="2026-09-23T20:30" -F meal_type=dinner -F file=@repas.jpg
 ```
 
-Ailleurs : **Journal › Ajouter un repas** dans le site (type, date et
-heure, description, prix, photo) ; outil MCP `log_meal` (`description`,
-`meal_type`, `eaten_at` ISO, `photo_base64`, `price`).
+Ailleurs : **Journal › Ajouter un repas (suivi santé)** dans le site
+(type, date et heure, description, photo) ; outil MCP `log_meal`
+(`description`, `meal_type`, `eaten_at` ISO, `photo_base64`). Une note de
+frais : `add_evidence` (MCP) ou Travail › Preuves (site).
 
 > Un raccourci déjà réglé sur `POST /api/v1/journal/urination?token=…`
 > (sans corps) continue de marcher : c'est la route du bouton « Pipi

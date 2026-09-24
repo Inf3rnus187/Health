@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchMealPhoto, MEAL_TYPES, type Meal } from '../../api/journal';
 import { useAnalyzeMeal, useDeleteMeal } from '../../hooks/useJournal';
 import type { Selection } from '../../hooks/useSelection';
+import { frNumber } from '../../utils/format';
 import { PickBox } from '../Bulk';
 import { MealAnalysisView } from './MealAnalysisView';
 import { clock } from './time';
@@ -51,6 +52,17 @@ function Actions({ meal }: { meal: Meal }) {
   );
 }
 
+/** A meal logged from a proof (expense report, receipt, delivery). */
+function FromProof({ meal }: { meal: Meal }) {
+  const paid = `${frNumber(meal.price ?? 0, 2)} €`;
+  return (
+    <p className="muted">
+      🧾 Note de frais : {paid}
+      {meal.vendor && ` · ${meal.vendor}`} — la preuve est dans Travail
+    </p>
+  );
+}
+
 export function MealCard({ meal, sel }: { meal: Meal; sel?: Selection }) {
   return (
     <article className="meal-card">
@@ -62,7 +74,7 @@ export function MealCard({ meal, sel }: { meal: Meal; sel?: Selection }) {
           {clock(meal.eaten_at)}
         </h3>
         {meal.description && <p>{meal.description}</p>}
-        {meal.price != null && <p className="muted">{meal.price} €</p>}
+        {meal.price != null && <FromProof meal={meal} />}
         <Reading meal={meal} />
         <Actions meal={meal} />
       </div>

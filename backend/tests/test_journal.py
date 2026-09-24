@@ -257,7 +257,7 @@ async def test_a_meal_shortcut_like_the_iphone_sends_it(
     bare = await client.post(
         url,
         data={"description": "pâtes", "eaten_at": "23/09/2026 20:30",
-              "file": "", "price": "", "meal_type": ""},
+              "file": "", "meal_type": ""},
     )  # fmt: skip
     assert bare.status_code == 201, bare.text
     meal = bare.json()
@@ -266,11 +266,13 @@ async def test_a_meal_shortcut_like_the_iphone_sends_it(
     shot = await client.post(
         url,
         data={"description": "salade", "eaten_at": "2026-09-23T12:15:00+02:00",
-              "price": "12,50"},
+              "price": "12,50"},  # a health meal: no price, not a proof
         files={"file": ("IMG_0001.JPG", _jpeg(), "application/octet-stream")},
     )  # fmt: skip
     assert shot.status_code == 201, shot.text
-    assert shot.json()["has_photo"] and shot.json()["price"] == 12.5
+    assert shot.json()["has_photo"] and shot.json()["price"] is None
+    proofs = (await client.get("/api/v1/evidence", headers=auth)).json()
+    assert proofs == []
     assert shot.json()["meal_type"] == "lunch"
     wrong = await client.post(url, data={"eaten_at": "hier"})
     assert wrong.status_code == 422

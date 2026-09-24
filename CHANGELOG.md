@@ -9,11 +9,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - **A meal Shortcut without photo was refused (422)**: an empty `file`
-  or `price` field (an iPhone Shortcut's « Sans photo » branch) now
-  counts as absent. `eaten_at` also takes `23/09/2026 20:30` (day
-  first, local time) besides ISO; `price` takes « 12,50 »; a photo sent
-  as `application/octet-stream` is still read (the decoder decides).
-  The guide gives the whole Shortcut, yesterday's meal included.
+  field (an iPhone Shortcut's « Sans photo » branch) now counts as
+  absent. `eaten_at` also takes `23/09/2026 20:30` (day first, local
+  time) besides ISO; a photo sent as `application/octet-stream` is still
+  read (the decoder decides). The guide gives the whole Shortcut,
+  yesterday's meal included.
+- **A health meal is not an expense**: a meal logged in the Journal (web,
+  Shortcut `POST /meals`, MCP `log_meal`) is the health follow-up only —
+  it takes no price and is never a work proof. A meal paid for (receipt,
+  delivery, expense report) is a proof added in Travail (`POST /evidence`,
+  `meal=true`), which logs its meal in the Journal too, shown there as
+  « 🧾 Note de frais ».
 - **Santé's vital signs showed « Mesure indisponible »** for everyone
   with a tracker blocker: EasyPrivacy (uBlock, AdGuard, Brave, Safari
   blockers) drops every browser request under `/api/v1/metrics`. The

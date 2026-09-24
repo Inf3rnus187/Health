@@ -30,23 +30,24 @@ async def create(
     meal_type: Annotated[str, Form()] = "",
     eaten_at: Annotated[str, Form()] = "",
     description: Annotated[str, Form()] = "",
-    price: Annotated[str, Form()] = "",
     file: Annotated[UploadFile | str | None, File()] = None,
 ) -> Meal:
-    """Log a meal (photo and/or description), then read it with the AI.
+    """Log a meal for the health follow-up, then read it with the AI.
 
     Form fields: ``description``, ``file`` (photo: JPEG, HEIC, PNG…), and
-    optionally ``meal_type`` (default: from the hour), ``eaten_at``
+    optionally ``meal_type`` (default: from the hour) and ``eaten_at``
     (default: now; ``2026-09-23T20:30``, with or without an offset, or
-    ``23/09/2026 20:30`` — a time without offset is local) and ``price``
-    (what it cost, « 12,50 » accepted). An empty field (an iPhone
-    Shortcut without photo) counts as absent.
+    ``23/09/2026 20:30`` — a time without offset is local). An empty
+    field (an iPhone Shortcut without photo) counts as absent.
+
+    Health only: such a meal is never a work proof and has no price. A
+    meal paid for (receipt, delivery, expense report) is a proof —
+    ``POST /evidence`` with ``meal=true`` — which logs its meal here too.
     """
     fields = {
         "meal_type": meal_type,
         "eaten_at": _when(eaten_at),
         "description": description,
-        "price": _price(price),
     }
     photo = await _photo(file)
     meal = await meals.create(session, principal.user.id, fields, photo)
@@ -109,20 +110,6 @@ def _when(value: str) -> datetime | None:
     raise InvalidInputError(
         "eaten_at must be a date-time: 2026-09-23T20:30 or 23/09/2026 20:30"
     )
-
-
-def _price(value: str) -> float | None:
-    """A price (« 12,50 », « 12.5 € »), None when empty."""
-    text = value.replace("€", "").replace(",", ".").strip()
-    if not text:
-        return None
-    try:
-        amount = float(text)
-    except ValueError as exc:
-        raise InvalidInputError("price must be a number") from exc
-    if not 0 <= amount <= 10000:  # noqa: PLR2004
-        raise InvalidInputError("price must be between 0 and 10000")
-    return amount
 
 
 async def _photo(file: Upload | str | None) -> tuple[bytes, str] | None:

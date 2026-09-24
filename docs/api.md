@@ -272,7 +272,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | POST | `/journal/urination` | `write:measurements` + ?token= | JSON `UrinationIn`? (at) | Record one urination (now unless ``at`` is given). |
 | DELETE | `/journal/urination/{sample_id}` | `write:measurements` | `sample_id` | Delete one urination entry. |
 | GET | `/meals` | `read:all` | `start`?, `end`? | Meals between two days (default: the last 7 days), newest first. |
-| POST | `/meals` | `write:measurements` + ?token= | form `meal_type`, form `eaten_at`, form `description`, form `price`, form `file` | Log a meal (photo and/or description), then read it with the AI. |
+| POST | `/meals` | `write:measurements` + ?token= | form `meal_type`, form `eaten_at`, form `description`, form `file` | Log a meal for the health follow-up, then read it with the AI. |
 | POST | `/meals/delete` | `write:measurements` | JSON `IdsIn` (ids) | Delete meals with their photos and nutrients. |
 | DELETE | `/meals/{meal_id}` | `write:measurements` | `meal_id` | Delete a meal, its photo and its nutrients. |
 | GET | `/meals/{meal_id}` | `read:all` | `meal_id` | One meal with its reading. |

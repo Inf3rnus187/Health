@@ -8,20 +8,6 @@ const HINT =
   'Ex. : 2 tomates, ½ concombre, comté dans la salade, un filet de blanc ' +
   'de poulet, pommes de terre rissolées — sans huile, beurre ni sauce.';
 
-function Price() {
-  return (
-    <input
-      className="input"
-      type="number"
-      name="price"
-      min={0}
-      step={0.01}
-      placeholder="Prix € (livraison…)"
-      title="Ce qu’il a coûté (facultatif)"
-    />
-  );
-}
-
 function When() {
   return (
     <>
@@ -38,7 +24,6 @@ function When() {
         name="eaten_at"
         defaultValue={nowLocal()}
       />
-      <Price />
     </>
   );
 }
@@ -62,11 +47,19 @@ function What() {
 
 function Help() {
   return (
-    <p className="muted">
-      Décrivez ce que vous avez mangé (quantités, cuisson, sans matière grasse…)
-      : la description fait foi, la photo aide à estimer les portions. L’analyse
-      IA prend une à quelques minutes.
-    </p>
+    <>
+      <p className="muted">
+        Décrivez ce que vous avez mangé (quantités, cuisson, sans matière
+        grasse…) : la description fait foi, la photo aide à estimer les
+        portions. L’analyse IA prend une à quelques minutes.
+      </p>
+      <p className="muted">
+        Suivi santé seulement (diabète, foie, poids…) : un repas noté ici n’est
+        jamais une preuve de travail et n’a pas de prix. Une note de frais, un
+        reçu ou une livraison s’ajoute comme preuve dans Travail › Dossier
+        travail et santé : son repas arrive alors ici aussi.
+      </p>
+    </>
   );
 }
 
@@ -80,7 +73,7 @@ export function MealForm() {
   };
   return (
     <section className="card">
-      <h2>Ajouter un repas</h2>
+      <h2>Ajouter un repas (suivi santé)</h2>
       <form className="meal-form" onSubmit={onSubmit}>
         <When />
         <What />
