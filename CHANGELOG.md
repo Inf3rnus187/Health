@@ -120,6 +120,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Edit a meal afterwards** (Journal › Repas › « Modifier »): type, date
+  and time, description, foods of the list, and its photos — remove one
+  (the plate's too) or add some later (a meal without a plate photo
+  takes the first one added). « Enregistrer et réanalyser » applies all
+  and reads the meal once. `POST /meals/{id}/photos` gives the plate's
+  photo to a meal without one; `DELETE /meals/{id}/photo`; `?read=false`
+  on photo changes; MCP `add_meal_photo`, `delete_meal_photo`
+  (`update_meal` takes `foods`).
 - **Same meal, same numbers — the Ciqual table**: the ANSES Ciqual 2025
   table (3,484 generic foods, Licence Ouverte, shipped with the hub,
   read offline; provenance in `backend/app/data/README.md`). The meal

@@ -169,6 +169,13 @@ formulaire et la liste) et **Mes aliments**.
 - **Repas** de la période (7 jours par défaut, ou dates exactes), groupés
   par jour avec le total du jour, 10 jours par page ; les photos de
   l'emballage en vignettes sous la description (un appui les agrandit).
+  **« Modifier »** ouvre le repas en place : type, date et heure,
+  description, aliments de ma liste, et ses **photos** — « × » en retire
+  une (celle de l'assiette aussi), « 📷 Prendre une photo » /
+  « 🖼️ Galerie » en ajoute après coup (un repas sans photo d'assiette
+  prend la première ajoutée comme assiette, les suivantes comme
+  emballage). « Enregistrer et réanalyser » applique tout puis relit le
+  repas **une seule fois** ; ses nutriments sont remplacés.
   **« Refaire ce repas »** remplit le formulaire avec son type, sa
   description et ses aliments (on ajuste l'heure, on enregistre). Cocher
   des repas (ou « Tout sélectionner » : tous ceux de la période) puis

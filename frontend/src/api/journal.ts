@@ -1,5 +1,5 @@
 import type { Range } from '../utils/range';
-import { api, authFetch } from './client';
+import { api, authFetch, toError } from './client';
 import type { FoodPortion } from './foods';
 
 export interface UrinationDay {
@@ -101,6 +101,38 @@ export async function createMeal(form: FormData): Promise<Meal> {
 
 export const mealPhotoPath = (id: string, photoId: string) =>
   `/meals/${id}/photos/${photoId}`;
+
+/** What a meal's edit changes (then it is read again). */
+export interface MealChange {
+  meal_type: string;
+  eaten_at: string;
+  description: string;
+  foods: FoodPortion[];
+}
+
+export const updateMeal = (id: string, change: MealChange) =>
+  api<Meal>(`/meals/${id}`, json('PUT', change));
+
+/** Drop a photo: the plate's (``null``) or another; no reading yet. */
+export const dropMealPhoto = (id: string, photoId: string | null) =>
+  api<Meal>(
+    photoId
+      ? `/meals/${id}/photos/${photoId}?read=false`
+      : `/meals/${id}/photo?read=false`,
+    json('DELETE'),
+  );
+
+/** Add a photo (the plate's if it has none); no reading yet. */
+export async function addMealPhoto(id: string, file: File): Promise<Meal> {
+  const form = new FormData();
+  form.set('file', file);
+  const res = await authFetch(`/meals/${id}/photos?read=false`, {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) throw await toError(res);
+  return (await res.json()) as Meal;
+}
 
 /** The meal photo as an object URL (authenticated). */
 export async function fetchMealPhoto(id: string): Promise<string> {

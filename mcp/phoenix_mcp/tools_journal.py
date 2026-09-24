@@ -130,6 +130,34 @@ async def update_meal(
 
 
 @mcp.tool()
+async def add_meal_photo(
+    meal_id: str, photo_base64: str, filename: str = "photo.jpg"
+) -> Any:
+    """Add a photo to a meal afterwards; it is read again.
+
+    A meal without a photo gets it as the plate's; otherwise it joins the
+    others (the box, the sachet, its nutrition table; 6 at most).
+    """
+    raw = base64.b64decode(photo_base64)
+    files = {"file": (filename, raw, "image/jpeg")}
+    return await client.upload(f"/meals/{meal_id}/photos", files, {})
+
+
+@mcp.tool()
+async def delete_meal_photo(meal_id: str, photo_id: str | None = None) -> Any:
+    """Delete a meal's photo; the meal is read again.
+
+    ``photo_id``: one of its ``photo_ids``; none: the plate's photo.
+    """
+    path = (
+        f"/meals/{meal_id}/photos/{photo_id}"
+        if photo_id
+        else f"/meals/{meal_id}/photo"
+    )
+    return await client.request("DELETE", path)
+
+
+@mcp.tool()
 async def analyze_meal(meal_id: str) -> Any:
     """Read a meal again with the current models."""
     return await client.post(f"/meals/{meal_id}/analyze")

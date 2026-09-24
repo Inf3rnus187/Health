@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import {
   fetchMealPhoto,
@@ -12,6 +13,7 @@ import { frNumber } from '../../utils/format';
 import { PickBox } from '../Bulk';
 import { Zoomable } from '../Zoomable';
 import { MealAnalysisView } from './MealAnalysisView';
+import { MealEdit } from './MealEdit';
 import { StoredShot } from './Shots';
 import { clock } from './time';
 
@@ -51,28 +53,44 @@ function Reading({ meal }: { meal: Meal }) {
   return <MealAnalysisView a={meal.analysis} />;
 }
 
-function Actions(props: { meal: Meal; onReuse?: (meal: Meal) => void }) {
-  const { meal, onReuse } = props;
-  const analyze = useAnalyzeMeal();
+function useDelete(meal: Meal) {
   const del = useDeleteMeal();
-  const onDelete = () => {
+  return () => {
     if (window.confirm('Supprimer ce repas et ses nutriments ?')) {
       del.mutate(meal.id);
     }
   };
+}
+
+interface ActionProps {
+  meal: Meal;
+  onReuse?: (meal: Meal) => void;
+  onEdit: () => void;
+}
+
+function useButtons(props: ActionProps): [string, () => void][] {
+  const { meal, onReuse } = props;
+  const analyze = useAnalyzeMeal();
+  const remove = useDelete(meal);
+  const reuse: [string, () => void][] = onReuse
+    ? [['Refaire ce repas', () => onReuse(meal)]]
+    : [];
+  return [
+    ['Modifier', props.onEdit],
+    ...reuse,
+    ['Réanalyser', () => analyze.mutate(meal.id)],
+    ['Supprimer', remove],
+  ];
+}
+
+function Actions(props: ActionProps) {
   return (
     <div className="row-actions">
-      {onReuse && (
-        <button className="btn ghost" onClick={() => onReuse(meal)}>
-          Refaire ce repas
+      {useButtons(props).map(([label, onClick]) => (
+        <button key={label} className="btn ghost" onClick={onClick}>
+          {label}
         </button>
-      )}
-      <button className="btn ghost" onClick={() => analyze.mutate(meal.id)}>
-        Réanalyser
-      </button>
-      <button className="btn ghost" onClick={onDelete}>
-        Supprimer
-      </button>
+      ))}
     </div>
   );
 }
@@ -88,27 +106,47 @@ function FromProof({ meal }: { meal: Meal }) {
   );
 }
 
+function Title({ meal, sel }: { meal: Meal; sel?: Selection }) {
+  return (
+    <h3>
+      {sel && <PickBox sel={sel} id={meal.id} />}{' '}
+      {MEAL_TYPES[meal.meal_type] ?? meal.meal_type} · {clock(meal.eaten_at)}
+    </h3>
+  );
+}
+
+function Body(props: {
+  meal: Meal;
+  sel?: Selection;
+  onReuse?: (meal: Meal) => void;
+  onEdit: () => void;
+}) {
+  const { meal } = props;
+  return (
+    <div className="meal-body">
+      <Title meal={meal} sel={props.sel} />
+      {meal.description && <p>{meal.description}</p>}
+      <Extras meal={meal} />
+      {meal.price != null && <FromProof meal={meal} />}
+      <Reading meal={meal} />
+      <Actions meal={meal} onReuse={props.onReuse} onEdit={props.onEdit} />
+    </div>
+  );
+}
+
 export function MealCard(props: {
   meal: Meal;
   sel?: Selection;
   onReuse?: (meal: Meal) => void;
 }) {
-  const { meal, sel } = props;
+  const [editing, setEditing] = useState(false);
+  if (editing) {
+    return <MealEdit meal={props.meal} onDone={() => setEditing(false)} />;
+  }
   return (
     <article className="meal-card">
-      <Photo meal={meal} />
-      <div className="meal-body">
-        <h3>
-          {sel && <PickBox sel={sel} id={meal.id} />}{' '}
-          {MEAL_TYPES[meal.meal_type] ?? meal.meal_type} ·{' '}
-          {clock(meal.eaten_at)}
-        </h3>
-        {meal.description && <p>{meal.description}</p>}
-        <Extras meal={meal} />
-        {meal.price != null && <FromProof meal={meal} />}
-        <Reading meal={meal} />
-        <Actions meal={meal} onReuse={props.onReuse} />
-      </div>
+      <Photo meal={props.meal} />
+      <Body {...props} onEdit={() => setEditing(true)} />
     </article>
   );
 }

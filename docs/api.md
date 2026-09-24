@@ -278,9 +278,10 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | GET | `/meals/{meal_id}` | `read:all` | `meal_id` | One meal with its reading. |
 | PUT | `/meals/{meal_id}` | `write:measurements` | `meal_id`, JSON `MealUpdate` (meal_type, eaten_at, description, price, vendor, foods) | Change type, time or description, then read the meal again. |
 | POST | `/meals/{meal_id}/analyze` | `write:measurements` | `meal_id` | Read the meal again with the current models. |
+| DELETE | `/meals/{meal_id}/photo` | `write:measurements` | `meal_id`, `read`? | Delete the plate's photo (the other photos stay), read again. |
 | GET | `/meals/{meal_id}/photo` | `read:all` | `meal_id` | The meal's photo (JPEG, EXIF removed). |
-| POST | `/meals/{meal_id}/photos` | `write:measurements` | `meal_id`, form `file` | Add a photo (the pack, its nutrition label…), then read again. |
-| DELETE | `/meals/{meal_id}/photos/{photo_id}` | `write:measurements` | `meal_id`, `photo_id` | Delete one of the meal's other photos (the reading stays). |
+| POST | `/meals/{meal_id}/photos` | `write:measurements` | `meal_id`, `read`?, form `file` | Add a photo afterwards, then read the meal again. |
+| DELETE | `/meals/{meal_id}/photos/{photo_id}` | `write:measurements` | `meal_id`, `photo_id`, `read`? | Delete one of the meal's other photos, then read it again. |
 | GET | `/meals/{meal_id}/photos/{photo_id}` | `read:all` | `meal_id`, `photo_id` | One of the meal's other photos (JPEG, EXIF removed). |
 
 ## Travail (heures d'embauche et de débauche)

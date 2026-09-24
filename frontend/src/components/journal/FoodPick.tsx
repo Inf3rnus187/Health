@@ -107,8 +107,9 @@ export function FoodPick(props: {
   return (
     <div className="photo-pick">
       <span className="muted">
-        Aliments de ma liste, calculés avec l’étiquette (grammes vides : estimés
-        ; un aliment nommé dans la description est reconnu aussi)
+        Aliments de ma liste, calculés avec leur fiche (grammes vides : lus dans
+        la description, sinon estimés ; un aliment nommé dans la description est
+        reconnu aussi)
       </span>
       <Choose foods={foods} p={p} />
       <Chosen value={props.value} foods={foods} onDrop={p.drop} />

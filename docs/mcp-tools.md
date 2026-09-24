@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-96 outils.
+98 outils.
 
 ## Données et métriques
 
@@ -308,6 +308,23 @@ Correct a meal (text, type, time, foods of the list); read again.
 ``foods`` replaces the list's foods eaten (``[]`` removes them).
 
 Paramètres : `meal_id`* (string), `description` (string | null, défaut `None`), `meal_type` (string | null, défaut `None`), `eaten_at` (string | null, défaut `None`), `foods` (array | null, défaut `None`)
+
+### `add_meal_photo`
+
+Add a photo to a meal afterwards; it is read again.
+
+A meal without a photo gets it as the plate's; otherwise it joins the
+others (the box, the sachet, its nutrition table; 6 at most).
+
+Paramètres : `meal_id`* (string), `photo_base64`* (string), `filename` (string, défaut `photo.jpg`)
+
+### `delete_meal_photo`
+
+Delete a meal's photo; the meal is read again.
+
+``photo_id``: one of its ``photo_ids``; none: the plate's photo.
+
+Paramètres : `meal_id`* (string), `photo_id` (string | null, défaut `None`)
 
 ### `analyze_meal`
 

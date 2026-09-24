@@ -24,16 +24,6 @@ def save(user_id: str, meal_id: str, data: bytes, content_type: str) -> str:
     return str(path)
 
 
-def read_all(meal: Meal) -> list[bytes]:
-    """Every photo of the meal: the plate's first, then the others."""
-    out = [data] if (data := read(meal)) is not None else []
-    for photo in meal.photos or []:
-        path = Path(str(photo.get("path")))
-        if path.exists():
-            out.append(photo_storage.read_bytes(path))
-    return out
-
-
 def clean(data: bytes, content_type: str, normalize: Any) -> bytes:
     """A decoded, EXIF-free JPEG, or why the upload is refused."""
     if not content_type.startswith("image/"):
@@ -55,7 +45,13 @@ def read(meal: Meal) -> bytes | None:
 
 def drop(meal: Meal) -> None:
     """Delete the meal's photo files, if any."""
-    if meal.photo_path:
-        Path(meal.photo_path).unlink(missing_ok=True)
+    drop_plate(meal)
     for photo in meal.photos or []:
         Path(str(photo.get("path"))).unlink(missing_ok=True)
+
+
+def drop_plate(meal: Meal) -> None:
+    """Delete the plate's photo (the other photos stay)."""
+    if meal.photo_path:
+        Path(meal.photo_path).unlink(missing_ok=True)
+    meal.photo_path = None

@@ -32,10 +32,10 @@ from app.models.meal import Meal
 from app.services import (
     conditions,
     meal_ciqual,
+    meal_extra,
     meal_foods,
     meal_nutrients,
     meal_nutrition,
-    meal_photo,
     meal_prompt,
     meals,
 )
@@ -154,7 +154,7 @@ async def _look(
     The labels are read on the other photos (a pack, a nutrition table);
     nothing without a photo.
     """
-    photos = meal_photo.read_all(meal)
+    photos = meal_extra.read_all(meal)
     if not photos:
         return [], []
     prompt = meal_prompt.look(meal.description, len(photos))

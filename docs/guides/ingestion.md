@@ -23,7 +23,9 @@ other sources). Required token scope per route:
 | CPAP | `POST /ingest/ppc` | `ingest:ppc` |
 | Progress photos | `POST /ingest/photo` | `ingest:photo` |
 | Pee at a given time (web Journal, `{"at": …}`) | `POST /journal/urination` | `write:measurements` (+ `?token=`) |
-| Meal: form `description`, `file` (photo), `meal_type`?, `eaten_at`? | `POST /meals` (multipart) | `write:measurements` (+ `?token=`) |
+| Meal: form `description`, `file` (plate photo), `photos` (repeated: box, sachet, nutrition table), `foods` (JSON `[{"food_id","grams"}]`), `meal_type`?, `eaten_at`? | `POST /meals` (multipart) | `write:measurements` (+ `?token=`) |
+| Meal changed afterwards: fields and foods | `PUT /meals/{id}` (JSON) | `write:measurements` |
+| Meal photo added afterwards (the plate's when it has none) / removed | `POST /meals/{id}/photos` (multipart `file`), `DELETE /meals/{id}/photo`, `DELETE /meals/{id}/photos/{photo_id}` — `?read=false` to change several, then read once | `write:measurements` |
 | Any script (sets — **replaces** — a day's value) | `POST /measurements` | `write:measurements` |
 
 iPhone Shortcuts step by step (one token, one rule for every count, one

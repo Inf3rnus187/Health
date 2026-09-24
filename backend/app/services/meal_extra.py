@@ -48,3 +48,13 @@ def remove(meal: Meal, photo_id: str) -> None:
         raise NotFoundError("Photo not found")
     Path(str(found[0]["path"])).unlink(missing_ok=True)
     meal.photos = [p for p in meal.photos if p.get("id") != photo_id]
+
+
+def read_all(meal: Meal) -> list[bytes]:
+    """Every photo of the meal: the plate's first, then the others."""
+    out = [data] if (data := meal_photo.read(meal)) is not None else []
+    for photo in meal.photos or []:
+        path = Path(str(photo.get("path")))
+        if path.exists():
+            out.append(photo_storage.read_bytes(path))
+    return out

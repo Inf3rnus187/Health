@@ -1,8 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
+  addMealPhoto,
   analyzeMeal,
   createMeal,
+  dropMealPhoto,
+  type MealChange,
+  updateMeal,
   deleteMeal,
   deleteUrination,
   fetchMeals,
@@ -70,3 +74,22 @@ export function useMealAction<A>(fn: (arg: A) => Promise<unknown>) {
 export const useCreateMeal = () => useMealAction(createMeal);
 export const useAnalyzeMeal = () => useMealAction(analyzeMeal);
 export const useDeleteMeal = () => useMealAction(deleteMeal);
+
+/** A meal's edit: photos dropped, photos added, then the fields (the
+ * last step reads the meal again, once). */
+export interface MealEdit {
+  id: string;
+  change: MealChange;
+  dropPlate: boolean;
+  dropIds: string[];
+  add: File[];
+}
+
+async function saveEdit(edit: MealEdit) {
+  if (edit.dropPlate) await dropMealPhoto(edit.id, null);
+  for (const photoId of edit.dropIds) await dropMealPhoto(edit.id, photoId);
+  for (const file of edit.add) await addMealPhoto(edit.id, file);
+  return updateMeal(edit.id, edit.change);
+}
+
+export const useEditMeal = () => useMealAction(saveEdit);

@@ -13,6 +13,13 @@ export function nowLocal(): string {
   return now.toISOString().slice(0, 16);
 }
 
+/** An ISO instant as a ``datetime-local`` value, in local time. */
+export function localInput(iso: string): string {
+  const at = new Date(iso);
+  at.setMinutes(at.getMinutes() - at.getTimezoneOffset());
+  return at.toISOString().slice(0, 16);
+}
+
 /** The usual meal for the current hour. */
 export function mealOfNow(): string {
   const hour = new Date().getHours() + new Date().getMinutes() / 60;
