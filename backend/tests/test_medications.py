@@ -144,3 +144,23 @@ async def test_todays_doses(client: AsyncClient, auth: dict[str, str]) -> None:
         2,
     )
     assert only["last_id"]
+
+
+async def test_the_ai_synthesis_is_told_the_adherence(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    from app.core.db import SessionFactory
+    from app.models.user import User
+    from app.services import clinical_facts
+    from sqlalchemy import select
+
+    await _treatment(client, auth)
+    await client.post(TAKE, json={"treatment": "Paroxétine"}, headers=auth)
+    async with SessionFactory() as session:
+        user = await session.scalar(
+            select(User).where(User.email == "admin@example.com")
+        )
+        assert user is not None
+        facts = await clinical_facts.gather(session, user.id)
+    (line,) = (f for f in facts if f.section.startswith("Observance"))
+    assert line.text.startswith("Paroxétine : 1 prises notées sur")

@@ -127,6 +127,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The AI synthesis knows the adherence**: its facts now include, per
+  treatment with doses recorded over the last 30 days, the doses taken
+  out of planned, the rate, the days without any entry, the longest gap,
+  the usual time and the late entries — it can state whether a treatment
+  is followed from what was recorded.
+- **Documentation with every change**: `CLAUDE.md` (rules for anyone
+  changing the repository: privacy, isolation, and the documents every
+  commit must update — changelog, user guide and iPhone Shortcut, API,
+  MCP, security and configuration, data model, AI guide) and a
+  pre-commit hook `docs-updated` (`tools/check_docs_updated.py`) that
+  refuses code without CHANGELOG.md and a hand-written document.
+- **Multi-user plan**: « Passer vos données de l'admin à votre compte —
+  sans rien perdre » (preview table by table and files with SHA-256,
+  automatic backup, one transaction, copy-verify-then-delete of files,
+  counts and fingerprints checked, tokens and Shortcuts kept working).
 - **Reports that prove the facts** (PDF clinique and synthèse):
   - header: report number, exact creation time and zone, version
     (`GIT_COMMIT`), how many values came from each source, SHA-256 of

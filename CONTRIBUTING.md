@@ -50,6 +50,16 @@ pnpm typecheck && pnpm lint && pnpm format && pnpm build
 - Commit messages: imperative mood; reference an issue where relevant.
 - New structural decisions get an ADR in `docs/adr`.
 
+## Documentation (every commit)
+
+A change is finished only when it is documented in the same commit —
+see [CLAUDE.md](CLAUDE.md) « Documentation »: CHANGELOG.md, the French
+user guide (web page and iPhone Shortcut), the API docstrings and
+`docs/api.md`, the MCP tool and `docs/mcp-tools.md`, security and
+configuration, the data model, the AI guide. The pre-commit hook
+`docs-updated` (`tools/check_docs_updated.py`) refuses code without its
+changelog and documentation.
+
 ## Pull requests
 
 Keep changes focused and covered by tests. CI (lint → types → tests +

@@ -257,15 +257,73 @@ Routes à créer (toutes `AdminDep` sauf mention) : `GET/POST /admin/users`,
 - Tests MCP : un jeton `mcp:read` ne peut rien écrire ; aucun outil
   n'atteint une route d'admin.
 
-## 8. Plan par étapes
+## 8. Passer vos données de l'admin à votre compte — sans rien perdre
+
+Aujourd'hui, **tout est sur le compte admin** créé à l'installation.
+Demain, l'admin gère le hub et **vos données de santé vont sur votre
+compte utilisateur**. Le transfert est une action de la page Admin, en
+trois temps, **sans perte possible** :
+
+1. **Aperçu (rien ne bouge)** : choisir le compte cible (nouveau, vide) ;
+   le hub compte **table par table** ce qui partira — mesures, relevés
+   bruts (`health_samples`, entraînements, ECG, trajets, observations et
+   documents cliniques, imports), événements, repas, aliments, photos et
+   leurs analyses, documents médicaux, maladies, traitements, **prises de
+   médicaments**, rendez-vous, sessions de travail, absences, preuves et
+   traces, rapports, automatisations, correspondances d'import, jetons,
+   journal d'audit — et **les fichiers** (`media/<admin>/`, rapports dans
+   `exports/`) avec leur taille et leur **SHA-256**.
+2. **Sauvegarde automatique** juste avant : base (`pg_dump`) et fichiers
+   (archive), gardée N jours, restaurable depuis la page Admin.
+3. **Transfert** dans **une seule transaction** : chaque ligne de chaque
+   table ci-dessus change de propriétaire (`user_id` ← compte cible) ;
+   les fichiers sont **copiés** vers `media/<cible>/`, **vérifiés**
+   (SHA-256 identiques), les chemins enregistrés réécrits (photos de
+   repas et d'aliments, documents, preuves, rapports, fichiers bruts),
+   puis seulement les originaux supprimés. Le fuseau, les unités et les
+   préférences suivent.
+4. **Vérification** : les comptes par table **après = avant**, les
+   empreintes des fichiers identiques, le compte cible lit tout (un
+   rapport généré avant et après donne les mêmes chiffres ; son
+   empreinte des données est comparée) ; l'admin n'a plus aucune donnée
+   de santé. Le résultat (comptes, empreintes) est écrit au journal
+   d'audit. Au moindre écart : **annulation** (la transaction n'est pas
+   validée, les originaux n'ont pas été touchés) et la sauvegarde reste.
+
+Points particuliers :
+
+- **Jetons et raccourcis iPhone** : les jetons passent au compte cible
+  (même valeur) : **vos raccourcis continuent de marcher** sans être
+  refaits ; la page le dit, et propose ensuite de les remplacer par des
+  jetons aux scopes fins (§3.5).
+- **Sessions** : celles de l'admin sont fermées ; vous vous reconnectez
+  avec le compte cible.
+- **Métriques personnalisées** créées par l'admin : elles deviennent
+  celles du compte cible (colonne propriétaire, H2).
+- **Chiffrement** : clé globale aujourd'hui, rien à rechiffrer ; avec une
+  clé par utilisateur (plus tard), les fichiers sont rechiffrés pendant
+  la copie, avant la vérification.
+- **Tests** : un test crée des données dans **chaque** table pour A,
+  transfère vers B, et vérifie comptes, empreintes, lecture par B, rien
+  chez A, et l'admin toujours capable de se connecter ; un second test
+  provoque une panne au milieu et vérifie que rien n'a changé.
+
+C'est **l'étape 1 bis** du plan : faite juste après l'isolation, avant
+d'inviter qui que ce soit.
+
+## 9. Plan par étapes
 
 0. **Fait** : mises à jour réservées à l'admin, bandeau « recharge » pour
    les autres, jetons masqués dans les journaux, MCP limité aux chemins
-   d'API, catalogue réservé à l'admin, aliments par utilisateur.
+   d'API, catalogue réservé à l'admin, aliments et prises de
+   médicaments par utilisateur (testés avec un deuxième compte),
+   vérification d'authenticité des rapports limitée à leur propriétaire.
 1. **Isolation (avant tout deuxième compte réel)** : H1, H2, H3, M1, M2,
    M3 ; cache web vidé, préférences par compte ; session vérifiée à
    chaque requête, `is_active` au renouvellement ; test d'isolation
    généré.
+1 bis. **Transfert de vos données de l'admin vers votre compte** (§8),
+   aperçu, sauvegarde, transaction, vérification.
 2. **Comptes dans la page web** : Mon compte (mot de passe, MFA avec
    champ code à la connexion, sessions), page Admin › Utilisateurs
    (inviter, créer, désactiver, réinitialiser), limite des tentatives,

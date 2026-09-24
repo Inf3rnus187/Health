@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services import (
     conditions,
+    fact_doses,
     fact_record,
     fact_trends,
     fact_values,
@@ -45,6 +46,7 @@ async def gather(session: AsyncSession, user_id: str) -> list[Fact]:
     lines = fact_record.profile(markers["profile"])
     lines += fact_record.conditions(await conditions.list_all(session, user_id))
     lines += fact_record.treatments(await treatments.list_all(session, user_id))
+    lines += await fact_doses.adherence(session, user_id)
     lines += fact_values.markers(markers["markers"])
     lines += fact_values.results(results)
     lines += fact_values.weight(weight_trend.summary(weights))
