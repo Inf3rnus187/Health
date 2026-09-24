@@ -7,6 +7,8 @@
   - [IA médicale](guides/ia-medicale.md) — MedGemma, lecture des documents,
     synthèse clinique, méthode photo, dépannage.
   - [MCP](guides/mcp.md) — brancher un assistant sur le hub.
+  - [Multi-utilisateur](multi-utilisateur.md) — analyse complète (données,
+    rôles, scopes API/MCP/raccourcis, pages Mon compte et Admin) et plan.
 - Guides (developer)
   - [Ingestion](guides/ingestion.md) — Apple Health, Health Auto Export,
     Shortcuts, watch, CPAP, photos.
