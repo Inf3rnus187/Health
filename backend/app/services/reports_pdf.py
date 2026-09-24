@@ -8,13 +8,20 @@ metric keys. All text is latin-1 (core PDF font).
 
 from __future__ import annotations
 
+from collections import Counter
 from datetime import date
 from typing import Any, NamedTuple
 
 from fpdf import FPDF
 
 from app.models.report import Report
-from app.services import domain_labels, reports_pdf_ai
+from app.services import (
+    domain_labels,
+    pdf_blocks,
+    pdf_stamp,
+    reports_pdf_ai,
+    reports_pdf_evidence,
+)
 from app.services.pdf_text import latin as _latin
 from app.services.pdf_text import line as _line
 
@@ -30,6 +37,21 @@ _KEY_METRICS = (
     "activity.steps",
 )
 _MIN_POINTS = 2
+#: Where a value came from, as a reader says it.
+_SOURCE_FR = {
+    "apple_health": "Apple Santé",
+    "auto-export": "Health Auto Export",
+    "watch": "montre et compteurs",
+    "manual": "saisie",
+    "meal": "repas analysés",
+    "import": "import de fichiers",
+    "ppc": "PPC",
+}
+_AUTHENTIC = (
+    "Authenticité : l'empreinte SHA-256 de ce fichier est enregistrée par "
+    "le hub à sa création ; Rapports › « Vérifier un fichier » dit si une "
+    "copie est identique."
+)
 
 
 class _Stat(NamedTuple):
@@ -48,22 +70,31 @@ def clinical_pdf(
     meta: dict[str, Any],
     care: dict[str, list[str]] | None = None,
     synthesis: dict[str, Any] | None = None,
+    extra: dict[str, Any] | None = None,
 ) -> bytes:
-    """Build a caregiver summary: recap, care record, charts, tables.
+    """Build a caregiver summary: recap, facts, care record, charts, tables.
 
     With ``synthesis`` (the AI clinical synthesis) it comes first and its
-    numbered facts are appended at the end.
+    numbered facts are appended at the end. ``extra``: ``facts`` (habits,
+    adherence, meals, traceability of the period) and ``stamp``
+    (generated, version, data_sha256) printed in the header and on every
+    page.
     """
-    pdf = FPDF()
+    extra = extra or {}
+    stamp = extra.get("stamp") or {}
+    pdf = pdf_stamp.StampedPDF(_stamp_line(report, stamp))
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-    _header(pdf, report)
+    _header(pdf, report, stamp, rows)
     reports_pdf_ai.synthesis(pdf, synthesis)
     series = _series(rows)
     _recap(pdf, series, meta)
+    reports_pdf_evidence.sections(pdf, extra.get("facts"))
     _care_sections(pdf, care)
     _charts(pdf, series, meta)
     _tables(pdf, series, meta)
+    _yes_no(pdf, rows, meta)
+    reports_pdf_evidence.trace(pdf, extra.get("facts"))
     reports_pdf_ai.facts(pdf, synthesis)
     return bytes(pdf.output())
 
@@ -83,16 +114,59 @@ def _care_sections(pdf: FPDF, care: dict[str, list[str]] | None) -> None:
         pdf.ln(1)
 
 
-def _header(pdf: FPDF, report: Report) -> None:
-    """Write the report title, period and generation date."""
+def _header(
+    pdf: FPDF, report: Report, stamp: dict[str, Any], rows: list[dict[str, Any]]
+) -> None:
+    """Title, period, the report's identity, sources and fingerprint."""
     pdf.set_font("Helvetica", "B", 16)
     _line(pdf, 10, "Phoenix Health Hub - Rapport clinique")
-    pdf.set_font("Helvetica", size=10)
+    pdf.set_font("Helvetica", size=9)
     start = report.period_start or "-"
     end = report.period_end or "-"
-    _line(pdf, 7, f"Periode: {start} -> {end}")
-    _line(pdf, 7, f"Genere le: {date.today().isoformat()}")
+    _line(pdf, 5, f"Période : {start} -> {end}")
+    _line(pdf, 5, f"Rapport n° {report.id}")
+    made = stamp.get("generated") or date.today().isoformat()
+    _line(pdf, 5, f"Généré le {made} - version {stamp.get('version') or '-'}")
+    _line(pdf, 5, f"Sources des valeurs : {_sources(rows)}")
+    if stamp.get("data_sha256"):
+        _line(
+            pdf, 5, f"Empreinte des données (SHA-256) : {stamp['data_sha256']}"
+        )
+    _line(pdf, 5, _AUTHENTIC)
+    pdf.set_font("Helvetica", size=10)
     pdf.ln(2)
+
+
+def _stamp_line(report: Report, stamp: dict[str, Any]) -> str:
+    """The footer of every page."""
+    made = stamp.get("generated") or date.today().isoformat()
+    return f"Phoenix Health Hub - rapport {report.id} - {made}"
+
+
+def _sources(rows: list[dict[str, Any]]) -> str:
+    """How many values came from each source (« Apple Santé 3 400 »)."""
+    count = Counter(str(r.get("source") or "?") for r in rows)
+    if not count:
+        return "aucune valeur"
+    return ", ".join(
+        f"{_SOURCE_FR.get(k, k)} {n}" for k, n in count.most_common()
+    )
+
+
+def _yes_no(
+    pdf: FPDF, rows: list[dict[str, Any]], meta: dict[str, Any]
+) -> None:
+    """Yes / no answers (a medicine taken…): yes, no, days recorded."""
+    answers: dict[str, list[bool]] = {}
+    for row in rows:
+        if isinstance(row.get("value"), bool):
+            answers.setdefault(row["metric_key"], []).append(row["value"])
+    body = [
+        [meta.get(k, {}).get("label", k), sum(v), len(v) - sum(v), len(v)]
+        for k, v in sorted(answers.items())
+    ]
+    head = ["Question", "Oui (jours)", "Non (jours)", "Jours saisis"]
+    pdf_blocks.table(pdf, "Réponses oui / non", head, body)
 
 
 def _recap(

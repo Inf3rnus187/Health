@@ -280,6 +280,15 @@ async def test_a_meal_with_its_sachet_and_a_food_of_the_list() -> None:
     assert seen[3].url.params["q"] == "tomate crue"
 
 
+async def test_period_facts_and_report_check() -> None:
+    seen = _capture()
+    await tools_reports.period_facts("2026-03-01", compare_from="2026-03-15")
+    assert seen[0].url.path == "/api/v1/facts"
+    assert seen[0].url.params["compare_from"] == "2026-03-15"
+    await tools_reports.verify_report("JVBERi0=")
+    assert seen[1].url.path == "/api/v1/reports/verify"
+
+
 async def test_a_dose_is_logged_by_name() -> None:
     seen = _capture()
     await tools_meds.log_medication("parox", status="skipped")

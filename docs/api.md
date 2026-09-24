@@ -244,6 +244,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 |---|---|---|---|---|
 | GET | `/reports` | `read:all` | — | List the caller's recent reports. |
 | POST | `/reports` | `read:all` | JSON `ReportCreate` (type, period_start, period_end, params) | Queue a report; build it inline if no worker is available. |
+| POST | `/reports/verify` | `read:all` | form `file` | Is this file one of my reports, unchanged? (by its SHA-256). |
 | GET | `/reports/{report_id}` | `read:all` | `report_id` | Return a report's status and metadata. |
 | GET | `/reports/{report_id}/file` | `read:all` | `report_id` | Stream a finished report file to its owner. |
 
@@ -346,6 +347,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 |---|---|---|---|---|
 | GET | `/ciqual` | `read:all` | `q`, `limit`? | Foods of the Ciqual table whose name has every word of ``q``. |
 | GET | `/ciqual/{code}` | `read:all` | `code` | One food of the Ciqual table. |
+| GET | `/facts` | `read:all` | `start`?, `end`?, `compare_from`? | What was recorded over a period (default: the last 90 days). |
 | GET | `/foods` | `read:all` | — | The user's foods, by name. |
 | POST | `/foods` | `write:measurements` | JSON `FoodIn` (name, brand, aliases, package_g, unit_name, unit_g, per_100g, note, source, barcode) | Add a food: name, brand, aliases, package weight, values per 100 g. |
 | POST | `/foods/read-label` | `write:measurements` | form `file` | Read a pack or its nutrition table with the vision model. |

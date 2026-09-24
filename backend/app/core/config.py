@@ -65,6 +65,9 @@ class Settings(BaseSettings):
     admin_email: str = "admin@example.com"
     admin_password: str = "change-me-please"
 
+    #: The commit running (``./update.sh`` passes it), printed on reports.
+    git_commit: str = ""
+
     log_level: str = "INFO"
     log_json: bool = True
 

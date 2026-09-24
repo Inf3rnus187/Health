@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 from typing import Any
 
 from phoenix_mcp import client
@@ -67,6 +68,33 @@ async def create_automation(
 async def run_automation(automation_id: str) -> Any:
     """Run an automation now."""
     return await client.post(f"/automations/{automation_id}/run")
+
+
+@mcp.tool()
+async def period_facts(
+    start: str | None = None,
+    end: str | None = None,
+    compare_from: str | None = None,
+) -> Any:
+    """What was recorded over a period, as a report proves it.
+
+    Habits (cigarettes, urges broken, coffee, water, pees): days with and
+    without an entry, total, mean per recorded day, median, lowest /
+    highest day, per week or month, and before / after ``compare_from``;
+    medication adherence; meals; when and how each entry was made.
+    Default: the last 90 days.
+    """
+    return await client.get(
+        "/facts", {"start": start, "end": end, "compare_from": compare_from}
+    )
+
+
+@mcp.tool()
+async def verify_report(file_base64: str, filename: str = "rapport.pdf") -> Any:
+    """Is this file one of the user's reports, unchanged (SHA-256)?"""
+    raw = base64.b64decode(file_base64)
+    files = {"file": (filename, raw, "application/octet-stream")}
+    return await client.upload("/reports/verify", files, {})
 
 
 @mcp.tool()

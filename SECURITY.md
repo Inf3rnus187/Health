@@ -14,7 +14,15 @@ security is a first‑class concern (§12).
 - **Headers**: `X‑Content‑Type‑Options`, `X‑Frame‑Options`,
   `Referrer‑Policy` on the API; a strict CSP + these on the web tier.
 - **CORS**: disabled by default; explicit allow‑list via `CORS_ORIGINS`.
-- **Audit**: every write is recorded in `audit_log`.
+- **Audit**: every write is recorded in `audit_log` — counter taps with
+  the day they count for and their channel (site / Shortcut token),
+  medication doses, and each report generated with its SHA-256.
+- **Report authenticity**: each report file's SHA-256 is stored on the
+  report and in the audit log; `POST /reports/verify` (web « Vérifier un
+  fichier ») tells whether a copy is byte-for-byte one of the caller's
+  reports. Every PDF page carries the report id, the generation time and
+  zone; the header shows the version running and the SHA-256 of the data
+  it was built on.
 - **Secrets**: never committed; injected via `.env`; `.env` is git‑ignored
   and `install.sh` generates a strong `SECRET_KEY`. **gitleaks** runs in
   pre‑commit and CI.

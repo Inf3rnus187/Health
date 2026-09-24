@@ -39,28 +39,43 @@ function period(report: Report): string {
   return `du ${shortDate(report.period_start)} au ${end}`;
 }
 
-export function ReportRow({ report }: { report: Report }) {
+function Status({ report }: { report: Report }) {
+  return (
+    <td className="metric-type">
+      {STATUS[report.status] ?? report.status}
+      {report.sha256 && (
+        <div className="muted small" title={`SHA-256 : ${report.sha256}`}>
+          empreinte {report.sha256.slice(0, 12)}…
+        </div>
+      )}
+    </td>
+  );
+}
+
+function File({ report }: { report: Report }) {
   const ext = EXT[report.type] ?? 'bin';
+  if (report.status !== 'ready') return <td />;
+  const path = `/reports/${report.id}/file`;
+  const filename = `rapport_${report.id}.${ext}`;
+  return (
+    <td>
+      {ext === 'pdf' ? (
+        <FileButtons path={path} filename={filename} />
+      ) : (
+        <DownloadButton path={path} filename={filename} />
+      )}
+    </td>
+  );
+}
+
+export function ReportRow({ report }: { report: Report }) {
   return (
     <tr>
       <td>{shortDateTime(report.created_at)}</td>
       <td>{TYPE_LABEL[report.type] ?? report.type}</td>
       <td className="muted">{period(report)}</td>
-      <td className="metric-type">{STATUS[report.status] ?? report.status}</td>
-      <td>
-        {report.status === 'ready' && ext === 'pdf' && (
-          <FileButtons
-            path={`/reports/${report.id}/file`}
-            filename={`rapport_${report.id}.pdf`}
-          />
-        )}
-        {report.status === 'ready' && ext !== 'pdf' && (
-          <DownloadButton
-            path={`/reports/${report.id}/file`}
-            filename={`rapport_${report.id}.${ext}`}
-          />
-        )}
-      </td>
+      <Status report={report} />
+      <File report={report} />
     </tr>
   );
 }

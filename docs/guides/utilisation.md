@@ -975,6 +975,56 @@ résultats d'examens), **Chronologie**, **Documents** (ajout + liste),
   affichée sur la page et en tête du PDF. Prend quelques minutes.
 - **PDF clinique**, **Heures travaillées**, **Dossier travail ↔ santé**,
   **CSV**, **JSON**, **Excel**, **FHIR**.
+- **Ce que le PDF clinique prouve** (et la synthèse, qui l'inclut) — des
+  faits vérifiables, chacun avec ce sur quoi il est calculé :
+  - **En-tête** : période, **numéro du rapport**, **date et heure de
+    création** (fuseau), **version** du hub, **sources des valeurs**
+    (Apple Santé, montre et compteurs, saisie, repas analysés…, avec
+    leur nombre), **empreinte SHA-256 des données** utilisées. Chaque
+    page porte en pied le numéro du rapport, sa date et « page n/N ».
+  - **Habitudes enregistrées** (cigarettes, envies cassées, cafés, eau,
+    mictions) : **jours saisis / jours de la période** (un jour sans
+    saisie n'est **pas** compté zéro : il est « sans donnée » ; un vrai
+    zéro se confirme avec le bouton **« 0 »** de la tuile dans Journal ›
+    Aujourd'hui), total, moyenne par jour saisi, médiane, jour le plus
+    bas et le plus haut (avec leur date) ; les **cigarettes jour par
+    jour** (barres, trous = jours sans donnée) et **par semaine ou par
+    mois** ; et, avec **« Comparer avant / après le »** (champ du
+    formulaire), la moyenne **avant** et **depuis** cette date, avec le
+    nombre de jours de chaque côté et l'évolution en %.
+  - **Médicaments — observance** : par traitement, du … au …, prises
+    prévues / prises / non prises, taux, jours sans aucune saisie et
+    plus long trou, heure habituelle, prises saisies après coup.
+  - **Alimentation** : repas, jours, types, part lue par l'IA, moyennes
+    par jour (énergie, protéines, glucides, sucres, lipides, saturés,
+    fibres, sodium), notes de l'IA, origine des valeurs (étiquette,
+    Ciqual, estimé), vos aliments les plus mangés, par mois, repas saisis
+    plus de 3 h après.
+  - **Dossier de soins** : maladies, traitements **datés** (début → fin,
+    prises/jour), rendez-vous **de la période** avec le praticien, les 30
+    documents les plus récents ; puis courbes, tableaux par domaine et
+    **réponses oui / non** (« N jours oui, M non, sur X saisis »).
+  - **Traçabilité des saisies** (en fin de rapport) : pour chaque
+    compteur, combien de saisies ont été faites **le jour même** ou
+    **après coup**, par quel **canal** (site, raccourci) ; pour les
+    prises et les repas, combien dans l'heure (3 h pour un repas), le
+    jour même, plus tard. C'est ce qui montre qu'un relevé a été tenu au
+    fil des jours.
+- **Authenticité** : le hub garde l'**empreinte SHA-256 de chaque
+  fichier** (affichée sous le statut : « empreinte 1a2b… ») et la note au
+  journal d'audit. **« 🔏 Vérifier un fichier »** (sous la liste) dit si
+  une copie reçue (par un médecin, un avocat, l'employeur) est
+  **identique octet pour octet** à un de vos rapports, et lequel ; un
+  fichier modifié ou venant d'un autre compte est refusé.
+- **Heures travaillées / Dossier travail ↔ santé** : le champ **« Heures
+  de contrat par semaine »** (35 par défaut) sert aux heures
+  supplémentaires.
+- Les mêmes faits en JSON : `GET /api/v1/facts?start=…&end=…&compare_from=…`
+  (outil MCP `period_facts`) ; vérifier une copie : `POST
+  /api/v1/reports/verify` (MCP `verify_report`).
+- La **synthèse IA** porte sur tout le dossier (ses indicateurs comparent
+  les 30 derniers jours aux 30 précédents) ; les sections factuelles
+  ci-dessus portent sur la période choisie.
 - **Période** de chaque rapport : « Tout » par défaut, un raccourci ou
   deux dates exactes (Du … au …) ; la liste des rapports rappelle la
   période de chacun.

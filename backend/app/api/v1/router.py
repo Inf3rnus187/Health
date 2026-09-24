@@ -24,6 +24,7 @@ from app.api.v1 import (
     evidence,
     evolution,
     export,
+    facts,
     food_refs,
     foods,
     foods_media,
@@ -118,5 +119,6 @@ api_router.include_router(summary.router)
 api_router.include_router(sync.router)
 api_router.include_router(export.router)
 api_router.include_router(reports.router)
+api_router.include_router(facts.router)
 api_router.include_router(automations.router)
 api_router.include_router(automations_run.router)

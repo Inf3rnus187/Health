@@ -51,4 +51,5 @@ async def test_tally_steps_are_audited(
         "date": "2026-09-20",
         "previous": 0.0,
         "total": 2.0,
+        "token_id": None,  # the web page (a Shortcut: its token's id)
     }

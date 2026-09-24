@@ -45,13 +45,34 @@ const COUNTERS: Counter[] = [
   },
 ];
 
-/** − (takes one back) and +1. */
-function Steps(props: { c: Counter; value: number }) {
+/** Counters a day can be confirmed at zero (« 0 aujourd'hui »). */
+const ZERO_OK = ['habit.cigarettes', 'habit.coffee', 'water.bottles_1_5'];
+
+const ZERO_HINT =
+  'Confirmer zéro aujourd’hui (sinon le jour compte « sans donnée »)';
+
+function Zero(props: { busy: boolean; onClick: () => void }) {
+  return (
+    <button
+      className="btn ghost"
+      title={ZERO_HINT}
+      disabled={props.busy}
+      onClick={props.onClick}
+    >
+      0
+    </button>
+  );
+}
+
+/** − (takes one back) and +1; « 0 » confirms a day without any. */
+function Steps(props: { c: Counter; value: number; noted: boolean }) {
   const step = useTally();
   const tap = (amount: number) =>
     step.mutate({ metric: props.c.metric, amount });
+  const zero = !props.noted && ZERO_OK.includes(props.c.metric);
   return (
     <div className="counter-buttons">
+      {zero && <Zero busy={step.isPending} onClick={() => tap(0)} />}
       <button
         className="btn ghost"
         aria-label={`${props.c.label} : retirer 1`}
@@ -68,6 +89,7 @@ function Steps(props: { c: Counter; value: number }) {
 }
 
 function Tile({ c, day }: { c: Counter; day?: JournalDay }) {
+  const noted = day?.[c.field] != null;
   const value = day?.[c.field] ?? 0;
   const [big, small] = c.show(value);
   return (
@@ -75,7 +97,7 @@ function Tile({ c, day }: { c: Counter; day?: JournalDay }) {
       <span className="counter-label">{c.label}</span>
       <span className="counter-value">{big}</span>
       <span className="muted counter-hint">{small}</span>
-      <Steps c={c} value={value} />
+      <Steps c={c} value={value} noted={noted} />
     </div>
   );
 }

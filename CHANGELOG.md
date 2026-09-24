@@ -22,6 +22,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Report times in the page**: the list of reports showed the creation
+  time in UTC (two hours early in summer); the API now sends it with its
+  offset.
+- **Counter taps say where they came from**: the audit log recorded the
+  web page as « api » and every Shortcut as « token »; it now writes
+  « web » / « raccourci » with the token's id (reports show « site » /
+  « raccourci »).
 - **Updates are the administrator's**: `/system/update` (state and
   « Installer ») needs an admin session (`AdminDep`, role `admin`); other
   users only get « Nouvelle version installée : recharge la page ». A
@@ -120,6 +127,30 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Reports that prove the facts** (PDF clinique and synthèse):
+  - header: report number, exact creation time and zone, version
+    (`GIT_COMMIT`), how many values came from each source, SHA-256 of
+    the data used; every page's footer repeats the report id and date;
+  - « Habitudes enregistrées »: per counter, days recorded out of the
+    period's days (a day without an entry is « sans donnée », never
+    zero), total, mean per recorded day, median, lowest / highest day
+    with their date; cigarettes day by day (gaps visible) and per week
+    or month; « Comparer avant / après le » (new report option): means
+    before and since, days on each side, change in %;
+  - « Médicaments — observance » per treatment; « Alimentation » (meals,
+    share read, daily means, AI scores, value origins, foods eaten most,
+    per month, late entries); dated treatments, the period's
+    appointments with the practitioner; yes / no answers counted;
+  - « Traçabilité des saisies »: per counter, entries made the same day
+    or afterwards and their channel; doses and meals entered within the
+    hour (3 h), the same day, later.
+- **Authentic copies**: each report's SHA-256 is stored and audited;
+  « 🔏 Vérifier un fichier » / `POST /reports/verify` tells whether a
+  copy is byte for byte one of your reports (migration `0020`).
+- **« 0 » on a counter** (cigarettes, coffee, water): confirms a day at
+  zero, so a report counts it instead of « sans donnée ».
+- `GET /facts` (MCP `period_facts`): the same facts as JSON;
+  « Heures de contrat par semaine » in the report form (work reports).
 - **Medication doses and adherence**: each dose taken — or declared not
   taken — is recorded with the time it was taken, the time it was
   entered and the channel (web, iPhone Shortcut, MCP, token id): the

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, field_validator
@@ -48,3 +48,11 @@ class ReportOut(BaseModel):
     status: str
     created_at: datetime
     summary: dict[str, Any] | None = None
+    #: SHA-256 of the file (check a copy with ``POST /reports/verify``).
+    sha256: str | None = None
+
+    @field_validator("created_at")
+    @classmethod
+    def _aware(cls, value: datetime) -> datetime:
+        """Always send the instant with its UTC offset (SQLite drops it)."""
+        return value if value.tzinfo else value.replace(tzinfo=UTC)

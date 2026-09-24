@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-103 outils.
+105 outils.
 
 ## Données et métriques
 
@@ -817,6 +817,24 @@ Paramètres : `name`* (string), `trigger`* (string), `action`* (object)
 Run an automation now.
 
 Paramètres : `automation_id`* (string)
+
+### `period_facts`
+
+What was recorded over a period, as a report proves it.
+
+Habits (cigarettes, urges broken, coffee, water, pees): days with and
+without an entry, total, mean per recorded day, median, lowest /
+highest day, per week or month, and before / after ``compare_from``;
+medication adherence; meals; when and how each entry was made.
+Default: the last 90 days.
+
+Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`), `compare_from` (string | null, défaut `None`)
+
+### `verify_report`
+
+Is this file one of the user's reports, unchanged (SHA-256)?
+
+Paramètres : `file_base64`* (string), `filename` (string, défaut `rapport.pdf`)
 
 ### `api_get`
 

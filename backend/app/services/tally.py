@@ -101,12 +101,13 @@ async def _log(
         action="add",
         entity="measurement",
         user_id=user_id,
-        source="token" if token_id else "api",
+        source="raccourci" if token_id else "web",
         payload={
             "metric": metric_key,
             "date": day.isoformat(),
             "previous": step.previous,
             "total": step.total,
+            "token_id": token_id,
         },
     )
 

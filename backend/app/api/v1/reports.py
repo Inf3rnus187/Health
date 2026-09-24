@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, status
+from typing import Any
+
+from fastapi import APIRouter, UploadFile, status
 from fastapi.responses import FileResponse
 
 from app.core.deps import ReaderDep, SessionDep
@@ -41,6 +43,22 @@ async def create(
         await svc.build(session, report)
         await session.commit()
     return report
+
+
+@router.post("/verify")
+async def verify(
+    principal: ReaderDep, session: SessionDep, file: UploadFile
+) -> dict[str, Any]:
+    """Is this file one of my reports, unchanged? (by its SHA-256).
+
+    Answers ``authentic`` (true only when the file is byte for byte the
+    report the hub made), its ``sha256`` and, if so, the ``report``
+    (type, period, when made).
+    """
+    found = await svc.verify(session, principal.user.id, await file.read())
+    report = found["report"]
+    found["report"] = ReportOut.model_validate(report) if report else None
+    return found
 
 
 @router.get("", response_model=list[ReportOut])

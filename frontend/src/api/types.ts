@@ -323,6 +323,8 @@ export interface Report {
   created_at: string;
   /** AI clinical synthesis of a "synthesis" report. */
   summary?: Synthesis | null;
+  /** SHA-256 of the file (a copy is authentic when it matches). */
+  sha256?: string | null;
 }
 
 export interface ApiToken {
