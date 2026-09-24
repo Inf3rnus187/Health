@@ -113,26 +113,9 @@ async def test_a_request_taken_by_the_host_is_no_longer_pending(
 
 
 async def test_only_the_administrator_sees_and_installs_updates(
-    client: AsyncClient, shared: Path
+    client: AsyncClient, shared: Path, member: dict[str, str]
 ) -> None:
     """Another user's page only reloads a new build (``/version.json``)."""
-    from app.core.db import SessionFactory
-    from app.core.security import hash_password
-    from app.models.user import User
-
-    async with SessionFactory() as session:
-        session.add(
-            User(
-                email="membre@example.com",
-                display_name="Membre",
-                password_hash=hash_password("motdepasse-membre-123"),
-                role="user",
-            )
-        )
-        await session.commit()
-    creds = {"email": "membre@example.com", "password": "motdepasse-membre-123"}
-    login = await client.post("/api/v1/auth/login", json=creds)
-    member = {"Authorization": f"Bearer {login.json()['access_token']}"}
     assert (await client.get(URL, headers=member)).status_code == 403
     assert (await client.post(URL, headers=member)).status_code == 403
     assert not (shared / "update-request").exists()

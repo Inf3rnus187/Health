@@ -61,7 +61,10 @@ def _item(raw: Any) -> tuple[dict[str, Any] | None, str]:
     energy = 4 * (values["protein_g"] + values["carbs_g"])
     energy += 9 * values["fat_g"] + 2 * values["fiber_g"]
     name = str(raw["name"]).strip()[:80]
-    return {"name": name, "grams": grams, "energy_kcal": energy, **values}, ""
+    item = {"name": name, "grams": grams, "energy_kcal": energy, **values}
+    if isinstance(raw.get("food_id"), str):  # a catalogue food
+        item["food_id"] = raw["food_id"][:36]
+    return item, ""
 
 
 def _implausible(grams: float, v: dict[str, float]) -> str:

@@ -23,6 +23,8 @@ from app.api.v1 import (
     evidence,
     evolution,
     export,
+    foods,
+    foods_media,
     health_records,
     imports,
     ingest,
@@ -31,6 +33,7 @@ from app.api.v1 import (
     logs,
     meals,
     meals_edit,
+    meals_media,
     measurements,
     medical,
     medical_ai,
@@ -79,6 +82,9 @@ api_router.include_router(journal.router)
 api_router.include_router(journal_days.router)
 api_router.include_router(meals.router)
 api_router.include_router(meals_edit.router)
+api_router.include_router(meals_media.router)
+api_router.include_router(foods.router)
+api_router.include_router(foods_media.router)
 api_router.include_router(work.router)
 api_router.include_router(work_data.router)
 api_router.include_router(work_journal.router)

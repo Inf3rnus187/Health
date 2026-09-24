@@ -28,6 +28,15 @@ class Meal(UUIDMixin, TimestampMixin, Base):
     price: Mapped[float | None] = mapped_column(Float, nullable=True)
     vendor: Mapped[str] = mapped_column(String(120), default="")
     photo_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    #: More photos (a pack, its nutrition label…): [{"id", "path"}].
+    photos: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONColumn, default=list
+    )
+    #: Foods of the catalogue it contains: [{"food_id", "grams"}] (grams
+    #: None: the model estimates, or the whole package).
+    foods: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONColumn, default=list
+    )
     #: AI reading: None (never), queued, running, done or failed.
     analysis_status: Mapped[str | None] = mapped_column(
         String(16), nullable=True
@@ -43,3 +52,8 @@ class Meal(UUIDMixin, TimestampMixin, Base):
     def has_photo(self) -> bool:
         """Whether a photo is attached."""
         return bool(self.photo_path)
+
+    @property
+    def photo_ids(self) -> list[str]:
+        """The ids of the other photos (pack, label…)."""
+        return [str(p.get("id")) for p in self.photos or []]

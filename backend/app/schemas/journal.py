@@ -7,6 +7,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.schemas.food import FoodPortion
+
 
 class UrinationIn(BaseModel):
     """One urination (now when ``at`` is omitted)."""
@@ -22,6 +24,8 @@ class MealUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=2000)
     price: float | None = Field(default=None, ge=0, le=10000)
     vendor: str | None = Field(default=None, max_length=120)
+    #: The catalogue foods eaten (replaces the list; [] removes them).
+    foods: list[FoodPortion] | None = Field(default=None, max_length=20)
 
 
 class MealOut(BaseModel):
@@ -37,6 +41,9 @@ class MealOut(BaseModel):
     price: float | None = None
     vendor: str = ""
     has_photo: bool = False
+    #: The other photos (the pack, its label…): GET /meals/{id}/photos/{id}.
+    photo_ids: list[str] = []
+    foods: list[dict[str, Any]] = []
     analysis_status: str | None = None
     analysis: dict[str, Any] | None = None
     created_at: datetime

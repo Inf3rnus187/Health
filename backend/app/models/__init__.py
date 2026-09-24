@@ -10,6 +10,7 @@ from app.models.audit import AuditLog
 from app.models.automation import Automation
 from app.models.base import Base
 from app.models.event import Event
+from app.models.food import Food
 from app.models.health_raw import (
     ClinicalDocument,
     ClinicalObservation,
@@ -50,6 +51,7 @@ __all__ = [
     "Condition",
     "EcgRecord",
     "Event",
+    "Food",
     "HealthSample",
     "ImportJob",
     "IngestMapping",

@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import InvalidInputError, NotFoundError
 from app.models.base import new_uuid, utcnow
 from app.models.meal import Meal
-from app.services import meal_nutrients, meal_photo
+from app.services import foods, meal_extra, meal_nutrients, meal_photo
 from app.services.daily_rollup import user_zone
 from app.services.timed_entries import day_bounds, utc
 
@@ -28,6 +28,7 @@ TYPES = {
     "snack": "Collation",
 }
 _DESCRIPTION_MAX = 2000
+_MORE_PHOTOS = 6
 #: Default meal by local hour (before 10:30 breakfast… after 18:00 dinner).
 _MEAL_HOURS = ((10.5, "breakfast"), (15.0, "lunch"), (18.0, "snack"))
 
@@ -36,13 +37,21 @@ async def create(
     session: AsyncSession,
     user_id: str,
     fields: dict[str, Any],
-    photo: tuple[bytes, str] | None,
+    photos: list[tuple[bytes, str]],
 ) -> Meal:
-    """Record a meal (``fields``: meal_type, eaten_at, description)."""
-    meal = Meal(id=new_uuid(), user_id=user_id)
+    """Record a meal (``fields``: meal_type, eaten_at, description, foods).
+
+    The first photo is the plate's; the others (at most 6: a box, a
+    sachet, its nutrition table) are kept with more pixels.
+    """
+    if len(photos) > 1 + _MORE_PHOTOS:
+        raise InvalidInputError(f"At most {1 + _MORE_PHOTOS} photos")
+    meal = Meal(id=new_uuid(), user_id=user_id, photos=[], foods=[])
     await _apply(session, meal, fields)
-    if photo is not None:
-        meal.photo_path = meal_photo.save(user_id, meal.id, *photo)
+    if photos:
+        meal.photo_path = meal_photo.save(user_id, meal.id, *photos[0])
+    for data, kind in photos[1:]:
+        meal_extra.add(meal, data, kind)
     if not meal.description and not meal.photo_path:
         raise InvalidInputError("Describe the meal or add a photo")
     session.add(meal)
@@ -80,7 +89,7 @@ async def get(session: AsyncSession, user_id: str, meal_id: str) -> Meal:
 async def update(
     session: AsyncSession, user_id: str, meal_id: str, fields: dict[str, Any]
 ) -> Meal:
-    """Change a meal's type, time or description (its nutrients move)."""
+    """Change a meal's type, time, description or foods (nutrients move)."""
     meal = await get(session, user_id, meal_id)
     await meal_nutrients.clear(session, meal)
     await _apply(session, meal, fields)
@@ -120,6 +129,20 @@ async def _apply(
         meal.price = fields["price"]
     if fields.get("vendor") is not None:
         meal.vendor = str(fields["vendor"]).strip()[:120]
+    if fields.get("foods") is not None:
+        meal.foods = await _own_foods(session, meal.user_id, fields["foods"])
+
+
+async def _own_foods(
+    session: AsyncSession, user_id: str, portions: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """The portions, once each food is known to be the user's (else 404)."""
+    for portion in portions:
+        await foods.get(session, user_id, str(portion["food_id"]))
+    return [
+        {"food_id": str(p["food_id"]), "grams": p.get("grams")}
+        for p in portions
+    ]
 
 
 def _meal_of(local: datetime) -> str:

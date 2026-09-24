@@ -27,6 +27,7 @@ from app.models.base import utcnow
 from app.models.meal import Meal
 from app.services import (
     conditions,
+    meal_foods,
     meal_nutrients,
     meal_nutrition,
     meal_photo,
@@ -72,18 +73,24 @@ async def run(session: AsyncSession, meal_id: str) -> None:
 
 async def analyze(session: AsyncSession, meal: Meal) -> dict[str, Any]:
     """Foods, checked nutrients and assessment of one meal."""
-    seen = await _look(meal)
+    seen, labels = await _look(meal)
+    portions = await meal_foods.of_meal(session, meal)
     context = await _context(session, meal, seen)
+    context["foods"] = meal_foods.context(portions)
+    context["labels"] = labels
     answer = await ollama.text_json(
         meal_prompt.nutrition(context), max_tokens=_TOKENS
     )
     items, rejected = meal_nutrition.check(answer.get("items"))
+    items = meal_foods.apply(items, portions)
     totals = meal_nutrition.totals(items)
     await meal_nutrients.record(session, meal, totals)
     return {
         "model": ollama.text_model(),
         "vision_model": get_settings().ollama_vision_model if seen else None,
         "seen": seen,
+        "labels": labels,
+        "foods": [food.name for food, _ in portions],
         "items": items,
         "rejected": rejected,
         "totals": totals,
@@ -116,16 +123,29 @@ async def _context(
     }
 
 
-async def _look(meal: Meal) -> list[dict[str, Any]]:
-    """Foods and portions the vision model sees (none without a photo)."""
-    photo = meal_photo.read(meal)
-    if photo is None:
-        return []
-    answer = await ollama.vision_json(meal_prompt.look(meal.description), photo)
-    found = answer.get("items")
+async def _look(
+    meal: Meal,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """What the vision model sees: foods and portions, and labels.
+
+    The labels are read on the other photos (a pack, a nutrition table);
+    nothing without a photo.
+    """
+    photos = meal_photo.read_all(meal)
+    if not photos:
+        return [], []
+    prompt = meal_prompt.look(meal.description, len(photos))
+    answer = await ollama.vision_json(
+        prompt, photos[0] if len(photos) == 1 else photos
+    )
+    return _dicts(answer.get("items"), 30), _dicts(answer.get("labels"), 10)
+
+
+def _dicts(found: Any, most: int) -> list[dict[str, Any]]:
+    """The dict entries of a list the model returned (at most ``most``)."""
     if not isinstance(found, list):
         return []
-    return [item for item in found if isinstance(item, dict)][:30]
+    return [item for item in found if isinstance(item, dict)][:most]
 
 
 async def _fail(session: AsyncSession, meal_id: str, exc: Exception) -> None:

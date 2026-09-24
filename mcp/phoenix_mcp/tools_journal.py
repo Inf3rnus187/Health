@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import json
 from typing import Any
 
 from phoenix_mcp import client
@@ -55,13 +56,20 @@ async def log_meal(
     eaten_at: str | None = None,
     photo_base64: str | None = None,
     photo_filename: str = "repas.jpg",
+    more_photos_base64: list[str] | None = None,
+    foods: list[dict[str, Any]] | None = None,
 ) -> Any:
     """Log a meal, then the AI reads it (minutes; poll get_meal).
 
     meal_type: breakfast, lunch, snack or dinner (empty: from the hour
     it was eaten). The description is
     authoritative (quantities, cooking, no fat…); an optional photo helps
-    estimate portions. Nutrients go to Apple's nutrition metrics.
+    estimate portions. ``more_photos_base64``: up to 6 more pictures (the
+    box, the sachet, its nutrition table), whose labels are read.
+    ``foods``: foods of the user's list eaten (list_foods), as
+    ``[{"food_id": "…", "grams": 125}]`` (grams null: estimated) — they
+    are computed from their label; a food the description names is found
+    anyway. Nutrients go to Apple's nutrition metrics.
 
     Health follow-up only: never a work proof, no price. A meal paid
     for (receipt, delivery, expense report) is a proof: add_evidence
@@ -72,11 +80,15 @@ async def log_meal(
         "meal_type": meal_type,
         "eaten_at": eaten_at or "",
         "description": description,
+        "foods": json.dumps(foods) if foods else "",
     }
-    files = {}
+    files: list[tuple[str, tuple[str, bytes, str]]] = []
     if photo_base64:
         raw = base64.b64decode(photo_base64)
-        files["file"] = (photo_filename, raw, "image/jpeg")
+        files.append(("file", (photo_filename, raw, "image/jpeg")))
+    for i, more in enumerate(more_photos_base64 or [], start=1):
+        raw = base64.b64decode(more)
+        files.append(("photos", (f"photo_{i}.jpg", raw, "image/jpeg")))
     return await client.upload("/meals", files, data)
 
 
@@ -98,14 +110,19 @@ async def update_meal(
     description: str | None = None,
     meal_type: str | None = None,
     eaten_at: str | None = None,
+    foods: list[dict[str, Any]] | None = None,
 ) -> Any:
-    """Correct a meal (text, type, time); it is read again."""
+    """Correct a meal (text, type, time, foods of the list); read again.
+
+    ``foods`` replaces the list's foods eaten (``[]`` removes them).
+    """
     body = {
         k: v
         for k, v in {
             "description": description,
             "meal_type": meal_type,
             "eaten_at": eaten_at,
+            "foods": foods,
         }.items()
         if v is not None
     }

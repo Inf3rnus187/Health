@@ -76,20 +76,34 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
 
 ## Repas
 
-1. **Photo** (facultative) → le modèle de vision (`OLLAMA_VISION_MODEL`)
-   liste les aliments et estime les portions en grammes. **Votre
-   description fait foi** (quantités, cuisson, absence de matière grasse).
-2. **Modèle texte** (`OLLAMA_TEXT_MODEL`) → nutriments de chaque aliment
-   (valeurs de référence Ciqual ramenées à la quantité), puis un avis
-   **pour vos maladies déclarées** : note 0–10, verdict, points positifs,
-   points à surveiller. Aucune posologie ni prescription.
-3. **Contrôle** (code, pas d'IA) : un aliment est **écarté**, avec sa
+1. **Photos** (facultatives) → le modèle de vision (`OLLAMA_VISION_MODEL`)
+   les voit toutes ensemble : il liste les aliments et estime les
+   portions en grammes sur l'assiette et, quand il y a plusieurs photos,
+   **relève les étiquettes** (boîte, sachet, tableau des valeurs : nom du
+   produit, valeurs pour 100 g, poids net). **Votre description fait
+   foi** (quantités, cuisson, absence de matière grasse).
+2. **Mes aliments** → les aliments choisis dans le formulaire et ceux
+   que la description **nomme** (tous les mots de leur nom, ou un de
+   leurs autres noms, sans tenir compte des accents) sont donnés au
+   modèle texte avec leurs **valeurs d'étiquette**, « elles font foi » :
+   il ne doit plus répondre « vérifier la composition du sachet ».
+3. **Modèle texte** (`OLLAMA_TEXT_MODEL`) → nutriments de chaque aliment
+   (valeurs de l'étiquette quand il y en a, sinon valeurs de référence
+   Ciqual ramenées à la quantité), puis un avis **pour vos maladies
+   déclarées** : note 0–10, verdict, points positifs, points à
+   surveiller. Aucune posologie ni prescription.
+4. **Contrôle** (code, pas d'IA) : un aliment est **écarté**, avec sa
    raison, si c'est physiquement impossible — quantité nulle ou > 1,5 kg,
    nutriments plus lourds que l'aliment, sucres > glucides, saturés >
    lipides, sodium impossible. L'**énergie est recalculée** depuis les
    macronutriments (4 kcal/g protéines et glucides, 9 lipides, 2 fibres) :
-   les totaux sont cohérents par construction.
-4. Les totaux deviennent des relevés `meal` à l'heure du repas, dans les
+   les totaux sont cohérents par construction. Un aliment de « Mes
+   aliments » est ensuite **recalculé par le code** depuis son étiquette
+   pour les grammes mangés (ceux du formulaire, sinon ceux estimés,
+   sinon le poids du paquet) et marqué « étiquette » ; un aliment choisi
+   que le modèle a oublié est ajouté (s'il a des grammes ou un poids de
+   paquet).
+5. Les totaux deviennent des relevés `meal` à l'heure du repas, dans les
    mesures nutrition d'Apple Santé ; ce sont des **estimations**
    (±20–30 % typiquement sur les portions), affichées comme telles.
 

@@ -106,6 +106,33 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Mes aliments** (Journal › Mes aliments, `/foods`, MCP `list_foods`,
+  `save_food`, `read_food_label`, `add_food_photo`, `delete_food`): the
+  boxes and sachets eaten often, a sheet filled once — name, brand,
+  other names used in meals, package weight, values per 100 g (salt as
+  printed, stored as sodium), note, photos of the box and of its
+  nutrition table. « Photo des valeurs (lecture IA) » reads the label
+  and pre-fills the sheet (plausible values only) to check and save.
+  Each food is its user's own (every query filters on the owner; anyone
+  else gets 404, also when attaching it to a meal).
+- **A meal computed from its label**: the foods picked in the meal form
+  (with the grams eaten) and those its description names (their name or
+  one of their other names, accents ignored) are given to the text model
+  as authoritative label values; each is then recomputed by code from
+  its label for the grams eaten (else the estimate, else the package
+  weight), marked « étiquette 🏷️ » — no more « vérifier la composition
+  du sachet ». The model's `food_id` survives the plausibility check.
+- **Several photos per meal** (up to 7: the plate, then the box, the
+  sachet, the nutrition table): « Galerie » picks several at once, each
+  preview has its ×; the vision model sees them together and reads the
+  labels. `POST /meals` takes `photos` (repeated) and `foods` (JSON);
+  `POST/GET/DELETE /meals/{id}/photos[/{photo_id}]`; `MealOut` has
+  `photo_ids` and `foods`; the extra photos (2048 px, cleaned,
+  encrypted) show as thumbnails on the meal card. Migration `0017`.
+- **« Refaire ce repas »**: a past meal fills the form again (type,
+  description, foods of the list).
+- **Journal in tabs**: Aujourd'hui, Repas, Mes aliments (the last one
+  opened is kept).
 - **What Uber Eats cost** (Travail › Statistiques › « Dépenses repas »):
   over a period, for deliveries (the imported Uber Eats orders), meals
   paid for (receipts) or both — total, orders, average basket, monthly

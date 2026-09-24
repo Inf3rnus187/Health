@@ -14,6 +14,7 @@ from phoenix_mcp import (
     client,
     server,  # noqa: F401 - importing registers every tool
     tools_data,
+    tools_foods,
     tools_journal,
     tools_record,
     tools_reports,
@@ -57,6 +58,9 @@ async def test_every_area_of_the_hub_has_tools() -> None:
         "get_report",
         "api_get",
         "api_call",
+        "list_foods",
+        "save_food",
+        "read_food_label",
     }
     assert expected <= names
     assert len(names) >= 50
@@ -229,6 +233,26 @@ async def test_a_meal_is_sent_as_a_form_with_its_photo() -> None:
     body = seen[0].content
     assert seen[0].url.path == "/api/v1/meals"
     assert b"salade, poulet" in body and b'filename="repas.jpg"' in body
+
+
+async def test_a_meal_with_its_sachet_and_a_food_of_the_list() -> None:
+    seen = _capture()
+    await tools_journal.log_meal(
+        "riz sachet, poulet",
+        photo_base64="SGVsbG8=",
+        more_photos_base64=["SGVsbG8=", "SGVsbG8="],
+        foods=[{"food_id": "f1", "grams": 125}],
+    )
+    body = seen[0].content
+    assert body.count(b'name="photos"') == 2
+    assert b'[{"food_id": "f1", "grams": 125}]' in body
+    await tools_foods.save_food(
+        "Riz", {"energy_kcal": 150}, package_g=250, food_id="f1"
+    )
+    assert (seen[1].method, seen[1].url.path) == ("PUT", "/api/v1/foods/f1")
+    assert json.loads(seen[1].content)["per_100g"] == {"energy_kcal": 150}
+    await tools_foods.read_food_label("SGVsbG8=")
+    assert seen[2].url.path == "/api/v1/foods/read-label"
 
 
 async def test_work_clock_and_dry_run_import() -> None:

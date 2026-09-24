@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-89 outils.
+94 outils.
 
 ## Données et métriques
 
@@ -275,14 +275,19 @@ Log a meal, then the AI reads it (minutes; poll get_meal).
 meal_type: breakfast, lunch, snack or dinner (empty: from the hour
 it was eaten). The description is
 authoritative (quantities, cooking, no fat…); an optional photo helps
-estimate portions. Nutrients go to Apple's nutrition metrics.
+estimate portions. ``more_photos_base64``: up to 6 more pictures (the
+box, the sachet, its nutrition table), whose labels are read.
+``foods``: foods of the user's list eaten (list_foods), as
+``[{"food_id": "…", "grams": 125}]`` (grams null: estimated) — they
+are computed from their label; a food the description names is found
+anyway. Nutrients go to Apple's nutrition metrics.
 
 Health follow-up only: never a work proof, no price. A meal paid
 for (receipt, delivery, expense report) is a proof: add_evidence
 with kind « repas » or « livraison » and trace={"amount": …,
 "meal": True} — it logs the meal here too.
 
-Paramètres : `description`* (string), `meal_type` (string, défaut ``), `eaten_at` (string | null, défaut `None`), `photo_base64` (string | null, défaut `None`), `photo_filename` (string, défaut `repas.jpg`)
+Paramètres : `description`* (string), `meal_type` (string, défaut ``), `eaten_at` (string | null, défaut `None`), `photo_base64` (string | null, défaut `None`), `photo_filename` (string, défaut `repas.jpg`), `more_photos_base64` (array | null, défaut `None`), `foods` (array | null, défaut `None`)
 
 ### `list_meals`
 
@@ -298,9 +303,11 @@ Paramètres : `meal_id`* (string)
 
 ### `update_meal`
 
-Correct a meal (text, type, time); it is read again.
+Correct a meal (text, type, time, foods of the list); read again.
 
-Paramètres : `meal_id`* (string), `description` (string | null, défaut `None`), `meal_type` (string | null, défaut `None`), `eaten_at` (string | null, défaut `None`)
+``foods`` replaces the list's foods eaten (``[]`` removes them).
+
+Paramètres : `meal_id`* (string), `description` (string | null, défaut `None`), `meal_type` (string | null, défaut `None`), `eaten_at` (string | null, défaut `None`), `foods` (array | null, défaut `None`)
 
 ### `analyze_meal`
 
@@ -313,6 +320,47 @@ Paramètres : `meal_id`* (string)
 Delete a meal, its photo and its nutrients.
 
 Paramètres : `meal_id`* (string)
+
+## Mes aliments : boîtes et sachets, leur étiquette
+
+### `list_foods`
+
+The user's foods, with their label values per 100 g.
+
+Each: name, brand, aliases, package weight (g), values per 100 g,
+note, photo ids and kinds. A meal that names one (or lists it in
+log_meal ``foods``) is computed from its label, not estimated.
+
+### `save_food`
+
+Add a food (or replace ``food_id``'s sheet).
+
+``per_100g``: energy_kcal, protein_g, carbs_g, sugars_g, fat_g,
+sat_fat_g, fiber_g, sodium_mg (1 g of salt = 400 mg of sodium).
+``aliases``: other names used in meals, comma separated.
+
+Paramètres : `name`* (string), `per_100g` (object | null, défaut `None`), `package_g` (number | null, défaut `None`), `brand` (string, défaut ``), `aliases` (string, défaut ``), `note` (string, défaut ``), `food_id` (string | null, défaut `None`)
+
+### `delete_food`
+
+Delete a food and its photos (meals keep their reading).
+
+Paramètres : `food_id`* (string)
+
+### `read_food_label`
+
+Read a pack or its nutrition table with the vision model.
+
+A proposal, nothing saved: name, brand, package_g, per_100g. Check
+it, then save_food.
+
+Paramètres : `photo_base64`* (string)
+
+### `add_food_photo`
+
+Attach a photo to a food: ``kind`` pack (the box) or label.
+
+Paramètres : `food_id`* (string), `photo_base64`* (string), `kind` (string, défaut `pack`)
 
 ## Travail : heures d'embauche et de débauche
 

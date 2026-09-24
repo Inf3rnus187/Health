@@ -1,12 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { fetchMealPhoto, MEAL_TYPES, type Meal } from '../../api/journal';
+import {
+  fetchMealPhoto,
+  MEAL_TYPES,
+  type Meal,
+  mealPhotoPath,
+} from '../../api/journal';
 import { useAnalyzeMeal, useDeleteMeal } from '../../hooks/useJournal';
 import type { Selection } from '../../hooks/useSelection';
 import { frNumber } from '../../utils/format';
 import { PickBox } from '../Bulk';
 import { Zoomable } from '../Zoomable';
 import { MealAnalysisView } from './MealAnalysisView';
+import { StoredShot } from './Shots';
 import { clock } from './time';
 
 function Photo({ meal }: { meal: Meal }) {
@@ -17,6 +23,18 @@ function Photo({ meal }: { meal: Meal }) {
     staleTime: Infinity,
   });
   return data ? <Zoomable src={data} alt="Repas" /> : null;
+}
+
+/** The other photos: the box, the sachet, its values. */
+function Extras({ meal }: { meal: Meal }) {
+  if (!meal.photo_ids?.length) return null;
+  return (
+    <div className="meal-extras">
+      {meal.photo_ids.map((id) => (
+        <StoredShot key={id} path={mealPhotoPath(meal.id, id)} alt="Photo" />
+      ))}
+    </div>
+  );
 }
 
 function Reading({ meal }: { meal: Meal }) {
@@ -33,7 +51,8 @@ function Reading({ meal }: { meal: Meal }) {
   return <MealAnalysisView a={meal.analysis} />;
 }
 
-function Actions({ meal }: { meal: Meal }) {
+function Actions(props: { meal: Meal; onReuse?: (meal: Meal) => void }) {
+  const { meal, onReuse } = props;
   const analyze = useAnalyzeMeal();
   const del = useDeleteMeal();
   const onDelete = () => {
@@ -43,6 +62,11 @@ function Actions({ meal }: { meal: Meal }) {
   };
   return (
     <div className="row-actions">
+      {onReuse && (
+        <button className="btn ghost" onClick={() => onReuse(meal)}>
+          Refaire ce repas
+        </button>
+      )}
       <button className="btn ghost" onClick={() => analyze.mutate(meal.id)}>
         Réanalyser
       </button>
@@ -64,7 +88,12 @@ function FromProof({ meal }: { meal: Meal }) {
   );
 }
 
-export function MealCard({ meal, sel }: { meal: Meal; sel?: Selection }) {
+export function MealCard(props: {
+  meal: Meal;
+  sel?: Selection;
+  onReuse?: (meal: Meal) => void;
+}) {
+  const { meal, sel } = props;
   return (
     <article className="meal-card">
       <Photo meal={meal} />
@@ -75,9 +104,10 @@ export function MealCard({ meal, sel }: { meal: Meal; sel?: Selection }) {
           {clock(meal.eaten_at)}
         </h3>
         {meal.description && <p>{meal.description}</p>}
+        <Extras meal={meal} />
         {meal.price != null && <FromProof meal={meal} />}
         <Reading meal={meal} />
-        <Actions meal={meal} />
+        <Actions meal={meal} onReuse={props.onReuse} />
       </div>
     </article>
   );

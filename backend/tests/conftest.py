@@ -99,3 +99,25 @@ async def auth(client: AsyncClient) -> dict[str, str]:
     )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest_asyncio.fixture
+async def member(client: AsyncClient) -> dict[str, str]:
+    """An Authorization header for a second, ordinary user (role user)."""
+    from app.core.db import SessionFactory
+    from app.core.security import hash_password
+    from app.models.user import User
+
+    async with SessionFactory() as session:
+        session.add(
+            User(
+                email="membre@example.com",
+                display_name="Membre",
+                password_hash=hash_password("motdepasse-membre-123"),
+                role="user",
+            )
+        )
+        await session.commit()
+    creds = {"email": "membre@example.com", "password": "motdepasse-membre-123"}
+    login = await client.post("/api/v1/auth/login", json=creds)
+    return {"Authorization": f"Bearer {login.json()['access_token']}"}

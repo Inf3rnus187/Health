@@ -50,7 +50,9 @@ function Remarks({ a }: { a: MealAnalysis }) {
 
 function Foods({ a }: { a: MealAnalysis }) {
   const kept = (a.items ?? []).map(
-    (i) => `${i.name} (${frNumber(i.grams, 0)} g)`,
+    (i) =>
+      `${i.name} (${frNumber(i.grams, 0)} g` +
+      `${i.source === 'étiquette' ? ', étiquette 🏷️' : ''})`,
   );
   const dropped = (a.rejected ?? []).map((r) => `${r.name} (${r.reason})`);
   return (

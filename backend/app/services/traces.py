@@ -30,7 +30,7 @@ async def add_meal(session: AsyncSession, row: Evidence, items: str) -> Meal:
         "price": row.amount,
         "vendor": vendor,
     }
-    meal = await meals.create(session, row.user_id, fields, None)
+    meal = await meals.create(session, row.user_id, fields, [])
     row.meal_id = meal.id
     await session.flush()
     return meal

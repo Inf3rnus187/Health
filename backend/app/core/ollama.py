@@ -37,11 +37,15 @@ def document_model() -> str:
 
 
 async def vision_json(
-    prompt: str, image: bytes, *, model: str | None = None
+    prompt: str, image: bytes | Sequence[bytes], *, model: str | None = None
 ) -> dict[str, Any]:
-    """Return a strict-JSON description of ``image`` from a vision model."""
+    """Return a strict-JSON description of ``image`` from a vision model.
+
+    Several images are read at once (a meal, its pack, the label).
+    """
+    images = [image] if isinstance(image, bytes) else list(image)
     return await generate_json(
-        prompt, model or _settings.ollama_vision_model, images=[image]
+        prompt, model or _settings.ollama_vision_model, images=images
     )
 
 

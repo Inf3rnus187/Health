@@ -118,29 +118,57 @@ cigarettes, le pipi et les repas.
   repas (nombre et kcal lues par l'IA) ; les moyennes de la page en tête.
   Paginé (50 par page, 10 sur téléphone, où chaque jour devient une
   fiche).
+Trois onglets (le dernier ouvert reste après un rechargement) :
+**Aujourd'hui** (la nuit, les compteurs, Mon journal), **Repas** (le
+formulaire et la liste) et **Mes aliments**.
+
 - **Ajouter un repas (suivi santé)** — jamais une preuve de travail, sans
   prix ; une note de frais (reçu, livraison) s'ajoute comme preuve dans
   Travail et son repas arrive ici marqué « 🧾 Note de frais » :
   type (petit-déjeuner, déjeuner, collation, dîner),
   date et heure, **description** (quantités, cuisson, « sans huile ni
-  beurre »…) et **photo** facultative : « 📷 Prendre une photo »
-  (l'appareil photo) ou « 🖼️ Galerie » (une photo déjà prise, par
-  exemple le repas d'hier), avec un aperçu et « Retirer la photo ». La
-  photo est nettoyée (EXIF et GPS retirés), redimensionnée et chiffrée si
-  le chiffrement est activé.
+  beurre »…), **aliments de ma liste** (facultatif : un aliment de « Mes
+  aliments » et les grammes mangés, vide = estimés) et jusqu'à **7
+  photos** : « 📷 Prendre une photo » (l'appareil photo, une à la fois)
+  ou « 🖼️ Galerie » (plusieurs d'un coup, par exemple celles d'hier). La
+  **première est l'assiette**, les suivantes l'emballage : la boîte, le
+  sachet, le tableau des valeurs nutritionnelles — l'IA y **lit
+  l'étiquette**. Chaque aperçu a son « × ». Les photos sont nettoyées
+  (EXIF et GPS retirés), redimensionnées (2048 px pour l'emballage, pour
+  que les petits caractères restent lisibles) et chiffrées si le
+  chiffrement est activé.
 - **Analyse IA du repas** (une à quelques minutes) : aliments et
   quantités, **nutriments** (énergie, protéines, glucides dont sucres,
   lipides dont saturés, fibres, sodium), **note 0–10**, verdict, points
   positifs et à surveiller **pour vos maladies déclarées** (stéatose,
-  diabète…). Voir le [guide IA](ia-medicale.md#repas).
+  diabète…). Un aliment de « Mes aliments » (choisi, ou **nommé dans la
+  description** : son nom ou un de ses autres noms) est **calculé avec
+  son étiquette** pour les grammes mangés (le poids du paquet si rien
+  n'est dit), marqué « étiquette 🏷️ » : plus de « vérifier la
+  composition du sachet ». Voir le [guide IA](ia-medicale.md#repas).
 - Les nutriments d'un repas rejoignent les **mêmes mesures nutrition
   qu'Apple Santé** (`nutrition.energy`, protéines, glucides…) ; modifier,
   réanalyser ou supprimer le repas remplace ou retire exactement ses
   nutriments.
 - **Repas** de la période (7 jours par défaut, ou dates exactes), groupés
-  par jour avec le total du jour, 10 jours par page. Cocher des repas (ou
-  « Tout sélectionner » : tous ceux de la période) puis « Supprimer la
-  sélection » les retire d'un coup, avec photos et nutriments.
+  par jour avec le total du jour, 10 jours par page ; les photos de
+  l'emballage en vignettes sous la description (un appui les agrandit).
+  **« Refaire ce repas »** remplit le formulaire avec son type, sa
+  description et ses aliments (on ajuste l'heure, on enregistre). Cocher
+  des repas (ou « Tout sélectionner » : tous ceux de la période) puis
+  « Supprimer la sélection » les retire d'un coup, avec photos et
+  nutriments.
+- **Mes aliments** : les boîtes et sachets mangés souvent, **une fiche
+  remplie une fois** — nom, marque, **autres noms** utilisés dans un
+  repas (« riz sachet, riz micro-ondes », séparés par des virgules),
+  **poids de la boîte ou du sachet**, **valeurs pour 100 g** (énergie,
+  protéines, glucides dont sucres, lipides dont saturés, fibres, **sel**
+  tel qu'imprimé : il est converti en sodium) et une note (« je mange la
+  moitié du sachet »). « 🏷️ Photo des valeurs (lecture IA) » lit
+  l'étiquette et **pré-remplit** la fiche (nom, marque, poids net,
+  valeurs plausibles seulement) : on vérifie puis on enregistre ;
+  « 📦 Photo de la boîte » garde la photo de l'emballage. Chaque fiche
+  est à son utilisateur seul.
 
 Depuis l'iPhone : voir [Raccourcis iPhone](#raccourcis-iphone--une-seule-règle).
 
@@ -203,7 +231,9 @@ santé, marqué « 🧾 Note de frais ».
 | Champ | Type | Obligatoire | Valeur |
 |-------|------|-------------|--------|
 | `description` | Texte | l'un des deux | ce que tu as mangé : quantités, cuisson, « sans huile » (fait foi pour l'IA) |
-| `file` | Fichier | l'un des deux | la photo (JPEG, HEIC, PNG… 15 Mo max ; EXIF et GPS retirés) |
+| `file` | Fichier | l'un des deux | la photo de l'assiette (JPEG, HEIC, PNG… 15 Mo max ; EXIF et GPS retirés) |
+| `photos` | Fichier(s) | non | jusqu'à 6 autres photos : la boîte, le sachet, le tableau des valeurs (sans `file`, la première sert d'assiette) |
+| `foods` | Texte | non | aliments de « Mes aliments » : `[{"food_id": "…", "grams": 125}]` (un aliment nommé dans la description est reconnu sans ça) |
 | `eaten_at` | Texte | non | vide = maintenant ; `2026-09-23T20:30`, `2026-09-23T20:30:00+02:00` ou `23/09/2026 20:30` (sans fuseau = heure locale) |
 | `meal_type` | Texte | non | `breakfast`, `lunch`, `snack`, `dinner` ; vide = d'après l'heure (avant 10:30, 15:00, 18:00) |
 
@@ -222,7 +252,9 @@ apparaît ensuite dans **Journal**.
 3. **Demander une entrée** — type *Texte*, « Qu'as-tu mangé ? ».
 4. **Choisir dans le menu** « Photo ? » :
    « Prendre une photo » → action *Prendre une photo* ;
-   « Depuis Photos » → *Sélectionner des photos* (un repas d'hier) ;
+   « Depuis Photos » → *Sélectionner des photos* avec **« Sélectionner
+   plusieurs »** activé (l'assiette d'abord, puis la boîte, le sachet,
+   les valeurs) ;
    « Sans photo » → action *Texte* vide.
 5. *(facultatif)* **Choisir dans le menu** « Repas ? » : une action
    *Texte* par branche — `breakfast`, `lunch`, `snack`, `dinner`, ou
@@ -230,9 +262,9 @@ apparaît ensuite dans **Journal**.
 6. **Obtenir le contenu de l'URL** — URL
    `http://<hub>/api/v1/meals?token=<jeton>`, méthode **POST**, corps
    **Formulaire** : `description` (Texte = réponse de l'étape 3),
-   `eaten_at` (Texte = *Date formatée*), `file` (**Fichier** = *Menu
-   « Photo ? »*), et si l'étape 5 existe `meal_type` (Texte = *Menu
-   « Repas ? »*).
+   `eaten_at` (Texte = *Date formatée*), `photos` (**Fichier** = *Menu
+   « Photo ? »* : une ou plusieurs photos, la première est l'assiette),
+   et si l'étape 5 existe `meal_type` (Texte = *Menu « Repas ? »*).
 7. **Afficher la notification** « Repas noté, analyse en cours ».
 
 En ligne de commande, le même appel :
@@ -240,13 +272,17 @@ En ligne de commande, le même appel :
 ```bash
 curl -s -X POST "http://<hub>/api/v1/meals?token=$TOKEN" \
   -F description="2 œufs, pain complet, café sans sucre" \
-  -F eaten_at="2026-09-23T20:30" -F meal_type=dinner -F file=@repas.jpg
+  -F eaten_at="2026-09-23T20:30" -F meal_type=dinner -F file=@repas.jpg \
+  -F photos=@sachet.jpg -F photos=@valeurs.jpg
 ```
 
-Ailleurs : **Journal › Ajouter un repas (suivi santé)** dans le site
-(type, date et heure, description, photo) ; outil MCP `log_meal`
-(`description`, `meal_type`, `eaten_at` ISO, `photo_base64`). Une note de
-frais : `add_evidence` (MCP) ou Travail › Preuves (site).
+Ailleurs : **Journal › Repas** dans le site (type, date et heure,
+description, aliments de ma liste, photos) ; outil MCP `log_meal`
+(`description`, `meal_type`, `eaten_at` ISO, `photo_base64`,
+`more_photos_base64`, `foods`). Les fiches d'aliments : **Journal › Mes
+aliments**, `GET/POST /api/v1/foods`, outils MCP `list_foods`,
+`save_food`, `read_food_label`, `add_food_photo`, `delete_food`. Une note
+de frais : `add_evidence` (MCP) ou Travail › Preuves (site).
 
 > Un raccourci déjà réglé sur `POST /api/v1/journal/urination?token=…`
 > (sans corps) continue de marcher : c'est la route du bouton « Pipi

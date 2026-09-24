@@ -272,13 +272,16 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | POST | `/journal/urination` | `write:measurements` + ?token= | JSON `UrinationIn`? (at) | Record one urination (now unless ``at`` is given). |
 | DELETE | `/journal/urination/{sample_id}` | `write:measurements` | `sample_id` | Delete one urination entry. |
 | GET | `/meals` | `read:all` | `start`?, `end`? | Meals between two days (default: the last 7 days), newest first. |
-| POST | `/meals` | `write:measurements` + ?token= | form `meal_type`, form `eaten_at`, form `description`, form `file` | Log a meal for the health follow-up, then read it with the AI. |
+| POST | `/meals` | `write:measurements` + ?token= | form `meal_type`, form `eaten_at`, form `description`, form `file`, form `photos`, form `foods` | Log a meal for the health follow-up, then read it with the AI. |
 | POST | `/meals/delete` | `write:measurements` | JSON `IdsIn` (ids) | Delete meals with their photos and nutrients. |
 | DELETE | `/meals/{meal_id}` | `write:measurements` | `meal_id` | Delete a meal, its photo and its nutrients. |
 | GET | `/meals/{meal_id}` | `read:all` | `meal_id` | One meal with its reading. |
-| PUT | `/meals/{meal_id}` | `write:measurements` | `meal_id`, JSON `MealUpdate` (meal_type, eaten_at, description, price, vendor) | Change type, time or description, then read the meal again. |
+| PUT | `/meals/{meal_id}` | `write:measurements` | `meal_id`, JSON `MealUpdate` (meal_type, eaten_at, description, price, vendor, foods) | Change type, time or description, then read the meal again. |
 | POST | `/meals/{meal_id}/analyze` | `write:measurements` | `meal_id` | Read the meal again with the current models. |
 | GET | `/meals/{meal_id}/photo` | `read:all` | `meal_id` | The meal's photo (JPEG, EXIF removed). |
+| POST | `/meals/{meal_id}/photos` | `write:measurements` | `meal_id`, form `file` | Add a photo (the pack, its nutrition label…), then read again. |
+| DELETE | `/meals/{meal_id}/photos/{photo_id}` | `write:measurements` | `meal_id`, `photo_id` | Delete one of the meal's other photos (the reading stays). |
+| GET | `/meals/{meal_id}/photos/{photo_id}` | `read:all` | `meal_id`, `photo_id` | One of the meal's other photos (JPEG, EXIF removed). |
 
 ## Travail (heures d'embauche et de débauche)
 
@@ -339,6 +342,15 @@ signale qu'il est aussi accepté en paramètre d'URL.
 
 | Méthode | Route | Accès | Paramètres | Rôle |
 |---|---|---|---|---|
+| GET | `/foods` | `read:all` | — | The user's foods, by name. |
+| POST | `/foods` | `write:measurements` | JSON `FoodIn` (name, brand, aliases, package_g, per_100g, note) | Add a food: name, brand, aliases, package weight, values per 100 g. |
+| POST | `/foods/read-label` | `write:measurements` | form `file` | Read a pack or its nutrition table with the vision model. |
+| DELETE | `/foods/{food_id}` | `write:measurements` | `food_id` | Delete a food and its photos. |
+| GET | `/foods/{food_id}` | `read:all` | `food_id` | One food. |
+| PUT | `/foods/{food_id}` | `write:measurements` | `food_id`, JSON `FoodIn` (name, brand, aliases, package_g, per_100g, note) | Change a food (every field; the meals already read keep theirs). |
+| POST | `/foods/{food_id}/photos` | `write:measurements` | `food_id`, form `file`, form `kind` | Add a photo: ``kind`` = ``pack`` (the box) or ``label`` (values). |
+| DELETE | `/foods/{food_id}/photos/{photo_id}` | `write:measurements` | `food_id`, `photo_id` | Delete one of the food's photos. |
+| GET | `/foods/{food_id}/photos/{photo_id}` | `read:all` | `food_id`, `photo_id` | One of the food's photos (JPEG, EXIF removed). |
 | GET | `/spending/meals` | `read:all` | `start`?, `end`?, `kind`?, `bucket`? | Spending on meals paid for over ``start``..``end``. |
 | GET | `/system/update` | Session uniquement | — | Changes waiting on GitHub, the parts to rebuild, the last update. |
 | POST | `/system/update` | Session uniquement | — | Ask the host to update now (its cron runs ./update.sh). |

@@ -1590,10 +1590,34 @@ a.tile:hover {
 }
 
 .photo-pick-chosen {
+  list-style: none;
+  padding: 0;
+  margin: 0;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
+}
+
+/* One picked photo: the preview, its × in the corner, what it shows. */
+.photo-pick-chosen li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 96px;
+  text-align: center;
+}
+
+.photo-pick-chosen .chip-x {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-border);
 }
 
 .photo-pick-preview {
@@ -1680,6 +1704,53 @@ a.tile:hover {
 .meal-body {
   flex: 1 1 280px;
   min-width: 0;
+}
+
+/* The other photos of a meal (box, sachet, values) and of a food. */
+.meal-extras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.meal-photo.mini-photo {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+}
+
+/* « Mes aliments »: one line per food, its sheet when edited. */
+.food-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+}
+
+.food-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-grid);
+}
+
+.food-form {
+  display: grid;
+  gap: 12px;
+}
+
+.food-values {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 12px 12px;
+  margin: 0;
+}
+
+.food-values .input {
+  max-width: 110px;
 }
 
 .meal-body h3 {

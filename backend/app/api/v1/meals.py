@@ -16,7 +16,7 @@ from app.core.scopes import WRITE_MEASUREMENTS
 from app.models.base import utcnow
 from app.models.meal import Meal
 from app.schemas.journal import MealOut
-from app.services import meal_ai, meal_photo, meals
+from app.services import meal_ai, meal_form, meal_photo, meals
 
 router = APIRouter(prefix="/meals", tags=["journal"])
 
@@ -31,14 +31,19 @@ async def create(
     eaten_at: Annotated[str, Form()] = "",
     description: Annotated[str, Form()] = "",
     file: Annotated[UploadFile | str | None, File()] = None,
+    photos: Annotated[list[UploadFile | str] | None, File()] = None,
+    foods: Annotated[str, Form()] = "",
 ) -> Meal:
     """Log a meal for the health follow-up, then read it with the AI.
 
-    Form fields: ``description``, ``file`` (photo: JPEG, HEIC, PNG…), and
-    optionally ``meal_type`` (default: from the hour) and ``eaten_at``
-    (default: now; ``2026-09-23T20:30``, with or without an offset, or
-    ``23/09/2026 20:30`` — a time without offset is local). An empty
-    field (an iPhone Shortcut without photo) counts as absent.
+    Form fields: ``description``, ``file`` (the plate's photo: JPEG,
+    HEIC, PNG…), and optionally ``photos`` (up to 6 more files: the box,
+    the sachet, its nutrition table), ``foods`` (catalogue foods eaten,
+    JSON ``[{"food_id": "…", "grams": 125}]``; a food the description
+    names is found anyway), ``meal_type`` (default: from the hour) and
+    ``eaten_at`` (default: now; ``2026-09-23T20:30``, with or without an
+    offset, or ``23/09/2026 20:30`` — a time without offset is local).
+    An empty field (an iPhone Shortcut without photo) counts as absent.
 
     Health only: such a meal is never a work proof and has no price. A
     meal paid for (receipt, delivery, expense report) is a proof —
@@ -48,9 +53,11 @@ async def create(
         "meal_type": meal_type,
         "eaten_at": _when(eaten_at),
         "description": description,
+        "foods": meal_form.portions(foods),
     }
-    photo = await _photo(file)
-    meal = await meals.create(session, principal.user.id, fields, photo)
+    sent = [await _photo(f) for f in [file, *(photos or [])]]
+    shots = [s for s in sent if s is not None]
+    meal = await meals.create(session, principal.user.id, fields, shots)
     await session.commit()
     await meal_ai.queue(session, meal)
     return meal

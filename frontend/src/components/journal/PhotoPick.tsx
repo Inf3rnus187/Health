@@ -1,64 +1,52 @@
-import { type ChangeEvent, useEffect, useState } from 'react';
+import { ShotButton, ShotPreview } from './Shots';
 
-/** A preview of the photo picked (its object URL freed when replaced). */
-function Preview({ photo }: { photo: File }) {
-  const [url, setUrl] = useState('');
-  useEffect(() => {
-    const made = URL.createObjectURL(photo);
-    setUrl(made);
-    return () => URL.revokeObjectURL(made);
-  }, [photo]);
-  return url ? <img className="photo-pick-preview" src={url} alt="" /> : null;
-}
+/** Photos of a meal at most: the plate, then boxes, sachets, labels. */
+const MOST_PHOTOS = 7;
 
-function Source(props: {
-  label: string;
-  camera: boolean;
-  onPick: (photo: File | null) => void;
-}) {
-  const pick = (event: ChangeEvent<HTMLInputElement>) => {
-    props.onPick(event.target.files?.[0] ?? null);
-    event.target.value = ''; // the same photo can be picked again
-  };
+function Chosen(props: { photos: File[]; onDrop: (index: number) => void }) {
   return (
-    <label className="btn ghost">
-      {props.label}
-      <input
-        type="file"
-        accept="image/*"
-        hidden
-        capture={props.camera ? 'environment' : undefined}
-        onChange={pick}
-      />
-    </label>
+    <ul className="photo-pick-chosen">
+      {props.photos.map((photo, index) => (
+        <li key={`${photo.name}-${photo.lastModified}-${index}`}>
+          <ShotPreview file={photo} />
+          <button
+            type="button"
+            className="chip-x"
+            title="Retirer"
+            onClick={() => props.onDrop(index)}
+          >
+            ×
+          </button>
+          <span className="muted small">
+            {index === 0 ? 'assiette' : 'emballage'}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
-function Chosen(props: { photo: File; onDrop: () => void }) {
-  return (
-    <div className="photo-pick-chosen">
-      <Preview photo={props.photo} />
-      <button type="button" className="btn ghost" onClick={props.onDrop}>
-        Retirer la photo
-      </button>
-    </div>
-  );
-}
-
-/** Take a photo or pick one from the gallery; show it, or take it back. */
+/** Take photos or pick several from the gallery; show them, drop one. */
 export function PhotoPick(props: {
-  photo: File | null;
-  onPick: (photo: File | null) => void;
+  photos: File[];
+  onChange: (photos: File[]) => void;
 }) {
+  const add = (files: File[]) =>
+    props.onChange([...props.photos, ...files].slice(0, MOST_PHOTOS));
+  const drop = (index: number) =>
+    props.onChange(props.photos.filter((_, i) => i !== index));
   return (
     <div className="photo-pick">
-      <span className="muted">Photo du repas (facultative)</span>
+      <span className="muted">
+        Photos (facultatives) : l’assiette d’abord, puis la boîte, le sachet, le
+        tableau des valeurs — {MOST_PHOTOS} au plus
+      </span>
       <div className="quick">
-        <Source label="📷 Prendre une photo" camera onPick={props.onPick} />
-        <Source label="🖼️ Galerie" camera={false} onPick={props.onPick} />
+        <ShotButton label="📷 Prendre une photo" camera onPick={add} />
+        <ShotButton label="🖼️ Galerie" many onPick={add} />
       </div>
-      {props.photo && (
-        <Chosen photo={props.photo} onDrop={() => props.onPick(null)} />
+      {props.photos.length > 0 && (
+        <Chosen photos={props.photos} onDrop={drop} />
       )}
     </div>
   );

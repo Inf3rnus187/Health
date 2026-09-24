@@ -1,5 +1,6 @@
 import type { Range } from '../utils/range';
 import { api, authFetch } from './client';
+import type { FoodPortion } from './foods';
 
 export interface UrinationDay {
   day: string;
@@ -21,6 +22,9 @@ export interface MealTotals {
 
 export interface MealItem extends MealTotals {
   name: string;
+  /** « étiquette »: computed from a food of « Mes aliments ». */
+  source?: string;
+  food_id?: string;
 }
 
 export interface MealAnalysis {
@@ -29,6 +33,8 @@ export interface MealAnalysis {
   vision_model?: string | null;
   items?: MealItem[];
   rejected?: { name: string; reason: string }[];
+  /** The foods of « Mes aliments » used (picked or named). */
+  foods?: string[];
   totals?: MealTotals;
   score?: number | null;
   verdict?: string | null;
@@ -45,6 +51,9 @@ export interface Meal {
   price: number | null;
   vendor: string;
   has_photo: boolean;
+  /** The other photos (the box, the sachet, its values…). */
+  photo_ids: string[];
+  foods: FoodPortion[];
   analysis_status: string | null;
   analysis: MealAnalysis | null;
 }
@@ -89,6 +98,9 @@ export async function createMeal(form: FormData): Promise<Meal> {
   }
   return (await res.json()) as Meal;
 }
+
+export const mealPhotoPath = (id: string, photoId: string) =>
+  `/meals/${id}/photos/${photoId}`;
 
 /** The meal photo as an object URL (authenticated). */
 export async function fetchMealPhoto(id: string): Promise<string> {

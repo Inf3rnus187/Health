@@ -16,6 +16,7 @@ from typing import Any
 from phoenix_mcp import (
     tools_body,
     tools_data,
+    tools_foods,
     tools_journal,
     tools_record,
     tools_reports,
@@ -29,6 +30,7 @@ SECTIONS: tuple[tuple[ModuleType, str], ...] = (
     (tools_data, "Données et métriques"),
     (tools_record, "Dossier médical, Suivi, documents"),
     (tools_journal, "Journal : pipi et repas"),
+    (tools_foods, "Mes aliments : boîtes et sachets, leur étiquette"),
     (tools_work, "Travail : heures d'embauche et de débauche"),
     (
         tools_workfile,

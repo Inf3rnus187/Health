@@ -30,13 +30,25 @@ function DayTotal({ meals }: { meals: Meal[] }) {
   return <p className="muted">{text} (repas analysés)</p>;
 }
 
-function Day(props: { day: string; list: Meal[]; sel: Selection }) {
+type Reuse = (meal: Meal) => void;
+
+function Day(props: {
+  day: string;
+  list: Meal[];
+  sel: Selection;
+  onReuse: Reuse;
+}) {
   return (
     <div className="meal-day">
       <h3>{shortDate(props.day)}</h3>
       <DayTotal meals={props.list} />
       {props.list.map((meal) => (
-        <MealCard key={meal.id} meal={meal} sel={props.sel} />
+        <MealCard
+          key={meal.id}
+          meal={meal}
+          sel={props.sel}
+          onReuse={props.onReuse}
+        />
       ))}
     </div>
   );
@@ -45,7 +57,7 @@ function Day(props: { day: string; list: Meal[]; sel: Selection }) {
 const NOUN = 'repas (avec photos et nutriments)';
 
 /** Meals of a period, grouped by day (a page is 10 days) with totals. */
-export function MealList() {
+export function MealList({ onReuse }: { onReuse: Reuse }) {
   const [range, setRange] = useRange(7, 'journal.meals');
   const meals = useMeals(range).data ?? [];
   const sel = useSelection();
@@ -59,7 +71,7 @@ export function MealList() {
       <BulkBar what="meals" noun={NOUN} shown={ids} sel={sel} />
       {bar}
       {page.map(([day, list]) => (
-        <Day key={day} day={day} list={list} sel={sel} />
+        <Day key={day} day={day} list={list} sel={sel} onReuse={onReuse} />
       ))}
     </section>
   );
