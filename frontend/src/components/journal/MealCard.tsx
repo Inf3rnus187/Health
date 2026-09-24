@@ -5,6 +5,7 @@ import { useAnalyzeMeal, useDeleteMeal } from '../../hooks/useJournal';
 import type { Selection } from '../../hooks/useSelection';
 import { frNumber } from '../../utils/format';
 import { PickBox } from '../Bulk';
+import { Zoomable } from '../Zoomable';
 import { MealAnalysisView } from './MealAnalysisView';
 import { clock } from './time';
 
@@ -15,7 +16,7 @@ function Photo({ meal }: { meal: Meal }) {
     enabled: meal.has_photo,
     staleTime: Infinity,
   });
-  return data ? <img className="meal-photo" src={data} alt="Repas" /> : null;
+  return data ? <Zoomable src={data} alt="Repas" /> : null;
 }
 
 function Reading({ meal }: { meal: Meal }) {

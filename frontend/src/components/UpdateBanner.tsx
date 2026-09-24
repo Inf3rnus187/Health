@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import type { UpdateState } from '../api/system';
+import { useAuth } from '../auth/useAuth';
 import {
   useNewBuild,
   useRequestUpdate,
@@ -160,35 +161,57 @@ function recent(u: UpdateState): boolean {
   return Date.now() - at < RECENT_MS;
 }
 
-/** The banner for the host's update state (null: nothing to say). */
-function stateBanner(u: UpdateState, onHide: () => void): JSX.Element | null {
-  if (u.state === 'failed' || u.stalled) {
-    return <Stuck u={u} onHide={onHide} />;
+interface Seen {
+  hidden: boolean;
+  later: boolean;
+  hide: () => void;
+  postpone: () => void;
+}
+
+/** The administrator's banner: a problem or an update running first,
+ * then one waiting, then « ✓ installée » (null: nothing to say). */
+function adminBanner(u: UpdateState, seen: Seen): JSX.Element | null {
+  const busy = ['requested', 'running'].includes(u.state);
+  if (!seen.hidden && (u.state === 'failed' || u.stalled)) {
+    return <Stuck u={u} onHide={seen.hide} />;
   }
-  if (['requested', 'running'].includes(u.state)) return <Progress u={u} />;
-  if (u.state === 'done' && recent(u)) return <Done u={u} onHide={onHide} />;
+  if (busy) return <Progress u={u} />;
+  if (u.behind > 0 && !seen.later) {
+    return <Available u={u} later={seen.postpone} />;
+  }
+  if (!seen.hidden && u.state === 'done' && recent(u)) {
+    return <Done u={u} onHide={seen.hide} />;
+  }
   return null;
 }
 
-/** A new build installed, an update waiting on GitHub, running or done. */
-export function UpdateBanner() {
-  const u = useUpdateState().data;
-  const newer = useNewBuild(['requested', 'running'].includes(u?.state ?? ''));
+function useSeen(u: UpdateState | undefined): Seen {
   const [later, setLater] = useState(readStored<string>('update.later'));
   const [hidden, setHidden] = useState(readStored<string>('update.hidden'));
+  const key = `${u?.state}:${u?.since ?? ''}`;
+  return {
+    hidden: hidden === key,
+    later: later === u?.latest,
+    hide: () => {
+      writeStored('update.hidden', key);
+      setHidden(key);
+    },
+    postpone: () => {
+      writeStored('update.later', u?.latest ?? '');
+      setLater(u?.latest ?? '');
+    },
+  };
+}
+
+/** Everyone: a new build installed → reload. The administrator also:
+ * an update waiting on GitHub, running, stuck or just installed. */
+export function UpdateBanner() {
+  const admin = useAuth().user?.role === 'admin';
+  const u = useUpdateState(admin).data;
+  const updating = ['requested', 'running'].includes(u?.state ?? '');
+  const newer = useNewBuild(updating);
+  const seen = useSeen(u);
   if (newer) return <Reload />;
-  if (!u) return null;
-  const seen = `${u.state}:${u.since ?? ''}`;
-  const hide = () => {
-    writeStored('update.hidden', seen);
-    setHidden(seen);
-  };
-  const told = hidden === seen ? null : stateBanner(u, hide);
-  if (told) return told;
-  if (u.behind === 0 || later === u.latest) return null;
-  const postpone = () => {
-    writeStored('update.later', u.latest);
-    setLater(u.latest);
-  };
-  return <Available u={u} later={postpone} />;
+  if (!admin || !u) return null;
+  return adminBanner(u, seen);
 }

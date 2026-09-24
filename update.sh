@@ -7,7 +7,7 @@
 #   ./update.sh --check         fetch; write what an update would bring
 #                               (run/update.json, read by the web page)
 #   ./update.sh --cron          for cron, every minute: check GitHub every
-#                               15 min, run the update asked for on the page
+#                               5 min, run the update asked for on the page
 #   ./update.sh --install-cron  add that cron line for the current user
 #   … --auto                    (with --cron / --install-cron) also install
 #                               a waiting update by itself, without the click
@@ -34,7 +34,7 @@ export GIT_TERMINAL_PROMPT=0
 
 RUN="run"
 COMPOSE="${COMPOSE:-docker compose}"
-CHECK_EVERY=900
+CHECK_EVERY=300
 
 mkdir -p "$RUN"
 chmod 1777 "$RUN" 2>/dev/null || true  # the API (uid 10001) drops requests

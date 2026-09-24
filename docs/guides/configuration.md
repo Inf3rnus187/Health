@@ -43,7 +43,7 @@ Recharger** ». Pour être prévenu **avant**, et installer d'un clic :
 ```
 
 Chaque minute, le cron exécute une mise à jour demandée depuis la page ;
-toutes les 15 minutes, il regarde GitHub (`git fetch`) — `./update.sh --check`
+toutes les 5 minutes, il regarde GitHub (`git fetch`) — `./update.sh --check`
 le fait tout de suite. Rien ne s'installe sans votre clic, sauf en mode
 automatique : `./update.sh --install-cron --auto` (remplace la ligne cron)
 installe seul chaque mise à jour trouvée ; `./update.sh --install-cron` revient
@@ -53,6 +53,11 @@ la branche suivie par l'hôte (`git status` la nomme). La page affiche alors
 interface web, API et worker » (ou « rien à reconstruire, documentation
 seulement »), la liste des changements, « **Installer** » et « Plus tard ».
 Sans le cron, la page donne la commande à lancer sur l'hôte.
+
+**Réservé à l'administrateur** (compte au rôle `admin`) : l'état de
+l'hôte, « Mise à jour disponible », « Installer », « Relancer ». Les
+autres comptes voient seulement « Nouvelle version installée sur le
+serveur : recharge la page » quand l'interface a changé.
 
 Sécurité : la page ne pilote jamais Docker (pas de `docker.sock` dans un
 conteneur, qui donnerait la main sur l'hôte). « Installer » dépose seulement

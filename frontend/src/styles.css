@@ -1627,12 +1627,54 @@ a.tile:hover {
   margin: 10px 0;
 }
 
+/* A square thumbnail (a tap enlarges it), centred on a phone. */
+.meal-thumb {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
 .meal-photo {
-  width: 180px;
-  max-width: 100%;
-  height: auto;
+  display: block;
+  width: 140px;
+  height: 140px;
   border-radius: var(--radius);
   object-fit: cover;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.85);
+  cursor: zoom-out;
+}
+
+.lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+@media (max-width: 640px) {
+  .meal-card {
+    flex-direction: column;
+    align-items: center;
+  }
+  .meal-body {
+    align-self: stretch;
+  }
+  .meal-photo {
+    width: 200px;
+    height: 200px;
+  }
 }
 
 .meal-body {

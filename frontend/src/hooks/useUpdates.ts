@@ -27,11 +27,13 @@ export function useNewBuild(updating = false): boolean {
   return newer;
 }
 
-/** Changes waiting, and the update running (polled faster then). */
-export function useUpdateState() {
+/** Changes waiting, and the update running (polled faster then);
+ * the administrator's only (``enabled``). */
+export function useUpdateState(enabled = true) {
   return useQuery({
     queryKey: ['system-update'],
     queryFn: fetchUpdate,
+    enabled,
     retry: false,
     refetchInterval: (q) =>
       ['requested', 'running'].includes(q.state.data?.state ?? '')

@@ -8,6 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Updates are the administrator's**: `/system/update` (state and
+  « Installer ») needs an admin session (`AdminDep`, role `admin`); other
+  users only get « Nouvelle version installée : recharge la page ». A
+  waiting update is no longer hidden behind the green « ✓ installée »
+  of the previous one, and the host looks at GitHub every 5 minutes
+  (was 15).
+- **Meal photos on a phone**: a square thumbnail, centred, instead of a
+  tall photo stuck to the left; a tap shows it whole, a tap closes it.
 - **« Mise à jour en cours » for ever after « Installer »**: `run/` is
   sticky (`1777`) and often owned by root or Docker, so the host's cron
   user could not delete the request dropped by the API (another user):
