@@ -17,7 +17,10 @@ Guiding constraints (non‑negotiable):
   re‑entered**.
 - **Multi‑source ingestion** — UI, REST API, scripts, scoped tokens, Apple
   Watch webhooks.
-- **Multi‑user** from day one, with strict per‑user isolation.
+- **Multi‑user by design**, with strict per‑user isolation (every row has
+  an owner, every query filters on it). There is **no way yet to create a
+  second account**: the hub runs with the single admin account created at
+  install — see the [multi-user plan](docs/multi-utilisateur.md).
 
 ---
 
@@ -29,23 +32,24 @@ and tested:
 | Area | Status |
 |------|--------|
 | Docker Compose stack (db, redis, api, worker, web, mcp) | ✅ |
-| Auth: JWT access + **rotating refresh** + revocation, multi‑user | ✅ |
-| Scoped, hashed **API tokens** (machine access) | ✅ |
+| Auth: JWT access + **rotating refresh** + revocation; roles `admin` / `user` (one seeded admin account today) | ✅ |
+| Scoped, hashed **API tokens** (machine access); a token sent in the URL (`?token=`, iPhone Shortcuts) is written `token=***` in the API and nginx logs | ✅ |
+| **Admin role**: host updates (`/system/update`, admin web session only) and the shared metric catalogue (`POST`/`PATCH /metrics`) | ✅ |
 | **Audit log** of every write | ✅ |
 | **Dynamic metric registry** (add a field at runtime) | ✅ |
 | Idempotent **batch measurements** + events (zero redundancy) | ✅ |
 | Rolling aggregates (7/30 j) computed on read | ✅ |
-| **Seed catalogue** — the full Annexe A dictionary (76 metrics) | ✅ |
+| **Seed catalogue** — the full Annexe A dictionary (77 metrics) | ✅ |
 | React front: login, catalogue, governed chart, quick entry | ✅ |
 | Quality gates: ruff, mypy strict, ESLint, custom limits, CI, coverage ≥80% | ✅ |
 | **Ingestion** `/ingest/watch` + `/ingest/ppc` + configurable HealthKit mapping | ✅ |
 | **Mode B** `/capture` (opens session, pre‑fills night data, returns form) | ✅ |
 | **Photo pipeline** (upload → EXIF‑strip/normalize → Ollama vision → compare) | ✅ |
 | **Dashboards** per domain (`/dashboard/{domain}` + React domain tabs) | ✅ |
-| **Exports** CSV/JSON/XLSX/FHIR + async **clinical PDF** reports | ✅ |
-| **MCP server** — 82 tools covering the whole hub, as a REST‑API client (each client uses its own `hub:full` token) | ✅ |
+| **Exports** of daily values CSV/JSON/XLSX/FHIR + async **clinical PDF** reports | ✅ |
+| **MCP server** — 105 tools covering the whole hub, as a REST‑API client (each client uses its own `hub:full` token) | ✅ |
 | **Automations** (trigger→action: reminder/capture) + run endpoint | ✅ |
-| **Hardening**: optional TOTP MFA, at‑rest media encryption, RGPD erasure | ✅ |
+| **Hardening**: optional TOTP MFA (API only, no web screen yet), at‑rest file encryption, RGPD erasure | ✅ |
 | **Supply chain**: gitleaks, pip‑audit, pnpm audit, Trivy, syft SBOM (CI) | ✅ |
 | **Apple Health import** (web + API): all raw samples, workouts, ECG, GPS, CDA | ✅ |
 | ECG waveform & GPS route **viewers**; day/week/month/year charts + wheel zoom | ✅ |
@@ -56,16 +60,21 @@ and tested:
 | **Complete Apple Health catalog** (iOS 26 SDK: 121 quantity + 72 category types, French labels) + **Health Auto Export** | ✅ |
 | **One truth**: canonical keys, daily values rebuilt from raw samples, *Réconcilier*, same numbers on every page | ✅ |
 | **Medical record** (Dossier): documents read by **MedGemma** with values checked against the text, results + source, chronology, suggestions | ✅ |
-| **Suivi**: each condition with its indicators and documents | ✅ |
+| **Suivi**: each condition with its indicators and documents; treatments with their doses per day and a 30-day adherence line (rate, days without any record, usual time) | ✅ |
 | **Évolution**: validated markers (FibroScan, FLI, FIB-4, HbA1c…), weight milestones, longitudinal photo method | ✅ |
 | **AI clinical synthesis** report: every sentence cites the record's facts, unproven ones removed | ✅ |
-| **Journal**: pee (one tap) and meals (photo + description, AI nutrition reading) | ✅ |
-| **Travail**: clock in / out (GPS Shortcut, web, assistant), hours worked per day, overtime, 10 h / 48 h flags, 7 d → 1 y stats, CSV / Excel / PDF, import of past txt / csv / json logs | ✅ |
-| **Work ↔ health file**: incomplete and 72 h sessions, sick-leave periods with causes, evidence (calls, mails, screenshots) with SHA-256, nights (awakenings, fragmented sleep, typed nights), legal landmarks, sleep correlations, full PDF report with evidence annex; import of iPhone Shortcut histories; **traces** (transport, taxi, parking, deliveries, hotels, expense reports) imported from Uber / Uber Eats / Navigo / parking / bank exports, deliveries logged as priced meals read by the AI | ✅ |
+| **Rapports that prove the facts**: habits (days recorded, « sans donnée » never counted as zero), medication adherence, meals, traceability of entries (same day or later, channel), before / after comparison; each page stamped (report id, time, version); SHA-256 stored, « Vérifier un fichier » (`POST /reports/verify`) checks a copy | ✅ |
+| **Journal** — Aujourd'hui: last night, counters (water, coffee, cigarettes, pee) with « +1 » / « − » and « 0 » to confirm a day at zero, today's medications (taken / not taken); Mon journal: one line per day | ✅ |
+| **Meals**: up to 7 photos (plate, box, label), description, edit afterwards, « Refaire ce repas »; the AI recognises and weighs, values computed by code from the ANSES **Ciqual** table (shipped, offline) or the food's label — same meal, same numbers | ✅ |
+| **Mes aliments**: foods eaten often with their values per 100 g, label read from a photo (vision model), barcode lookup on Open Food Facts (opt-in, `FOOD_LOOKUP_ONLINE`, barcode only) | ✅ |
+| **Travail**: clock in / out (GPS Shortcut, web, assistant), on site or remote, hours worked per day, overtime, 10 h / 48 h flags, 7 d → 1 y stats, CSV / Excel / PDF, import of past txt / csv / json logs; absences with half days, imported from HR exports (Lucca…); Uber Eats / meals spending; bulk delete of sessions, absences, proofs and meals | ✅ |
+| **Work ↔ health file**: incomplete and 72 h sessions, sick-leave periods with causes, evidence (calls, mails, screenshots) with SHA-256, nights (awakenings, fragmented sleep, typed nights), legal landmarks, sleep correlations, full PDF report with evidence annex; import of iPhone Shortcut histories; **traces** (transport, taxi, parking, deliveries, hotels, expense reports) imported from Uber / Uber Eats / Navigo / parking / bank exports, deliveries logged as priced meals read by the AI; WhatsApp chat exports, ticket exports (NinjaOne…) and Lucca expense-report PDFs read as proofs and traces | ✅ |
+| **Update notice**: the page offers « Recharger » after a new build (`/version.json`); `./update.sh` pulls and rebuilds only what changed; with its cron, the admin sees « Mise à jour disponible » and « Installer » (no Docker socket in any container) | ✅ |
 
 **All 9 specification phases are implemented.** Remaining follow‑ups
 (signed container images, encrypted off‑site backups, an automated retention
-purge job) are noted in [`SECURITY.md`](SECURITY.md).
+purge job) and known limitations (single account, MFA without a web
+screen, no login rate limit…) are noted in [`SECURITY.md`](SECURITY.md).
 
 See [`docs/`](docs) for architecture, the data model, and how‑to guides.
 
@@ -78,7 +87,7 @@ Requirements: Docker + Docker Compose.
 ```bash
 git clone <this-repo> phoenix-health-hub
 cd phoenix-health-hub
-cp .env.example .env      # optional — install.sh does this for you
+cp .env.example .env      # then edit it BEFORE the first ./install.sh
 ./install.sh              # build + migrate + seed + create admin + start
 ```
 
@@ -88,7 +97,10 @@ Then open **http://localhost:8082** and log in with the `ADMIN_EMAIL` /
 
 `install.sh` is the single bootstrap: it creates `.env` with a strong random
 `SECRET_KEY` on first run, builds the images, applies migrations, seeds the
-metric catalogue and admin user (idempotently), then starts the stack.
+metric catalogue and admin user (idempotently), then starts the stack. It
+does not stop to let you edit a `.env` it has just created, so set
+`ADMIN_EMAIL`, `ADMIN_PASSWORD` and `POSTGRES_PASSWORD` first: the admin
+account is created once, and no route changes its password afterwards.
 
 > TLS is intentionally **not** provided: the app only speaks HTTP internally.
 > Terminate HTTPS with your own reverse proxy in front of the `web` service.
@@ -104,7 +116,7 @@ commented [`.env.example`](.env.example). Key settings:
 |----------|---------|
 | `SECRET_KEY` | JWT signing key (≥32 chars; auto‑generated by `install.sh`). |
 | `POSTGRES_USER/PASSWORD/DB` | Database credentials. |
-| `ADMIN_EMAIL/PASSWORD` | Initial admin created by the seed step. |
+| `ADMIN_EMAIL/PASSWORD` | Initial admin created by the seed step (read only when that account does not exist yet). |
 | `ACCESS_TOKEN_TTL_MIN` / `REFRESH_TOKEN_TTL_DAYS` | Token lifetimes. |
 | `OLLAMA_URL` / `OLLAMA_*_MODEL` | AI endpoint + one model per task (photos, documents, synthesis — MedGemma recommended). |
 | `WEB_PORT` | Host port for the web tier (default 8082). |
@@ -125,7 +137,9 @@ Every variable is explained in the
 | [Ingestion](docs/guides/ingestion.md) | Apple Santé, Health Auto Export, Raccourcis, montre, PPC, photos. |
 | [MCP](docs/guides/mcp.md) | Brancher un assistant (Claude Desktop / Code, stdio) de façon sûre. |
 | [Référence API](docs/api.md) | Toutes les routes, leurs paramètres et le droit exigé (générée depuis le code). |
-| [Outils MCP](docs/mcp-tools.md) | Les 82 outils et leurs paramètres (générée depuis le serveur). |
+| [Outils MCP](docs/mcp-tools.md) | Les 105 outils et leurs paramètres (générée depuis le serveur). |
+| [Multi-utilisateur](docs/multi-utilisateur.md) | Ce qui manque pour plusieurs comptes (on ne peut pas encore en créer un second) : analyse et plan. |
+| [Sécurité](SECURITY.md) | Niveaux d'accès, chiffrement, limites connues. |
 | [Architecture](docs/architecture.md), [modèle de données](docs/data-model.md), [ADR](docs/adr/) | Conception. |
 
 ---
@@ -140,7 +154,8 @@ ACCESS=$(curl -s $BASE/auth/login -H 'Content-Type: application/json' \
   -d '{"email":"admin@example.com","password":"<your password>"}' \
   | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
 
-# 2. Add a brand-new metric at runtime (no migration!)
+# 2. Add a brand-new metric at runtime (no migration!) — admin role only:
+#    the catalogue is shared by every account
 curl -s $BASE/metrics -H "Authorization: Bearer $ACCESS" \
   -H 'Content-Type: application/json' \
   -d '{"key":"mind.meditation_min","label":"Méditation","domain":"mind",
@@ -183,11 +198,19 @@ curl -s $BASE/tokens -H "Authorization: Bearer $ACCESS" \
 # → returns the plaintext token ONCE; store it in your Shortcut.
 ```
 
-Scopes are least-privilege: `ingest:*` and `write:*` tokens can only
-**send** data. Reading health data (values, export, reports, photos,
-record) needs `read:all`; `hub:full` (MCP / assistant) can do everything
-the web app does except managing tokens, 2FA and the account. Bulk
-deletions (all photos, Apple import reset) need a login or `hub:full`.
+Scopes are least-privilege: no write scope opens the **read** routes.
+`ingest:*` tokens only send data. `write:measurements` sends,
+but also **edits** (meals, foods, work sessions) and **deletes by id**
+(measurements, meals and their photos, foods and their photos, pee
+entries, work sessions, medication doses — including the batch
+`/measurements/delete`, `/meals/delete`, `/work/sessions/delete`).
+`write:metrics` works for the admin only (shared catalogue). Reading
+health data (values, export, reports, photos, record) needs `read:all`;
+`hub:full` (MCP / assistant) can do everything the web app does except
+managing tokens, 2FA, deleting the account, downloading the Shortcut and
+`/system/update`. Wiping everything (all photos, Apple import reset)
+needs a login or `hub:full`. Access levels in detail:
+[SECURITY.md](SECURITY.md#access-levels).
 
 Adding a metric is also documented step‑by‑step in
 [docs/guides/add-a-metric.md](docs/guides/add-a-metric.md).
@@ -337,8 +360,12 @@ and fails the build on any violation or coverage under 80%.
 
 ## Data, backup & restore
 
-Docker named volumes hold all state: `pgdata` (database), `media` (photos),
-`exports` (generated reports).
+Docker named volumes hold all state: `pgdata` (database), `media` (photos,
+documents, proofs, ECG and GPS files), `exports` (generated reports,
+uploaded Apple exports). Back up **`.env`** too, and keep it safe: it
+holds the passwords, `SECRET_KEY` and `MEDIA_ENCRYPTION_KEY` — without
+that key, the encrypted files of `media` are lost for good. The `run/`
+folder (update status) and `import/` need no backup.
 
 ```bash
 # Backup the database
@@ -366,7 +393,7 @@ phoenix-health-hub/
 │   └── app/{core,models,schemas,services,api,workers,seed}
 ├── frontend/               # React + Vite + TS (theme, api, components)
 ├── nginx/                  # reverse proxy + React build image
-├── mcp/                    # MCP server (82 tools, API client)
+├── mcp/                    # MCP server (105 tools, API client)
 ├── tools/                  # custom code-limit checker
 └── docs/                   # architecture, data model, guides, ADRs
 ```
@@ -384,9 +411,12 @@ phoenix-health-hub/
 
 Argon2id passwords, short JWTs with rotating/revocable refresh sessions,
 hashed scoped tokens, strict input validation, security headers + CSP,
-an append‑only audit log, optional TOTP MFA and media encryption, SBOM and
-image/dependency scans in CI. Tokens that only send data cannot read it
-(`read:all`); the MCP server only accepts `hub:full` tokens. See
+an append‑only audit log, optional TOTP MFA (API only: no code field in
+the web login yet) and at-rest file encryption, SBOM and dependency /
+filesystem scans in CI. Tokens that only send data cannot read it
+(`read:all`); tokens sent in the URL never reach the logs; the MCP server
+only accepts `hub:full` tokens and relative API paths. Access levels,
+what is and is not encrypted, and known limitations: see
 [SECURITY.md](SECURITY.md).
 
 ## License

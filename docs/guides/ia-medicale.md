@@ -12,11 +12,15 @@ phrase de la synthèse doit citer les faits du dossier.
 | Photos (face / profil / dos) | `OLLAMA_VISION_MODEL` | `medgemma1.5` (4B, image + texte) | Entraîné sur images médicales, comparaison dans le temps. |
 | Lecture des documents (valeurs, dates) | `OLLAMA_DOCUMENT_MODEL` (vide = vision) | `medgemma1.5` | Meilleure extraction des comptes-rendus de labo, lit aussi les scans. |
 | Résumé, médicaments, diagnostics, synthèse clinique | `OLLAMA_TEXT_MODEL` | `medgemma:27b` | Le raisonnement médical le plus solide. |
+| Repas — photos et étiquettes (assiette, boîte, sachet, tableau des valeurs) | `OLLAMA_VISION_MODEL` | `medgemma1.5` | Voit toutes les photos d'un repas ensemble : aliments, portions, valeurs imprimées. |
+| Repas — aliments et grammes, choix des références Ciqual, note 0–10, verdict | `OLLAMA_TEXT_MODEL` | `medgemma:27b` | Raisonne sur la description, vos aliments et vos maladies déclarées. |
+| Lecture d'une étiquette (Journal › Mes aliments › « 🏷️ Photo des valeurs ») | `OLLAMA_VISION_MODEL` | `medgemma1.5` | Une photo, réduite à 2048 px ; tourne **dans l'API** (pas le worker), **100 s** au plus. |
 
 Réglages communs : réponses JSON, température 0 et graine fixe (une même
 entrée donne la même réponse), contexte 8192 jetons, **une requête à la
-fois** (Ollama sert les requêtes l'une après l'autre), 10 min maximum par
-appel.
+fois par processus** (Ollama sert les requêtes l'une après l'autre ; le
+verrou est propre à chaque processus : l'API et le worker peuvent appeler
+Ollama en même temps), 10 min maximum par appel.
 
 ## Lecture d'un document (Dossier › Analyser)
 
@@ -58,10 +62,13 @@ renvoie le texte exact que l'IA a lu — pour vérifier une extraction.
 ## Synthèse clinique (Rapports)
 
 1. Tout le dossier devient une liste de **faits numérotés** (`F1`, `F2`…) :
-   maladies, traitements, marqueurs avec leur interprétation, résultats
-   d'examens avec la valeur précédente, poids (évolutions, perte depuis le
-   pic), indicateurs Apple (30 derniers jours vs 30 jours avant et il y a
-   un an), tendance des photos, documents.
+   maladies, traitements, **observance des 30 derniers jours** (par
+   traitement ayant des prises notées : prises notées sur prévues et taux,
+   non prises déclarées, jours sans saisie, plus long trou, heure
+   habituelle, saisies faites après coup), marqueurs avec leur
+   interprétation, résultats d'examens avec la valeur précédente, poids
+   (évolutions, perte depuis le pic), indicateurs Apple (30 derniers jours
+   vs 30 jours avant et il y a un an), tendance des photos, documents.
 2. Le modèle texte rédige : synthèse, évolutions, points d'attention, à
    discuter avec le médecin, données manquantes — **chaque phrase cite ses
    faits** (`[F3][F12]`).
@@ -151,4 +158,5 @@ Statuts et délai : comme les documents (en attente → en cours → lu /
 | Beaucoup de valeurs rejetées | Le filet fonctionne : les valeurs réellement imprimées sont gardées. Vérifier avec `document_text`. |
 | Résumé IA faux | Le résumé est « non vérifié » ; seules les valeurs vérifiées alimentent les courbes. Réanalyser avec `medgemma:27b` en modèle texte. |
 | Synthèse vide ou avec beaucoup de phrases retirées | Le modèle n'a pas cité ses faits : relancer, ou utiliser `medgemma:27b`. |
-| Aucune IA ne répond | `OLLAMA_URL` injoignable depuis Docker. Tester depuis le worker (c'est lui qui appelle Ollama) : `docker compose exec worker python -c "import httpx,os;print(httpx.get(os.environ['OLLAMA_URL']+'/api/tags').json())"` (doit lister vos modèles). |
+| Aucune IA ne répond | `OLLAMA_URL` injoignable depuis Docker. Tester depuis le worker (c'est lui qui lit documents, repas et photos) : `docker compose exec worker python -c "import httpx,os;print(httpx.get(os.environ['OLLAMA_URL']+'/api/tags').json())"` (doit lister vos modèles) ; pour la lecture d'étiquette, la même commande avec `api` au lieu de `worker`. |
+| « Lecture trop longue : réessayer » (Mes aliments › Photo des valeurs) | La lecture d'étiquette tourne **dans l'API**, limitée à **100 s** (`services/food_label.py`), attente comprise. Le verrou « une requête à la fois » est **par processus** (`core/ollama.py`) : l'API ne voit pas le travail du worker, et Ollama peut recevoir les deux demandes ensemble (un repas ou un document en cours de lecture). Réessayer quand le worker a fini, ou remplir la fiche depuis la table Ciqual. |

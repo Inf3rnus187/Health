@@ -2,10 +2,12 @@
 
 Le serveur MCP donne à un assistant (Claude Desktop, Claude Code, tout
 client MCP) **l'accès à tout le hub** : données Apple Santé, Dossier,
-Suivi, documents et leur texte, marqueurs, poids, photos, rapports avec
-synthèse, automatisations, heures de travail, dossier travail et santé — 82 outils, listés avec leurs paramètres dans
-[`mcp-tools.md`](../mcp-tools.md). Chaque outil appelle l'API REST : il voit
-exactement ce que voient les pages.
+Suivi, documents et leur texte, marqueurs, poids, photos, Journal (pipi,
+repas), aliments et table Ciqual, médicaments et observance, rapports
+avec synthèse et vérification, automatisations, heures de travail,
+dossier travail et santé — **105 outils**, listés avec leurs paramètres
+dans [`mcp-tools.md`](../mcp-tools.md) (généré depuis le serveur). Chaque
+outil appelle l'API REST : il voit exactement ce que voient les pages.
 
 > Ce serveur détient une clé de **tout votre dossier médical**. Gardez-le
 > sur la machine ou le réseau local ; pour un accès à distance, passez par
@@ -22,7 +24,15 @@ Le serveur MCP vérifie ce jeton auprès de l'API à chaque connexion (401 si
 inconnu ou révoqué, 403 s'il n'a pas `hub:full`) puis appelle l'API avec
 lui : chaque utilisateur du hub ne voit que ses données, et **révoquer le
 jeton coupe l'accès** (effectif en une minute au plus). Ce jeton peut tout
-faire **sauf** gérer les jetons, la 2FA et le compte.
+faire **sauf** :
+
+- gérer les jetons, la 2FA et le compte (session du site seulement) ;
+- lancer ou suivre une **mise à jour du hub** (`/system/update`) : réservé
+  à la session de l'administrateur, jamais à un jeton ;
+- modifier le **catalogue des métriques**, partagé par tous les
+  utilisateurs : `create_metric` / `update_metric` répondent `403`
+  (« administrator only ») si le compte du jeton n'est pas
+  l'administrateur (rôle `admin`).
 
 ## 2. Configurer `.env` (facultatif)
 
@@ -123,14 +133,17 @@ Depuis un autre poste, la même commande à travers SSH :
   bruts, tendances), inventaire des sources, Dossier (résultats, suggestions,
   chronologie), Suivi, documents et **le texte lu par l'IA**, marqueurs,
   poids, photos, séances / ECG / parcours, rapports et synthèses.
-- **Agir** : saisir une valeur, créer une métrique, déclarer / modifier une
+- **Agir** : saisir une valeur, créer une métrique (administrateur
+  seulement, voir plus haut), déclarer / modifier une
   maladie ou un traitement, ajouter un rendez-vous, envoyer un document puis
   le faire lire, relancer une lecture IA, réconcilier les données, générer
   un rapport (synthèse clinique), lancer une automatisation.
 - **Compter / saisir sans rien effacer** : « ajoute une clope », « un café
   de plus » → `add_to_counter`, qui **ajoute** au total du jour et répond
   le total avant et après (montant négatif pour retirer une erreur,
-  jamais sous 0). `record_measurement` **remplace** la valeur du jour
+  jamais sous 0 ; montant `0` : « aucune cigarette aujourd'hui », la
+  journée est confirmée à zéro au lieu de rester sans donnée ; il passe
+  par `/sync/tally`). `record_measurement` **remplace** la valeur du jour
   (poids, sommeil…) : s'il y en a déjà une différente, il refuse tant que
   l'utilisateur n'a pas confirmé la nouvelle valeur (`replace=true`).
 - **Heures de travail** : « j'embauche », « je débauche » (`clock_in` /
@@ -145,10 +158,57 @@ Depuis un autre poste, la même commande à travers SSH :
   cette nuit, je me suis couché à 1 h, levé à 6 h, réveillé 3 fois »
   (`add_sleep_night`), « Uber Eats hier à 21 h 15, burger frites 24,90 € »
   (`add_evidence` type `livraison` avec le repas), « importe mon export
-  Uber » (`import_traces`), « quel lien entre mes heures et mon sommeil ? »
+  Uber » (`import_traces` : aussi notes de frais Lucca en PDF, tickets
+  NinjaOne, conversations WhatsApp), « importe mes absences Lucca »
+  (`import_absences`, lecture d'abord), « mes nuits du mois »
+  (`sleep_nights`), « quel lien entre mes heures et mon sommeil ? »
   (`work_health`), rapport complet (`generate_report("work_health")`).
-- **Tout le reste** : `api_get` / `api_call` atteignent n'importe quelle
-  route de la [référence API](../api.md). Les routes destructrices agissent
+- **Corriger les sessions de travail** : les journées à compléter avec
+  leurs indices (`work_incomplete`), ajouter ou corriger une session, sur
+  place ou à distance (`save_work_session`), réunir une embauche seule et
+  une débauche seule (`merge_work_sessions`), une ligne par jour
+  (`work_days`), export texte par session, jour, semaine ou mois en CSV
+  ou JSON (`export_work`).
+- **Journal et repas** : le journal jour par jour (`journal_days`), un
+  pipi maintenant ou à une heure donnée (`log_urination`,
+  `list_urinations`, `delete_urination`), « note mon déjeuner : … »
+  (`log_meal` : description, type, heure, `photo_base64` pour l'assiette,
+  `more_photos_base64` jusqu'à 6 photos de l'emballage, `foods` de « Mes
+  aliments » avec leurs grammes), corriger un repas après coup
+  (`update_meal`, `foods` remplace la liste), `add_meal_photo`,
+  `delete_meal_photo`, `analyze_meal`, `delete_meal` ; « combien m'ont
+  coûté les Uber Eats cette année ? » (`meal_spending`).
+- **Mes aliments** : `list_foods`, `save_food` (valeurs pour 100 g,
+  autres noms, poids du paquet, **unité** `unit_name` / `unit_g`,
+  source, code-barres), `search_ciqual` (table Ciqual 2025, hors ligne),
+  `lookup_barcode` (Open Food Facts, seulement si
+  `FOOD_LOOKUP_ONLINE=true`), `read_food_label` (lit l'étiquette : une
+  proposition, rien n'est enregistré), `add_food_photo`, `delete_food`.
+- **Médicaments** : « j'ai pris ma paroxétine » (`log_medication`, par
+  le nom ; `status` `skipped` = non pris), `medications_today`,
+  `medication_intakes` (chaque prise avec heure de prise, heure de
+  saisie et canal), `medication_adherence` (observance par traitement),
+  `delete_medication_intake`. Une prise notée par MCP garde le canal
+  `mcp`.
+- **Rapports qui prouvent** : `period_facts` (les faits d'une période
+  comme le rapport les prouve : jours saisis / sans donnée, avant /
+  après une date, observance, repas, traçabilité des saisies),
+  `verify_report` (ce fichier est-il un de mes rapports, intact ?
+  SHA-256).
+- **Photos, données** : relancer l'analyse d'une photo (`analyze_photo`)
+  ou de tout l'historique après un changement de modèle
+  (`reanalyze_all_photos`) ; exporter les données en texte CSV, JSON ou
+  FHIR (`export_data`).
+- **Supprimer en lot** : `delete_many` (preuves et traces — avec les
+  repas créés par les livraisons si `meals` —, sessions, absences, repas
+  ou rendez-vous ; 5 000 au plus), après avoir montré la liste et obtenu
+  l'accord.
+- **Tout le reste** : `api_get` / `api_call` appellent une route de la
+  [référence API](../api.md) par son **chemin relatif** à `/api/v1`
+  (`/metrics/body.weight`, `/events`) — jamais une URL complète
+  (`https://…`, `//hôte/…`) ni un segment `..` : c'est refusé avant tout
+  envoi, pour que le jeton ne parte jamais vers un autre hôte. Les routes
+  réservées ci-dessus restent refusées. Les routes destructrices agissent
   sur de vraies données : l'assistant doit demander confirmation.
 
 Exemples de demandes : « Résume mon dossier et l'évolution de mon HbA1c »,
@@ -163,6 +223,9 @@ retirées ».
 |----------|--------|
 | `401 Unauthorized` | En-tête absent, jeton mal copié ou révoqué : en créer un nouveau. |
 | `403 Forbidden: the token needs the hub:full scope` | Le jeton n'a pas « Accès complet — MCP / assistant ». |
+| `403 … administrator only` (`create_metric`, `update_metric`) | Le catalogue des métriques est partagé : réservé au compte administrateur. |
+| `403 User session required` (`/system/update`, jetons, 2FA, compte) | Route du site seulement : aucun jeton ne l'atteint. |
+| `an API path is expected` (`api_get`, `api_call`) | Donner un chemin relatif à `/api/v1` (`/metrics`), pas une URL. |
 | `502 API unreachable` | Le conteneur `mcp` ne joint pas l'API : `docker compose ps`, `docker compose logs mcp`. |
 | Une valeur a été remplacée par erreur | Chaque valeur remplacée reste dans le journal d'audit (champs `replaced` / `previous`) : `docker compose exec db psql -U phoenix phoenix -c "select created_at, payload from audit_log where entity = 'measurement' order by created_at desc limit 20"` (`POSTGRES_USER` / `POSTGRES_DB` de `.env`), puis remettre la bonne valeur. |
 | Injoignable depuis un autre appareil | `MCP_BIND=0.0.0.0`, puis `docker compose --profile mcp up -d mcp`. |

@@ -22,6 +22,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **« Supprimer les données importées » asks first**: it erased every
+  Apple export value at one click; it now asks for confirmation.
 - **Report times in the page**: the list of reports showed the creation
   time in UTC (two hours early in summer); the API now sends it with its
   offset.

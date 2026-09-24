@@ -15,23 +15,45 @@ other sources). Required token scope per route:
 | Health Auto Export (daily JSON) | `POST /sync/auto-export` | `write:measurements` (+ `?token=`) |
 | SimpleHealthExportCSV (zip of CSV) | `POST /imports/apple-health` | `write:measurements` (+ `?token=`) |
 | iPhone Shortcut (flat map) | `POST /sync/health` | `ingest:watch` |
-| One-tap counts: `{"metric": key, "amount"?}` — water bottle, coffee, cigarette, pee (`elimination.urination`, timed), clock in / out (`work.start` / `work.end`) | `POST /sync/tally` | `write:measurements` (+ `?token=`) |
+| One-tap counts: `{"metric": key, "amount"?, "date_key"?}` — water bottle, coffee, cigarette, urge broken, pee (`elimination.urination`, timed), clock in / out (`work.start`, `work.remote_start`, `work.end`, `work.remote_end`). `amount`: `1` by default, negative takes back, `0` confirms a day at zero (a value 0 is stored, instead of a day without data); `date_key`: today (local) by default — pees and clock taps only accept today, and clock taps only `amount` 1 | `POST /sync/tally` | `write:measurements` (+ `?token=`) |
+| Clock in / out: JSON `kind` (`in` / `out`), `at`? (ISO; default now, without offset = local), `place`? (`site` default / `remote`; a clock-out closes the open session wherever it is) | `POST /work/clock` | `write:measurements` (+ `?token=`) |
 | Past clock-in / clock-out logs (txt, csv, json; `?dry_run=true` reads only) | `POST /work/import` | `write:measurements` (+ `?token=`) |
-| App exports and receipts as traces — Uber, Uber Eats, Navigo, parking, hotels, expense reports, bank statements (CSV / XLSX / JSON) and receipts (PDF, photo); `files` + `kinds` (`auto` guesses), a receipt and its expense line are merged, `meals=true` logs deliveries as priced meals | `POST /traces/import` | session or `hub:full` |
+| App exports and receipts as traces — Uber, Uber Eats, Navigo, parking, hotels, expense reports, bank statements (CSV / XLSX / JSON), receipts (PDF, photo), Lucca expense-report PDFs (one trace per expense, the PDF kept untouched), ticket exports (NinjaOne… CSV: the `person`'s actions, one `activite` trace a day), WhatsApp chat exports (`.txt`: the `person`'s messages and calls). Multipart `files` + `kinds` (one per file, same order: `transport`, `taxi`, `parking`, `livraison`, `repas`, `hotel`, `frais`, `activite` or `auto` — guessed), form `person`? (whose tickets / messages; default the most active author, or « Moi » in a chat — the preview lists the others); a receipt and its expense line are merged; `?meals=true` logs deliveries and bought meals as priced meals, `?dry_run=true` reads only | `POST /traces/import` | session or `hub:full` |
+| One proof or trace by hand: multipart `occurred_at`* (ISO; without offset = local), `kind` (`capture` by default; proofs `appel`, `sms`, `mail`, `capture`, `note`, `document`, `autre`, or a trace kind above), `title`, `description`, `count` (1–10000), `absence_id`, `file` (30 MB in the API, 25 MB through nginx), trace fields `ended_at`, `place`, `amount`, `currency` (`EUR`), `meal=true` (a `livraison` / `repas` trace is also logged as a priced meal and read by the AI) | `POST /evidence` | session or `hub:full` |
+| Absences from an HR export (Lucca…: CSV, XLSX, JSON): multipart `files`, form `person`? (a manager's export; default the one with the most rows), `?dry_run=true` reads only; nothing added twice | `POST /absences/import` | session or `hub:full` |
+| A night the watch missed: JSON `bedtime`, `wake_time` (ISO; without offset = local; 20 h at most), `awakenings`? (0–100) — a raw `manual` sleep sample plus that day's `sleep.asleep` | `POST /sleep/nights` (`DELETE /sleep/nights/{id}`) | session or `hub:full` |
 | iPhone Shortcut histories — one time stamp per line, one kind per file (`files` + optional `keys`; clock-ins and clock-outs paired, counters fill empty days, pee de-duplicated) | `POST /logs/import` | `write:measurements` (+ `?token=`) |
 | Watch / HealthKit samples | `POST /ingest/watch` | `ingest:watch` |
 | CPAP | `POST /ingest/ppc` | `ingest:ppc` |
 | Progress photos | `POST /ingest/photo` | `ingest:photo` |
 | Pee at a given time (web Journal, `{"at": …}`) | `POST /journal/urination` | `write:measurements` (+ `?token=`) |
-| Meal: form `description`, `file` (plate photo), `photos` (repeated: box, sachet, nutrition table), `foods` (JSON `[{"food_id","grams"}]`), `meal_type`?, `eaten_at`? | `POST /meals` (multipart) | `write:measurements` (+ `?token=`) |
+| Meal: form `description`, `file` (plate photo), `photos` (repeated, up to 6: box, sachet, nutrition table), `foods` (JSON `[{"food_id","grams"}]`), `meal_type`?, `eaten_at`? | `POST /meals` (multipart) | `write:measurements` (+ `?token=`) |
 | Meal changed afterwards: fields and foods | `PUT /meals/{id}` (JSON) | `write:measurements` |
-| Medication dose by name (iPhone Shortcut): JSON `treatment`, `taken_at`?, `status`? (`taken`/`skipped`), `note`? | `POST /medications/take` | `write:measurements` (+ `?token=`) |
+| Medication dose by name (iPhone Shortcut): JSON `treatment` (accents and case ignored; the start of a word, 3 letters or more, is enough), `taken_at`? (never more than 10 min ahead), `status`? (`taken`/`skipped`), `dose`? (default: the treatment's), `note`? | `POST /medications/take` | `write:measurements` (+ `?token=`) |
 | Medication dose of a treatment (web): same JSON without `treatment` | `POST /treatments/{id}/intakes` | `write:measurements` (+ `?token=`) |
 | Meal photo added afterwards (the plate's when it has none) / removed | `POST /meals/{id}/photos` (multipart `file`), `DELETE /meals/{id}/photo`, `DELETE /meals/{id}/photos/{photo_id}` — `?read=false` to change several, then read once | `write:measurements` |
+| Food sheet (« Mes aliments »): JSON `name`*, `brand`, `aliases` (comma-separated), `package_g`, `unit_name` / `unit_g` (« tomate », 120), `per_100g` (`energy_kcal`, `protein_g`, `carbs_g`, `sugars_g`, `fat_g`, `sat_fat_g`, `fiber_g`, `sodium_mg`), `note`, `source`, `barcode` (digits) | `POST /foods`, `PUT /foods/{id}`, `DELETE /foods/{id}` (`GET /foods`: `read:all`) | `write:measurements` |
+| Food photo: multipart `file`, form `kind` (`pack` default, or `label`) | `POST /foods/{id}/photos`, `DELETE /foods/{id}/photos/{photo_id}` | `write:measurements` |
+| Read a pack or its nutrition table with the vision model: multipart `file` → a proposal (`name`, `brand`, `package_g`, `per_100g`), nothing saved; runs inside the API, 100 s at most | `POST /foods/read-label` | `write:measurements` |
+| Ciqual 2025 reference values (offline table): `?q=` (2–100 characters, every word must match), `limit` (1–50, default 20); one food by code | `GET /ciqual`, `GET /ciqual/{code}` | `read:all` |
+| A packaged food by barcode (8–14 digits) from Open Food Facts → a proposal, nothing saved. Off by default: `422` unless `FOOD_LOOKUP_ONLINE=true`; only the barcode is sent | `GET /openfoodfacts/{barcode}` | `write:measurements` |
 | Any script (sets — **replaces** — a day's value) | `POST /measurements` | `write:measurements` |
 
 iPhone Shortcuts step by step (one token, one rule for every count, one
 for meals): [usage guide](utilisation.md#raccourcis-iphone--une-seule-règle).
+
+## Upload size limits
+
+- **nginx** (`nginx/default.conf`) caps every request body at **25 MB**
+  (`client_max_body_size 25m`: all the files of one request together),
+  except `POST /imports/apple-health` (no limit, streamed to disk, 1 h
+  timeouts) and `POST /sync/auto-export` (no limit, 10 min).
+- **Photos** — progress photos, meal photos (each one), food photos:
+  `MAX_UPLOAD_MB` (15 by default) per image, checked by the API.
+- **Evidence files** (`POST /evidence`): 30 MB in the API, so 25 MB in
+  practice behind nginx; medical documents: 25 MB.
+- A body over the nginx cap is refused by nginx (`413`) before it
+  reaches the API.
 
 ## Health Auto Export (JSON)
 
@@ -88,12 +110,15 @@ samples with neither a `metric_key` nor a `healthkit_type` are reported in
 
 ## iPhone Shortcut sync — `/sync/*`
 
-For a **one-tap, zero-config** sync, the web UI (Import → « Synchro
-iPhone ») offers a pre-filled Shortcut:
+A pre-filled Shortcut can be built by the API only — the web UI does
+not offer it (iOS refuses unsigned `.shortcut` files, see the CSV zip
+path below, which is what the web card « Synchro iPhone (export CSV) »
+sets up):
 
 ```bash
-# Interactive user session (JWT). Mints an ingest:watch token and returns
-# a .shortcut file with the token + endpoint already embedded.
+# Interactive user session (JWT) only, never a token. Mints an
+# ingest:watch token and returns a .shortcut file with the token +
+# endpoint already embedded.
 curl -s "$BASE/sync/shortcut?base=https://health.example.com" \
   -H "Authorization: Bearer $ACCESS" -o "Phoenix Sante.shortcut"
 ```
@@ -119,8 +144,11 @@ curl -s $BASE/sync/health -H "Authorization: Bearer $WATCH_TOKEN" \
 Because iOS refuses to import unsigned shortcut files (Apple signing needs
 an Apple device), the reliable device path reuses an already-signed
 community shortcut, **SimpleHealthExportCSV**, which exports Health data as
-one CSV per HealthKit type, zipped, and can upload the zip. Point its
-upload at the existing import endpoint:
+one CSV per HealthKit type, zipped, and can upload the zip. The web card
+**Import › « Synchro iPhone (export CSV) » › « Créer l'URL d'upload »**
+mints a `write:measurements` token (named « iPhone (CSV) ») and shows,
+once, `https://<hub>/api/v1/imports/apple-health?token=<token>` with the
+recipe; point the shortcut's upload at it:
 
 ```
 POST /api/v1/imports/apple-health?token=<token>   (scope write:measurements)
@@ -134,7 +162,10 @@ hand-enter) **or** the usual `Authorization: Bearer <token>` header.
 The importer **auto-detects** the archive: `export.xml` → Apple's native
 format; otherwise it reads every `type,sourceName,…,unit,value` CSV member
 into the same full-fidelity storage (`health_samples`) and daily roll-ups,
-resolving each type through the HealthKit catalog.
+resolving each type through the HealthKit catalog. When a job ends
+`done`, the reconciliation (`reconcile_data`: merge duplicate keys,
+rebuild daily values from the raw data) is queued by itself — nothing to
+launch by hand.
 
 ## Managing mappings
 

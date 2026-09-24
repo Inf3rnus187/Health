@@ -57,8 +57,12 @@ choix sont gardés dans ce navigateur seulement.
 
 ## Accueil
 
-Tuiles des mesures clés (dernière valeur, moyenne 7 j, évolution) — un clic
-ouvre la mesure dans **Données** avec son graphique. Saisie rapide du poids.
+**Récap du jour** : tuiles des mesures clés (dernière valeur, moyenne
+7 j, évolution) — un clic ouvre la mesure dans **Données** avec son
+graphique. Puis **Poids — tendance** : la courbe de `body.weight` par
+Jour, Semaine, **Mois** (par défaut) ou Année, zoom à la molette,
+« Tout (réinit. zoom) » pour revenir à l'ensemble ; dessous, la saisie
+rapide « Poids du matin (kg) » › Enregistrer.
 
 Tuiles, dans l'ordre (une mesure sans aucune donnée n'apparaît pas) :
 poids, pas, **km marchés / courus** (`activity.distance`, total du jour),
@@ -90,27 +94,37 @@ dossier CDA importé (recherche, pages).
   et pages (25 par défaut).
 - **Réconcilier et recalculer les valeurs journalières** : fusionne les
   clés en double, aligne les données sur le catalogue Apple, recalcule
-  chaque valeur journalière depuis le brut. **Aucune IA.** À lancer après
-  une mise à jour du hub ou un gros import.
+  chaque valeur journalière depuis le brut. **Aucune IA.** Elle se lance
+  **toute seule** à la fin de chaque import Apple Santé (`export.zip` ou
+  zip SimpleHealthExportCSV) ; le bouton sert après une mise à jour du
+  hub, ou pour tout recalculer à la main.
 - **Une mesure en détail** : choisir une métrique → graphique + chiffres.
 - **Données brutes** : relevés paginés, filtrables par métrique et dates.
 
 ## Journal
 
 Un vrai journal de la journée : la nuit, l'eau, le café, les
-cigarettes, le pipi et les repas.
+cigarettes, le pipi, les médicaments et les repas.
+
+Trois onglets (le dernier ouvert reste après un rechargement) :
+**Aujourd'hui** (la nuit, les compteurs, les médicaments du jour, Mon
+journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
 
 - **Aujourd'hui** : la nuit (« 6 h 40 de sommeil en 2 fois · 3 réveils ·
   23:40 → 06:50 », de la montre ou saisie dans Travail › Dossier travail
   et santé › Nuits), puis une tuile par compteur — **💧 Eau** (bouteilles
   de 1,5 L, affichées en litres), **☕ Cafés**, **🚬 Cigarettes**,
   **🚽 Pipi** — avec « +1 » et « − » (retire le dernier). Ce sont les
-  mêmes compteurs que les Raccourcis iPhone (`/sync/tally`). Sous les
-  tuiles : les heures des pipis du jour (× pour en retirer un) et « Pipi
-  à une autre heure ». Chaque miction est horodatée ; la valeur du jour
-  (`elimination.urination`) est leur nombre — courbes, tableaux de bord,
-  Suivi (diabète, apnée du sommeil) et rapports la voient comme toute
-  autre mesure.
+  mêmes compteurs que les Raccourcis iPhone (`/sync/tally`). Tant que
+  rien n'est noté aujourd'hui, les tuiles Eau, Cafés et Cigarettes ont
+  aussi un bouton **« 0 »** : il confirme une journée à zéro (sans lui,
+  le jour compte « sans donnée » dans les rapports, pas zéro). Pour le
+  pipi, « +1 » le note **maintenant** ; sous les tuiles : les heures des
+  pipis du jour (× pour en retirer un) et **« Pipi à une autre heure »**
+  (une heure d'aujourd'hui › Noter). Chaque miction est horodatée ; la
+  valeur du jour (`elimination.urination`) est leur nombre — courbes,
+  tableaux de bord, Suivi (diabète, apnée du sommeil) et rapports la
+  voient comme toute autre mesure.
 - **💊 Médicaments du jour** : chaque traitement actif (Suivi ›
   Traitements) avec « 1/2 aujourd'hui · dernier à 08:10 » et quatre
   boutons — **✔ Pris** (maintenant), **Pris à…** (une autre heure),
@@ -128,10 +142,6 @@ cigarettes, le pipi et les repas.
   « non pris » déclarés) ; les moyennes de la page en tête.
   Paginé (50 par page, 10 sur téléphone, où chaque jour devient une
   fiche).
-Trois onglets (le dernier ouvert reste après un rechargement) :
-**Aujourd'hui** (la nuit, les compteurs, Mon journal), **Repas** (le
-formulaire et la liste) et **Mes aliments**.
-
 - **Ajouter un repas (suivi santé)** — jamais une preuve de travail, sans
   prix ; une note de frais (reçu, livraison) s'ajoute comme preuve dans
   Travail et son repas arrive ici marqué « 🧾 Note de frais » :
@@ -233,7 +243,11 @@ valeur de `metric` change d'un raccourci à l'autre.
 - URL : `https://<hub>/api/v1/sync/tally?token=<jeton>`
 - Méthode **POST**, Corps de la requête **JSON**
 - Champ `metric` (Texte) = la clé du tableau ; champ `amount` (Nombre)
-  facultatif : `1` par défaut, `-1` pour annuler un appui de trop.
+  facultatif : `1` par défaut, `-1` pour annuler un appui de trop, `0`
+  pour **confirmer une journée à zéro** (eau, café, cigarettes, envies :
+  « aucune aujourd'hui » est enregistré, au lieu d'un jour sans donnée) ;
+  champ `date_key` (Texte, `AAAA-MM-JJ`) facultatif : aujourd'hui par
+  défaut (heure locale), une autre date pour corriger un compteur passé.
 
 | Raccourci | `metric` |
 |-----------|----------|
@@ -245,6 +259,12 @@ valeur de `metric` change d'un raccourci à l'autre.
 | Embauche | `work.start` (pointe l'arrivée maintenant) |
 | Embauche à distance | `work.remote_start` (ouvre une session à distance, même après la journée sur place) |
 | Débauche | `work.end` (clôt la session ouverte, sur place ou à distance) |
+| Débauche à distance | `work.remote_end` (même effet que `work.end` ; sans session ouverte, garde une débauche seule marquée « à distance ») |
+
+Le pipi et le pointage se notent **maintenant** : pour eux, `date_key`
+ne peut être qu'aujourd'hui, et le pointage n'accepte que `amount` = 1
+(une autre heure se corrige dans Travail ; un pipi d'une autre heure :
+Journal › « Pipi à une autre heure »).
 
 Chaque appui **ajoute** au total du jour et n'efface jamais rien ; la
 réponse donne le total avant (`previous`) et après (`total`). Pour
@@ -309,7 +329,7 @@ santé, marqué « 🧾 Note de frais ».
 | Champ | Type | Obligatoire | Valeur |
 |-------|------|-------------|--------|
 | `description` | Texte | l'un des deux | ce que tu as mangé : quantités, cuisson, « sans huile » (fait foi pour l'IA) |
-| `file` | Fichier | l'un des deux | la photo de l'assiette (JPEG, HEIC, PNG… 15 Mo max ; EXIF et GPS retirés) |
+| `file` | Fichier | l'un des deux | la photo de l'assiette (JPEG, HEIC, PNG… 15 Mo max par photo — `MAX_UPLOAD_MB` —, 25 Mo pour tout l'envoi ; EXIF et GPS retirés) |
 | `photos` | Fichier(s) | non | jusqu'à 6 autres photos : la boîte, le sachet, le tableau des valeurs (sans `file`, la première sert d'assiette) |
 | `foods` | Texte | non | aliments de « Mes aliments » : `[{"food_id": "…", "grams": 125}]` (un aliment nommé dans la description est reconnu sans ça) |
 | `eaten_at` | Texte | non | vide = maintenant ; `2026-09-23T20:30`, `2026-09-23T20:30:00+02:00` ou `23/09/2026 20:30` (sans fuseau = heure locale) |
@@ -363,8 +383,9 @@ aliments**, `GET/POST /api/v1/foods`, outils MCP `list_foods`,
 de frais : `add_evidence` (MCP) ou Travail › Preuves (site).
 
 > Un raccourci déjà réglé sur `POST /api/v1/journal/urination?token=…`
-> (sans corps) continue de marcher : c'est la route du bouton « Pipi
-> maintenant ». Pour un nouveau raccourci, suivre la règle ci-dessus.
+> (sans corps : maintenant ; ou `{"at": "…"}` en ISO) continue de
+> marcher : c'est la route de « Pipi à une autre heure » dans le Journal.
+> Pour un nouveau raccourci, suivre la règle ci-dessus.
 
 ## Travail
 
@@ -614,11 +635,15 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
   JSON) se téléchargent.
 - **Preuves et traces**. Preuves : appel, SMS, mail, capture d'écran,
   note, document — date et heure, **nombre** (« 12 appels » sur une même
-  capture), titre, description, fichier (30 Mo au plus, chiffré au repos
-  si activé). **Traces** — ce que des tiers ont enregistré : transport
-  (métro, Navigo, train), taxi / VTC, parking, **repas livré** (Uber
-  Eats…), repas acheté, hôtel, note de frais — avec en plus l'heure de
-  **fin** (sortie du parking, arrivée du taxi, départ de l'hôtel), le
+  capture), titre, description, fichier (**25 Mo** au plus par envoi : la
+  limite du proxy nginx, plus basse que les 30 Mo de l'API ; chiffré au
+  repos si activé). **Traces** — ce que des tiers ont enregistré :
+  transport (métro, Navigo, train), taxi / VTC, parking, **repas livré**
+  (Uber Eats…), repas acheté, hôtel, note de frais, **activité pro**
+  (tickets traités, messages, outils : créée surtout par l'import des
+  tickets et des conversations WhatsApp, voir Importer) — avec en plus
+  l'heure de **fin** (sortie du parking, arrivée du taxi, départ de
+  l'hôtel), le
   **lieu** et le **montant**. Un repas livré ou acheté peut être
   **ajouté au Journal** (case cochée par défaut) : le repas y est créé à
   l'heure de la commande, avec l'enseigne, ce qui a été commandé et son
@@ -728,7 +753,9 @@ Navigo, parking, hôtel, notes de frais, relevé bancaire en CSV, Excel
 fichiers, vérifier le **type** de chacun (« Deviner » par défaut ; sinon
 deviné du nom : `trips` → taxi, `eats`, `user_orders` → repas livré,
 `navigo` →
-transport…), « Lire », puis « Importer ».
+transport…), « Lire », puis « Importer ». Un envoi fait **25 Mo** au
+plus, tous fichiers ensemble (limite du proxy nginx) : importer un gros
+lot en plusieurs fois.
 
 - **Reçus et factures** (PDF avec texte, PDF scanné ou photo lus par
   OCR) : la date, **l'heure** (tirée du nom du fichier quand il la porte,
@@ -931,7 +958,15 @@ résultats d'examens), **Chronologie**, **Documents** (ajout + liste),
   glycémie, TyG) avec le formulaire tour de taille, taille, année de
   naissance, FibroScan ; suivi du poids (paliers 5 / 7 / 10 / 15 %) ;
   évolution par angle ; avant / après ; « Réanalyser tout l'historique ».
-- **Galerie** : photos par angle (face / profil / dos), suppression.
+- **Galerie** : filtre Toutes / Face / Profil / Dos (gardé après un
+  rechargement) ; chaque photo avec sa date, le poids lié, son statut
+  (Reçue, Prête, Analysée, Qualité insuffisante, IA indisponible, Image
+  illisible) et son analyse, puis deux boutons : **« Relancer
+  l'analyse »** (remet cette photo dans la file du worker : préparation,
+  contrôle qualité, analyse avec le modèle de vision actuel) et
+  **« Supprimer »** (après confirmation). **« Tout supprimer »** (en haut,
+  après confirmation) efface **toutes** les photos, quel que soit le
+  filtre affiché.
 - **Envoi des photos** : pas de bouton dans le site — les photos arrivent
   par `POST /api/v1/ingest/photo` avec un jeton `ingest:photo`
   (Raccourci iPhone, script) :
@@ -1033,8 +1068,22 @@ résultats d'examens), **Chronologie**, **Documents** (ajout + liste),
 ## Import
 
 - **Importer mes données Apple Santé** : `export.zip` complet (Santé ›
-  photo de profil › Exporter toutes les données). Rejouable sans doublon.
-- **Synchro iPhone (export CSV)** : URL d'envoi pour SimpleHealthExportCSV.
+  photo de profil › Exporter toutes les données) ou `export.xml`, sans
+  limite de taille. Rejouable sans doublon. Pendant l'envoi :
+  « Téléversement… N % » ; puis la liste des **20 derniers imports**
+  (statut `queued`, `running` avec l'étape et le nombre d'enregistrements
+  lus — mise à jour toute seule —, `done` avec échantillons, séances,
+  ECG et tracés, ou `error` avec la raison). La réconciliation
+  (Données) suit d'elle-même chaque import réussi.
+  **« Supprimer les données importées »** efface d'un coup tout ce qui
+  vient de l'export Apple (relevés, séances, ECG, tracés GPS, dossier
+  CDA), après confirmation (« ne peut pas être annulée ») ; les saisies,
+  compteurs, repas, Health Auto Export et documents restent.
+- **Synchro iPhone (export CSV)** : « Créer l'URL d'upload » crée un
+  jeton `write:measurements` (« iPhone (CSV) ») et affiche une fois
+  `…/api/v1/imports/apple-health?token=…`, à coller dans l'envoi du
+  raccourci SimpleHealthExportCSV (champ Fichier `file` = le zip) ; la
+  recette pas à pas est sur la carte.
 - **Health Auto Export (JSON)** : URL de synchro quotidienne — voir le
   [guide d'ingestion](ingestion.md#health-auto-export-json).
 - **Jetons d'accès (API)** : créer / révoquer des jetons et choisir leurs
@@ -1044,7 +1093,7 @@ résultats d'examens), **Chronologie**, **Documents** (ajout + liste),
 
 | Je veux… | Faire |
 |----------|-------|
-| Tout mon historique Apple | Import › Apple Santé (`export.zip`), puis Données › Réconcilier. |
+| Tout mon historique Apple | Import › Apple Santé (`export.zip`) : la réconciliation suit toute seule à la fin de l'import. |
 | Une synchro quotidienne | Import › Health Auto Export, coller l'URL dans l'app. |
 | Ajouter une prise de sang | Dossier › Ajouter un document (Biologie) — l'IA la lit ; ou « Analyser une prise de sang (PDF) » pour le lecteur exact seul. |
 | Ajouter un FibroScan | Dossier › Ajouter un document (Imagerie), ou Photos › Évolution › formulaire (CAP, E, date). |
@@ -1052,7 +1101,7 @@ résultats d'examens), **Chronologie**, **Documents** (ajout + liste),
 | Suivre une maladie | Suivi › déclarer la maladie (ou la confirmer depuis « À confirmer »). |
 | Un rapport pour le médecin | Rapports › « Synthèse clinique IA » › Générer, puis Télécharger. |
 | Compter eau, café, cigarettes, pipi | Raccourci iPhone : `POST /api/v1/sync/tally?token=<jeton>` avec `{"metric": "<clé>"}` ([Raccourcis iPhone](#raccourcis-iphone--une-seule-règle)). Par l'assistant MCP : « ajoute une clope » (outil `add_to_counter`, qui ajoute et n'efface jamais). |
-| Noter un pipi | Journal › « Pipi maintenant », ou le Raccourci avec `{"metric": "elimination.urination"}`. |
+| Noter un pipi | Journal › Aujourd'hui › tuile 🚽 Pipi › « +1 » (maintenant) ou « Pipi à une autre heure », ou le Raccourci avec `{"metric": "elimination.urination"}`. |
 | Noter un repas et savoir s'il était sain | Journal › Ajouter un repas (description + photo), ou le Raccourci repas › l'analyse s'affiche sous le repas. |
 | Suivre mes heures de travail | Travail (ou Raccourci GPS `work.start` / `work.end`, ou l'assistant) ; heures sup et semaines > 48 h dans « Heures travaillées ». |
 | Importer mes anciens pointages | Travail › Importer › Historiques de Raccourcis (tous les fichiers ensemble) › Lire › Importer. |

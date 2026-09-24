@@ -141,10 +141,12 @@ Added by later migrations (each creates only its own tables, ADR‑0004):
   (`watch`, `ppc`); `user_id NULL` is a global default, a user row
   overrides it.
 - `medical_documents` (`0006`) — `kind`, `title`, `doc_date`,
-  `file_path` (encrypted file on disk), `media_type`, `size_bytes`,
-  `notes`; `analysis_status` (`NULL` never read, `queued`, `running`,
-  `done`, `failed`) and `analysis` (JSON: type, summary, grounded values,
-  rejected proposals), migration `0008`.
+  `file_path` (the file on disk, encrypted at rest when encryption is
+  on), `media_type`, `size_bytes`, `notes`; `analysis_status` (`NULL`
+  never read, `queued`, `running`, `done`, `failed`) and `analysis`
+  (JSON: summary, medications and diagnoses read, the grounded values,
+  rejected proposals with their reason, models used, error), migration
+  `0008`.
 - `conditions` (`0007`) — `name`, `code`, `status` (`active`,
   `resolved`, `suspected`), `onset_date`, `notes`.
 - `treatments` (`0007`) — `name`, `dose`, `frequency`, `doses_per_day`
@@ -155,8 +157,9 @@ Added by later migrations (each creates only its own tables, ADR‑0004):
   `external_uid` (the `.ics` event, so a re-import does not duplicate).
 - `meals` (`0010`) — `eaten_at`, `date_key`, `meal_type` (`breakfast`,
   `lunch`, `snack`, `dinner`), `description`; `price` and `vendor`
-  (`0013`: set only for a meal logged from a paid trace — a delivery, a
-  receipt); `photo_path` (the plate), `photos` (`0017`: up to 6 more,
+  (`0013`: filled when the meal is logged from a paid trace — a
+  delivery, a receipt —; a meal logged in the Journal has none);
+  `photo_path` (the plate), `photos` (`0017`: up to 6 more,
   `[{"id", "path"}]` — the pack, its nutrition label), `foods` (`0017`:
   `[{"food_id", "grams"}]`, grams `NULL` = estimated or the whole
   package); `analysis_status` (`NULL`, `queued`, `running`, `done`,
@@ -224,6 +227,22 @@ curated value per day), these keep **every** imported record:
 These are additive (migrations `0004`, `0005`); the daily roll-ups written
 into `measurements` remain the dashboards' plottable cache.
 
+`health_samples` is not only Apple's: every timed entry lives there, told
+apart by `source` and `device`:
+
+| What | `source` | `device` | Written by |
+|------|----------|----------|------------|
+| Native export and SimpleHealthExportCSV zip | `apple` | the recording device | `services/apple_health/importer.py` |
+| Health Auto Export push | `auto-export` | `Health Auto Export` | `services/auto_export.py` |
+| A pee (Journal, `/sync/tally`, `/journal/urination`) — metric `elimination.urination`, value 1 | `manual` | `journal` | `services/urination.py` |
+| A night typed by hand (bedtime → wake-up, `value_text` `asleep`, awakenings in `value_num`) | `manual` | `Saisie manuelle` | `services/sleep_manual.py` |
+| A meal's nutrients, one sample per nutrient at the meal's time, in Apple's nutrition metrics | `meal` | `meal:<meal id>` | `services/meal_nutrients.py` |
+
+Only `apple` rows are touched by « Supprimer les données importées »
+(`POST /imports/reset`) and by a re-import. Re-pushing a day with Health
+Auto Export replaces that day's `auto-export` rows; re-reading, editing or
+deleting a meal replaces or removes exactly its `meal:<id>` rows.
+
 ## Idempotency (zero redundancy)
 
 A measurement is unique per `(user_id, metric_id, date_key, event_id)`.
@@ -249,3 +268,63 @@ Metrics with `source = "derived"` carry a `formula` and are **read‑only**
 through the write API. Examples from the catalogue: `hydration.liters =
 water.bottles_1_5 * 1.5`, `workout.recovery_delta = workout.hr_max -
 workout.hr_recovery_1min`.
+
+## Daily values rebuilt from raw rows
+
+Some daily values in `measurements` are not typed: they are rebuilt from
+their raw rows each time those change, so there is one truth.
+
+- **Work** (`services/work_days.py`, `source = "work"`): from
+  `work_sessions`, per local day (a session belongs to the day it
+  starts) — `work.hours` (hours of closed sessions, remote included),
+  `work.remote_hours` (the part worked remote), `work.start` (first
+  clock-in) and `work.end` (last clock-out), both in decimal hours of the
+  day (8.25 = 08:15; past midnight 25.5 = 01:30 the next day). Adding,
+  editing, merging or deleting a session rebuilds its days; a day without
+  sessions is cleared.
+- **Pees** (`elimination.urination`) and **meal nutrients**: the day's
+  value is rebuilt from the `health_samples` rows above (count of pees,
+  sum of nutrients) — `services/timed_entries.py`.
+- **A typed night** also sets that day's `sleep.asleep` (`source =
+  "manual"`); deleting the night removes it.
+
+## Reference data
+
+`backend/app/data/ciqual.tsv` — an extract of the ANSES **Ciqual 2025**
+food composition table (3,484 foods: code, name, sub-group and per 100 g
+energy, proteins, carbohydrates, sugars, fat, saturated fat, fibre,
+sodium; licence Etalab 2.0). It is shipped in the image and read offline
+by `services/ciqual.py` (nothing is downloaded or sent at run time); a
+meal's Ciqual references and the food sheet search (`GET /ciqual`) use
+it. Source, checksum and how to regenerate it:
+[`backend/app/data/README.md`](../backend/app/data/README.md). It is not
+a database table.
+
+## Migrations
+
+`backend/alembic/versions`, one chain; each migration creates only its
+own tables from the ORM metadata, and column additions are guarded so a
+fresh database built from the live models is left untouched (ADR‑0004).
+
+| Revision | What it does |
+|----------|--------------|
+| `0001_initial` | Baseline tables (list above), with the partial unique indexes of `measurements`. |
+| `0002_ingest_mappings` | `ingest_mappings`. |
+| `0003_user_mfa` | `users.mfa_secret`, `users.mfa_enabled` (optional TOTP). |
+| `0004_raw_health_data` | Full-fidelity Apple tables: `health_samples`, `workouts`, `ecg_records`, `route_files`, `import_jobs`. |
+| `0005_clinical_cda` | `clinical_observations`, `clinical_documents`. |
+| `0006_medical_documents` | `medical_documents`. |
+| `0007_care` | `conditions`, `treatments`, `appointments`. |
+| `0008_document_analysis` | `medical_documents.analysis_status`, `analysis`. |
+| `0009_report_summary` | `reports.summary` (AI clinical synthesis). |
+| `0010_meals` | `meals`. |
+| `0011_work_sessions` | `work_sessions` (clock-in / clock-out). |
+| `0012_work_file` | `work_sessions.start_at` nullable (clock-in missing); `absences`, `evidence`. |
+| `0013_traces` | `evidence.ended_at`, `place`, `amount`, `currency`, `meal_id`; `meals.price`, `vendor`. |
+| `0014_trace_time_known` | `evidence.time_known`. |
+| `0015_work_place` | `work_sessions.place` (`site` / `remote`). |
+| `0016_absence_halves` | `absences.start_half`, `end_half`. |
+| `0017_foods` | `foods`; `meals.photos`, `meals.foods`. |
+| `0018_food_units` | `foods.unit_name`, `unit_g`, `source`, `barcode`. |
+| `0019_medication_intakes` | `medication_intakes`; `treatments.doses_per_day`. |
+| `0020_report_hash` | `reports.sha256`. |

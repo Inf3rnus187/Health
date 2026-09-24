@@ -28,9 +28,10 @@ security is a first‑class concern (§12).
   pre‑commit and CI.
 - **Transport**: the app speaks HTTP only internally; terminate TLS with your
   own reverse proxy.
-- **MFA (optional, API only)**: TOTP — `POST /auth/mfa/setup|enable|disable`
-  (web session only); once enabled, `POST /auth/login` requires the `otp`
-  code. The web login form has no code field yet: see
+- **MFA (optional, no web screen yet)**: TOTP —
+  `POST /auth/mfa/setup|enable|disable`, called with a web session's
+  access token (never an API token); once enabled, `POST /auth/login`
+  requires the `otp` code. The web login form has no code field: see
   [Known limitations](#known-limitations).
 - **Files at rest (optional)**: set `MEDIA_ENCRYPTION_KEY` (Fernet) and
   every file written under `MEDIA_DIR` is encrypted: body photos, meal
@@ -76,8 +77,9 @@ security is a first‑class concern (§12).
 
 A web login gives an access JWT (`ACCESS_TOKEN_TTL_MIN`, 15 min) and a
 refresh token; an API token is a long random secret created in the web
-app, stored as a SHA‑256 digest. Every level only ever reaches its own
-account's data.
+app, stored as a SHA‑256 digest. Every level only reaches its own
+account's data; the metric catalogue is the one thing shared, hence
+admin-only writes.
 
 | Level | How | May |
 |-------|-----|-----|

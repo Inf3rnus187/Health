@@ -3,6 +3,13 @@
 Adding a field is a **data** change: one row in `metric_definitions`. No
 schema migration, no redeploy.
 
+**Admin only.** The catalogue is shared by every account (a unit, bounds
+or « active » change would change everybody's data), so `POST /metrics`
+and `PATCH /metrics/{key}` need the `admin` role: the admin's web session,
+or an admin's API token carrying `write:metrics` (or `hub:full`); anyone
+else gets 403 (`CatalogDep`, `backend/app/core/deps_admin.py`). Reading
+the catalogue (`GET /metrics`) is open to any authenticated caller.
+
 ## Via the API
 
 ```bash
