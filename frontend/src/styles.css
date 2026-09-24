@@ -15,6 +15,9 @@
   --color-remote: #7c3aed;
   --color-high: #b91c1c;
   --color-high-bg: #fee2e2;
+  /* Chart series (validated for colour-blind separation, light surface). */
+  --chart-1: #2563eb;
+  --chart-2: #eb6834;
   --radius: 10px;
   /* Side margin of every page: the content uses the whole screen. */
   --gutter: clamp(12px, 2vw, 32px);
@@ -38,6 +41,9 @@
   --color-remote: #a78bfa;
   --color-high: #f87171;
   --color-high-bg: rgba(248, 113, 113, 0.14);
+  /* Chart series, dark steps (validated against the dark surface). */
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
 }
 
 * {
@@ -1880,7 +1886,9 @@ img.viewer-file {
 }
 
 .data-table th {
+  padding: 5px 8px;
   text-align: left;
+  white-space: nowrap;
 }
 
 /* The hub's own news: a new build installed, an update waiting. */
@@ -2213,5 +2221,39 @@ img.viewer-file {
 @media (max-width: 640px) {
   .counters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* A chart's legend: a coloured swatch beside plain text. */
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+/* Tiles holding amounts (« 3 746,76 € »): room for the number on one line. */
+.tiles-wide {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+}
+
+.tiles-wide .tile-value {
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .tiles-wide {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tiles-wide .tile-value {
+    font-size: 18px;
   }
 }

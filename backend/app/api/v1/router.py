@@ -43,6 +43,7 @@ from app.api.v1 import (
     reports,
     samples,
     sleep,
+    spending,
     summary,
     sync,
     system,
@@ -84,6 +85,7 @@ api_router.include_router(work_journal.router)
 api_router.include_router(logs.router)
 api_router.include_router(absences.router)
 api_router.include_router(evidence.router)
+api_router.include_router(spending.router)
 api_router.include_router(bulk.router)
 api_router.include_router(system.router)
 api_router.include_router(sleep.router)

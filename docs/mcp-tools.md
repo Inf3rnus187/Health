@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-88 outils.
+89 outils.
 
 ## Données et métriques
 
@@ -572,6 +572,19 @@ work and calls inside them, evidence. ``with_days`` adds every day.
 For the PDF: generate_report(report_type="work_health").
 
 Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`), `contract_hours` (number, défaut `35`), `with_days` (boolean, défaut `False`)
+
+### `meal_spending`
+
+What meals paid for cost: Uber Eats and other deliveries, receipts.
+
+``kind``: livraison (deliveries, default), repas (receipts,
+restaurants) or tout. Total, orders, average basket, largest order,
+monthly average, late orders (21:00 – 05:00), spending per day / week
+/ month (``auto`` from the span), per hour of the day, and the
+establishments that cost the most. ``start`` / ``end``: YYYY-MM-DD
+(default: from the first order up to today).
+
+Paramètres : `start` (string | null, défaut `None`), `end` (string | null, défaut `None`), `kind` (string, défaut `livraison`), `bucket` (string, défaut `auto`)
 
 ## Évolution, photos, données Apple
 

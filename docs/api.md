@@ -339,6 +339,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 
 | Méthode | Route | Accès | Paramètres | Rôle |
 |---|---|---|---|---|
+| GET | `/spending/meals` | `read:all` | `start`?, `end`?, `kind`?, `bucket`? | Spending on meals paid for over ``start``..``end``. |
 | GET | `/system/update` | Session / hub:full | — | Changes waiting on GitHub, the parts to rebuild, the last update. |
 | POST | `/system/update` | Session uniquement | — | Ask the host to update now (its cron runs ./update.sh). |
 | POST | `/traces/import` | Session / hub:full | `dry_run`?, `meals`?, form `files`, form `kinds`, form `person` | Import exports (CSV, Excel, JSON) and receipts (PDF, photo). |

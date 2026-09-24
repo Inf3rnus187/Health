@@ -261,3 +261,25 @@ async def work_health(
     if not with_days and isinstance(data, dict):
         data.pop("days", None)
     return data
+
+
+@mcp.tool()
+async def meal_spending(
+    start: str | None = None,
+    end: str | None = None,
+    kind: Literal["livraison", "repas", "tout"] = "livraison",
+    bucket: Literal["auto", "day", "week", "month"] = "auto",
+) -> Any:
+    """What meals paid for cost: Uber Eats and other deliveries, receipts.
+
+    ``kind``: livraison (deliveries, default), repas (receipts,
+    restaurants) or tout. Total, orders, average basket, largest order,
+    monthly average, late orders (21:00 – 05:00), spending per day / week
+    / month (``auto`` from the span), per hour of the day, and the
+    establishments that cost the most. ``start`` / ``end``: YYYY-MM-DD
+    (default: from the first order up to today).
+    """
+    return await client.get(
+        "/spending/meals",
+        {"start": start, "end": end, "kind": kind, "bucket": bucket},
+    )

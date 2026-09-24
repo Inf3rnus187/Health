@@ -280,7 +280,18 @@ six onglets, du plus utile au plus rare :
   main » (plus bas).
 - **Sessions** : chaque session, à ajouter, modifier ou supprimer.
 - **Statistiques** : heures travaillées, graphique par semaine, court /
-  moyen / long terme, export et rapport PDF.
+  moyen / long terme, export et rapport PDF. Puis **Dépenses repas —
+  Uber Eats et livraisons** : sur la période choisie (« 1 an » par
+  défaut, ou dates exactes ; elle reste après un rechargement) et pour
+  les livraisons (les commandes Uber Eats importées), les repas payés
+  (reçus, restaurants) ou les deux — total dépensé, commandes, panier
+  moyen, moyenne par mois, plus grosse commande, **commandes tard**
+  (21 h – 5 h : nombre, part, montant) ; un graphique **par jour, semaine
+  ou mois** (« Auto » selon la durée ; le détail en liste dessous) ;
+  l'**heure de commande** (tard le soir en orange) ; les **établissements
+  qui coûtent le plus** (commandes, total, part). Survoler une barre
+  donne son montant et son nombre de commandes. Ce sont les preuves et
+  traces (notes de frais), jamais les repas notés dans le Journal.
 - **Dossier travail et santé** : synthèse, arrêts et absences, preuves
   et traces, nuits. Le rapport PDF a une section **« Journées les plus
   significatives »** (20 au plus, les plus marquantes d'abord) : date,

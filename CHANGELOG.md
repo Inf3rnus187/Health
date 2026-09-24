@@ -98,6 +98,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **What Uber Eats cost** (Travail › Statistiques › « Dépenses repas »):
+  over a period, for deliveries (the imported Uber Eats orders), meals
+  paid for (receipts) or both — total, orders, average basket, monthly
+  average, largest order, late orders (21:00 – 05:00); spending per day,
+  week or month (empty periods included); orders per hour of the day;
+  the establishments that cost the most (`GET /spending/meals`, MCP
+  `meal_spending`). Chart colours validated for colour-blind readers in
+  light and dark; tables headers get their padding back site-wide.
 - **A real daily journal** (Journal page). « Aujourd'hui »: last night
   (asleep, in how many goes, awakenings, bedtime → wake-up) and a tile
   per counter — water (1.5 L bottles, in litres), coffees, cigarettes,

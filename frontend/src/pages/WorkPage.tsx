@@ -1,4 +1,5 @@
 import { ClockCard } from '../components/work/ClockCard';
+import { MealSpending } from '../components/work/MealSpending';
 import { DaysTable } from '../components/work/DaysTable';
 import { SessionList } from '../components/work/SessionList';
 import { WorkImport } from '../components/work/WorkImport';
@@ -56,7 +57,12 @@ function content(tab: Tab, go: (tab: Tab) => void): JSX.Element {
     ),
     completer: () => <Incomplete />,
     sessions: () => <SessionList />,
-    stats: () => <WorkStatsCard />,
+    stats: () => (
+      <>
+        <WorkStatsCard />
+        <MealSpending />
+      </>
+    ),
     dossier: () => <Dossier />,
     import: () => <Imports />,
   };

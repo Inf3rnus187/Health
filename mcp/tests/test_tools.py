@@ -312,6 +312,14 @@ async def test_many_items_go_at_once() -> None:
     assert seen[2].url.path == "/api/v1/appointments/delete"
 
 
+async def test_meal_spending_by_period() -> None:
+    seen = _capture()
+    await tools_workfile.meal_spending(start="2026-01-01", bucket="month")
+    assert seen[0].url.path == "/api/v1/spending/meals"
+    assert seen[0].url.params["bucket"] == "month"
+    assert seen[0].url.params["kind"] == "livraison"
+
+
 async def test_the_journal_is_read_a_page_of_days_at_a_time() -> None:
     seen = _capture()
     await tools_journal.journal_days(start="2026-03-01", limit=10, offset=10)
