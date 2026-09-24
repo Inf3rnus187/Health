@@ -19,6 +19,9 @@ ARG VITE_TILE_ATTRIB=""
 ENV VITE_MAP_KEY=$VITE_MAP_KEY \
     VITE_TILE_URL=$VITE_TILE_URL \
     VITE_TILE_ATTRIB=$VITE_TILE_ATTRIB
+# The commit built, shown next to the name (./update.sh passes it).
+ARG GIT_COMMIT=""
+ENV VITE_COMMIT=$GIT_COMMIT
 RUN pnpm build
 
 # --- Serve static assets with Nginx ---

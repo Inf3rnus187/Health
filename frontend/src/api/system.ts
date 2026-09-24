@@ -16,6 +16,10 @@ export interface UpdateState {
   watcher: boolean;
   /** idle, requested, running, done or failed. */
   state: string;
+  /** When the request was made, or the last update changed state. */
+  since: string | null;
+  /** A request nobody takes, or an update that never ends. */
+  stalled: boolean;
   message: string;
   command: string;
 }

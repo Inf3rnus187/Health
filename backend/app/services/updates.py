@@ -10,6 +10,7 @@ folder; the host runs the update. The API never touches Docker or git.
 from __future__ import annotations
 
 import json
+import secrets
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -20,8 +21,14 @@ from app.core.errors import ConflictError
 
 #: The host's cron beat this recently: « Installer » can be offered.
 FRESH_SECONDS = 180
+#: A request not taken by then, or an update running longer, is stuck.
+TAKEN_SECONDS = 180
+RUNNING_SECONDS = 20 * 60
 _PARTS = {"api": "API et worker", "web": "interface web", "mcp": "serveur MCP"}
 _REQUEST = "update-request"
+#: The host's copy of the request it took (it cannot delete the API's
+#: file in a sticky run/ it does not own).
+_TAKEN = "update-taken"
 
 
 def state() -> dict[str, Any]:
@@ -30,7 +37,10 @@ def state() -> dict[str, Any]:
     info = _read(folder / "update.json")
     last = _read(folder / "status.json")
     parts = [str(a) for a in info.get("areas", [])]
-    requested = (folder / _REQUEST).exists()
+    requested = _pending(folder)
+    watcher = _watching(folder)
+    now = "requested" if requested else last.get("state", "idle")
+    since = _since(folder, now, last)
     return {
         "known": bool(info),
         "behind": int(info.get("behind", 0) or 0),
@@ -39,8 +49,10 @@ def state() -> dict[str, Any]:
         "checked_at": info.get("checked_at"),
         "current": info.get("current") or last.get("commit"),
         "latest": info.get("latest"),
-        "watcher": _watching(folder),
-        "state": "requested" if requested else last.get("state", "idle"),
+        "watcher": watcher,
+        "state": now,
+        "since": since.isoformat(timespec="seconds") if since else None,
+        "stalled": _stalled(now, since, watcher),
         "message": last.get("message", ""),
         "command": "./update.sh",
     }
@@ -56,14 +68,57 @@ def request(user_id: str) -> dict[str, Any]:
             "--install-cron pour ce bouton)."
         )
     stamp = datetime.now(UTC).isoformat(timespec="seconds")
+    # Unique: the host tells a new request from the one it took by content.
+    nonce = secrets.token_hex(4)
     try:
-        (folder / _REQUEST).write_text(f"{stamp} {user_id}\n")
+        (folder / _REQUEST).write_text(f"{stamp} {user_id} {nonce}\n")
     except OSError as exc:
         raise ConflictError(
             "Le dossier run/ n'est pas accessible en écriture : sur l'hôte, "
             "« chmod 1777 run »."
         ) from exc
     return state()
+
+
+def _pending(folder: Path) -> bool:
+    """A request dropped here that the host has not taken yet."""
+    try:
+        asked = (folder / _REQUEST).read_bytes()
+    except OSError:
+        return False
+    try:
+        return asked != (folder / _TAKEN).read_bytes()
+    except OSError:
+        return True
+
+
+def _since(folder: Path, now: str, last: dict[str, Any]) -> datetime | None:
+    """When the request was made, or the last update changed state."""
+    if now == "requested":
+        try:
+            stamp = (folder / _REQUEST).stat().st_mtime
+        except OSError:
+            return None
+        return datetime.fromtimestamp(stamp, UTC)
+    try:
+        return datetime.fromisoformat(str(last.get("at", "")))
+    except ValueError:
+        return None
+
+
+def _stalled(now: str, since: datetime | None, watcher: bool) -> bool:
+    """A request nobody takes, or an update that never ends.
+
+    The host's cron takes a request within a minute; an update rebuilds
+    in a few minutes. Past that, the page says so (and offers to ask
+    again) instead of « en cours » for ever.
+    """
+    if since is None or now not in ("requested", "running"):
+        return False
+    age = (datetime.now(UTC) - since).total_seconds()
+    if now == "requested":
+        return not watcher or age > TAKEN_SECONDS
+    return age > RUNNING_SECONDS
 
 
 def _watching(folder: Path) -> bool:

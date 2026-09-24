@@ -8,6 +8,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **« Mise à jour en cours » for ever after « Installer »**: `run/` is
+  sticky (`1777`) and often owned by root or Docker, so the host's cron
+  user could not delete the request dropped by the API (another user):
+  `rm` failed every minute and the update never ran. `update.sh` now
+  keeps a copy (`run/update-taken`) to mark it taken; each request is
+  unique. The banner says where the host is, with the time (asked,
+  running since, « ✓ … installée à … »), turns red with the log command,
+  « Relancer la mise à jour » and « Masquer » when a request is not
+  taken within 3 minutes or an update gives no news for 20 minutes; an
+  update stopped midway is written « failed », never left « running ».
+  The page also looks for the new build every 20 s while the host
+  updates. `update.sh` is read whole before it runs (a pull may rewrite
+  it).
+- **The version loaded** is shown next to the name: « v20c48fe · 24/09
+  20:52 » (commit and build time; `update.sh` / `install.sh` pass the
+  commit to the web image).
 - **A meal photo from the gallery**: on a phone the Journal's photo field
   opened the camera only. It now offers « 📷 Prendre une photo » and
   « 🖼️ Galerie », shows the photo picked and lets it be taken back.

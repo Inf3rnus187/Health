@@ -67,6 +67,23 @@ body {
   margin: 0;
 }
 
+/* The name, and the version of the page loaded beside it. */
+.brand-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.app-version {
+  font-size: 12px;
+  color: var(--color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .header-right {
   display: flex;
   align-items: center;
@@ -1882,6 +1899,14 @@ img.viewer-file {
 .update-banner.failed {
   border-color: var(--color-danger);
   color: var(--color-danger);
+}
+
+.update-banner.done {
+  border-color: var(--color-ok);
+}
+
+.update-banner code {
+  color: var(--color-text);
 }
 
 .update-banner details {

@@ -4,9 +4,12 @@ import { useEffect, useState } from 'react';
 import { fetchUpdate, installedBuild, requestUpdate } from '../api/system';
 
 const EVERY = 5 * 60 * 1000;
+/** While the host updates, the new build is looked for this often. */
+const UPDATING = 20 * 1000;
 
-/** Whether a newer build than this page was installed on the server. */
-export function useNewBuild(): boolean {
+/** Whether a newer build than this page was installed on the server
+ * (looked for every 5 min, on focus, every 20 s while ``updating``). */
+export function useNewBuild(updating = false): boolean {
   const [newer, setNewer] = useState(false);
   useEffect(() => {
     const look = () =>
@@ -14,13 +17,13 @@ export function useNewBuild(): boolean {
         if (build && build !== __BUILD_ID__) setNewer(true);
       });
     look();
-    const timer = setInterval(look, EVERY);
+    const timer = setInterval(look, updating ? UPDATING : EVERY);
     window.addEventListener('focus', look);
     return () => {
       clearInterval(timer);
       window.removeEventListener('focus', look);
     };
-  }, []);
+  }, [updating]);
   return newer;
 }
 

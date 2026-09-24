@@ -32,6 +32,9 @@ mkdir -p run && chmod 1777 run
 
 # 2. Build all images.
 info "Building images"
+# The version shown next to the name in the web page.
+GIT_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || true)"
+export GIT_COMMIT
 docker compose build
 
 # 3. Start data services and wait for them to become healthy.

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { useAuth } from '../auth/useAuth';
+import { AppVersion } from './AppVersion';
 import { NavLinks } from './NavBar';
 import { useHere } from './navLinks';
 import { ThemeToggle } from './ThemeToggle';
@@ -41,9 +42,12 @@ export function AppHeader() {
   const [open, setOpen] = useState(false);
   return (
     <header className="header">
-      <h1 className="brand">
-        Phoenix<span className="wide-only"> Health Hub</span>
-      </h1>
+      <div className="brand-line">
+        <h1 className="brand">
+          Phoenix<span className="wide-only"> Health Hub</span>
+        </h1>
+        <AppVersion />
+      </div>
       <div className="header-right">
         <span className="muted wide-only">{user?.email}</span>
         <ThemeToggle />

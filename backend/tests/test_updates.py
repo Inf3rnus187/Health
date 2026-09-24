@@ -58,3 +58,55 @@ async def test_a_stale_heartbeat_means_no_install_button(
 ) -> None:
     (shared / "heartbeat").write_text(f"{int(time.time()) - 3600}\n")
     assert (await client.get(URL, headers=auth)).json()["watcher"] is False
+
+
+async def test_a_stuck_update_says_so_instead_of_running_for_ever(
+    client: AsyncClient, auth: dict[str, str], shared: Path
+) -> None:
+    (shared / "heartbeat").write_text(f"{int(time.time())}\n")
+    fresh = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    (shared / "status.json").write_text(json.dumps({
+        "state": "running", "message": "Mise à jour en cours", "at": fresh,
+    }))  # fmt: skip
+    body = (await client.get(URL, headers=auth)).json()
+    assert (body["state"], body["stalled"]) == ("running", False)
+    assert body["since"].startswith(fresh[:16])
+    old = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 3600))
+    (shared / "status.json").write_text(json.dumps({
+        "state": "running", "message": "Mise à jour en cours", "at": old,
+    }))  # fmt: skip
+    body = (await client.get(URL, headers=auth)).json()
+    assert (body["state"], body["stalled"]) == ("running", True)
+    again = await client.post(URL, headers=auth)  # « Relancer »
+    assert (again.json()["state"], again.json()["stalled"]) == (
+        "requested",
+        False,
+    )
+
+
+async def test_a_request_the_host_never_takes_is_stuck(
+    client: AsyncClient, auth: dict[str, str], shared: Path
+) -> None:
+    (shared / "heartbeat").write_text(f"{int(time.time()) - 3600}\n")
+    (shared / "update-request").write_text("2026-09-24T10:00:00+00:00 me\n")
+    body = (await client.get(URL, headers=auth)).json()
+    assert (body["state"], body["watcher"], body["stalled"]) == (
+        "requested",
+        False,
+        True,
+    )
+
+
+async def test_a_request_taken_by_the_host_is_no_longer_pending(
+    client: AsyncClient, auth: dict[str, str], shared: Path
+) -> None:
+    """The host cannot delete the API's file in a sticky run/: it copies it."""
+    (shared / "heartbeat").write_text(f"{int(time.time())}\n")
+    asked = await client.post(URL, headers=auth)
+    assert asked.json()["state"] == "requested"
+    request = (shared / "update-request").read_bytes()
+    (shared / "update-taken").write_bytes(request)  # ./update.sh took it
+    body = (await client.get(URL, headers=auth)).json()
+    assert body["state"] == "idle"
+    again = await client.post(URL, headers=auth)  # a new request
+    assert again.json()["state"] == "requested"

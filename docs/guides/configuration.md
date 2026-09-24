@@ -63,6 +63,33 @@ reconstruction, l'API redémarre : la page est indisponible une à deux
 minutes, puis propose de recharger. Suivi : `run/update.log`,
 `run/status.json`.
 
+**La version chargée** s'affiche à droite du nom, en haut de chaque page :
+« v20c48fe · 24/09 20:52 » — le commit construit et l'heure de la
+construction (sur téléphone, le commit seul). Après une mise à jour et
+« Recharger », c'est là qu'on voit que la nouvelle version tourne.
+`update.sh` et `install.sh` donnent le commit à l'image ; construite à la
+main (`docker compose up -d --build`), la page affiche « version du … »
+(ou passer `GIT_COMMIT=$(git rev-parse --short HEAD)` devant la commande).
+
+Le bandeau dit toujours où en est l'hôte, avec l'heure :
+« Mise à jour demandée à 20:41 : l'hôte la lance dans la minute », « en
+cours depuis 20:42 », puis « ✓ À jour (20c48fe) ; reconstruit : web —
+installée à 20:46 » (bouton « Masquer »). Une demande que l'hôte ne prend
+pas en 3 minutes, ou une mise à jour sans nouvelles depuis 20 minutes,
+s'affiche en rouge avec la commande à regarder (`tail -50
+run/update.log`), « **Relancer la mise à jour** » et « Masquer » — plus
+jamais « en cours » sans fin. Une mise à jour interrompue (erreur,
+arrêt, redémarrage de l'hôte) est notée « échouée », jamais laissée « en
+cours ».
+
+`run/` est souvent créé par root ou par Docker (droits `1777`, « sticky ») :
+l'utilisateur du cron ne peut alors pas supprimer la demande déposée par
+l'API. `update.sh` ne la supprime plus : il en garde une copie
+(`run/update-taken`) qui la marque prise en charge. Un hub resté bloqué
+sur « Mise à jour en cours » avant cette correction : lancer une fois
+`./update.sh` à la main sur l'hôte (le log montrait « rm: cannot remove
+'run/update-request': Operation not permitted »).
+
 Puis, si la mise à jour touche les données (voir le CHANGELOG) :
 
 1. **Données › Réconcilier** — recalcule les valeurs journalières depuis les

@@ -14,9 +14,16 @@
 #
 # The web page never touches Docker: its « Installer » button only drops
 # run/update-request; this script, run by you or by cron on the host,
-# does the work. `git pull --ff-only`: local changes or a diverged
+# does the work. It never deletes that file: it belongs to the API's
+# user, and in run/ (sticky, often created by root or Docker) only its
+# owner could; a copy in run/update-taken marks it as taken instead. `git pull --ff-only`: local changes or a diverged
 # history stop the update (nothing overwritten). .env and the data
 # volumes are never touched; migrations run when the API starts.
+#
+# The pull may rewrite this very file while it runs: everything is in
+# functions and the last line reads « main "$@"; exit », so bash has read
+# it all before anything runs. An update stopped midway (an error, a
+# kill, a reboot) leaves « failed » in run/status.json, never « running ».
 # ============================================================================
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -87,32 +94,61 @@ rebuild() {  # the services behind the parts changed
     esac
 }
 
+stopped() {  # the update ended before « done » (error, kill…)
+    status failed "La mise à jour s'est arrêtée avant la fin : voir run/update.log sur l'hôte, puis relancer"
+}
+
 update() {
     status running "Mise à jour en cours"
+    trap stopped EXIT
+    trap 'exit 1' HUP INT TERM
     local before
     before="$(git rev-parse HEAD)"
     if ! git pull --ff-only --quiet; then
+        trap - EXIT
         status failed "git pull impossible (modifications locales ou historique divergent) : voir « git status » sur l'hôte"
         return 1
     fi
     local parts
     parts="$(areas "$before" HEAD)"
+    # The version shown next to the name in the web page.
+    GIT_COMMIT="$(git rev-parse --short HEAD)"
+    export GIT_COMMIT
     if ! rebuild "$parts"; then
+        trap - EXIT
         status failed "La reconstruction a échoué : voir run/update.log sur l'hôte"
         return 1
     fi
-    status done "À jour ($(git rev-parse --short HEAD)) ; reconstruit : ${parts:-rien (documentation seulement)}"
+    trap - EXIT
+    status done "À jour ($GIT_COMMIT) ; reconstruit : ${parts:-rien (documentation seulement)}"
     check >/dev/null
+}
+
+pending() {  # a request from the page not taken yet
+    [ -f "$RUN/update-request" ] && ! cmp -s "$RUN/update-request" "$RUN/update-taken"
+}
+
+take() {  # mark the request as taken (it stays: see the header)
+    cp "$RUN/update-request" "$RUN/update-taken.tmp"
+    mv "$RUN/update-taken.tmp" "$RUN/update-taken"
+    rm -f "$RUN/update-request" 2>/dev/null || true
 }
 
 cron() {
     date -u +%s > "$RUN/heartbeat"
     exec 9> "$RUN/update.lock"
-    if command -v flock >/dev/null 2>&1 && ! flock -n 9; then
-        return 0  # an update is already running
+    if command -v flock >/dev/null 2>&1; then
+        if ! flock -n 9; then
+            return 0  # an update is already running
+        fi
+        # We hold the lock: a « running » left behind is an update that
+        # died (older script, reboot) — say so instead of for ever.
+        if grep -q '"state": "running"' "$RUN/status.json" 2>/dev/null; then
+            stopped
+        fi
     fi
-    if [ -f "$RUN/update-request" ]; then
-        rm -f "$RUN/update-request"
+    if pending; then
+        take
         update || true
         return 0
     fi
@@ -138,10 +174,14 @@ install_cron() {
     echo "Installé : $line"
 }
 
-case "${1:-}" in
-    --check) check ;;
-    --cron) cron "${2:-}" ;;
-    --install-cron) install_cron "${2:-}" ;;
-    "") update ;;
-    *) echo "Usage: $0 [--check | --cron [--auto] | --install-cron [--auto]]" >&2; exit 2 ;;
-esac
+main() {
+    case "${1:-}" in
+        --check) check ;;
+        --cron) cron "${2:-}" ;;
+        --install-cron) install_cron "${2:-}" ;;
+        "") update ;;
+        *) echo "Usage: $0 [--check | --cron [--auto] | --install-cron [--auto]]" >&2; exit 2 ;;
+    esac
+}
+
+main "$@"; exit $?

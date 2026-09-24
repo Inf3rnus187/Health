@@ -101,6 +101,8 @@ services:
         VITE_MAP_KEY: ${VITE_MAP_KEY:-}
         VITE_TILE_URL: ${VITE_TILE_URL:-}
         VITE_TILE_ATTRIB: ${VITE_TILE_ATTRIB:-}
+        # The version shown next to the name (./update.sh sets it).
+        GIT_COMMIT: ${GIT_COMMIT:-}
     depends_on: [api]
     ports:
       - "${WEB_PORT:-8082}:80"
