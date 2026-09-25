@@ -20,7 +20,12 @@ Writing: to count something (a bottle of water, a coffee, a cigarette,
 a pee) use add_to_counter, which ADDS to the day. record_measurement REPLACES
 the day's value: it refuses to erase one unless replace=true, which you
 pass only after the user confirmed the new value. Never write
-/measurements through api_call. Ask before deleting anything."""
+/measurements through api_call. Ask before deleting anything.
+Meals: call list_foods first; log_meal with the user's own words as
+description (quantities kept), foods = the user's foods they name
+(food_id, grams null unless said), meal_type empty unless they say it.
+After get_meal, say which lines come from their food sheets
+(source "étiquette") and which from the Ciqual table or an estimate."""
 
 mcp = FastMCP(
     "phoenix-health-hub",

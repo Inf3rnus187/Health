@@ -164,12 +164,23 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
   pèse, les tables comptent** : l'IA liste les aliments et leurs
   grammes, puis les **valeurs** viennent, dans cet ordre :
   1. **vos aliments** (« Mes aliments ») : choisis dans le formulaire ou
-     **nommés dans la description** (leur nom ou un de leurs autres
-     noms, singulier ou pluriel) — calculés avec **leur fiche** ; leurs
+     **nommés dans la description** — leur nom, un de leurs autres noms,
+     ou **un mot de leur nom avec ce qui le confirme** : « un pavé de
+     saumon » suffit pour « Saumon sauvage rose » si sa fiche a l'unité
+     « pavé », « petite boîte d'aubergines » pour « Aubergines
+     cuisinées à la provençale » (la boîte, ou la marque, confirme).
+     Rien n'est deviné : « filet de poulet » ne prend pas « Poulet
+     basquaise », « 2 pommes » ne prend pas « Pommes rissolées », et
+     deux fiches possibles (« une barquette de poulet » avec « Poulet
+     basquaise » et « Risotto au poulet ») = aucune. Pour être sûr :
+     les **autres noms** de la fiche (« saumon, pavé de saumon »), ou
+     choisir l'aliment dans la liste. Calculés avec **leur fiche** ; leurs
      **grammes sont lus par le code** dans la description : « 100g »,
      « 150 g de riz », sinon un compte × le poids de leur unité
      (« 2 tomates » = 2 × 120 g, « un demi concombre », « une tranche de
-     comté », « ½ sachet de riz » = ½ × le paquet) — marqués
+     comté », « ½ sachet de riz » = ½ × le paquet, « une boîte » ou
+     « petite boîte » = la boîte : remplissez « Poids de la boîte » sur
+     la fiche, sinon l'IA estime) — marqués
      « étiquette 🏷️ » ;
   2. la **table Ciqual 2025 de l'ANSES** (≈ 3 500 aliments génériques,
      embarquée dans le hub, rien n'est envoyé dehors) : l'IA choisit la

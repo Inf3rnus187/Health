@@ -220,6 +220,29 @@ Exemples de demandes : « Résume mon dossier et l'évolution de mon HbA1c »,
 l'ordonnance », « Génère une synthèse clinique et montre-moi les phrases
 retirées ».
 
+### Noter un repas par l'assistant
+
+Dites le repas avec vos mots et les quantités, l'heure si ce n'est pas
+maintenant : « j'ai mangé à 5 h : 2 tomates, un demi concombre, une
+petite boîte d'aubergines, un pavé de saumon ». L'assistant (consignes
+du serveur et de `log_meal`) :
+
+1. appelle `list_foods` et passe dans `foods` les fiches de « Mes
+   aliments » que vous nommez (`food_id`, `grams` null : le hub lit
+   « un pavé » = l'unité de la fiche, « une boîte » = son poids) ;
+2. recopie **vos mots** dans `description` (sans les résumer : les
+   quantités y sont lues) et l'heure dans `eaten_at` ;
+3. laisse `meal_type` vide si vous ne dites pas « déjeuner », « dîner »…
+   (le hub le déduit de l'heure : 5 h → petit-déjeuner) ;
+4. après l'analyse (`get_meal`), dit d'où vient chaque ligne :
+   « étiquette » = votre fiche, « Ciqual » = la table, sinon estimée.
+
+Même si l'assistant oublie `foods`, le hub reconnaît une fiche nommée
+dans la description (son nom, un autre nom, ou « un pavé de saumon »
+pour « Saumon sauvage rose » : voir le [guide IA](ia-medicale.md)).
+Corriger : « le saumon de 5 h, c'est ma fiche Saumon sauvage rose » →
+`update_meal` avec `foods`, qui relance l'analyse.
+
 ## Dépannage
 
 | Symptôme | Action |

@@ -22,6 +22,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Your foods found by the words you use**: a meal named a food of
+  « Mes aliments » only with every word of its name, so « un pavé de
+  saumon » took the Ciqual table instead of « Saumon sauvage rose ». A
+  word of the name now suffices when nothing else in that part of the
+  description contradicts it and something confirms it (a box or
+  sachet, the sheet's unit « pavé », its brand, or two words of its
+  name); « filet de poulet » still does not take « Poulet basquaise »,
+  and a part two sheets fit equally takes neither. « une boîte » without
+  a number is one box (the sheet's package weight). The model's own
+  line for such a food is replaced by the sheet, a second one dropped
+  (no double count). « Réanalyser » a meal to apply it.
+- **The MCP assistant logs meals as said**: its instructions and
+  `log_meal` now ask it to call `list_foods` and pass the foods named,
+  to keep the user's own words (the quantities are read in them), to
+  leave the meal type empty unless it is said (5 h is a breakfast, not a
+  snack) and to say which lines come from the user's sheets.
 - **« Supprimer les données importées » asks first**: it erased every
   Apple export value at one click; it now asks for confirmation.
 - **Report times in the page**: the list of reports showed the creation

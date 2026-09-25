@@ -44,7 +44,8 @@ def test_search_and_candidates_put_generic_foods_first() -> None:
 
 
 def _food(**kw: Any) -> Any:
-    base = {"aliases": "", "unit_g": None, "package_g": None}
+    base = {"aliases": "", "unit_g": None, "package_g": None, "brand": None,
+            "unit_name": None}  # fmt: skip
     return SimpleNamespace(**{**base, **kw})
 
 

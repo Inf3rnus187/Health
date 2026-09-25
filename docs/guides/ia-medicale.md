@@ -90,14 +90,28 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    produit, valeurs pour 100 g, poids net). **Votre description fait
    foi** (quantités, cuisson, absence de matière grasse).
 2. **Mes aliments** → les aliments choisis dans le formulaire et ceux
-   que la description **nomme** (tous les mots de leur nom, ou un de
-   leurs autres noms, sans accents, singulier ou pluriel) sont donnés
+   que la description **nomme** sont donnés
    au modèle texte avec leurs **valeurs** et leurs **grammes**, « ils
    font foi ». Les grammes sont **lus par le code** dans la description
    (`meal_quantity`) : grammes écrits à côté (« saumon 100g », « 150 g
    de riz »), sinon un compte (« 2 », « deux », « un demi », « ½ »,
    « 1/2 ») × le poids d'une unité de la fiche, ou × le paquet pour
-   « sachet », « boîte », « pot »…
+   « sachet », « boîte », « pot »… (une boîte sans nombre = une).
+   **Nommer un aliment** (`food_match`, par le code, sans accents,
+   singulier ou pluriel), dans chaque morceau de la description
+   (séparés par des virgules, « et », « + », « avec ») : tout son nom
+   ou un de ses autres noms ; ou **un mot de son nom** (« saumon »)
+   quand le reste du morceau n'est que des mots à lui (son nom, sa
+   marque, son unité « pavé »), un nombre, une taille (« petite »), un
+   emballage ou un mot neutre (« nature », « cuit », « grillé »), **et**
+   qu'un emballage, son unité, sa marque ou deux mots de son nom le
+   confirment. « un pavé de saumon » → « Saumon sauvage rose » (1 pavé
+   = 100 g) ; « petite boîte d'aubergines » → « Aubergines cuisinées à
+   la provençale ». Mais « filet de poulet » ne nomme pas « Poulet
+   basquaise » (« filet » n'est pas à lui), ni « 2 pommes » « Pommes
+   rissolées » (rien ne confirme), ni « sachet de riz basmati » un
+   autre riz ; un morceau qui va à deux fiches autant n'en nomme
+   aucune (la table Ciqual décide).
 3. **Table Ciqual** → pour les mots de la description et de la photo, le
    code cherche dans la table Ciqual 2025 de l'ANSES (embarquée, hors
    ligne) les références possibles : noms qui commencent par le mot,
@@ -124,7 +138,10 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    ne voit contrôlée que sa quantité. Un aliment de « Mes
    aliments » est ensuite **recalculé par le code** depuis son étiquette
    pour les grammes mangés (ceux du formulaire, sinon ceux estimés,
-   sinon le poids du paquet) et marqué « étiquette » ; un aliment choisi
+   sinon le poids du paquet) et marqué « étiquette » : la ligne du
+   modèle pour cet aliment (« Saumon » pris dans la table Ciqual,
+   « Pavé de saumon grillé ») est remplacée, une **seconde ligne** pour
+   lui est retirée (pas de double compte) ; un aliment choisi ou nommé
    que le modèle a oublié est ajouté (s'il a des grammes ou un poids de
    paquet).
 7. Les totaux deviennent des relevés `meal` à l'heure du repas, dans les

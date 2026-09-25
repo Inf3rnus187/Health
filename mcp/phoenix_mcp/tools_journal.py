@@ -61,15 +61,22 @@ async def log_meal(
 ) -> Any:
     """Log a meal, then the AI reads it (minutes; poll get_meal).
 
-    meal_type: breakfast, lunch, snack or dinner (empty: from the hour
-    it was eaten). The description is
-    authoritative (quantities, cooking, no fat…); an optional photo helps
-    estimate portions. ``more_photos_base64``: up to 6 more pictures (the
-    box, the sachet, its nutrition table), whose labels are read.
-    ``foods``: foods of the user's list eaten (list_foods), as
-    ``[{"food_id": "…", "grams": 125}]`` (grams null: estimated) — they
-    are computed from their label; a food the description names is found
-    anyway. Nutrients go to Apple's nutrition metrics.
+    Call list_foods first. ``description``: the user's own words, with
+    their quantities (« 2 tomates, un pavé de saumon »), never a summary:
+    the hub reads the grams in it. ``foods``: the foods of the user's
+    list they name, as ``[{"food_id": "…", "grams": null}]`` (grams only
+    when said; null: read from the description — « un pavé » = the
+    food's unit, « une boîte » = its package — else estimated); they are
+    computed from their label. A food the description names is found
+    anyway (its name, an alias, or « pavé de saumon » for « Saumon
+    sauvage rose »). meal_type: breakfast, lunch, snack or dinner, only
+    when the user says it (empty: from the hour eaten). ``eaten_at``:
+    ISO time when not now. An optional photo helps estimate portions;
+    ``more_photos_base64``: up to 6 more pictures (the box, the sachet,
+    its nutrition table), whose labels are read. Nutrients go to Apple's
+    nutrition metrics. In get_meal, an item's ``source`` says where its
+    values come from: "étiquette" (the user's sheet), "Ciqual", or none
+    (the model's estimate).
 
     Health follow-up only: never a work proof, no price. A meal paid
     for (receipt, delivery, expense report) is a proof: add_evidence

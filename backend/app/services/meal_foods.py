@@ -1,13 +1,15 @@
 """The catalogue foods of a meal, and their label values in its reading.
 
 A meal's foods are those the user picked, plus those its description
-names (the food's name, or one of its aliases: « riz sachet »). Their
-grams: the form's, else what the description says (:mod:`meal_quantity`:
-« 2 tomates » = 2 × the food's unit). The model is told their label
-values and grams as authoritative, and its answer is then corrected: a
-catalogue food's nutrients come from its label for the grams eaten (else
-the model's estimate, else the package's weight); a picked food the
-model forgot is added.
+names (:mod:`food_match`: its name, an alias « riz sachet », or « un
+pavé de saumon » for « Saumon sauvage rose »). Their grams: the form's,
+else what the description says (:mod:`meal_quantity`: « 2 tomates » =
+2 × the food's unit). The model is told their label values and grams as
+authoritative, and its answer is then corrected: a catalogue food's
+nutrients come from its label for the grams eaten (else the model's
+estimate, else the package's weight); the model's own line for such a
+food (« Saumon » from the Ciqual table) is replaced, a second one
+dropped; a food the model forgot is added.
 """
 
 from __future__ import annotations
@@ -19,8 +21,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.food import Food
 from app.models.meal import Meal
 from app.services import foods as food_service
+from app.services.food_match import fits, named
 from app.services.meal_quantity import grams_in
-from app.services.text_norm import singular, tokens
 
 #: The label values copied onto an item (energy apart: from the label).
 NUTRIENTS = (
@@ -41,19 +43,8 @@ async def of_meal(session: AsyncSession, meal: Meal) -> list[Portion]:
         if food is not None:
             picked.append((food, entry.get("grams") or grams_in(food, said)))
     taken = {food.id for food, _ in picked}
-    named = [f for f in known if f.id not in taken and named_in(f, said)]
-    return picked + [(food, grams_in(food, said)) for food in named]
-
-
-def named_in(food: Food, text: str) -> bool:
-    """Whether ``text`` names the food (all words of its name, or an alias)."""
-    words = set(_plain(text).split())
-    name = [w for w in _plain(food.name).split() if len(w) > 2]  # noqa: PLR2004
-    if name and all(w in words for w in name):
-        return True
-    said = f" {_plain(text)} "
-    aliases = [_plain(a) for a in food.aliases.split(",")]
-    return any(a and f" {a} " in said for a in aliases)
+    said_foods = [f for f in named(known, said) if f.id not in taken]
+    return picked + [(food, grams_in(food, said)) for food in said_foods]
 
 
 def context(portions: list[Portion]) -> list[dict[str, Any]]:
@@ -83,7 +74,8 @@ def apply(
     for item in items:
         match = _match(item, portions, used)
         if match is None:
-            out.append(item)
+            if not _again(item, portions, used):
+                out.append(item)
             continue
         used.add(match[0].id)
         out.append(_labelled(match, item.get("grams")))
@@ -101,7 +93,18 @@ def _match(
     by_id = next((p for p in free if p[0].id == item.get("food_id")), None)
     if by_id is not None:
         return by_id
-    return next((p for p in free if named_in(p[0], str(item["name"]))), None)
+    return next((p for p in free if fits(p[0], str(item["name"]))), None)
+
+
+def _again(
+    item: dict[str, Any], portions: list[Portion], used: set[str]
+) -> bool:
+    """Whether the item is a second line for a food already counted."""
+    done = [food for food, _ in portions if food.id in used]
+    return any(
+        food.id == item.get("food_id") or fits(food, str(item["name"]))
+        for food in done
+    )
 
 
 def _labelled(portion: Portion, eaten: Any) -> dict[str, Any]:
@@ -123,8 +126,3 @@ def _labelled(portion: Portion, eaten: Any) -> dict[str, Any]:
         "food_id": food.id,
         "source": "étiquette",
     }
-
-
-def _plain(text: str) -> str:
-    """Lower case, no accents, singular words (« Tomates » → « tomate »)."""
-    return " ".join(singular(w) for w in tokens(text))
