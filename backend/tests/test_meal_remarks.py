@@ -103,3 +103,12 @@ def test_added_sugar_needs_sugar_in_the_ingredients() -> None:
     known = meal_remarks.numbers(ITEMS, TOTALS, [*SHEETS, plain])
     said = "Les aubergines contiennent du sucre ajouté."
     assert meal_remarks.clean([said], True, known) == []
+
+
+def test_a_nova_3_is_processed_but_not_ultra_processed() -> None:
+    said = "Les aubergines, Nutri-Score A, ne sont pas transformées (NOVA 3)."
+    assert _checked(said) == [
+        "Les aubergines, Nutri-Score A, sont transformées (NOVA 3)."
+    ]
+    right = "Les aubergines ne sont pas ultra-transformées (NOVA 3)."
+    assert _checked(right) == [right]

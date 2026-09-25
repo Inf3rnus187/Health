@@ -182,7 +182,10 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    légumes. « **ultra-transformé** » dit d'aliments dont le groupe NOVA
    est connu et inférieur à 4 devient « transformé » (NOVA 3) ou « peu
    transformé » (1, 2) — le modèle reçoit aussi ce que veut dire leur
-   groupe (« 3 : transformé, PAS ultra-transformé »). « **sucre
+   groupe (« 3 : transformé, PAS ultra-transformé ») ; « ne sont pas
+   transformées » dit d'un NOVA 3 ou 4 devient « sont transformées »
+   (« ultra-transformées » pour 4) ; « pas ultra-transformé », vrai d'un
+   NOVA 3, reste tel quel. « **sucre
    ajouté** » dit d'aliments dont les ingrédients sont connus en entier
    et ne contiennent aucun sucre (sucre, sirop, glucose, fructose,
    dextrose, saccharose) retire la remarque. Une remarque trop longue

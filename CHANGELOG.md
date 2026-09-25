@@ -32,7 +32,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **NOVA, percentages and added sugar checked in remarks**: the
   remarks called a NOVA 3 pack (« transformé ») « ultra-transformé »
-  (that is NOVA 4). The judgement prompt now says what each group
+  (that is NOVA 4), then « pas transformé »; « ne sont pas
+  transformées » said of NOVA 3 or 4 is now corrected too, while « pas
+  ultra-transformé », true of NOVA 3, is kept as written. The judgement prompt now says what each group
   means, and the code corrects « ultra-transformé » said of foods known
   to be NOVA 1 to 3; a percentage quoted must be in the named foods'
   ingredients or fruits-and-vegetables share (else its brackets are

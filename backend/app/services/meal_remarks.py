@@ -12,7 +12,10 @@
   it are cut, or the remark is dropped: « grâce au saumon (24,6 g) » —
   the meal's protein; the salmon has 20,5 g — loses its brackets.
 * « ultra-transformé » said of foods whose NOVA group is known and
-  below 4 becomes « transformé » (NOVA 3) or « peu transformé » (1, 2).
+  below 4 becomes « transformé » (NOVA 3) or « peu transformé » (1, 2);
+  « ne sont pas transformées » said of NOVA 3 or 4 becomes « sont
+  transformées » (« ultra-transformées » for 4). « pas ultra-transformé »,
+  true of NOVA 3, stays.
 * « sucre ajouté » said of foods whose whole ingredients are known and
   hold no sugar drops the remark.
 * A remark too long ends at its last full sentence, never mid-word.
@@ -52,7 +55,16 @@ _QTY = re.compile(r"(\d+(?:[.,]\d+)?)\s*(?:mg|g|kcal|µg)\b", re.IGNORECASE)
 _PCT = re.compile(r"(\d+(?:[.,]\d+)?)\s*%")
 _NUMBER = re.compile(r"\d+(?:[.,]\d+)?")
 _ASIDE = re.compile(r"\s*\([^()]*\)")
-_ULTRA = re.compile(r"ultra[- ]?transform[ée](e?s?)", re.IGNORECASE)
+#: « ultra-transformé », but not « pas / non ultra-transformé » (true of 3).
+_ULTRA = re.compile(
+    r"(?<!pas )(?<!non )(?<!non-)ultra[- ]?transform[ée](e?s?)", re.IGNORECASE
+)
+#: « ne sont pas transformées », « non transformé »: false of NOVA 3, 4.
+_NOT = re.compile(
+    r"\bn(?:e\s+|')(sont|est)\s+pas\s+transform[ée](e?s?)"
+    r"|\bnon[- ]transform[ée](e?s?)",
+    re.IGNORECASE,
+)
 _ADDED_SUGAR = re.compile(r"sucres? ajout|ajouts? de sucre", re.IGNORECASE)
 _SUGARS = ("sucre", "sirop", "glucose", "fructose", "dextrose", "saccharose")
 _MEAL_WORDS = frozenset("total totale repas ensemble".split())
@@ -135,12 +147,24 @@ def _known(raw: str, allowed: set[float]) -> bool:
 
 
 def _nova(text: str, foods: list[Said]) -> str:
-    """« ultra-transformé » said of foods known to be NOVA 1 to 3, fixed."""
+    """What the remark says of processing, made true to the NOVA group."""
     groups = [f.nova for f in foods if f.nova is not None]
-    if not groups or max(groups) >= _ULTRA_NOVA:
+    if not groups:
         return text
-    word = "transformé" if max(groups) == _PROCESSED_NOVA else "peu transformé"
-    return _ULTRA.sub(lambda m: word + m[1], text)
+    top = max(groups)
+    if top < _PROCESSED_NOVA:
+        return _ULTRA.sub(lambda m: "peu transformé" + m[1], text)
+    word = "ultra-transformé" if top >= _ULTRA_NOVA else "transformé"
+    if top == _PROCESSED_NOVA:
+        text = _ULTRA.sub(lambda m: word + m[1], text)
+    return _NOT.sub(lambda m: _said_so(m, word), text)
+
+
+def _said_so(match: re.Match[str], word: str) -> str:
+    """« ne sont pas transformées » → « sont transformées »."""
+    if match[1]:
+        return f"{match[1]} {word}{match[2]}"
+    return f"{word}{match[3]}"
 
 
 def _no_sugar(foods: list[Said]) -> bool:
