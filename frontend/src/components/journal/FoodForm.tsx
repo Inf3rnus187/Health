@@ -1,6 +1,7 @@
+import { useMutation } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
 
-import { type Food, foodPhotoPath } from '../../api/foods';
+import { type Food, foodPhotoPath, scanBarcode } from '../../api/foods';
 import {
   type NewPhoto,
   useDeleteFoodPhoto,
@@ -152,11 +153,14 @@ function Stored({ food }: { food: Food }) {
   );
 }
 
-function usePhotos(onLabel: (file: File) => void) {
+function usePhotos(onLabel: (file: File) => void, onPack: (f: File) => void) {
   const [photos, setPhotos] = useState<NewPhoto[]>([]);
   const add = (kind: NewPhoto['kind']) => (files: File[]) => {
     setPhotos((now) => [...now, ...files.map((file) => ({ file, kind }))]);
-    if (kind === 'label' && files[0]) onLabel(files[0]);
+    const first = files[0];
+    if (!first) return;
+    if (kind === 'label') onLabel(first);
+    else onPack(first);
   };
   const drop = (index: number) =>
     setPhotos((now) => now.filter((_, i) => i !== index));
@@ -166,14 +170,15 @@ function usePhotos(onLabel: (file: File) => void) {
 type Panel = 'ciqual' | 'barcode';
 const PANELS: [Panel, string][] = [
   ['ciqual', '🔎 Table Ciqual (aliment courant)'],
-  ['barcode', '▥ Code-barres (Open Food Facts)'],
+  ['barcode', '▥ Code-barres (scan ou saisie)'],
 ];
 
-/** Fill the sheet from the Ciqual table or a barcode (one panel open). */
-function Fill(props: {
+type FillProps = Parameters<typeof BarcodeLookup>[0] & {
   onCiqual: Parameters<typeof CiqualSearch>[0]['onPick'];
-  onFound: Parameters<typeof BarcodeLookup>[0]['onFound'];
-}) {
+};
+
+/** Fill the sheet from the Ciqual table or a barcode (one panel open). */
+function Fill({ onCiqual, ...barcode }: FillProps) {
   const [open, setOpen] = useState<Panel | null>(null);
   return (
     <>
@@ -189,8 +194,8 @@ function Fill(props: {
           </button>
         ))}
       </div>
-      {open === 'ciqual' && <CiqualSearch onPick={props.onCiqual} />}
-      {open === 'barcode' && <BarcodeLookup onFound={props.onFound} />}
+      {open === 'ciqual' && <CiqualSearch onPick={onCiqual} />}
+      {open === 'barcode' && <BarcodeLookup {...barcode} />}
     </>
   );
 }
@@ -201,7 +206,21 @@ function useFill(setDraft: (next: (now: FoodDraft) => FoodDraft) => void) {
       setDraft((now) => withCiqual(now, ref)),
     onFound: (found: Parameters<typeof withReading>[1]) =>
       setDraft((now) => withReading(now, found)),
+    onCode: (barcode: string) => setDraft((now) => ({ ...now, barcode })),
   };
+}
+
+/** A pack photo may show the barcode: keep it when the sheet has none. */
+function usePackCode(setDraft: (next: (now: FoodDraft) => FoodDraft) => void) {
+  const scan = useMutation({ mutationFn: scanBarcode });
+  return (file: File) =>
+    scan.mutate(file, {
+      onSuccess: (r) => {
+        const code = r.barcodes[0];
+        if (code)
+          setDraft((now) => (now.barcode ? now : { ...now, barcode: code }));
+      },
+    });
 }
 
 function useFoodForm(food: Food | null, onDone: () => void) {
@@ -212,7 +231,7 @@ function useFoodForm(food: Food | null, onDone: () => void) {
     read.mutate(file, {
       onSuccess: (found) => setDraft((now) => withReading(now, found)),
     });
-  const shots = usePhotos(onLabel);
+  const shots = usePhotos(onLabel, usePackCode(setDraft));
   const save = useSaveFood();
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -256,7 +275,7 @@ export function FoodForm(props: { food: Food | null; onDone: () => void }) {
   return (
     <form className="form-box food-form" onSubmit={f.onSubmit}>
       <Photos food={props.food} shots={f.shots} reading={f.read.isPending} />
-      <Fill onCiqual={f.fill.onCiqual} onFound={f.fill.onFound} />
+      <Fill {...f.fill} />
       {f.read.isSuccess && (
         <p className="muted">Valeurs lues par l’IA : vérifiez-les.</p>
       )}

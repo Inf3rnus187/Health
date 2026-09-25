@@ -5,9 +5,11 @@ import {
   type CiqualRef,
   type LabelReading,
   lookupBarcode,
+  type ScanResult,
   searchCiqual,
 } from '../../api/foods';
 import { frNumber } from '../../utils/format';
+import { BarcodeScan } from './BarcodeScan';
 
 function RefButton(props: { r: CiqualRef; onPick: (r: CiqualRef) => void }) {
   const kcal = props.r.per_100g.energy_kcal;
@@ -62,29 +64,60 @@ export function CiqualSearch({ onPick }: { onPick: (r: CiqualRef) => void }) {
   );
 }
 
-/** A barcode looked up on Open Food Facts (when the hub allows it). */
-export function BarcodeLookup(props: {
-  onFound: (found: LabelReading) => void;
-}) {
+/** What a scan found, in words. */
+function scanText(r: ScanResult): string {
+  const code = r.barcodes[0];
+  if (!code) return r.note || 'Aucun code-barres lisible';
+  if (r.food)
+    return `Code ${code} : déjà dans vos aliments (« ${r.food.name} »).`;
+  if (r.product)
+    return `Code ${code} : trouvé sur Open Food Facts, à vérifier.`;
+  const why = r.online ? r.note : 'recherche en ligne désactivée';
+  return `Code ${code} lu (${why}) : remplissez les valeurs vous-même.`;
+}
+
+function useLookup(props: BarcodeProps) {
   const [code, setCode] = useState('');
+  const [said, setSaid] = useState('');
   const look = useMutation({ mutationFn: lookupBarcode });
   const go = () =>
     look.mutate(code.replace(/\D/g, ''), { onSuccess: props.onFound });
+  const onScan = (r: ScanResult) => {
+    setSaid(scanText(r));
+    const found = r.barcodes[0];
+    if (!found) return;
+    setCode(found);
+    if (r.product) props.onFound(r.product);
+    else props.onCode(found);
+  };
+  return { code, setCode, said, look, go, onScan };
+}
+
+interface BarcodeProps {
+  onFound: (found: LabelReading) => void;
+  onCode: (code: string) => void;
+}
+
+/** A barcode scanned (camera, photo) or typed; Open Food Facts if allowed. */
+export function BarcodeLookup(props: BarcodeProps) {
+  const b = useLookup(props);
   return (
     <div className="food-source">
+      <BarcodeScan onResult={b.onScan} />
+      {b.said && <p className="muted small">{b.said}</p>}
       <div className="quick">
         <input
           className="input"
           inputMode="numeric"
-          value={code}
-          placeholder="13 chiffres sous le code-barres"
-          onChange={(e) => setCode(e.target.value)}
+          value={b.code}
+          placeholder="ou les 13 chiffres sous le code-barres"
+          onChange={(e) => b.setCode(e.target.value)}
         />
-        <button type="button" className="btn ghost" onClick={go}>
-          {look.isPending ? 'Recherche…' : 'Chercher'}
+        <button type="button" className="btn ghost" onClick={b.go}>
+          {b.look.isPending ? 'Recherche…' : 'Chercher'}
         </button>
       </div>
-      {look.isError && <p className="error">{look.error.message}</p>}
+      {b.look.isError && <p className="error">{b.look.error.message}</p>}
     </div>
   );
 }

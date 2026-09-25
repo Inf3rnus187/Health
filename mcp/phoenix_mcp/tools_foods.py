@@ -82,6 +82,19 @@ async def lookup_barcode(barcode: str) -> Any:
 
 
 @mcp.tool()
+async def scan_barcode(photo_base64: str) -> Any:
+    """Read a pack's barcode on a photo, decoded on the hub (offline).
+
+    Returns the barcodes read, ``food`` (my food with that barcode, or
+    null), ``product`` (an Open Food Facts proposal, only when the hub
+    allows it; only the barcode is sent) and ``note``.
+    """
+    raw = base64.b64decode(photo_base64)
+    files = {"file": ("code-barres.jpg", raw, "image/jpeg")}
+    return await client.upload("/foods/scan", files, {})
+
+
+@mcp.tool()
 async def delete_food(food_id: str) -> Any:
     """Delete a food and its photos (meals keep their reading)."""
     return await client.request("DELETE", f"/foods/{food_id}")

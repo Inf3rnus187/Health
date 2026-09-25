@@ -8,13 +8,15 @@ from fastapi import APIRouter, Depends, Form, UploadFile, status
 from fastapi.responses import Response
 
 from app.core.deps import Principal, ReaderDep, SessionDep, require_scope
+from app.core.deps_query import require_scope_flex
 from app.core.scopes import WRITE_MEASUREMENTS
 from app.schemas.food import FoodOut
-from app.services import food_label, food_photos, foods
+from app.services import food_label, food_photos, food_scan, foods
 
 router = APIRouter(prefix="/foods", tags=["journal"])
 
 WriteDep = Annotated[Principal, Depends(require_scope(WRITE_MEASUREMENTS))]
+TapDep = Annotated[Principal, Depends(require_scope_flex(WRITE_MEASUREMENTS))]
 
 
 @router.post("/read-label")
@@ -27,6 +29,22 @@ async def read_label(principal: WriteDep, file: UploadFile) -> dict[str, Any]:
     """
     del principal
     return await food_label.read(await file.read())
+
+
+@router.post("/scan")
+async def scan(
+    principal: TapDep, session: SessionDep, file: UploadFile
+) -> dict[str, Any]:
+    """Read a pack's barcode on a photo (camera or gallery), offline.
+
+    Answers ``barcodes`` (EAN-13, EAN-8, UPC; best first), ``food`` (the
+    user's food with that barcode, or null), ``product`` (Open Food
+    Facts' proposal when ``FOOD_LOOKUP_ONLINE=true`` and no food of the
+    list has the code, else null), ``online`` and a ``note`` (why no
+    code or no product). Nothing is saved, the photo is not kept. An
+    iPhone Shortcut may pass its token as ``?token=``.
+    """
+    return await food_scan.scan(session, principal.user.id, await file.read())
 
 
 @router.post(

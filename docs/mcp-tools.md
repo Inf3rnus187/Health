@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-105 outils.
+106 outils.
 
 ## Données et métriques
 
@@ -379,6 +379,16 @@ Needs FOOD_LOOKUP_ONLINE=true on the hub; only the barcode is sent.
 A proposal to check, then save_food.
 
 Paramètres : `barcode`* (string)
+
+### `scan_barcode`
+
+Read a pack's barcode on a photo, decoded on the hub (offline).
+
+Returns the barcodes read, ``food`` (my food with that barcode, or
+null), ``product`` (an Open Food Facts proposal, only when the hub
+allows it; only the barcode is sent) and ``note``.
+
+Paramètres : `photo_base64`* (string)
 
 ### `delete_food`
 

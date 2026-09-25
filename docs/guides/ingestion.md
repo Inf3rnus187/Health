@@ -36,6 +36,7 @@ other sources). Required token scope per route:
 | Food photo: multipart `file`, form `kind` (`pack` default, or `label`) | `POST /foods/{id}/photos`, `DELETE /foods/{id}/photos/{photo_id}` | `write:measurements` |
 | Read a pack or its nutrition table with the vision model: multipart `file` → a proposal (`name`, `brand`, `package_g`, `per_100g`), nothing saved; runs inside the API, 100 s at most | `POST /foods/read-label` | `write:measurements` |
 | Ciqual 2025 reference values (offline table): `?q=` (2–100 characters, every word must match), `limit` (1–50, default 20); one food by code | `GET /ciqual`, `GET /ciqual/{code}` | `read:all` |
+| A pack's barcode read on a photo (camera or gallery), decoded on the hub offline (EAN-13, EAN-8, UPC): multipart `file` → `barcodes`, `food` (my food with that barcode or null), `product` (Open Food Facts proposal only when `FOOD_LOOKUP_ONLINE=true`, else null), `online`, `note`. Nothing saved, the photo is not kept | `POST /foods/scan` | `write:measurements` (+ `?token=`) |
 | A packaged food by barcode (8–14 digits) from Open Food Facts → a proposal, nothing saved. Off by default: `422` unless `FOOD_LOOKUP_ONLINE=true`; only the barcode is sent | `GET /openfoodfacts/{barcode}` | `write:measurements` |
 | Any script (sets — **replaces** — a day's value) | `POST /measurements` | `write:measurements` |
 

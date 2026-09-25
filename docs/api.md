@@ -351,6 +351,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | GET | `/foods` | `read:all` | — | The user's foods, by name. |
 | POST | `/foods` | `write:measurements` | JSON `FoodIn` (name, brand, aliases, package_g, unit_name, unit_g, per_100g, note, source, barcode) | Add a food: name, brand, aliases, package weight, values per 100 g. |
 | POST | `/foods/read-label` | `write:measurements` | form `file` | Read a pack or its nutrition table with the vision model. |
+| POST | `/foods/scan` | `write:measurements` + ?token= | form `file` | Read a pack's barcode on a photo (camera or gallery), offline. |
 | DELETE | `/foods/{food_id}` | `write:measurements` | `food_id` | Delete a food and its photos. |
 | GET | `/foods/{food_id}` | `read:all` | `food_id` | One food. |
 | PUT | `/foods/{food_id}` | `write:measurements` | `food_id`, JSON `FoodIn` (name, brand, aliases, package_g, unit_name, unit_g, per_100g, note, source, barcode) | Change a food (every field; the meals already read keep theirs). |

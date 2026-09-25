@@ -129,6 +129,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Barcode from a photo or the camera**: in Mes aliments › « ▥
+  Code-barres (scan ou saisie) », « 📷 Scanner le code-barres » opens
+  the camera and « 🖼️ Photo du code-barres » takes a photo from the
+  gallery; the hub decodes it itself, offline (zxing-cpp, EAN-13,
+  EAN-8, UPC), and the photo is not kept. A food of your list with that
+  barcode is named, otherwise Open Food Facts proposes the product when
+  `FOOD_LOOKUP_ONLINE=true` (the barcode only is sent), otherwise the
+  code is put on the sheet. A « 📦 Photo de la boîte » showing the
+  barcode fills the sheet's barcode too. In a meal (new or changed),
+  « ▥ Scanner un code-barres » chooses your food with that barcode.
+  `POST /foods/scan` (form `file`; `?token=` for an iPhone Shortcut),
+  MCP `scan_barcode`.
 - **The AI synthesis knows the adherence**: its facts now include, per
   treatment with doses recorded over the last 30 days, the doses taken
   out of planned, the rate, the days without any entry, the longest gap,

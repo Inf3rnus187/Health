@@ -1,8 +1,9 @@
 import { useState } from 'react';
 
-import type { Food, FoodPortion } from '../../api/foods';
+import type { Food, FoodPortion, ScanResult } from '../../api/foods';
 import { useFoods } from '../../hooks/useFoods';
 import { frNumber } from '../../utils/format';
+import { BarcodeScan } from './BarcodeScan';
 
 function Chip(props: { name: string; p: FoodPortion; onDrop: () => void }) {
   const { p } = props;
@@ -76,6 +77,39 @@ function Select(props: { foods: Food[]; p: ReturnType<typeof usePick> }) {
   );
 }
 
+/** What a scan did to the choice, in words. */
+function scanned(r: ScanResult): string {
+  const code = r.barcodes[0];
+  if (!code) return r.note || 'Aucun code-barres lisible';
+  if (r.food) return `« ${r.food.name} » choisi : grammes puis Ajouter.`;
+  return `Produit ${code} absent de vos aliments : créez sa fiche.`;
+}
+
+/** Scan a pack: my food with that barcode gets chosen in the list. */
+function Scan(props: { p: ReturnType<typeof usePick> }) {
+  const [open, setOpen] = useState(false);
+  const [said, setSaid] = useState('');
+  const onResult = (r: ScanResult) => {
+    setSaid(scanned(r));
+    if (r.food) props.p.setId(r.food.id);
+  };
+  return (
+    <>
+      <div className="quick">
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={() => setOpen(!open)}
+        >
+          ▥ Scanner un code-barres
+        </button>
+      </div>
+      {open && <BarcodeScan onResult={onResult} />}
+      {open && said && <p className="muted small">{said}</p>}
+    </>
+  );
+}
+
 function Choose(props: { foods: Food[]; p: ReturnType<typeof usePick> }) {
   const { p } = props;
   return (
@@ -112,6 +146,7 @@ export function FoodPick(props: {
         reconnu aussi)
       </span>
       <Choose foods={foods} p={p} />
+      <Scan p={p} />
       <Chosen value={props.value} foods={foods} onDrop={p.drop} />
     </div>
   );

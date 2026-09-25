@@ -62,6 +62,7 @@ async def test_every_area_of_the_hub_has_tools() -> None:
         "list_foods",
         "save_food",
         "read_food_label",
+        "scan_barcode",
     }
     assert expected <= names
     assert len(names) >= 50
@@ -278,6 +279,9 @@ async def test_a_meal_with_its_sachet_and_a_food_of_the_list() -> None:
     await tools_foods.search_ciqual("tomate crue")
     assert seen[3].url.path == "/api/v1/ciqual"
     assert seen[3].url.params["q"] == "tomate crue"
+    await tools_foods.scan_barcode("SGVsbG8=")
+    assert seen[4].url.path == "/api/v1/foods/scan"
+    assert b"Hello" in seen[4].content
 
 
 async def test_period_facts_and_report_check() -> None:

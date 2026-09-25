@@ -97,6 +97,23 @@ export const searchCiqual = (q: string) =>
 export const lookupBarcode = (code: string) =>
   api<LabelReading>(`/openfoodfacts/${encodeURIComponent(code)}`);
 
+/** A barcode read on a photo: my food with that code, or the product. */
+export interface ScanResult {
+  barcodes: string[];
+  food: Food | null;
+  product: LabelReading | null;
+  /** Whether the hub may look a product up on Open Food Facts. */
+  online: boolean;
+  note: string;
+}
+
+/** Read a pack's barcode on a photo (camera or gallery), on the hub. */
+export function scanBarcode(file: File) {
+  const form = new FormData();
+  form.set('file', file);
+  return send<ScanResult>('/foods/scan', form);
+}
+
 /** Read a label with the AI (nothing saved). */
 export function readLabel(file: File) {
   const form = new FormData();

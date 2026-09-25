@@ -182,7 +182,10 @@ Depuis un autre poste, la même commande à travers SSH :
   autres noms, poids du paquet, **unité** `unit_name` / `unit_g`,
   source, code-barres), `search_ciqual` (table Ciqual 2025, hors ligne),
   `lookup_barcode` (Open Food Facts, seulement si
-  `FOOD_LOOKUP_ONLINE=true`), `read_food_label` (lit l'étiquette : une
+  `FOOD_LOOKUP_ONLINE=true`), `scan_barcode` (une photo du code-barres,
+  lue par le hub hors ligne : l'aliment de la liste qui porte ce code,
+  sinon la proposition Open Food Facts si elle est activée ; rien n'est
+  enregistré), `read_food_label` (lit l'étiquette : une
   proposition, rien n'est enregistré), `add_food_photo`, `delete_food`.
 - **Médicaments** : « j'ai pris ma paroxétine » (`log_medication`, par
   le nom ; `status` `skipped` = non pris), `medications_today`,

@@ -148,7 +148,10 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
   type (petit-déjeuner, déjeuner, collation, dîner),
   date et heure, **description** (quantités, cuisson, « sans huile ni
   beurre »…), **aliments de ma liste** (facultatif : un aliment de « Mes
-  aliments » et les grammes mangés, vide = estimés) et jusqu'à **7
+  aliments » et les grammes mangés, vide = estimés ; **« ▥ Scanner un
+  code-barres »** photographie le paquet — appareil photo ou galerie —
+  et choisit l'aliment de la liste qui porte ce code, reste à mettre
+  les grammes puis « Ajouter ») et jusqu'à **7
   photos** : « 📷 Prendre une photo » (l'appareil photo, une à la fois)
   ou « 🖼️ Galerie » (plusieurs d'un coup, par exemple celles d'hier). La
   **première est l'assiette**, les suivantes l'emballage : la boîte, le
@@ -217,12 +220,24 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
   - « 🔎 Table Ciqual (aliment courant) » : chercher « tomate crue »,
     « saumon vapeur »… et toucher un résultat prend ses valeurs
     (source « Ciqual 2025 · code · nom ») ;
-  - « ▥ Code-barres (Open Food Facts) » : les 13 chiffres sous le code
-    → nom, marque, poids, valeurs du produit. **Désactivé par défaut**
-    (le hub ne sort pas sur Internet) : l'administrateur l'active avec
-    `FOOD_LOOKUP_ONLINE=true` ; seul le code-barres est envoyé.
-    Collaboratif : vérifiez contre le paquet ;
-  - « 📦 Photo de la boîte » garde la photo de l'emballage.
+  - « ▥ Code-barres (scan ou saisie) » : **« 📷 Scanner le
+    code-barres »** ouvre l'appareil photo, **« 🖼️ Photo du
+    code-barres »** prend une photo déjà dans la galerie, ou l'on tape
+    les 13 chiffres sous le code puis « Chercher ». Le code est **lu
+    par le hub lui-même, hors ligne** (EAN-13, EAN-8, UPC ; photo
+    nette, code entier dans l'image, penché ou à l'envers accepté) et
+    la photo n'est pas gardée. Puis, dans l'ordre : un aliment de votre
+    liste porte déjà ce code → son nom s'affiche (« déjà dans vos
+    aliments ») ; sinon **Open Food Facts** propose nom, marque, poids
+    et valeurs du produit — **désactivé par défaut** (le hub ne sort
+    pas sur Internet) : l'administrateur l'active avec
+    `FOOD_LOOKUP_ONLINE=true` ; seul le code-barres est envoyé ;
+    collaboratif : vérifiez contre le paquet ; sinon le code est
+    simplement inscrit sur la fiche, et l'on remplit les valeurs
+    (étiquette, Ciqual) ;
+  - « 📦 Photo de la boîte » garde la photo de l'emballage ; si le
+    code-barres y est lisible, il est inscrit sur la fiche (quand elle
+    n'en a pas déjà un).
 
   On vérifie puis on enregistre. Chaque fiche est à son utilisateur
   seul.
@@ -379,8 +394,41 @@ description, aliments de ma liste, photos) ; outil MCP `log_meal`
 (`description`, `meal_type`, `eaten_at` ISO, `photo_base64`,
 `more_photos_base64`, `foods`). Les fiches d'aliments : **Journal › Mes
 aliments**, `GET/POST /api/v1/foods`, outils MCP `list_foods`,
-`save_food`, `read_food_label`, `add_food_photo`, `delete_food`. Une note
+`save_food`, `read_food_label`, `scan_barcode`, `add_food_photo`,
+`delete_food`. Une note
 de frais : `add_evidence` (MCP) ou Travail › Preuves (site).
+
+### Scanner un produit : est-il dans mes aliments ?
+
+Photographier le code-barres d'un paquet et savoir si sa fiche existe
+(ou ce qu'Open Food Facts en dit, si l'administrateur l'a activé).
+Rien n'est enregistré, la photo n'est pas gardée.
+
+**L'appel** — `POST /api/v1/foods/scan?token=<jeton>`
+(`write:measurements`), corps **Formulaire** : `file` (**Fichier** =
+la photo). Réponse JSON : `barcodes` (les codes lus, `[]` si aucun),
+`food` (votre aliment avec ce code, ou `null`), `product` (proposition
+Open Food Facts, ou `null`), `note` (pourquoi rien n'a été trouvé).
+
+**Le raccourci** :
+
+1. **Prendre une photo** (ou **Sélectionner des photos**) — le
+   code-barres entier, net, bien éclairé.
+2. **Obtenir le contenu de l'URL** — URL
+   `http://<hub>/api/v1/foods/scan?token=<jeton>`, méthode **POST**,
+   corps **Formulaire** : `file` (Fichier = la photo).
+3. **Obtenir la valeur du dictionnaire** `food` › `name` ;
+   **Si** elle a une valeur → **Afficher le résultat** « Dans mes
+   aliments : *Valeur* » ; **Sinon** → **Obtenir la valeur du
+   dictionnaire** `barcodes` puis **Afficher le résultat** « Pas
+   encore de fiche pour *Valeur* : Journal › Mes aliments ».
+
+En ligne de commande :
+
+```bash
+curl -s -X POST "http://<hub>/api/v1/foods/scan?token=$TOKEN" \
+  -F file=@code-barres.jpg
+```
 
 > Un raccourci déjà réglé sur `POST /api/v1/journal/urination?token=…`
 > (sans corps : maintenant ; ou `{"at": "…"}` en ISO) continue de

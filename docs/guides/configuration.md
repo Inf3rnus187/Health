@@ -235,7 +235,7 @@ docker compose ps
 | `MEDIA_DIR` / `EXPORTS_DIR` | Photos, documents, rapports (dans les conteneurs). |
 | `MEDIA_ENCRYPTION_KEY` | Chiffrement au repos des fichiers de `MEDIA_DIR` (clé Fernet ; vide = désactivé) : photos, documents médicaux, preuves, ECG, tracés GPS, document CDA. Pas les rapports, les exports, le tampon d'envoi ni la base. **Clé perdue = fichiers chiffrés perdus** : la sauvegarder avec `.env`. |
 | `MAX_UPLOAD_MB` | Taille maximale d'une photo (`15`) : corps, repas, aliments. |
-| `FOOD_LOOKUP_ONLINE` | `false` (défaut) : le hub ne sort pas sur Internet. `true` : « Code-barres (Open Food Facts) » dans Mes aliments interroge `OPENFOODFACTS_URL` avec **le code-barres seul** (ni compte, ni repas, ni donnée de santé). |
+| `FOOD_LOOKUP_ONLINE` | `false` (défaut) : le hub ne sort pas sur Internet. `true` : « Code-barres » dans Mes aliments (saisi, ou lu sur une photo quand aucun de vos aliments ne le porte) interroge `OPENFOODFACTS_URL` avec **le code-barres seul** (ni photo, ni compte, ni repas, ni donnée de santé). La lecture du code sur la photo se fait toujours sur le hub, hors ligne, et la photo n'est pas gardée. |
 | `OPENFOODFACTS_URL` | `https://world.openfoodfacts.org` (une instance miroir possible). |
 | `RETENTION_DAYS` | `0` = tout garder. |
 
@@ -340,7 +340,8 @@ pas l'avoir. Le droit exigé par chaque route est listé dans la
 (`write:measurements`) acceptent aussi le jeton en `?token=<jeton>` :
 `/imports/apple-health`, `/sync/tally`, `/sync/auto-export`, `/meals`,
 `/journal/urination`, `/logs/import`, `/work/import`, `/work/clock`,
-`/medications/take`, `/treatments/{id}/intakes` (toutes en `POST`).
+`/medications/take`, `/treatments/{id}/intakes`, `/foods/scan` (lit
+un code-barres, n'enregistre rien) (toutes en `POST`).
 Les journaux de l'API et de nginx écrivent `token=***`. Une URL peut
 tout de même finir dans un proxy ajouté devant, un historique ou un
 Raccourci partagé : un tel jeton ne doit porter que `write:measurements`,

@@ -28,6 +28,12 @@ security is a first‑class concern (§12).
   pre‑commit and CI.
 - **Transport**: the app speaks HTTP only internally; terminate TLS with your
   own reverse proxy.
+- **Outbound calls**: none with personal data. The one lookup, Open
+  Food Facts by barcode (`services/food_off.py`), is off by default
+  (`FOOD_LOOKUP_ONLINE=false`); when enabled it sends the barcode only
+  (no photo, account or meal) to `OPENFOODFACTS_URL`. A barcode on a
+  photo (`POST /foods/scan`) is decoded on the hub, offline
+  (`services/barcode_read.py`, zxing-cpp), and the photo is not kept.
 - **MFA (optional, no web screen yet)**: TOTP —
   `POST /auth/mfa/setup|enable|disable`, called with a web session's
   access token (never an API token); once enabled, `POST /auth/login`
@@ -97,7 +103,8 @@ API token as a query parameter (`require_scope_flex`,
 `core/deps_query.py`; an API token only, never a session JWT):
 `POST /imports/apple-health`, `/sync/tally`, `/sync/auto-export`,
 `/meals`, `/journal/urination`, `/logs/import`, `/work/import`,
-`/work/clock`, `/medications/take`, `/treatments/{id}/intakes`. Both
+`/work/clock`, `/medications/take`, `/treatments/{id}/intakes`,
+`/foods/scan` (reads a barcode, saves nothing). Both
 access logs write `token=***`, but a URL can still end up in a proxy you
 add in front, a browser history or a Shortcut shared with someone: give
 such a token `write:measurements` only, and revoke it if it leaks.
