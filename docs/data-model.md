@@ -176,6 +176,13 @@ Added by later migrations (each creates only its own tables, ADR‑0004):
   values come from: « étiquette », « Ciqual 2025 · code · name », « Open
   Food Facts · barcode », « saisie »), `barcode`, `photos` (`[{"id",
   "kind": "pack" | "label", "path"}]`).
+- `food_stock_moves` (`0022`) — a food's stock entries: `food_id`
+  (`CASCADE` with the food), `at`, `kind` (`purchase` +, `out` −,
+  `count`: the quantity left at that time), `grams`, `said` (« 3 × 185
+  g »), `note`, `source` (web, mcp, raccourci). What meals ate is **not**
+  stored: it is read from their analysis (lines of the food, source
+  « étiquette »; meals with a price excluded), after the last `count`,
+  else after the food's first move.
 - `medication_intakes` (`0019`) — one row per dose: `treatment_id` (`SET
   NULL` when the treatment is deleted), `name` and `dose` **copied** from
   the treatment at the time (the history survives its deletion),
@@ -331,3 +338,4 @@ fresh database built from the live models is left untouched (ADR‑0004).
 | `0019_medication_intakes` | `medication_intakes`; `treatments.doses_per_day`. |
 | `0020_report_hash` | `reports.sha256`. |
 | `0021_food_portion` | `foods.portion_g`. |
+| `0022_food_stock` | `food_stock_moves`. |

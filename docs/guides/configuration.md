@@ -341,7 +341,8 @@ pas l'avoir. Le droit exigé par chaque route est listé dans la
 `/imports/apple-health`, `/sync/tally`, `/sync/auto-export`, `/meals`,
 `/journal/urination`, `/logs/import`, `/work/import`, `/work/clock`,
 `/medications/take`, `/treatments/{id}/intakes`, `/foods/scan` (lit
-un code-barres, n'enregistre rien) (toutes en `POST`).
+un code-barres, n'enregistre rien), `/stock` (un achat scanné)
+(toutes en `POST`).
 Les journaux de l'API et de nginx écrivent `token=***`. Une URL peut
 tout de même finir dans un proxy ajouté devant, un historique ou un
 Raccourci partagé : un tel jeton ne doit porter que `write:measurements`,

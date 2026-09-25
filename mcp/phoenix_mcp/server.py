@@ -24,6 +24,7 @@ from phoenix_mcp import (  # noqa: F401 - importing registers the tools
     tools_meds,
     tools_record,
     tools_reports,
+    tools_stock,
     tools_work,
     tools_workfile,
 )

@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **`POST /stock` accepts `?token=`** (an iPhone Shortcut scanning
+  groceries): like the other Shortcut routes, the token needs
+  `write:measurements` only and is written `token=***` in the logs; it
+  can only add to the stock of the token owner's own foods.
 - **No token in the logs**: an iPhone Shortcut sends its API token in the
   URL (`?token=…`); the API's access log and nginx's now write
   `token=***` (the token stays valid, it just never lands in a log file).
@@ -145,6 +149,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Food stock**: « Stock » on a sheet of Mes aliments enters a
+  purchase (« J'ai acheté »), a count (« Il m'en reste ») or a loss
+  (« Jeté / donné »), in packs, units or grams, and shows what is left
+  (« 370 g (2 × 185 g) ») with its history. Meals are never entered:
+  what an analysed meal ate from a sheet is taken off by itself, so a
+  meal changed, read again or deleted corrects the stock; a bought meal
+  (with a price), a meal before the first purchase or before the last
+  count does not count. New table `food_stock_moves` (migration
+  `0022`); `GET/POST /stock` (`?token=` for the « Ranger les courses »
+  iPhone Shortcut: scan each pack's barcode), `GET
+  /stock/{food_id}/moves`, `DELETE /stock/moves/{id}`; MCP
+  `food_stock`, `add_stock`, `stock_history`, `delete_stock_move`, and
+  the assistant is told to suggest « what to cook tonight » from the
+  stock only, within what is left.
 - **One sheet per size, and my usual portion**: a food sheet has « Ma
   portion habituelle (g) », with « Toute la boîte », « ½ », « ¼ » to
   compute it from the package (migration `0021`, `portion_g`; MCP

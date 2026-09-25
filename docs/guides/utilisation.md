@@ -277,6 +277,26 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
   On vérifie puis on enregistre. Chaque fiche est à son utilisateur
   seul.
 
+  **Stock** (bouton « Stock » d'une fiche) : une quantité — en
+  boîtes (× le poids de la boîte), en unités (« 6 » tomates) ou en
+  grammes — puis **« J'ai acheté »** (les courses), **« Il m'en
+  reste »** (un inventaire : ce qu'il y a vraiment dans le placard) ou
+  **« Jeté / donné »** (sorti sans être mangé). Ce que vous **mangez
+  n'est jamais à saisir** : chaque repas analysé retire de lui-même
+  les grammes de ses lignes « étiquette » ; modifier, réanalyser ou
+  supprimer le repas corrige le stock d'autant. Ne comptent pas : un
+  repas acheté (avec un prix : livraison, note de frais), un repas
+  encore en analyse, ni un repas mangé avant le premier achat noté ou
+  avant le dernier inventaire (déjà dedans). La fiche affiche
+  « Stock : 370 g (2 × 185 g) » ; « épuisé — les repas dépassent de
+  … g » veut dire que les repas ont pris plus que ce qui a été noté :
+  un « Il m'en reste » remet le compte juste. Sous les boutons,
+  l'historique : achats, inventaires, pertes (× pour effacer une
+  erreur) et repas qui ont pris dans le stock. Pour que le compte
+  soit exact, pesez (une balance de cuisine) et écrivez les grammes
+  dans le repas (« tomate 135 g »). « Que me préparer ce soir ? » :
+  l'assistant MCP lit le stock (voir le [guide MCP](mcp.md)).
+
 Depuis l'iPhone : voir [Raccourcis iPhone](#raccourcis-iphone--une-seule-règle).
 
 ## Raccourcis iPhone — une seule règle
@@ -463,6 +483,43 @@ En ligne de commande :
 ```bash
 curl -s -X POST "http://<hub>/api/v1/foods/scan?token=$TOKEN" \
   -F file=@code-barres.jpg
+```
+
+### Ranger les courses : scanner chaque produit
+
+Au retour des courses, scanner le code-barres de chaque paquet l'ajoute
+au stock de sa fiche (la fiche doit exister : la créer une fois dans
+Mes aliments, en scannant le même code).
+
+**L'appel** — `POST /api/v1/stock?token=<jeton>` (`write:measurements`),
+corps **JSON** : `barcode` (le code), `packs` (nombre de paquets,
+défaut 1) — ou `food` (le nom de la fiche, le début d'un mot suffit),
+`units`, `grams`, `kind` (`purchase` par défaut, `out`, `count`).
+Réponse : `move` (ce qui est noté, `said` : « 2 × 185 g ») et `level`
+(`name`, `grams` restants). `404` : aucune fiche avec ce code ; `422` :
+deux formats répondent au même nom (donner le code-barres).
+
+**Le raccourci** :
+
+1. **Scanner le code QR/code-barres** (action *Scan QR or Barcode*).
+2. **Demander une entrée** — type *Nombre*, « Combien de paquets ? »,
+   valeur par défaut `1`.
+3. **Obtenir le contenu de l'URL** — URL
+   `http://<hub>/api/v1/stock?token=<jeton>`, méthode **POST**, corps
+   **JSON** : `barcode` (Texte = *Code QR/code-barres*), `packs`
+   (Nombre = *Entrée fournie*).
+4. **Obtenir la valeur du dictionnaire** `level` › `name`, puis
+   **Afficher la notification** « Rangé : *Valeur* ».
+
+Pour enchaîner les paquets, mettre les étapes 1 à 4 dans **Répéter**
+(par exemple 20 fois) et arrêter avec « Annuler » au scan.
+
+En ligne de commande :
+
+```bash
+curl -s -X POST "http://<hub>/api/v1/stock?token=$TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"barcode": "2001234567893", "packs": 3}'
 ```
 
 > Un raccourci déjà réglé sur `POST /api/v1/journal/urination?token=…`

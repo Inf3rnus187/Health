@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-106 outils.
+110 outils.
 
 ## Données et métriques
 
@@ -423,6 +423,47 @@ Paramètres : `photo_base64`* (string)
 Attach a photo to a food: ``kind`` pack (the box) or label.
 
 Paramètres : `food_id`* (string), `photo_base64`* (string), `kind` (string, défaut `pack`)
+
+## Stock de Mes aliments : courses, inventaire, idées de repas
+
+### `food_stock`
+
+What is left of each food with a stock (for « what do I cook? »).
+
+Per food: ``name`` (name · brand · package), ``grams`` left,
+``packs`` / ``units`` / ``portions`` (packages, units, usual
+portions ``portion_g`` it makes), ``missing`` (meals ate more than
+was entered: suggest a count), ``last_purchase``. To suggest a meal:
+only foods in stock, grams within what is left (the usual portion
+first), mind the user's conditions (medical_record), and say what
+will remain; log it afterwards with log_meal.
+
+### `add_stock`
+
+Enter a purchase (« j'ai acheté 3 boîtes de … »), a loss or a count.
+
+The food by ``food`` (its name; a word's start is enough), ``food_id``
+or ``barcode``; two sizes answering one name are refused (ask which,
+or use the barcode / id from list_foods). The quantity: ``packs``
+(× the package), ``units`` (× the unit: 6 tomates) or ``grams``; a
+purchase with none is one pack. ``kind``: purchase, out (thrown,
+given — not eaten: meals are deducted by themselves) or count (what
+is left now: « il m'en reste une boîte »). ``at``: ISO time when not
+now. A new product: save_food first (one sheet per size).
+
+Paramètres : `food` (string | null, défaut `None`), `food_id` (string | null, défaut `None`), `barcode` (string | null, défaut `None`), `kind` (string, défaut `purchase`), `packs` (number | null, défaut `None`), `units` (number | null, défaut `None`), `grams` (number | null, défaut `None`), `at` (string | null, défaut `None`), `note` (string, défaut ``)
+
+### `stock_history`
+
+A food's stock moves (newest first) and the meals that ate it.
+
+Paramètres : `food_id`* (string)
+
+### `delete_stock_move`
+
+Delete a stock move entered by mistake (ask first).
+
+Paramètres : `move_id`* (string)
 
 ## Médicaments : prises et observance
 

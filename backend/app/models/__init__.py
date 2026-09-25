@@ -11,6 +11,7 @@ from app.models.automation import Automation
 from app.models.base import Base
 from app.models.event import Event
 from app.models.food import Food
+from app.models.food_stock import StockMove
 from app.models.health_raw import (
     ClinicalDocument,
     ClinicalObservation,
@@ -65,6 +66,7 @@ __all__ = [
     "Photo",
     "PhotoAnalysis",
     "Report",
+    "StockMove",
     "RouteFile",
     "User",
     "WorkSession",

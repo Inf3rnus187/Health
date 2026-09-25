@@ -104,7 +104,8 @@ API token as a query parameter (`require_scope_flex`,
 `POST /imports/apple-health`, `/sync/tally`, `/sync/auto-export`,
 `/meals`, `/journal/urination`, `/logs/import`, `/work/import`,
 `/work/clock`, `/medications/take`, `/treatments/{id}/intakes`,
-`/foods/scan` (reads a barcode, saves nothing). Both
+`/foods/scan` (reads a barcode, saves nothing), `/stock` (a purchase
+scanned). Both
 access logs write `token=***`, but a URL can still end up in a proxy you
 add in front, a browser history or a Shortcut shared with someone: give
 such a token `write:measurements` only, and revoke it if it leaks.

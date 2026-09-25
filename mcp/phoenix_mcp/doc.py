@@ -21,6 +21,7 @@ from phoenix_mcp import (
     tools_meds,
     tools_record,
     tools_reports,
+    tools_stock,
     tools_work,
     tools_workfile,
 )
@@ -32,6 +33,10 @@ SECTIONS: tuple[tuple[ModuleType, str], ...] = (
     (tools_record, "Dossier médical, Suivi, documents"),
     (tools_journal, "Journal : pipi et repas"),
     (tools_foods, "Mes aliments : fiches, table Ciqual, code-barres"),
+    (
+        tools_stock,
+        "Stock de Mes aliments : courses, inventaire, idées de repas",
+    ),
     (tools_meds, "Médicaments : prises et observance"),
     (tools_work, "Travail : heures d'embauche et de débauche"),
     (

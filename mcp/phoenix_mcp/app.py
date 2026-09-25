@@ -25,7 +25,12 @@ Meals: call list_foods first; log_meal with the user's own words as
 description (quantities kept), foods = the user's foods they name
 (food_id, grams null unless said), meal_type empty unless they say it.
 After get_meal, say which lines come from their food sheets
-(source "étiquette") and which from the Ciqual table or an estimate."""
+(source "étiquette") and which from the Ciqual table or an estimate.
+Stock: shopping ("j'ai acheté 3 boîtes de ...") is add_stock (save_food
+first for a new product, one sheet per size); meals deduct by
+themselves. "What do I cook tonight?": food_stock and the conditions in
+medical_record; propose only foods in stock, in grams within what is
+left (the usual portion first), and say what will remain."""
 
 mcp = FastMCP(
     "phoenix-health-hub",

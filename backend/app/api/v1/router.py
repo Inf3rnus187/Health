@@ -51,6 +51,7 @@ from app.api.v1 import (
     samples,
     sleep,
     spending,
+    stock,
     summary,
     sync,
     system,
@@ -89,6 +90,7 @@ api_router.include_router(meals_edit.router)
 api_router.include_router(meals_media.router)
 api_router.include_router(foods.router)
 api_router.include_router(foods_media.router)
+api_router.include_router(stock.router)
 api_router.include_router(food_refs.router)
 api_router.include_router(work.router)
 api_router.include_router(work_data.router)

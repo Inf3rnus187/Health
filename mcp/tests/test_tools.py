@@ -19,6 +19,7 @@ from phoenix_mcp import (
     tools_meds,
     tools_record,
     tools_reports,
+    tools_stock,
     tools_work,
     tools_workfile,
 )
@@ -63,6 +64,8 @@ async def test_every_area_of_the_hub_has_tools() -> None:
         "save_food",
         "read_food_label",
         "scan_barcode",
+        "food_stock",
+        "add_stock",
     }
     assert expected <= names
     assert len(names) >= 50
@@ -407,3 +410,22 @@ async def test_two_halves_are_merged() -> None:
     await tools_work.merge_work_sessions("keep", "other")
     assert seen[0].url.path == "/api/v1/work/sessions/keep/merge"
     assert json.loads(seen[0].content) == {"other_id": "other"}
+
+
+async def test_shopping_is_entered_by_name_and_the_stock_read() -> None:
+    seen = _capture()
+    await tools_stock.add_stock("aubergines", packs=3)
+    assert (seen[0].method, seen[0].url.path) == ("POST", "/api/v1/stock")
+    assert json.loads(seen[0].content) == {
+        "food": "aubergines",
+        "kind": "purchase",
+        "packs": 3,
+        "note": "",
+    }
+    await tools_stock.food_stock()
+    assert seen[1].url.path == "/api/v1/stock"
+    await tools_stock.delete_stock_move("m1")
+    assert (seen[2].method, seen[2].url.path) == (
+        "DELETE",
+        "/api/v1/stock/moves/m1",
+    )

@@ -26,6 +26,7 @@ const FED = [
   'dashboard',
   'care-overview',
   'record',
+  'stock',
 ];
 
 function pending(meals: Meal[] | undefined): boolean {

@@ -1,10 +1,14 @@
 import { useState } from 'react';
 
 import type { Food } from '../../api/foods';
+import type { StockLevel } from '../../api/stock';
 import { useDeleteFood, useFoods } from '../../hooks/useFoods';
+import { useStock } from '../../hooks/useStock';
 import { frNumber } from '../../utils/format';
 import { FoodForm } from './FoodForm';
 import { bySize, portionText } from './foodLabel';
+import { StockPanel } from './StockPanel';
+import { stockText } from './stockText';
 
 /** « 150 kcal · P 3,5 · G 30 · L 1,8 » for 100 g. */
 function per100(food: Food): string {
@@ -21,7 +25,7 @@ function per100(food: Food): string {
     .join(' · ');
 }
 
-function Summary({ food }: { food: Food }) {
+function Summary({ food, level }: { food: Food; level?: StockLevel }) {
   return (
     <div>
       <strong>{food.name}</strong>
@@ -35,22 +39,31 @@ function Summary({ food }: { food: Food }) {
         {food.photos.length > 0 && ` · ${food.photos.length} photo(s)`}
         {food.source && ` · ${food.source.split(' · ')[0]}`}
       </div>
+      {level && <div className="small">Stock : {stockText(level)}</div>}
     </div>
   );
 }
 
-function Row(props: { food: Food; onEdit: () => void }) {
+function useDelete(food: Food) {
   const del = useDeleteFood();
-  const { food } = props;
-  const onDelete = () => {
+  return () => {
     if (window.confirm(`Supprimer « ${food.name} » et ses photos ?`)) {
       del.mutate(food.id);
     }
   };
+}
+
+function Row(props: { food: Food; level?: StockLevel; onEdit: () => void }) {
+  const onDelete = useDelete(props.food);
+  const [stock, setStock] = useState(false);
+  const { food } = props;
   return (
     <li className="food-row">
-      <Summary food={food} />
+      <Summary food={food} level={props.level} />
       <div className="row-actions">
+        <button className="btn ghost" onClick={() => setStock(!stock)}>
+          Stock
+        </button>
         <button className="btn ghost" onClick={props.onEdit}>
           Modifier
         </button>
@@ -58,6 +71,7 @@ function Row(props: { food: Food; onEdit: () => void }) {
           Supprimer
         </button>
       </div>
+      {stock && <StockPanel food={food} />}
     </li>
   );
 }
@@ -88,6 +102,7 @@ function Editor(props: {
 /** The user's usual foods: a list, and the sheet being edited. */
 export function FoodsCard() {
   const foods = useFoods().data ?? [];
+  const levels = useStock().data?.foods ?? [];
   const [editing, setEditing] = useState<string | null>(null);
   return (
     <section className="card">
@@ -96,7 +111,12 @@ export function FoodsCard() {
       <Editor editing={editing} foods={foods} onEdit={setEditing} />
       <ul className="food-list">
         {[...foods].sort(bySize).map((food) => (
-          <Row key={food.id} food={food} onEdit={() => setEditing(food.id)} />
+          <Row
+            key={food.id}
+            food={food}
+            level={levels.find((lv) => lv.food_id === food.id)}
+            onEdit={() => setEditing(food.id)}
+          />
         ))}
       </ul>
     </section>

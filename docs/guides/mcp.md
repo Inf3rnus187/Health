@@ -222,6 +222,23 @@ Exemples de demandes : « Résume mon dossier et l'évolution de mon HbA1c »,
 l'ordonnance », « Génère une synthèse clinique et montre-moi les phrases
 retirées ».
 
+### Le stock et « que me préparer ce soir ? »
+
+- **Courses** : « j'ai acheté 3 boîtes d'aubergines Marque test » →
+  `add_stock` (par le nom, le code-barres ou l'id ; deux formats au
+  même nom : l'assistant demande lequel). Produit nouveau :
+  `save_food` d'abord (une fiche par format). « Il me reste une
+  boîte » → `kind` `count` ; « j'ai jeté le reste » → `out`.
+- **Repas** : rien à faire, un repas analysé retire lui-même ses
+  grammes du stock.
+- **« Qu'est-ce que je me prépare ce soir ? »** → l'assistant lit
+  `food_stock` (ce qui reste, en grammes, boîtes et portions
+  habituelles) et vos maladies (`medical_record`), puis propose **avec
+  ce qui est en stock seulement**, en grammes (« 250 g de poulet
+  basquaise et un filet de poulet ») et dit ce qu'il restera.
+  `stock_history` : les achats, inventaires, pertes et repas d'un
+  aliment ; `delete_stock_move` efface une erreur (après accord).
+
 ### Noter un repas par l'assistant
 
 Dites le repas avec vos mots et les quantités, l'heure si ce n'est pas
