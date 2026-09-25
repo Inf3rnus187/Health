@@ -43,6 +43,19 @@ def test_search_and_candidates_put_generic_foods_first() -> None:
     assert not any("matière" in n.lower() for n in names[:1])
 
 
+def test_a_phrase_finds_its_reference_before_its_words() -> None:
+    said = (
+        "Entrée: 2 tomates, un demi concombre, une tranche de comté Plat: "
+        "Riz sachet et un filet de poulet cuit Aucune sauce"
+    )
+    codes = [r.code for r in ciqual.candidates([said])]
+    fillet, cooked_wings = codes.index("36018"), codes.index("36035")
+    assert fillet == 0 < cooked_wings  # « filet de poulet cuit »: grillé
+    assert codes.index("36017") < cooked_wings  # the raw fillet too
+    raw = [r.code for r in ciqual.candidates(["un filet de poulet cru"])]
+    assert raw[0] == "36017"
+
+
 def _food(**kw: Any) -> Any:
     base = {"aliases": "", "unit_g": None, "package_g": None, "brand": None,
             "unit_name": None, "portion_g": None}  # fmt: skip

@@ -117,10 +117,15 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    aucune (la table Ciqual décide) — sauf deux **formats** d'un même
    produit quand le morceau dit lequel : « petite » → le plus petit
    paquet, « grosse / grande » → le plus grand, ou son poids (« 750 g »).
-3. **Table Ciqual** → pour les mots de la description et de la photo, le
-   code cherche dans la table Ciqual 2025 de l'ANSES (embarquée, hors
-   ligne) les références possibles : noms qui commencent par le mot,
-   préparées comme le dit le texte (« cuit », « vapeur », « cru »…),
+3. **Table Ciqual** → le code cherche dans la table Ciqual 2025 de
+   l'ANSES (embarquée, hors ligne) les références possibles. D'abord,
+   pour chaque morceau de la description (« un filet de poulet cuit »),
+   celles qui contiennent **tous** ses mots d'aliment (filet et poulet)
+   — cuites en premier si le morceau dit « cuit » (grillé, poêlé, rôti,
+   vapeur…), crues s'il dit « cru », génériques avant « bio », « label
+   rouge », « mariné », « préemballé » : « Poulet, filet sans peau
+   grillé/poêlé » vient avant tout autre poulet. Puis, mot par mot, les
+   noms qui commencent par le mot, préparés comme le dit le texte,
    génériques (« aliment moyen ») d'abord. Cette courte liste (code :
    nom) est donnée au modèle.
 4. **Modèle texte** (`OLLAMA_TEXT_MODEL`, décodage glouton, graine

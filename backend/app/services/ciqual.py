@@ -14,6 +14,7 @@ reference: the same food always gets the same values.
 from __future__ import annotations
 
 import csv
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import NamedTuple
@@ -41,6 +42,16 @@ _PREPARATION = frozenset(
     "bouilli bouillie frit frite fume fumee rissole rissolee saute sautee "
     "micro sec seche entier entiere ecreme complet nature peau".split()
 )
+#: « cuit » in a description: any of these ways of cooking.
+_COOKED = frozenset(
+    "cuit cuite grille grillee poele poelee roti rotie four bouilli bouillie "
+    "vapeur frit frite saute sautee braise braisee".split()
+)
+_RAW = frozenset("cru crue".split())
+#: References less likely to be what a plain description means.
+_SPECIAL = frozenset("bio label preleve preemballe marine".split())
+_PARTS = re.compile(r"[,;:+\n]|\bet\b|\bavec\b|\bpuis\b", re.IGNORECASE)
+_PER_PHRASE = 6
 
 
 class Ref(NamedTuple):
@@ -78,21 +89,21 @@ def search(query: str, limit: int = 20) -> list[Ref]:
 def candidates(
     texts: list[str], per_word: int = 8, most: int = 60
 ) -> list[Ref]:
-    """References a meal may contain: foods named by a word of ``texts``.
+    """References a meal may contain — the list the model picks from.
 
-    Only the head of a name (before its first comma) is matched; the
-    foods whose name repeats other words of the text (« cuit »,
-    « vapeur », « cru ») come first, then generic and plain ones — the
-    list the model picks from.
+    First, for each part of a text (« un filet de poulet cuit »), the
+    references naming all its food words (filet and poulet), cooked
+    ones first when it says « cuit » (grillé, poêlé, rôti…), raw when
+    « cru », then generic before « bio », « label rouge », « mariné »,
+    « préemballé ». Then, word by word, the foods whose head (before the
+    first comma) has the word, those repeating the text's preparation
+    words first, generic and plain ones next.
     """
     said = {singular(w) for text in texts for w in tokens(text)} & _PREPARATION
     words: list[str] = []
     for text in texts:
-        for word in tokens(text):
-            base = singular(word)
-            if len(base) >= _SHORTEST_FOOD_WORD and base not in _NOT_FOOD:
-                words.append(base) if base not in words else None
-    out: dict[str, Ref] = {}
+        words += [w for w in _food_words(text) if w not in words]
+    out: dict[str, Ref] = {ref.code: ref for ref in _by_phrase(texts)}
     for word in words:
         heads = [r for r in table().values() if word in _head(r.name)]
         ranked = sorted(heads, key=lambda r: _pick(r, word, said))
@@ -138,6 +149,45 @@ def _value(text: str) -> float | None:
     if plain.startswith("<"):
         return round(float(plain[1:].strip()) / 2, 4)
     return float(plain)
+
+
+def _food_words(text: str) -> list[str]:
+    """The words of ``text`` that may name a food (singular, in order)."""
+    out: list[str] = []
+    for word in tokens(text):
+        base = singular(word)
+        long = len(base) >= _SHORTEST_FOOD_WORD
+        if long and base not in _NOT_FOOD and base not in out:
+            out.append(base)
+    return out
+
+
+def _by_phrase(texts: list[str]) -> list[Ref]:
+    """References naming every food word of a part (« filet de poulet »)."""
+    found: list[Ref] = []
+    for text in texts:
+        for part in _PARTS.split(text):
+            words = _food_words(part)
+            if len(words) < 2:  # noqa: PLR2004 - one word: the word lists
+                continue
+            said = {singular(w) for w in tokens(part)} & _PREPARATION
+            hits = [r for r in table().values() if _has_all(r.name, words)]
+            ranked = sorted(hits, key=lambda r: _cooking(r, said))
+            found += ranked[:_PER_PHRASE]
+    return found
+
+
+def _cooking(ref: Ref, said: set[str]) -> tuple[int, int, int, int]:
+    """Cooked as said, generic, not special, short: first."""
+    name = {singular(w) for w in tokens(ref.name)}
+    if said & _COOKED:
+        cooking = 0 if name & _COOKED else (2 if name & _RAW else 1)
+    elif said & _RAW:
+        cooking = 0 if name & _RAW else 1
+    else:
+        cooking = 0
+    generic = _rank(ref, "")[1]
+    return (cooking, int(bool(name & _SPECIAL)), generic, len(ref.name))
 
 
 def _head(name: str) -> set[str]:

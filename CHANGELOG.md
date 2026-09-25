@@ -30,6 +30,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **« un filet de poulet cuit » found its reference**: the Ciqual list
+  offered to the model was built word by word, and for « poulet » the
+  references with « cuits » came first — « Poulet, manchons marinés,
+  préemballés, rôtis/cuits au four » (12,6 g of fat, 674 mg of sodium
+  per 100 g) was picked, while « Poulet, filet sans peau grillé/poêlé »
+  (2 g, 56 mg) was not offered: a meal's sodium read 1 224 mg instead of
+  about 600. Each part of the description now first offers the
+  references naming all its food words, cooked ones first for « cuit »,
+  generic before bio, label rouge, marinated or prepacked.
 - **The header shows the version installed**: it showed the page's own
   build, so after an update of the server alone (« reconstruit : api »)
   it still read the older commit however often the page was reloaded.
