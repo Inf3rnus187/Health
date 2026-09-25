@@ -190,7 +190,9 @@ async def test_a_meal_with_its_sachet_is_read_from_the_label(
     assert rice["protein_g"] == pytest.approx(4.4)
     assert rice["sodium_mg"] == 500
     assert chicken["name"] == "Poulet" and "source" not in chicken
-    assert read["analysis"]["foods"] == ["Riz méditerranéen"]
+    assert read["analysis"]["foods"] == [
+        "Riz méditerranéen · Marque test · 250 g"
+    ]
     extra = f"{MEALS}/{meal['id']}/photos/{meal['photo_ids'][0]}"
     assert (await client.get(extra, headers=auth)).status_code == 200
     gone = await client.delete(extra, headers=auth)
@@ -220,5 +222,5 @@ async def test_a_food_named_in_a_meal_is_found_without_picking_it(
         await meal_ai.run(session, made.json()["id"])
     read = await client.get(f"{MEALS}/{made.json()['id']}", headers=auth)
     names = [i["name"] for i in read.json()["analysis"]["items"]]
-    assert names == ["Poulet", "Riz méditerranéen"]  # the whole sachet
+    assert names == ["Poulet", "Riz méditerranéen · Marque test · 250 g"]
     assert read.json()["analysis"]["items"][1]["grams"] == 250

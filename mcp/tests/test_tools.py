@@ -270,10 +270,11 @@ async def test_a_meal_with_its_sachet_and_a_food_of_the_list() -> None:
     assert body.count(b'name="photos"') == 2
     assert b'[{"food_id": "f1", "grams": 125}]' in body
     await tools_foods.save_food(
-        "Riz", {"energy_kcal": 150}, package_g=250, food_id="f1"
+        "Riz", {"energy_kcal": 150}, package_g=250, food_id="f1", portion_g=125
     )
     assert (seen[1].method, seen[1].url.path) == ("PUT", "/api/v1/foods/f1")
-    assert json.loads(seen[1].content)["per_100g"] == {"energy_kcal": 150}
+    sent = json.loads(seen[1].content)
+    assert sent["per_100g"] == {"energy_kcal": 150} and sent["portion_g"] == 125
     await tools_foods.read_food_label("SGVsbG8=")
     assert seen[2].url.path == "/api/v1/foods/read-label"
     await tools_foods.search_ciqual("tomate crue")

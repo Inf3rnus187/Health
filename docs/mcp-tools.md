@@ -357,7 +357,13 @@ log_meal ``foods``) is computed from its label, not estimated.
 
 ### `save_food`
 
-Add a food (or replace ``food_id``'s sheet).
+Add a food (or replace ``food_id``'s sheet: send every field).
+
+One sheet per size: the small box (185 g) and the big one are two
+sheets with their own ``package_g`` (and barcode); a meal saying
+« petite boîte » / « grosse boîte » takes the right one.
+``portion_g``: what the user usually eats of it (the whole small
+box, ¼ of the big one), counted when a meal gives no quantity.
 
 ``per_100g``: energy_kcal, protein_g, carbs_g, sugars_g, fat_g,
 sat_fat_g, fiber_g, sodium_mg (1 g of salt = 400 mg of sodium).
@@ -366,7 +372,7 @@ sat_fat_g, fiber_g, sodium_mg (1 g of salt = 400 mg of sodium).
 « 2 tomates » in a meal is then 240 g. ``source``: where the values
 come from (« étiquette », « Ciqual 2025 · 20385 · … »).
 
-Paramètres : `name`* (string), `per_100g` (object | null, défaut `None`), `package_g` (number | null, défaut `None`), `brand` (string, défaut ``), `aliases` (string, défaut ``), `note` (string, défaut ``), `food_id` (string | null, défaut `None`), `unit_name` (string, défaut ``), `unit_g` (number | null, défaut `None`), `source` (string, défaut ``), `barcode` (string, défaut ``)
+Paramètres : `name`* (string), `per_100g` (object | null, défaut `None`), `package_g` (number | null, défaut `None`), `brand` (string, défaut ``), `aliases` (string, défaut ``), `note` (string, défaut ``), `food_id` (string | null, défaut `None`), `unit_name` (string, défaut ``), `unit_g` (number | null, défaut `None`), `source` (string, défaut ``), `barcode` (string, défaut ``), `portion_g` (number | null, défaut `None`)
 
 ### `search_ciqual`
 

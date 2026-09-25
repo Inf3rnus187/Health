@@ -96,7 +96,10 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    (`meal_quantity`) : grammes écrits à côté (« saumon 100g », « 150 g
    de riz »), sinon un compte (« 2 », « deux », « un demi », « ½ »,
    « 1/2 ») × le poids d'une unité de la fiche, ou × le paquet pour
-   « sachet », « boîte », « pot »… (une boîte sans nombre = une).
+   « sachet », « boîte », « pot »… ; sinon la **portion habituelle** de
+   la fiche (« petite boîte » sans nombre = cette portion), sinon une
+   boîte. Chaque fiche est donnée au modèle et affichée **nom · marque ·
+   poids** : deux formats d'un produit restent distincts.
    **Nommer un aliment** (`food_match`, par le code, sans accents,
    singulier ou pluriel), dans chaque morceau de la description
    (séparés par des virgules, « et », « + », « avec ») : tout son nom
@@ -111,7 +114,9 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    basquaise » (« filet » n'est pas à lui), ni « 2 pommes » « Pommes
    rissolées » (rien ne confirme), ni « sachet de riz basmati » un
    autre riz ; un morceau qui va à deux fiches autant n'en nomme
-   aucune (la table Ciqual décide).
+   aucune (la table Ciqual décide) — sauf deux **formats** d'un même
+   produit quand le morceau dit lequel : « petite » → le plus petit
+   paquet, « grosse / grande » → le plus grand, ou son poids (« 750 g »).
 3. **Table Ciqual** → pour les mots de la description et de la photo, le
    code cherche dans la table Ciqual 2025 de l'ANSES (embarquée, hors
    ligne) les références possibles : noms qui commencent par le mot,

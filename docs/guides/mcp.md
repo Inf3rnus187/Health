@@ -179,7 +179,9 @@ Depuis un autre poste, la même commande à travers SSH :
   `delete_meal_photo`, `analyze_meal`, `delete_meal` ; « combien m'ont
   coûté les Uber Eats cette année ? » (`meal_spending`).
 - **Mes aliments** : `list_foods`, `save_food` (valeurs pour 100 g,
-  autres noms, poids du paquet, **unité** `unit_name` / `unit_g`,
+  autres noms, poids du paquet, **portion habituelle** `portion_g` —
+  une fiche par format : petite et grosse boîte —, **unité**
+  `unit_name` / `unit_g`,
   source, code-barres), `search_ciqual` (table Ciqual 2025, hors ligne),
   `lookup_barcode` (Open Food Facts, seulement si
   `FOOD_LOOKUP_ONLINE=true`), `scan_barcode` (une photo du code-barres,

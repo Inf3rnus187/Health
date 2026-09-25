@@ -19,9 +19,11 @@ from app.services import food_photos
 
 
 async def list_foods(session: AsyncSession, user_id: str) -> list[Food]:
-    """The user's foods, by name."""
+    """The user's foods, by name, then the smaller package first."""
     rows = await session.execute(
-        select(Food).where(Food.user_id == user_id).order_by(Food.name)
+        select(Food)
+        .where(Food.user_id == user_id)
+        .order_by(Food.name, Food.package_g)
     )
     return list(rows.scalars())
 
@@ -69,6 +71,7 @@ def _fields(data: FoodIn) -> dict[str, Any]:
         "package_g": data.package_g,
         "unit_name": data.unit_name.strip(),
         "unit_g": data.unit_g,
+        "portion_g": data.portion_g,
         "per_100g": values,
         "note": data.note.strip(),
         "source": data.source.strip(),

@@ -94,7 +94,7 @@ async def analyze(session: AsyncSession, meal: Meal) -> dict[str, Any]:
         "vision_model": get_settings().ollama_vision_model if seen else None,
         "seen": seen,
         "labels": labels,
-        "foods": [food.name for food, _ in portions],
+        "foods": [meal_foods.label(food) for food, _ in portions],
         "items": items,
         "rejected": rejected,
         "totals": totals,

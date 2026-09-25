@@ -148,7 +148,9 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
   type (petit-déjeuner, déjeuner, collation, dîner),
   date et heure, **description** (quantités, cuisson, « sans huile ni
   beurre »…), **aliments de ma liste** (facultatif : un aliment de « Mes
-  aliments » et les grammes mangés, vide = estimés ; **« ▥ Scanner un
+  aliments » — le menu montre nom · marque · poids · portion — et les
+  grammes mangés, vide = lus dans la description, sinon votre portion
+  habituelle, sinon estimés ; **« ▥ Scanner un
   code-barres »** photographie le paquet — appareil photo ou galerie —
   et choisit l'aliment de la liste qui porte ce code, reste à mettre
   les grammes puis « Ajouter ») et jusqu'à **7
@@ -223,9 +225,31 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
   120 g, « tranche » = 30 g, « pavé » = 125 g : c'est ce qui rend
   « 2 tomates » identique à chaque repas), **valeurs pour 100 g**
   (énergie, protéines, glucides dont sucres, lipides dont saturés,
-  fibres, **sel** tel qu'imprimé : converti en sodium), une note (« je
-  mange la moitié du sachet ») et la **source** des valeurs. Pour
-  remplir les valeurs :
+  fibres, **sel** tel qu'imprimé : converti en sodium), **ma portion
+  habituelle** (ce que vous en mangez d'habitude, en grammes ; sous le
+  champ, « Toute la boîte », « ½ », « ¼ » la calculent depuis le poids
+  de la boîte), une note (préparation, ce qu'il y a dedans) et la
+  **source** des valeurs.
+
+  **Une fiche par format** : la petite boîte (185 g) et la grosse du
+  même produit sont **deux fiches**, chacune avec son poids, son
+  code-barres (il change avec le format) et sa portion — par exemple
+  « toute la boîte » pour la petite, « ¼ » pour la grosse. Partout (la
+  liste, le choix dans un repas, l'analyse), une fiche s'affiche
+  **nom · marque · poids**, suivi de sa portion dans le menu d'un repas
+  (« Aubergines cuisinées à la provençale · Marque test · 185 g —
+  portion : tout (185 g) ») : deux formats ne se confondent jamais. Dans
+  une description, « petite boîte d'aubergines » prend la plus petite,
+  « grosse (ou grande) boîte » la plus grande, « boîte de 750 g » celle
+  de ce poids ; « boîte d'aubergines » seule ne choisit pas (l'analyse
+  prend alors la table Ciqual : précisez, ou choisissez la fiche dans
+  la liste). Les grammes, dans l'ordre : ceux du formulaire, ceux de la
+  description (« un quart de la grosse boîte » = ¼ × 750 g, « 2 pavés »
+  = 2 × l'unité), sinon **votre portion habituelle** (« petite boîte
+  d'aubergines » sans nombre = votre portion de la petite boîte), sinon
+  une boîte, sinon l'estimation de l'IA.
+
+  Pour remplir les valeurs :
   - « 🏷️ Photo des valeurs (lecture IA) » lit l'étiquette et
     pré-remplit (nom, marque, poids net, valeurs plausibles seulement) ;
   - « 🔎 Table Ciqual (aliment courant) » : chercher « tomate crue »,

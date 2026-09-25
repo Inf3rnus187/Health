@@ -28,6 +28,7 @@ export interface FoodDraft {
   package_g: string;
   unit_name: string;
   unit_g: string;
+  portion_g: string;
   note: string;
   source: string;
   barcode: string;
@@ -54,8 +55,17 @@ const BLANK: LabelReading = {
   package_g: null,
   per_100g: {},
 };
-type Own = Pick<Food, 'aliases' | 'note' | 'unit_name' | 'unit_g'>;
-const EMPTY: Own = { aliases: '', note: '', unit_name: '', unit_g: null };
+type Own = Pick<
+  Food,
+  'aliases' | 'note' | 'unit_name' | 'unit_g' | 'portion_g'
+>;
+const EMPTY: Own = {
+  aliases: '',
+  note: '',
+  unit_name: '',
+  unit_g: null,
+  portion_g: null,
+};
 
 /** The sheet of a saved food, of a reading (label, barcode), or blank. */
 export function draftOf(food: Food | LabelReading | null): FoodDraft {
@@ -68,6 +78,7 @@ export function draftOf(food: Food | LabelReading | null): FoodDraft {
     package_g: text(read.package_g),
     unit_name: known.unit_name,
     unit_g: text(known.unit_g),
+    portion_g: text(known.portion_g),
     note: known.note,
     source: read.source ?? '',
     barcode: read.barcode ?? '',
@@ -107,7 +118,7 @@ export function withReading(draft: FoodDraft, read: LabelReading): FoodDraft {
   };
 }
 
-const num = (value: string): number | null => {
+export const num = (value: string): number | null => {
   const parsed = Number.parseFloat(value.replace(',', '.'));
   return Number.isFinite(parsed) ? parsed : null;
 };
@@ -127,6 +138,7 @@ export function foodIn(draft: FoodDraft): FoodIn {
     package_g: num(draft.package_g),
     unit_name: draft.unit_name.trim(),
     unit_g: num(draft.unit_g),
+    portion_g: num(draft.portion_g),
     per_100g: per,
     note: draft.note.trim(),
     source: draft.source.trim() || 'saisie',

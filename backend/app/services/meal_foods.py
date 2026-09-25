@@ -3,13 +3,13 @@
 A meal's foods are those the user picked, plus those its description
 names (:mod:`food_match`: its name, an alias « riz sachet », or « un
 pavé de saumon » for « Saumon sauvage rose »). Their grams: the form's,
-else what the description says (:mod:`meal_quantity`: « 2 tomates » =
-2 × the food's unit). The model is told their label values and grams as
-authoritative, and its answer is then corrected: a catalogue food's
-nutrients come from its label for the grams eaten (else the model's
-estimate, else the package's weight); the model's own line for such a
-food (« Saumon » from the Ciqual table) is replaced, a second one
-dropped; a food the model forgot is added.
+else what the description says (:mod:`meal_quantity`: « 2 tomates » = 2
+× the food's unit), else its usual portion (``portion_g``). The model is
+told their label values and grams as authoritative, and its answer is
+then corrected: a catalogue food's nutrients come from its label for the
+grams eaten (else the model's estimate, else the package's weight); the
+model's own line for such a food (« Saumon » from the Ciqual table) is
+replaced, a second one dropped; a food the model forgot is added.
 """
 
 from __future__ import annotations
@@ -41,10 +41,16 @@ async def of_meal(session: AsyncSession, meal: Meal) -> list[Portion]:
     for entry in meal.foods or []:
         food = by_id.get(str(entry.get("food_id")))
         if food is not None:
-            picked.append((food, entry.get("grams") or grams_in(food, said)))
+            picked.append((food, entry.get("grams") or _eaten(food, said)))
     taken = {food.id for food, _ in picked}
     said_foods = [f for f in named(known, said) if f.id not in taken]
-    return picked + [(food, grams_in(food, said)) for food in said_foods]
+    return picked + [(food, _eaten(food, said)) for food in said_foods]
+
+
+def label(food: Food) -> str:
+    """How a food is shown: name, brand, package (sizes stay apart)."""
+    pack = f"{food.package_g:g} g" if food.package_g else ""
+    return " · ".join(b for b in (food.name, food.brand, pack) if b)[:160]
 
 
 def context(portions: list[Portion]) -> list[dict[str, Any]]:
@@ -52,7 +58,7 @@ def context(portions: list[Portion]) -> list[dict[str, Any]]:
     return [
         {
             "id": food.id,
-            "name": f"{food.name} ({food.brand})" if food.brand else food.name,
+            "name": label(food),
             "package_g": food.package_g,
             "unit": f"1 {food.unit_name or 'unité'} = {food.unit_g:g} g"
             if food.unit_g
@@ -112,17 +118,22 @@ def _labelled(portion: Portion, eaten: Any) -> dict[str, Any]:
     food, grams = portion
     amount = float(grams or (eaten if eaten else 0) or food.package_g or 100)
     ratio = amount / 100
-    label = food.per_100g
-    values = {k: round(float(label.get(k) or 0) * ratio, 1) for k in NUTRIENTS}
-    energy = label.get("energy_kcal")
+    per = food.per_100g
+    values = {k: round(float(per.get(k) or 0) * ratio, 1) for k in NUTRIENTS}
+    energy = per.get("energy_kcal")
     if energy is None:
-        energy = 4 * (label.get("protein_g", 0) + label.get("carbs_g", 0))
-        energy += 9 * label.get("fat_g", 0) + 2 * label.get("fiber_g", 0)
+        energy = 4 * (per.get("protein_g", 0) + per.get("carbs_g", 0))
+        energy += 9 * per.get("fat_g", 0) + 2 * per.get("fiber_g", 0)
     return {
-        "name": food.name[:80],
+        "name": label(food),
         "grams": amount,
         "energy_kcal": round(float(energy) * ratio, 1),
         **values,
         "food_id": food.id,
         "source": "étiquette",
     }
+
+
+def _eaten(food: Food, said: str) -> float | None:
+    """The grams the description gives, else the usual portion."""
+    return grams_in(food, said) or food.portion_g

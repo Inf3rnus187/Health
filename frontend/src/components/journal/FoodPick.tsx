@@ -4,13 +4,16 @@ import type { Food, FoodPortion, ScanResult } from '../../api/foods';
 import { useFoods } from '../../hooks/useFoods';
 import { frNumber } from '../../utils/format';
 import { BarcodeScan } from './BarcodeScan';
+import { bySize, foodLabel, foodName } from './foodLabel';
 
 function Chip(props: { name: string; p: FoodPortion; onDrop: () => void }) {
   const { p } = props;
   return (
     <li className="chip">
       {props.name} ·{' '}
-      {p.grams == null ? 'quantité estimée' : `${frNumber(p.grams, 0)} g`}
+      {p.grams == null
+        ? 'quantité lue ou portion'
+        : `${frNumber(p.grams, 0)} g`}
       <button
         type="button"
         className="chip-x"
@@ -28,8 +31,10 @@ function Chosen(props: {
   foods: Food[];
   onDrop: (id: string) => void;
 }) {
-  const name = (id: string) =>
-    props.foods.find((f) => f.id === id)?.name ?? 'aliment supprimé';
+  const name = (id: string) => {
+    const food = props.foods.find((f) => f.id === id);
+    return food ? foodName(food) : 'aliment supprimé';
+  };
   return (
     <ul className="chips">
       {props.value.map((p) => (
@@ -68,9 +73,9 @@ function Select(props: { foods: Food[]; p: ReturnType<typeof usePick> }) {
       onChange={(e) => props.p.setId(e.target.value)}
     >
       <option value="">Choisir…</option>
-      {props.foods.map((f) => (
+      {[...props.foods].sort(bySize).map((f) => (
         <option key={f.id} value={f.id}>
-          {f.name}
+          {foodLabel(f)}
         </option>
       ))}
     </select>
@@ -81,7 +86,7 @@ function Select(props: { foods: Food[]; p: ReturnType<typeof usePick> }) {
 function scanned(r: ScanResult): string {
   const code = r.barcodes[0];
   if (!code) return r.note || 'Aucun code-barres lisible';
-  if (r.food) return `« ${r.food.name} » choisi : grammes puis Ajouter.`;
+  if (r.food) return `« ${foodName(r.food)} » choisi : grammes puis Ajouter.`;
   return `Produit ${code} absent de vos aliments : créez sa fiche.`;
 }
 
@@ -119,7 +124,7 @@ function Choose(props: { foods: Food[]; p: ReturnType<typeof usePick> }) {
         className="input"
         inputMode="decimal"
         placeholder="grammes"
-        title="Vide : la quantité est estimée"
+        title="Vide : lue dans la description, sinon ma portion habituelle"
         value={p.grams}
         onChange={(e) => p.setGrams(e.target.value)}
       />
@@ -142,8 +147,8 @@ export function FoodPick(props: {
     <div className="photo-pick">
       <span className="muted">
         Aliments de ma liste, calculés avec leur fiche (grammes vides : lus dans
-        la description, sinon estimés ; un aliment nommé dans la description est
-        reconnu aussi)
+        la description, sinon ma portion habituelle, sinon estimés ; un aliment
+        nommé dans la description est reconnu aussi)
       </span>
       <Choose foods={foods} p={p} />
       <Scan p={p} />

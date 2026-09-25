@@ -165,15 +165,17 @@ Added by later migrations (each creates only its own tables, ADR‑0004):
   package); `analysis_status` (`NULL`, `queued`, `running`, `done`,
   `failed`) and `analysis` (JSON: items with their grams and origin,
   checked nutrients, score and verdict).
-- `foods` (`0017`, `0018`) — a user's food sheet: `name`, `brand`,
-  `aliases` (other names used in a meal, comma-separated), `package_g`
-  (box / sachet weight), `unit_name` / `unit_g` (« tomate » = 120 g: « 2
-  tomates » in a meal is 240 g), `per_100g` (JSON: `energy_kcal`,
-  `protein_g`, `carbs_g`, `sugars_g`, `fat_g`, `sat_fat_g`, `fiber_g`,
-  `sodium_mg`), `note`, `source` (where the values come from:
-  « étiquette », « Ciqual 2025 · code · name », « Open Food Facts ·
-  barcode », « saisie »), `barcode`, `photos` (`[{"id", "kind": "pack" |
-  "label", "path"}]`).
+- `foods` (`0017`, `0018`, `0021`) — a user's food sheet: `name`,
+  `brand`, `aliases` (other names used in a meal, comma-separated),
+  `package_g` (box / sachet weight), `unit_name` / `unit_g` (« tomate »
+  = 120 g: « 2 tomates » in a meal is 240 g), `portion_g` (`0021`: what
+  the user usually eats of it — the whole small box, ¼ of the big one —
+  counted when a meal gives no quantity; one sheet per size), `per_100g`
+  (JSON: `energy_kcal`, `protein_g`, `carbs_g`, `sugars_g`, `fat_g`,
+  `sat_fat_g`, `fiber_g`, `sodium_mg`), `note`, `source` (where the
+  values come from: « étiquette », « Ciqual 2025 · code · name », « Open
+  Food Facts · barcode », « saisie »), `barcode`, `photos` (`[{"id",
+  "kind": "pack" | "label", "path"}]`).
 - `medication_intakes` (`0019`) — one row per dose: `treatment_id` (`SET
   NULL` when the treatment is deleted), `name` and `dose` **copied** from
   the treatment at the time (the history survives its deletion),
@@ -328,3 +330,4 @@ fresh database built from the live models is left untouched (ADR‑0004).
 | `0018_food_units` | `foods.unit_name`, `unit_g`, `source`, `barcode`. |
 | `0019_medication_intakes` | `medication_intakes`; `treatments.doses_per_day`. |
 | `0020_report_hash` | `reports.sha256`. |
+| `0021_food_portion` | `foods.portion_g`. |

@@ -10,6 +10,7 @@ import {
 } from '../../api/foods';
 import { frNumber } from '../../utils/format';
 import { BarcodeScan } from './BarcodeScan';
+import { foodName } from './foodLabel';
 
 function RefButton(props: { r: CiqualRef; onPick: (r: CiqualRef) => void }) {
   const kcal = props.r.per_100g.energy_kcal;
@@ -69,7 +70,7 @@ function scanText(r: ScanResult): string {
   const code = r.barcodes[0];
   if (!code) return r.note || 'Aucun code-barres lisible';
   if (r.food)
-    return `Code ${code} : déjà dans vos aliments (« ${r.food.name} »).`;
+    return `Code ${code} : déjà dans vos aliments (« ${foodName(r.food)} »).`;
   if (r.product)
     return `Code ${code} : trouvé sur Open Food Facts, à vérifier.`;
   const why = r.online ? r.note : 'recherche en ligne désactivée';

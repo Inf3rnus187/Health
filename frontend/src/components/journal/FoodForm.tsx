@@ -17,6 +17,7 @@ import {
   withReading,
 } from './foodDraft';
 import { BarcodeLookup, CiqualSearch } from './FoodSources';
+import { PortionField } from './PortionField';
 import { ShotButton, ShotPreview, StoredShot } from './Shots';
 
 type Set = (change: Partial<FoodDraft>) => void;
@@ -59,18 +60,21 @@ const IDENTITY: [keyof FoodDraft, string, boolean, string?][] = [
 
 function Identity({ draft, set }: { draft: FoodDraft; set: Set }) {
   return (
-    <div className="fields">
-      {IDENTITY.map(([key, label, numeric, example]) => (
-        <Line
-          key={key}
-          label={label}
-          numeric={numeric}
-          placeholder={example}
-          value={String(draft[key])}
-          onChange={(value) => set({ [key]: value })}
-        />
-      ))}
-    </div>
+    <>
+      <div className="fields">
+        {IDENTITY.map(([key, label, numeric, example]) => (
+          <Line
+            key={key}
+            label={label}
+            numeric={numeric}
+            placeholder={example}
+            value={String(draft[key])}
+            onChange={(value) => set({ [key]: value })}
+          />
+        ))}
+      </div>
+      <PortionField draft={draft} set={set} />
+    </>
   );
 }
 
@@ -97,12 +101,12 @@ function Values({ draft, set }: { draft: FoodDraft; set: Set }) {
 function Note({ draft, set }: { draft: FoodDraft; set: Set }) {
   return (
     <label className="field">
-      Note (portion habituelle, préparation…)
+      Note (préparation, ce qu'il y a dedans…)
       <textarea
         className="input meal-text"
         rows={2}
         value={draft.note}
-        placeholder="Ex. : je mange la moitié du sachet, sans beurre"
+        placeholder="Ex. : réchauffé sans beurre, avec du riz"
         onChange={(event) => set({ note: event.target.value })}
       />
     </label>

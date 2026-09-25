@@ -22,6 +22,8 @@ export interface FoodIn {
   /** How it is counted: « tomate », « tranche » (unit_g grams each). */
   unit_name: string;
   unit_g: number | null;
+  /** What is usually eaten of it (g): the small box, ¼ of the big one. */
+  portion_g: number | null;
   per_100g: Per100g;
   note: string;
   /** Where the values come from (étiquette, Ciqual, Open Food Facts). */

@@ -31,6 +31,8 @@ class FoodIn(BaseModel):
     #: « 2 tomates » = 2 × unit_g ; unit_name is how it is counted.
     unit_name: str = Field(default="", max_length=40)
     unit_g: float | None = Field(default=None, gt=0, le=5000)
+    #: What is usually eaten of it (g): the box, ½, ¼ of the big one.
+    portion_g: float | None = Field(default=None, gt=0, le=5000)
     per_100g: Per100g = Field(default_factory=Per100g)
     note: str = Field(default="", max_length=4000)
     source: str = Field(default="", max_length=200)
@@ -49,6 +51,7 @@ class FoodOut(BaseModel):
     package_g: float | None
     unit_name: str = ""
     unit_g: float | None = None
+    portion_g: float | None = None
     per_100g: dict[str, Any]
     note: str
     source: str = ""

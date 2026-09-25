@@ -32,6 +32,9 @@ class Food(UUIDMixin, TimestampMixin, Base):
     #: = 30 g — « 2 tomates » in a meal is then 240 g, every time.
     unit_name: Mapped[str] = mapped_column(String(40), default="")
     unit_g: Mapped[float | None] = mapped_column(Float, nullable=True)
+    #: What the user usually eats of it (g): the whole small box, ¼ of
+    #: the big one. A meal naming it without a quantity counts this.
+    portion_g: Mapped[float | None] = mapped_column(Float, nullable=True)
     #: Where the values come from: « étiquette », « Ciqual 2025 · 20385
     #: Tomate… », « Open Food Facts · 3017620422003 », « saisie ».
     source: Mapped[str] = mapped_column(String(200), default="")

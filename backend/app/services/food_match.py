@@ -15,8 +15,11 @@ So « un pavé de saumon » names « Saumon sauvage rose » (1 pavé = 100 g)
 and « petite boîte d'aubergines » names « Aubergines cuisinées à la
 provençale »; « filet de poulet » does not name « Poulet basquaise »
 (« filet » is not its word), nor « 2 pommes » « Pommes rissolées »
-(nothing confirms). A part two foods fit equally names neither: the
-Ciqual table or the model decides.
+(nothing confirms). A part two foods fit equally names neither — unless
+they are one product in several sizes and the part says which: « petite
+boîte » the smallest package, « grosse / grande boîte » the largest, or
+its weight (« boîte de 185 g »). Otherwise the Ciqual table or the model
+decides.
 """
 
 from __future__ import annotations
@@ -43,6 +46,8 @@ _NEUTRAL = frozenset(
     "rechauffee four micro onde grille grillee poele vapeur roti rotie "
     "braise mijote".split()
 )
+_SMALL = frozenset("petit petite mini".split())
+_BIG = frozenset("grand grande gros grosse".split())
 _SPLIT = re.compile(r"[,;+\n]|\bet\b|\bpuis\b|\bavec\b", re.IGNORECASE)
 _SHORT = 2  # « à », « la »: not words of a name
 Span = tuple[int, int]
@@ -63,14 +68,8 @@ def named(foods: list[Any], text: str) -> list[Any]:
     """The foods the description names, each once, in the order said."""
     out: list[Any] = []
     for words in parts(text):
-        ranked = sorted(
-            ((_rank(f, words), i) for i, f in enumerate(foods)), reverse=True
-        )
-        best = ranked[0] if ranked and ranked[0][0] > (0, 0) else None
-        if best is None or (len(ranked) > 1 and ranked[1][0] == best[0]):
-            continue
-        food = foods[best[1]]
-        if all(food.id != f.id for f in out):
+        food = _best(foods, words)
+        if food is not None and all(food.id != f.id for f in out):
             out.append(food)
     return out
 
@@ -84,6 +83,30 @@ def fits(food: Any, name: str) -> bool:
     return any(w in own for w in words) and all(
         _allowed(food, w) for w in words
     )
+
+
+def _best(foods: list[Any], words: list[str]) -> Any | None:
+    """The one food a part names best (a size settles a tie), or None."""
+    scored = [(_rank(food, words), food) for food in foods]
+    top = max((rank for rank, _ in scored), default=(0, 0))
+    if top == (0, 0):
+        return None
+    tied = [food for rank, food in scored if rank == top]
+    return tied[0] if len(tied) == 1 else _sized(tied, words)
+
+
+def _sized(foods: list[Any], words: list[str]) -> Any | None:
+    """Among sizes of one product, the one the part says, or None."""
+    packs = [food.package_g for food in foods]
+    if None in packs or len(set(packs)) < len(packs):
+        return None
+    said = set(words)
+    if said & _SMALL:
+        return min(foods, key=lambda food: food.package_g)
+    if said & _BIG:
+        return max(foods, key=lambda food: food.package_g)
+    weighed = [food for food in foods if f"{food.package_g:g}" in said]
+    return weighed[0] if len(weighed) == 1 else None
 
 
 def _rank(food: Any, words: list[str]) -> tuple[int, int]:

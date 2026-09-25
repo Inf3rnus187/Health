@@ -8,8 +8,9 @@ grams. Within the part of the description naming the food
 * else a count before it: « 2 tomates », « un demi concombre », « une
   tranche de comté », « ½ sachet de riz » — times the food's unit
   (``unit_g``), or its package (``package_g``) for « sachet », « boîte »,
-  « pot »… or when it has no unit; a pack without a count is one
-  (« petite boîte d'aubergines » = the box);
+  « pot »… or when it has no unit; a pack without a count is the
+  food's usual portion (``portion_g``: the small box, ¼ of the big
+  one), else one pack (« petite boîte d'aubergines » = the box);
 * else nothing (None): the form's grams, the photo or the package decide.
 """
 
@@ -20,7 +21,7 @@ from typing import Any
 from app.services.food_match import COUNTS, GRAMS, PACKS, parts, span
 
 _FILLERS = frozenset("de d du des la le l en a au".split())
-_BEFORE, _AFTER = 5, 3
+_BEFORE, _AFTER = 8, 3  # « un quart de la grosse boîte d'aubergines »
 
 
 def grams_in(food: Any, text: str) -> float | None:
@@ -69,9 +70,8 @@ def _counted(food: Any, before: list[str]) -> float | None:
                 break
             continue
         count = value if count is None else _combine(value, count)
-    if count is None and not pack:
-        return None
-    count = 1.0 if count is None else count
+    if count is None:
+        return (food.portion_g or food.package_g) if pack else None
     unit = food.package_g if pack or not food.unit_g else food.unit_g
     return round(count * unit, 1) if unit else None
 

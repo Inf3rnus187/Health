@@ -145,6 +145,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **One sheet per size, and my usual portion**: a food sheet has « Ma
+  portion habituelle (g) », with « Toute la boîte », « ½ », « ¼ » to
+  compute it from the package (migration `0021`, `portion_g`; MCP
+  `save_food`). A meal naming a food without a quantity counts that
+  portion (the whole small box, ¼ of the big one). Two sizes of one
+  product are two sheets: everywhere a sheet shows « name · brand ·
+  weight » (list, meal menu with its portion, analysis lines), and a
+  description saying « petite boîte » takes the smaller package,
+  « grosse / grande boîte » the larger, « boîte de 750 g » that one;
+  « un quart de la grosse boîte » is ¼ of its weight. Sizes of one
+  product are listed together, smaller first.
 - **Barcode from a photo or the camera**: in Mes aliments › « ▥
   Code-barres (scan ou saisie) », « 📷 Scanner le code-barres » opens
   the camera and « 🖼️ Photo du code-barres » takes a photo from the

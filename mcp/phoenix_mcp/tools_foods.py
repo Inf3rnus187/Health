@@ -33,8 +33,15 @@ async def save_food(
     unit_g: float | None = None,
     source: str = "",
     barcode: str = "",
+    portion_g: float | None = None,
 ) -> Any:
-    """Add a food (or replace ``food_id``'s sheet).
+    """Add a food (or replace ``food_id``'s sheet: send every field).
+
+    One sheet per size: the small box (185 g) and the big one are two
+    sheets with their own ``package_g`` (and barcode); a meal saying
+    « petite boîte » / « grosse boîte » takes the right one.
+    ``portion_g``: what the user usually eats of it (the whole small
+    box, ¼ of the big one), counted when a meal gives no quantity.
 
     ``per_100g``: energy_kcal, protein_g, carbs_g, sugars_g, fat_g,
     sat_fat_g, fiber_g, sodium_mg (1 g of salt = 400 mg of sodium).
@@ -50,6 +57,7 @@ async def save_food(
         "package_g": package_g,
         "unit_name": unit_name,
         "unit_g": unit_g,
+        "portion_g": portion_g,
         "per_100g": per_100g or {},
         "note": note,
         "source": source,
