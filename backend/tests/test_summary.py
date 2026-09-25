@@ -3,8 +3,17 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
+from zoneinfo import ZoneInfo
 
+import pytest
+from app.api.v1 import sync
+from app.core.db import SessionFactory
+from app.models.meal import Meal
+from app.services import meal_ai, meal_nutrients, tally
 from httpx import AsyncClient
+
+PARIS = ZoneInfo("Europe/Paris")  # the default time zone of a user
 
 
 async def test_summary_returns_latest(
@@ -26,7 +35,7 @@ async def test_summary_returns_latest(
     assert weight["date_key"] == "2026-01-10"
     # Entered later for a past day: only the day is known, no made-up time.
     assert weight["at"] is None
-    today = datetime.now(UTC).date().isoformat()
+    today = datetime.now(PARIS).date().isoformat()
     body["items"][0]["date_key"] = today
     await client.post("/api/v1/measurements", json=body, headers=auth)
     tiles = (await client.get("/api/v1/summary", headers=auth)).json()
@@ -121,3 +130,65 @@ async def test_home_shows_pee_and_distance_walked(
     assert pee["at"]  # the time of the last pee
     walked = by_key["activity.distance"]
     assert (walked["value"], walked["unit"]) == (6.4, "km")
+
+
+async def _tiles(client: AsyncClient, auth: dict[str, str]) -> dict[str, Any]:
+    tiles = (await client.get("/api/v1/summary", headers=auth)).json()
+    return {t["key"]: t for t in tiles}
+
+
+async def test_a_counter_shows_the_time_of_its_last_addition(
+    client: AsyncClient, auth: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def tap_at(iso: str) -> None:
+        now = datetime.fromisoformat(iso)
+        monkeypatch.setattr(sync, "utcnow", lambda: now)
+        monkeypatch.setattr(tally, "utcnow", lambda: now)
+
+    tally_url = "/api/v1/sync/tally"
+    # 01:30 in Paris on 25/09 is 23:30 UTC on 24/09: still that day's time
+    tap_at("2026-09-24T23:30:00+00:00")
+    await client.post(tally_url, json={"metric": "habit.coffee"}, headers=auth)
+    coffee = (await _tiles(client, auth))["habit.coffee"]
+    assert coffee["date_key"] == "2026-09-25"
+    assert coffee["at"].startswith("2026-09-24T23:30")
+    tap_at("2026-09-25T06:10:00+00:00")
+    for key in ("habit.coffee", "water.bottles_1_5"):
+        await client.post(tally_url, json={"metric": key}, headers=auth)
+    tiles = await _tiles(client, auth)
+    assert tiles["habit.coffee"]["value"] == 2
+    assert tiles["habit.coffee"]["at"].startswith("2026-09-25T06:10")
+    assert tiles["hydration.liters"]["at"].startswith("2026-09-25T06:10")
+    # added afterwards for a past day: only the day is known
+    past = {"metric": "habit.cigarettes", "date_key": "2026-09-20"}
+    await client.post(tally_url, json=past, headers=auth)
+    assert (await _tiles(client, auth))["habit.cigarettes"]["at"] is None
+
+
+async def test_home_shows_the_energy_brought_by_meals(
+    client: AsyncClient, auth: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def no_worker(*_: Any) -> bool:
+        return False
+
+    monkeypatch.setattr(meal_ai, "enqueue", no_worker)
+    made = await client.post(
+        "/api/v1/meals",
+        data={
+            "meal_type": "dinner",
+            "eaten_at": "2026-09-25T05:00",
+            "description": "Traitement A test",
+        },
+        headers=auth,
+    )
+    async with SessionFactory() as session:
+        meal = await session.get(Meal, made.json()["id"])
+        assert meal is not None
+        await meal_nutrients.record(session, meal, {"energy_kcal": 363.4})
+        await session.commit()
+    energy = (await _tiles(client, auth))["nutrition.energy"]
+    assert energy["label"] == "Énergie apportée (repas)"
+    assert (energy["value"], energy["unit"]) == (363.4, "kcal")
+    assert energy["date_key"] == "2026-09-25"
+    at = datetime.fromisoformat(energy["at"])
+    assert at == datetime(2026, 9, 25, 3, tzinfo=UTC)  # 05:00 in Paris

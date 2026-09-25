@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class TileOut(BaseModel):
@@ -19,3 +19,11 @@ class TileOut(BaseModel):
     delta: float | None = None
     avg7: float | None = None
     spark: list[float] = Field(default_factory=list)
+
+    @field_validator("at")
+    @classmethod
+    def _aware(cls, value: datetime | None) -> datetime | None:
+        """Always send the instant with its UTC offset."""
+        if value is None or value.tzinfo:
+            return value
+        return value.replace(tzinfo=UTC)

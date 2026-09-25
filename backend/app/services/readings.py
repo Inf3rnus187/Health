@@ -18,6 +18,7 @@ from app.models.health_raw import HealthSample
 from app.models.measurement import Measurement
 from app.models.metric import MetricDefinition
 from app.services.apple_health.units import convert
+from app.services.daily_rollup import user_zone
 
 #: Daily rows written by syncs (not an explicit entry).
 SYNCED = frozenset({"apple", "auto-export", "watch"})
@@ -43,20 +44,30 @@ async def latest(
     day_value = float(daily.value_num or 0.0)
     sample = await _newest_sample(session, user_id, metric.id)
     if sample is None:
-        return _entry(day_value, daily)
+        return await _entry(session, user_id, day_value, daily)
     value, at, unit, source = sample
     if metric.aggregation_hint == "sum" or value is None:
         return Reading(day_value, at, daily.source)
     explicit = daily.source not in SYNCED
     if explicit and measured_at(daily) > _aware(at):
-        return _entry(day_value, daily)
+        return await _entry(session, user_id, day_value, daily)
     return Reading(convert(value, unit or "", metric.unit), at, source)
 
 
-def _entry(value: float, daily: Measurement) -> Reading:
-    """A reading from a daily row, dated by its measurement day."""
-    timed = _aware(daily.recorded_at).date() == daily.date_key
-    return Reading(value, measured_at(daily), daily.source, timed)
+async def _entry(
+    session: AsyncSession, user_id: str, value: float, daily: Measurement
+) -> Reading:
+    """A reading from a daily row, dated by its measurement day.
+
+    Timed when entered on its own day in the user's time zone (a coffee
+    added at 01:30 in Paris is 23:30 UTC the day before): a counter keeps
+    the time of its last addition (:mod:`tally`).
+    """
+    at = _aware(daily.recorded_at)
+    zone = await user_zone(session, user_id)
+    if at.astimezone(zone).date() == daily.date_key:
+        return Reading(value, at, daily.source)
+    return Reading(value, measured_at(daily), daily.source, timed=False)
 
 
 def measured_at(daily: Measurement) -> datetime:

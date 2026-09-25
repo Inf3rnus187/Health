@@ -93,7 +93,8 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    que la description **nomme** sont donnés
    au modèle texte avec leurs **valeurs** et leurs **grammes**, « ils
    font foi ». Les grammes sont **lus par le code** dans la description
-   (`meal_quantity`) : grammes écrits à côté (« saumon 100g », « 150 g
+   (`meal_quantity`) : grammes écrits à côté (« saumon 100g », « saumon
+   cuit nature 100g » — « cuit », « nature », « cru » sautés —, « 150 g
    de riz »), sinon un compte (« 2 », « deux », « un demi », « ½ »,
    « 1/2 ») × le poids d'une unité de la fiche, ou × le paquet pour
    « sachet », « boîte », « pot »… ; sinon la **portion habituelle** de

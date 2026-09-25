@@ -35,6 +35,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Cigarettes, coffees and water show the time of the last one**: on
+  the home page these tiles had a date only — a counter kept the time
+  of its first addition, and a time was shown only when its UTC day was
+  the counter's day. Each addition for the current day now dates the
+  total, and a time is checked against the user's own time zone (a
+  coffee at 01:30 in Paris is 23:30 UTC the day before); the water
+  tile passes its time on too. An addition made afterwards for another
+  day still shows its date only.
+- **Grams written after « cuit », « nature » are read**: « 1 pavé
+  saumon cuit nature 100g » was read as 1 pavé × 100 g (« comptés »)
+  because the grams came 4 words after the food; « cuit », « nature »,
+  « cru »… are now skipped, so written grams win (« 150g » would have
+  given 100 g before).
 - **« sel » and « sodium » now name what a remark quotes**: « Comté :
   sel (120,9 mg par 30g) » quoted the comté's sodium (403 mg/100 g ×
   30 g) as salt, which is 302 mg (sodium × 2,5). The check now reads
@@ -251,6 +264,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Energy eaten on the home page**: a tile « Énergie apportée (repas) »
+  (`nutrition.energy`: the day's kcal from analysed meals, plus any
+  logged in Apple Health, with the last meal's time) sits next to
+  « Énergie active » and « Énergie de repos » (`activity.basal_energy`,
+  shown when the watch sends it) — what is spent is active + resting.
 - **Each nutrient against official references**: a meal's table has a
   column « Repère dîner » (petit-déjeuner, déjeuner) with the part of an
   adult-type day that meal type carries — « 600–800 kcal », « 600–800 mg

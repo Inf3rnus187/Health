@@ -67,11 +67,24 @@ rapide « Poids du matin (kg) » › Enregistrer.
 Tuiles, dans l'ordre (une mesure sans aucune donnée n'apparaît pas) :
 poids, pas, **km marchés / courus** (`activity.distance`, total du jour),
 FC au repos, fréquence cardiaque, VFC, sommeil, SpO2, fréquence
-respiratoire, énergie active, minutes d'exercice, cigarettes, cafés,
-**pipi** (`elimination.urination` : nombre du jour et heure du dernier),
-**heures travaillées** (`work.hours`), eau (litres = bouteilles × 1,5). Une tuile montre le dernier jour qui a une
-valeur, avec sa date. La liste est `HEADLINE_KEYS` dans
+respiratoire, énergie active, **énergie de repos** (`activity.basal_energy`,
+si la montre l'envoie), **énergie apportée (repas)** (`nutrition.energy` :
+les kcal des repas analysés du jour, plus celles notées dans Apple
+Santé, avec l'heure du dernier repas), minutes d'exercice, cigarettes,
+cafés, **pipi** (`elimination.urination` : nombre du jour et heure du
+dernier), **heures travaillées** (`work.hours`), eau (litres =
+bouteilles × 1,5). Une tuile montre le dernier jour qui a une valeur,
+avec sa date et **l'heure du dernier relevé** quand elle est connue :
+pour cigarettes, cafés et eau, l'heure du **dernier ajout** du jour
+(bouton, raccourci ou assistant) ; un ajout fait après coup pour un
+autre jour n'a que sa date. La liste est `HEADLINE_KEYS` dans
 `backend/app/services/summary.py`.
+
+**Apporté et dépensé** : « Énergie apportée (repas) » se compare à ce
+que le corps dépense, **énergie active + énergie de repos** — l'énergie
+active seule (le mouvement) n'est qu'une partie de la dépense ; la
+tuile « apportée » n'apparaît qu'une fois un repas analysé (sa date dit
+de quel jour il s'agit).
 
 ## Tableaux de bord
 
@@ -178,7 +191,9 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
      les **autres noms** de la fiche (« saumon, pavé de saumon »), ou
      choisir l'aliment dans la liste. Calculés avec **leur fiche** ; leurs
      **grammes sont lus par le code** dans la description : « 100g »,
-     « 150 g de riz », sinon un compte × le poids de leur unité
+     « 150 g de riz », « pavé de saumon cuit nature 100g » (« cuit »,
+     « nature », « cru » ne comptent pas), sinon un compte × le poids de
+     leur unité
      (« 2 tomates » = 2 × 120 g, « un demi concombre », « une tranche de
      comté », « ½ sachet de riz » = ½ × le paquet, « une boîte » ou
      « petite boîte » = la boîte : remplissez « Poids de la boîte » sur
@@ -444,7 +459,9 @@ ne peut être qu'aujourd'hui, et le pointage n'accepte que `amount` = 1
 Journal › « Pipi à une autre heure »).
 
 Chaque appui **ajoute** au total du jour et n'efface jamais rien ; la
-réponse donne le total avant (`previous`) et après (`total`). Pour
+réponse donne le total avant (`previous`) et après (`total`). L'accueil
+affiche l'heure du **dernier** appui du jour sur la tuile (cafés,
+cigarettes, eau). Pour
 l'embauche et la débauche, `total` est le nombre d'heures travaillées du
 jour et `detail` une phrase à afficher en notification (« Débauche 17:31
 — 8 h 49 aujourd'hui »).

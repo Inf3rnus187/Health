@@ -27,12 +27,17 @@ HEADLINE_KEYS = (
     "body.spo2",
     "body.resp_rate",
     "activity.active_energy",
+    "activity.basal_energy",
+    "nutrition.energy",
     "activity.exercise_min",
     "habit.cigarettes",
     "habit.coffee",
     "elimination.urination",
     "work.hours",
 )
+
+#: Tiles named for the recap rather than by their metric.
+_LABELS = {"nutrition.energy": "Énergie apportée (repas)"}
 
 #: Units not worth printing next to a number ("5", not "5 count").
 _BARE_UNITS = {"count"}
@@ -80,7 +85,7 @@ async def _water_tile(session: AsyncSession, user_id: str) -> Tile | None:
         unit="L",
         value=round(bottles.value * _LITERS_PER_BOTTLE, 2),
         date_key=bottles.date_key,
-        at=None,
+        at=bottles.at,
         delta=_liters(bottles.delta),
         avg7=_liters(bottles.avg7),
         spark=[round(v * _LITERS_PER_BOTTLE, 2) for v in bottles.spark],
@@ -105,7 +110,7 @@ async def _tile(session: AsyncSession, user_id: str, key: str) -> Tile | None:
     at = view["latest"]["at"] if view["latest"]["timed"] else None
     return Tile(
         key=key,
-        label=view["label"],
+        label=_LABELS.get(key, view["label"]),
         unit=None if view["unit"] in _BARE_UNITS else view["unit"],
         value=view["latest"]["value"],
         date_key=date.fromisoformat(view["day"]["date"]),

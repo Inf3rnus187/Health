@@ -14,6 +14,10 @@ indiquée.
 
 Home tiles: latest value, 7-day average and change per key metric.
 
+``at``: time of the last reading (a counter's last addition); the
+kcal eaten (nutrition.energy, from analysed meals) sit next to active
+and resting energy — spent = active + resting.
+
 ### `list_domains`
 
 Domain codes and their French names (Cœur, Biologie, Sommeil…).

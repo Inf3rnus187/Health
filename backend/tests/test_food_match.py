@@ -10,7 +10,7 @@ from app.core import ollama
 from app.core.db import SessionFactory
 from app.services import meal_ai
 from app.services.food_match import fits, named
-from app.services.meal_quantity import grams_in
+from app.services.meal_quantity import grams_in, read, written
 from httpx import AsyncClient
 
 BREAKFAST = (
@@ -92,6 +92,20 @@ def test_the_grams_follow_the_words_used() -> None:
     box = _food("Aubergines cuisinées à la provençale", package_g=185.0)
     assert grams_in(box, BREAKFAST) == 185.0  # the box
     assert grams_in(SALMON, "2 pavés de saumon") == 200.0
+
+
+def test_written_grams_are_read_past_cuit_and_nature() -> None:
+    salmon = _food(
+        "Saumon sauvage rose", aliases="saumon", unit_name="Pavé", unit_g=100.0
+    )
+    said = (
+        "Entrée: 2 tomates, un demi concombre, une tranche de comté Plat: "
+        "1 pavé saumon cuit nature {}g et pommes de terres rissolées nature"
+    )
+    assert read(salmon, said.format(100)) == (100.0, "écrit")
+    assert read(salmon, said.format(150)) == (150.0, "écrit")  # not 1 pavé
+    line = written([{"name": "Tomates", "unit_g": 150}], "tomates crues 240 g")
+    assert (line[0]["grams"], line[0]["grams_from"]) == (240.0, "écrit")
 
 
 def test_a_line_of_the_model_is_recognised() -> None:

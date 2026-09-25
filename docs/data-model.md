@@ -125,7 +125,9 @@ follow the specification §5.2 (plus `auth_sessions`, see
   account can neither log in nor use its tokens), `mfa_secret` /
   `mfa_enabled` (optional TOTP, migration `0003`).
 - `measurements` — besides the typed value columns: `recorded_at` (the
-  time sent with the value, else when it was written), `date_key` (the
+  time sent with the value, else when it was written; a counter added
+  to for the user's current day — `POST /sync/tally` — takes the time
+  of its last addition), `date_key` (the
   day it belongs to), `source` (who wrote it: `manual`, `watch`, `work`…)
   and `token_id` (the API token it came through, `NULL` for the web
   session; set to `NULL` if the token is deleted).

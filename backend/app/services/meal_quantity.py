@@ -4,7 +4,9 @@ Read by code, never guessed, so the same words always give the same
 grams. Within the part of the description naming the food
 (:mod:`food_match`: « un pavé de saumon » names « Saumon sauvage rose »):
 
-* grams written next to it: « saumon 100g », « 150 g de riz » (kg too);
+* grams written next to it: « saumon 100g », « saumon cuit nature
+  100g » (« cuit », « nature », « cru »… skipped), « 150 g de riz »
+  (kg too);
 * else a count before it: « 2 tomates », « un demi concombre », « une
   tranche de comté », « ½ sachet de riz » — times the food's unit
   (``unit_g``), or its package (``package_g``) for « sachet », « boîte »,
@@ -50,7 +52,7 @@ def read(food: Any, text: str) -> tuple[float | None, str]:
         if at is None:
             continue
         start, end = at
-        found = _grams(words[end : end + _AFTER]) or _grams_before(
+        found = _grams(_after(words, end)) or _grams_before(
             words[max(0, start - _BEFORE) : start]
         )
         if found is not None:
@@ -116,12 +118,17 @@ def _written(name: str, text: str) -> float | None:
         at = [i for i, w in enumerate(words) if w in own]
         if not at:
             continue
-        found = _grams(words[at[-1] + 1 : at[-1] + 1 + _AFTER]) or (
+        found = _grams(_after(words, at[-1] + 1)) or (
             _grams_before(words[max(0, at[0] - _BEFORE) : at[0]])
         )
         if found is not None:
             return found
     return None
+
+
+def _after(words: list[str], start: int) -> list[str]:
+    """The words right after a food, « cuit », « nature »… skipped."""
+    return [w for w in words[start:] if w not in _VAGUE][:_AFTER]
 
 
 def _grams(after: list[str]) -> float | None:

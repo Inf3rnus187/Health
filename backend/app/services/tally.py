@@ -5,6 +5,8 @@ The daily fact table keeps one row per metric/day, so a plain ingest
 reads the current day total, adds the amount and upserts the sum, so each
 tap (or an assistant's "add one") adds to the running total for the day.
 A negative amount takes back a wrong entry; the total never goes below 0.
+A tap for the user's current day dates the row with its time, so the
+home page shows when the last coffee or cigarette was added.
 A pee (``elimination.urination``) is a timed journal entry: each one is
 logged with its time, the day's value is their count. ``work.start`` /
 ``work.end`` clock in / out now (:mod:`work_tap`).
@@ -18,8 +20,10 @@ from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import InvalidInputError
+from app.models.base import utcnow
+from app.models.measurement import Measurement
 from app.schemas.measurement import MeasurementIn
-from app.services import audit, urination, work_tap
+from app.services import audit, timed_entries, urination, work_tap
 from app.services import measurement_values as values
 from app.services import measurements as measure
 from app.services import metrics as metrics_service
@@ -60,9 +64,10 @@ async def increment(
         )
     values.validate(metric, total)
     item = MeasurementIn(metric_key=metric_key, date_key=day, value=total)
-    await measure.record_batch(
+    rows = await measure.record_batch(
         session, user_id, [item], source="watch", token_id=token_id
     )
+    await _stamp(session, user_id, rows, day)
     step = Tally(previous=previous, total=total)
     await _log(session, user_id, metric_key, day, step, token_id)
     return step
@@ -85,6 +90,17 @@ async def _timed(
         count = await urination.tap(session, user_id, amount, day)
         return Tally(previous=count[0], total=count[1])
     return None
+
+
+async def _stamp(
+    session: AsyncSession, user_id: str, rows: list[Measurement], day: date
+) -> None:
+    """Date today's total by this tap (a past day keeps its own time)."""
+    now = utcnow()
+    if await timed_entries.local_day(session, user_id, now) != day:
+        return
+    for row in rows:
+        row.recorded_at = now
 
 
 async def _log(

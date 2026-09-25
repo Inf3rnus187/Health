@@ -16,7 +16,12 @@ def today(day: str | None) -> str:
 
 @mcp.tool()
 async def health_summary() -> Any:
-    """Home tiles: latest value, 7-day average and change per key metric."""
+    """Home tiles: latest value, 7-day average and change per key metric.
+
+    ``at``: time of the last reading (a counter's last addition); the
+    kcal eaten (nutrition.energy, from analysed meals) sit next to active
+    and resting energy — spent = active + resting.
+    """
     return await client.get("/summary")
 
 
