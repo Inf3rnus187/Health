@@ -287,6 +287,8 @@ async def test_a_meal_with_its_sachet_and_a_food_of_the_list() -> None:
     await tools_foods.scan_barcode("SGVsbG8=")
     assert seen[4].url.path == "/api/v1/foods/scan"
     assert b"Hello" in seen[4].content
+    await tools_foods.nutrition_references()
+    assert seen[5].url.path == "/api/v1/nutrition/references"
 
 
 async def test_period_facts_and_report_check() -> None:

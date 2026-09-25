@@ -1,9 +1,10 @@
-"""Reference values for foods: the Ciqual table, Open Food Facts.
+"""Reference values: the Ciqual table, Open Food Facts, daily intakes.
 
 Ciqual (ANSES, shipped with the hub, offline) holds generic foods —
 « Tomate, crue », « Saumon, cuit à la vapeur »; Open Food Facts (only
 when ``FOOD_LOOKUP_ONLINE=true``) packaged products by barcode. Both are
-proposals for a food sheet: nothing is saved here.
+proposals for a food sheet: nothing is saved here. The official daily
+references (EU, ANSES, WHO) are what each meal is set against.
 """
 
 from __future__ import annotations
@@ -15,7 +16,7 @@ from fastapi import APIRouter, Depends, Path, Query
 from app.core.deps import Principal, ReaderDep, require_scope
 from app.core.errors import NotFoundError
 from app.core.scopes import WRITE_MEASUREMENTS
-from app.services import ciqual, food_off
+from app.services import ciqual, food_off, meal_reference
 
 router = APIRouter(tags=["journal"])
 
@@ -63,6 +64,21 @@ async def barcode(
     """
     del principal
     return await food_off.lookup(barcode)
+
+
+@router.get("/nutrition/references")
+async def references(principal: ReaderDep) -> dict[str, Any]:
+    """The official daily references each meal is set against.
+
+    ``daily``: energy_kcal … sodium_mg with ``value`` (a day, adult-type),
+    ``unit``, ``kind`` (``limit`` not to exceed, ``target`` to reach,
+    ``reference`` a benchmark) and ``source``; ``share_pct``: the
+    indicative part of the day of a breakfast, lunch or dinner (none for
+    a snack); ``sources``: name and link of each. A meal's own figures
+    are in its ``reference`` (``GET /meals/{id}``).
+    """
+    del principal
+    return meal_reference.table()
 
 
 def _out(ref: ciqual.Ref) -> dict[str, Any]:

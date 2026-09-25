@@ -1,6 +1,7 @@
 import type { Range } from '../utils/range';
 import { api, authFetch, toError } from './client';
 import type { FoodPortion } from './foods';
+import type { MealReference } from './nutrition';
 
 export interface UrinationDay {
   day: string;
@@ -30,6 +31,8 @@ export interface MealItem extends MealTotals {
   grams_from?: string;
   /** « 2 × 120 g »: the count said × the model's weight of one unit. */
   units?: string;
+  /** « Ciqual 2025 · Tomate, crue »: the table food its values are of. */
+  reference?: string;
 }
 
 export interface MealAnalysis {
@@ -61,6 +64,8 @@ export interface Meal {
   foods: FoodPortion[];
   analysis_status: string | null;
   analysis: MealAnalysis | null;
+  /** Its totals against official daily references (by the hub). */
+  reference?: MealReference | null;
 }
 
 export const MEAL_TYPES: Record<string, string> = {

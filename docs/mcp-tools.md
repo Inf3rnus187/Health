@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-112 outils.
+113 outils.
 
 ## Données et métriques
 
@@ -306,6 +306,11 @@ Paramètres : `start` (string | null, défaut `None`), `end` (string | null, dé
 
 One meal: foods, checked nutrients, score, verdict, remarks.
 
+``reference`` (computed by the hub): each nutrient against the
+official daily reference (``day``, ``day_pct``) and the meal type's
+indicative part of the day (``low``–``high``, ``verdict`` below /
+within / above; none for a snack). See nutrition_references.
+
 Paramètres : `meal_id`* (string)
 
 ### `update_meal`
@@ -386,6 +391,17 @@ foods first. Each: code, name, group, per_100g — e.g. to fill
 save_food with reference values.
 
 Paramètres : `query`* (string), `limit` (integer, défaut `20`)
+
+### `nutrition_references`
+
+The official daily references each meal is set against.
+
+Adult-type, per day: energy 2 000 kcal, protein 50 g, carbohydrate
+260 g, sugars ≤ 90 g, fat 70 g, saturates ≤ 20 g (EU 1169/2011),
+fibre ≥ 30 g (ANSES), sodium < 2 000 mg (WHO); the indicative part of
+a breakfast (15–25 %), lunch or dinner (30–40 %), none for a snack;
+sources with links. A meal's own figures: get_meal → ``reference``.
+Not personal needs: say so when you quote them.
 
 ### `lookup_barcode`
 

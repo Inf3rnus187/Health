@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **Explanation links send nothing**: the links of « Comprendre ces
+  références » (EU, ANSES, WHO, Santé.fr, Open Food Facts, Ciqual) are
+  plain links the browser opens in a new tab only when tapped, without
+  a referrer; the hub itself calls nothing and the addresses carry no
+  data (a product link carries its barcode only).
 - **Nightly Open Food Facts re-reading**: with the lookup on, the
   worker sends each sheet's barcode again when its page is older than
   `FOOD_REFRESH_DAYS` (default 30; 0 turns it off) — the barcode only,
@@ -30,6 +35,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Meal cards no longer scroll sideways on a phone**: the four buttons
+  (Modifier, Refaire ce repas, Réanalyser, Supprimer) stayed on one line
+  and pushed the card 60 px past a 390 px screen; they now wrap.
 - **A count you write beats what a photo shows**: with a photo, « 2
   tomates » became 50 g and « un demi concombre » 30 g — the grams the
   vision model saw of a small salad, which the text model kept. The code
@@ -235,6 +243,29 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Each nutrient against official references**: a meal's table has a
+  column « Repère dîner » (petit-déjeuner, déjeuner) with the part of an
+  adult-type day that meal type carries — « 600–800 kcal », « 600–800 mg
+  de sodium » — and a mark: ✓ within, ↓ below, ↑ above, ⚠ over a limit
+  (sugars, saturates, sodium), ↓ in orange when fibre is short. Daily
+  references: energy 2 000 kcal, protein 50 g, carbohydrate 260 g,
+  sugars 90 g, fat 70 g, saturates 20 g (EU 1169/2011, annex XIII),
+  fibre 30 g (ANSES 2016), sodium under 2 000 mg (WHO). The meal parts
+  (breakfast 15–25 %, lunch and dinner 30–40 %) are the ANSES sheet
+  « Veiller à son équilibre nutritionnel », shown as indicative: ANSES
+  said in 2019 no split can be recommended, and none exists for a snack,
+  which shows its share of the day (« 33 % »). Computed by the hub on
+  each read (`reference` of `GET /meals/{id}`), never by the AI;
+  `GET /nutrition/references` and the MCP tool `nutrition_references`
+  give the table and its sources.
+- **What a reference means, one tap away**: « Comprendre ces
+  références » under each meal explains the reference column (values and
+  links to the EU regulation, ANSES and WHO), Nutri-Score, NOVA 1–4,
+  Ciqual, « étiquette », « estimé » and the quantity words. Each Ciqual
+  line now names the table food used (« Ciqual « Tomate, crue » »), an
+  « étiquette 🏷️ » line links to the product's Open Food Facts page,
+  and a sheet's Open Food Facts details link to what Nutri-Score and
+  NOVA mean.
 - **Read Open Food Facts again without the pack**: « ↻ Open Food Facts »
   on each sheet that has a barcode re-reads its page and says what
   changed; « ↻ Tout relire sur Open Food Facts » does every sheet (a

@@ -188,7 +188,8 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
      embarquée dans le hub, rien n'est envoyé dehors) : l'IA choisit la
      référence la plus proche (même aliment, même cuisson) dans une
      courte liste tirée de vos mots, le code prend ses valeurs pour les
-     grammes — marqués « Ciqual » ;
+     grammes — marqués « Ciqual » suivi de l'aliment de la table utilisé
+     (« Ciqual « Tomate, crue » ») ;
   3. sinon l'**estimation de l'IA**, contrôlée (marquée « estimé »).
 
   Chaque aliment dit **d'où viennent ses grammes** : « 240 g écrits »
@@ -214,6 +215,45 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
   dans vos fiches ou dans la table ; seul l'avis (texte, note) peut
   varier si la description change de mots. Plus de « vérifier la
   composition du sachet ». Voir le [guide IA](ia-medicale.md#repas).
+- **Repères officiels, ligne par ligne** : le tableau des nutriments a
+  une colonne **« Repère dîner »** (« Repère petit-déjeuner »,
+  « Repère déjeuner ») — la part d'une journée d'**adulte-type** que ce
+  type de repas porte : pour un dîner « 600–800 kcal », « 15–20 g » de
+  protéines, « 600–800 mg » de sodium — et une marque :
+  ✓ dans le repère (ou sous la limite), ↓ en dessous, ↑ au-dessus,
+  ⚠ **limite dépassée** (sucres, saturés, sodium) ; ↓ en orange pour
+  les **fibres** (à augmenter). Sur ordinateur, le survol d'un repère
+  donne sa part du jour (« 18 % du repère d'un jour : 2 000 kcal
+  (UE) »). Une **collation** n'a pas de part fixée : la colonne
+  « Part du jour » donne seulement le pourcentage de la journée
+  (« 33 % » de saturés).
+  - Repères d'une journée : énergie 2 000 kcal, protéines 50 g,
+    glucides 260 g, sucres ≤ 90 g, lipides 70 g, saturés ≤ 20 g
+    (règlement UE 1169/2011, annexe XIII — ceux des « % AR » des
+    emballages), fibres ≥ 30 g (ANSES 2016), sodium < 2 000 mg soit 5 g
+    de sel (OMS).
+  - Part d'un repas : petit-déjeuner 15–25 %, déjeuner 30–40 %, dîner
+    30–40 % (fiche ANSES « Veiller à son équilibre nutritionnel »).
+    **Indicatif** : en 2019 l'ANSES a conclu qu'aucune répartition ne
+    pouvait être recommandée. Le repère suit le **type** du repas :
+    un repas de 5 h noté « dîner » est comparé à un dîner (« Modifier »
+    pour changer le type).
+  - Ce ne sont **pas vos besoins personnels** (âge, sexe, poids,
+    activité, traitement) : un repère pour voir où l'on se situe, pas
+    une prescription. Le total du jour (en tête de journée) se compare
+    aux repères d'une journée entière.
+  - Calculé par le hub à chaque affichage, jamais par l'IA.
+- **« Comprendre ces références »** (sous chaque repas, replié) : les
+  repères et leurs sources (liens vers le règlement UE, l'ANSES, l'OMS),
+  le **Nutri-Score** (A à E : qualité nutritionnelle pour 100 g comparée
+  à la catégorie du produit), les **groupes NOVA** (1 brut ou peu
+  transformé · 2 ingrédient culinaire · 3 transformé · 4
+  ultra-transformé : la transformation, pas la valeur nutritionnelle),
+  **Ciqual**, « étiquette », « estimé » et les mots des quantités. Les
+  liens s'ouvrent dans un nouvel onglet (Santé.fr, Open Food Facts,
+  ciqual.anses.fr…) ; **« étiquette 🏷️ »** sur une ligne ouvre la page
+  Open Food Facts du produit quand sa fiche en a une, et les détails
+  Open Food Facts d'une fiche ont « Comprendre : Nutri-Score · NOVA ».
 - Les nutriments d'un repas rejoignent les **mêmes mesures nutrition
   qu'Apple Santé** (`nutrition.energy`, protéines, glucides…) ; modifier,
   réanalyser ou supprimer le repas remplace ou retire exactement ses
@@ -489,6 +529,24 @@ curl -s -X POST "http://<hub>/api/v1/meals?token=$TOKEN" \
   -F eaten_at="2026-09-23T20:30" -F meal_type=dinner -F file=@repas.jpg \
   -F photos=@sachet.jpg -F photos=@valeurs.jpg
 ```
+
+**Voir le dernier repas face aux repères** (lecture seule, jeton
+`read:all`) :
+
+1. **Formater la date** — *Date actuelle*, format personnalisé
+   `yyyy-MM-dd`.
+2. **Obtenir le contenu de l'URL** — URL
+   `http://<hub>/api/v1/meals?start=<Date formatée>&end=<Date formatée>`,
+   méthode **GET**, en-tête `Authorization` = `Bearer <jeton>`.
+3. **Obtenir l'élément de la liste** — *Premier élément* (le plus
+   récent).
+4. **Obtenir la valeur du dictionnaire** — clé `reference`, puis `rows`,
+   puis `sodium_mg` (ou `energy_kcal`, `fiber_g`…) ; dans ce dernier
+   dictionnaire : `low` et `high` (le repère du repas), `day_pct` (sa
+   part du repère d'un jour), `verdict` (`below`, `within`, `above` ;
+   absent pour une collation).
+5. **Afficher le résultat**. Les repères eux-mêmes et leurs sources :
+   `GET /api/v1/nutrition/references`, même en-tête.
 
 Ailleurs : **Journal › Repas** dans le site (type, date et heure,
 description, aliments de ma liste, photos) ; outil MCP `log_meal`

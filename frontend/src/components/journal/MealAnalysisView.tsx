@@ -1,33 +1,12 @@
-import type { MealAnalysis, MealItem, MealTotals } from '../../api/journal';
+import type { Food } from '../../api/foods';
+import type { MealAnalysis, MealItem } from '../../api/journal';
+import type { MealReference } from '../../api/nutrition';
+import { useFoods } from '../../hooks/useFoods';
 import { frNumber } from '../../utils/format';
-
-const ROWS: [keyof MealTotals, string, string][] = [
-  ['energy_kcal', 'Énergie', 'kcal'],
-  ['protein_g', 'Protéines', 'g'],
-  ['carbs_g', 'Glucides', 'g'],
-  ['sugars_g', '— dont sucres', 'g'],
-  ['fat_g', 'Lipides', 'g'],
-  ['sat_fat_g', '— dont saturés', 'g'],
-  ['fiber_g', 'Fibres', 'g'],
-  ['sodium_mg', 'Sodium', 'mg'],
-];
-
-export function NutrientTable({ totals }: { totals: MealTotals }) {
-  return (
-    <table className="nutri-table">
-      <tbody>
-        {ROWS.map(([key, label, unit]) => (
-          <tr key={key}>
-            <td>{label}</td>
-            <td>
-              {frNumber(totals[key], key === 'energy_kcal' ? 0 : 1)} {unit}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
+import { MealRefs } from './MealRefs';
+import { NutrientTable } from './NutrientTable';
+import { RefLink } from './RefLink';
+import { LINKS } from './refLinks';
 
 function scoreClass(score: number): string {
   if (score >= 7) return 'badge badge-done';
@@ -48,11 +27,26 @@ function Remarks({ a }: { a: MealAnalysis }) {
   );
 }
 
-/** Where an item's values come from, as shown after its grams. */
-function origin(source?: string): string {
-  if (source === 'étiquette') return ', étiquette 🏷️';
-  if (source === 'Ciqual') return ', Ciqual';
-  return ', estimé';
+/** « Tomate, crue » out of « Ciqual 2025 · Tomate, crue ». */
+function tableName(reference?: string): string {
+  return reference?.split(' · ').slice(1).join(' · ') ?? '';
+}
+
+/** Where an item's values come from, after its grams, with its link. */
+function Origin({ item, food }: { item: MealItem; food?: Food }) {
+  if (item.source === 'étiquette') {
+    const url = food?.product_info?.url;
+    const label = 'étiquette 🏷️';
+    return <>, {url ? <RefLink href={url}>{label}</RefLink> : label}</>;
+  }
+  if (item.source !== 'Ciqual') return <>, estimé</>;
+  const name = tableName(item.reference);
+  return (
+    <>
+      , <RefLink href={LINKS.ciqual}>Ciqual</RefLink>
+      {name && ` « ${name} »`}
+    </>
+  );
 }
 
 /** How the grams were given, after them: « écrits », « ta portion »… */
@@ -76,20 +70,40 @@ function quantity(i: MealItem): string {
 }
 
 function Foods({ a }: { a: MealAnalysis }) {
-  const kept = (a.items ?? []).map(
-    (i) => `${i.name} (${quantity(i)}${origin(i.source)})`,
-  );
+  const { data: foods } = useFoods();
+  const byId = new Map((foods ?? []).map((f) => [f.id, f]));
   const dropped = (a.rejected ?? []).map((r) => `${r.name} (${r.reason})`);
   return (
     <p className="muted">
-      {kept.join(', ')}
+      {(a.items ?? []).map((i, n) => (
+        <span key={`${n}${i.name}`}>
+          {n > 0 && ', '}
+          {i.name} ({quantity(i)}
+          <Origin item={i} food={byId.get(i.food_id ?? '')} />)
+        </span>
+      ))}
       {dropped.length > 0 && ` — écarté : ${dropped.join(', ')}`}
     </p>
   );
 }
 
+/** Which models read the meal, and what the verdict rests on. */
+function Made({ a }: { a: MealAnalysis }) {
+  return (
+    <p className="muted small">
+      Aliments : IA ({a.model}
+      {a.vision_model ? ` + photo : ${a.vision_model}` : ''}) et ta description.
+      Avis : écrit par l’IA d’après ces valeurs, chiffres vérifiés.
+    </p>
+  );
+}
+
 /** The checked reading of a meal: score, verdict, nutrients, foods. */
-export function MealAnalysisView({ a }: { a: MealAnalysis }) {
+export function MealAnalysisView(props: {
+  a: MealAnalysis;
+  reference?: MealReference | null;
+}) {
+  const { a } = props;
   return (
     <div className="meal-analysis">
       <p>
@@ -99,16 +113,12 @@ export function MealAnalysisView({ a }: { a: MealAnalysis }) {
         {a.verdict}
       </p>
       <Remarks a={a} />
-      {a.totals && <NutrientTable totals={a.totals} />}
+      {a.totals && (
+        <NutrientTable totals={a.totals} reference={props.reference} />
+      )}
       <Foods a={a} />
-      <p className="muted small">
-        Aliments : IA ({a.model}
-        {a.vision_model ? ` + photo : ${a.vision_model}` : ''}) et votre
-        description. Quantités : écrites ou comptées dans la description, vos
-        fiches, sinon estimées par l’IA (dit sur chaque aliment). Valeurs : vos
-        étiquettes 🏷️, la table Ciqual 2025 (ANSES), sinon estimées. Avis :
-        écrit par l’IA d’après ces valeurs, chiffres vérifiés.
-      </p>
+      <Made a={a} />
+      <MealRefs />
     </div>
   );
 }

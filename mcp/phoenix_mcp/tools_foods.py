@@ -85,6 +85,20 @@ async def search_ciqual(query: str, limit: int = 20) -> Any:
 
 
 @mcp.tool()
+async def nutrition_references() -> Any:
+    """The official daily references each meal is set against.
+
+    Adult-type, per day: energy 2 000 kcal, protein 50 g, carbohydrate
+    260 g, sugars ≤ 90 g, fat 70 g, saturates ≤ 20 g (EU 1169/2011),
+    fibre ≥ 30 g (ANSES), sodium < 2 000 mg (WHO); the indicative part of
+    a breakfast (15–25 %), lunch or dinner (30–40 %), none for a snack;
+    sources with links. A meal's own figures: get_meal → ``reference``.
+    Not personal needs: say so when you quote them.
+    """
+    return await client.get("/nutrition/references")
+
+
+@mcp.tool()
 async def lookup_barcode(barcode: str) -> Any:
     """A packaged food by barcode on Open Food Facts (if the hub allows).
 

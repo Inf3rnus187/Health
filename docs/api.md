@@ -365,6 +365,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | DELETE | `/medications/intakes/{intake_id}` | `write:measurements` | `intake_id` | Delete a dose entered by mistake (the audit log keeps the trace). |
 | POST | `/medications/take` | `write:measurements` + ?token= | JSON `TakeIn` (taken_at, status, dose, note, treatment) | Record a dose by the treatment's name (an iPhone Shortcut). |
 | GET | `/medications/today` | `read:all` | — | The active treatments with today's doses (taken, not taken, last). |
+| GET | `/nutrition/references` | `read:all` | — | The official daily references each meal is set against. |
 | GET | `/openfoodfacts/{barcode}` | `write:measurements` | `barcode` | A packaged food by its barcode, from Open Food Facts. |
 | GET | `/spending/meals` | `read:all` | `start`?, `end`?, `kind`?, `bucket`? | Spending on meals paid for over ``start``..``end``. |
 | GET | `/stock` | `read:all` | — | What is left of each food with a stock. |

@@ -1749,7 +1749,8 @@ a.tile:hover {
   color: var(--color-primary);
 }
 
-.food-row .row-actions {
+.food-row .row-actions,
+.meal-body .row-actions {
   flex-wrap: wrap;
 }
 
@@ -1805,9 +1806,64 @@ a.tile:hover {
   margin: 4px 0;
 }
 
-.nutri-table td {
-  padding: 1px 12px 1px 0;
+.nutri-table td,
+.nutri-table th {
+  padding: 1px 10px 1px 0;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.nutri-table td.muted {
+  font-size: 0.85em;
+}
+
+.nutri-table th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.8em;
+  color: var(--color-muted);
+}
+
+.nutri-table td:last-child {
+  padding-right: 0;
+}
+
+.ref-ok {
+  color: var(--color-ok);
+}
+
+.ref-warn {
+  color: var(--color-warn);
+  font-weight: 600;
+}
+
+.ref-link {
+  color: var(--color-primary);
+}
+
+.meal-refs {
+  margin-top: 6px;
+  font-size: 0.85em;
+}
+
+.meal-refs summary {
+  cursor: pointer;
+  color: var(--color-primary);
+}
+
+.meal-refs dt {
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+.meal-refs dd {
+  margin: 2px 0 0;
+  color: var(--color-muted);
+}
+
+.meal-refs ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
 }
 
 .small {

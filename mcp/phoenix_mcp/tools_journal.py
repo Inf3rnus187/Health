@@ -107,7 +107,13 @@ async def list_meals(start: str | None = None, end: str | None = None) -> Any:
 
 @mcp.tool()
 async def get_meal(meal_id: str) -> Any:
-    """One meal: foods, checked nutrients, score, verdict, remarks."""
+    """One meal: foods, checked nutrients, score, verdict, remarks.
+
+    ``reference`` (computed by the hub): each nutrient against the
+    official daily reference (``day``, ``day_pct``) and the meal type's
+    indicative part of the day (``low``–``high``, ``verdict`` below /
+    within / above; none for a snack). See nutrition_references.
+    """
     return await client.get(f"/meals/{meal_id}")
 
 

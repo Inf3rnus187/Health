@@ -207,6 +207,16 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
 8. Les totaux deviennent des relevés `meal` à l'heure du repas, dans les
    mesures nutrition d'Apple Santé ; ce sont des **estimations**
    (±20–30 % typiquement sur les portions), affichées comme telles.
+9. **Repères officiels** (colonne « Repère dîner ») : **aucun modèle** —
+   le code (`services/meal_reference.py`) compare à chaque affichage les
+   totaux aux repères d'une journée d'adulte-type (UE 1169/2011 :
+   2 000 kcal, protéines 50 g, glucides 260 g, sucres 90 g, lipides
+   70 g, saturés 20 g ; ANSES : fibres 30 g ; OMS : sodium < 2 000 mg)
+   et à la part indicative du type de repas (fiche ANSES : petit-déjeuner
+   15–25 %, déjeuner et dîner 30–40 % ; aucune pour une collation —
+   l'ANSES n'a pu recommander aucune répartition en 2019). Le modèle ne
+   reçoit pas ces repères : l'avis et la colonne sont indépendants. Ce
+   ne sont pas des besoins personnels.
 
 Statuts et délai : comme les documents (en attente → en cours → lu /
 échec), 15 minutes maximum ; relancé après un redémarrage du worker.

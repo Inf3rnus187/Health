@@ -39,6 +39,14 @@ Over time Open Food Facts can thus see which barcodes the hub's address
 asks for, never who eats them. A barcode on a
   photo (`POST /foods/scan`) is decoded on the hub, offline
   (`services/barcode_read.py`, zxing-cpp), and the photo is not kept.
+- **Explanation links**: « Comprendre ces références » under a meal,
+  and a sheet's Open Food Facts details, hold plain links (EU
+  regulation, ANSES, WHO, Santé.fr, Open Food Facts, Ciqual). The hub
+  calls none of them; the browser opens one in a new tab only when it
+  is tapped, with `rel="noreferrer noopener"` (no hub address sent), and
+  no address carries personal data — a product link carries its barcode
+  only. The official references a meal is set against are constants of
+  the code (`services/meal_reference.py`), read offline.
 - **MFA (optional, no web screen yet)**: TOTP —
   `POST /auth/mfa/setup|enable|disable`, called with a web session's
   access token (never an API token); once enabled, `POST /auth/login`

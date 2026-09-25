@@ -50,7 +50,7 @@ function Reading({ meal }: { meal: Meal }) {
   if (status !== 'done' || !meal.analysis) {
     return <p className="muted">Pas encore analysé.</p>;
   }
-  return <MealAnalysisView a={meal.analysis} />;
+  return <MealAnalysisView a={meal.analysis} reference={meal.reference} />;
 }
 
 function useDelete(meal: Meal) {

@@ -183,6 +183,9 @@ Depuis un autre poste, la même commande à travers SSH :
   une fiche par format : petite et grosse boîte —, **unité**
   `unit_name` / `unit_g`,
   source, code-barres), `search_ciqual` (table Ciqual 2025, hors ligne),
+  `nutrition_references` (les repères officiels d'une journée — UE,
+  ANSES, OMS — et la part indicative de chaque type de repas, avec
+  leurs sources ; ceux d'un repas sont dans `reference` de `get_meal`),
   `lookup_barcode` (Open Food Facts, seulement si
   `FOOD_LOOKUP_ONLINE=true` : les valeurs et tout le reste de la page —
   ingrédients, Nutri-Score, NOVA, additifs, allergènes… —, à repasser
@@ -258,7 +261,11 @@ du serveur et de `log_meal`) :
 3. laisse `meal_type` vide si vous ne dites pas « déjeuner », « dîner »…
    (le hub le déduit de l'heure : 5 h → petit-déjeuner) ;
 4. après l'analyse (`get_meal`), dit d'où vient chaque ligne :
-   « étiquette » = votre fiche, « Ciqual » = la table, sinon estimée.
+   « étiquette » = votre fiche, « Ciqual » = la table, sinon estimée ;
+   et, avec `reference`, où chaque nutriment se situe face aux repères
+   officiels du type de repas (« sodium 657 mg : dans le repère d'un
+   dîner, 600–800 mg »), en rappelant que ce sont ceux d'un
+   adulte-type.
 
 Même si l'assistant oublie `foods`, le hub reconnaît une fiche nommée
 dans la description (son nom, un autre nom, ou « un pavé de saumon »

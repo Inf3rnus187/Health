@@ -1,6 +1,8 @@
 import type { ProductInfo } from '../../api/foods';
 import { shortDate } from '../../utils/format';
 import { allergens, levels, others, productSummary } from './productText';
+import { RefLink } from './RefLink';
+import { LINKS } from './refLinks';
 
 function Line(props: { label: string; text: string }) {
   if (!props.text) return null;
@@ -8,6 +10,23 @@ function Line(props: { label: string; text: string }) {
     <p className="small">
       <span className="muted">{props.label} : </span>
       {props.text}
+    </p>
+  );
+}
+
+/** What Nutri-Score and NOVA mean, and the product's page. */
+function Links({ url }: { url?: string }) {
+  return (
+    <p className="small">
+      <span className="muted">Comprendre : </span>
+      <RefLink href={LINKS.nutriscore}>Nutri-Score</RefLink> ·{' '}
+      <RefLink href={LINKS.nova}>NOVA</RefLink>
+      {url && (
+        <>
+          {' '}
+          · <RefLink href={url}>page du produit sur Open Food Facts</RefLink>
+        </>
+      )}
     </p>
   );
 }
@@ -29,11 +48,7 @@ export function ProductInfoView({ info }: { info: ProductInfo }) {
       <Line label="Catégories" text={info.categories} />
       <Line label="Portion indiquée" text={info.serving} />
       <Line label="Page lue le" text={shortDate(info.fetched_at)} />
-      {info.url && (
-        <a href={info.url} target="_blank" rel="noreferrer" className="small">
-          Page du produit sur Open Food Facts
-        </a>
-      )}
+      <Links url={info.url} />
     </details>
   );
 }
