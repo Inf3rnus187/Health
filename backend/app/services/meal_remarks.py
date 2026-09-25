@@ -6,7 +6,7 @@
   the code computed for what the remark talks about: the values of the
   foods it names (their line, their sheet per 100 g), or the meal's
   totals when it names none or speaks of the meal (« total », « repas »),
-  at the rounding written (sodium also as grams of sodium or of salt).
+  at the rounding written (sodium also in grams, and as salt in g or mg).
   A percentage (« 1,4 % ») must be in the named foods' ingredients or
   their share of fruits and vegetables. Otherwise the brackets holding
   it are cut, or the remark is dropped: « grâce au saumon (24,6 g) » —
@@ -18,6 +18,11 @@
   true of NOVA 3, stays.
 * « sucre ajouté » said of foods whose whole ingredients are known and
   hold no sugar drops the remark.
+* « sel » and « sodium » name what they quote: « sel (120,9 mg) » where
+  120,9 mg is the sodium becomes « sodium (120,9 mg) », « 1,4 g de
+  sodium » where 1,4 g is the salt becomes « 1,4 g de sel ». The word is
+  the one right after the quantity (« de sel »), else the last one before
+  it in its sentence; a word two quantities disagree on is left alone.
 * A remark too long ends at its last full sentence, never mid-word.
 """
 
@@ -40,10 +45,13 @@ class Said:
     nova: int | None
     #: Its ingredients, when known whole ("" otherwise).
     ingredients: str
+    #: Its sodium and its salt as (unit, value), to tell one from the other.
+    sodium: frozenset[tuple[str, float]] = frozenset()
+    salt: frozenset[tuple[str, float]] = frozenset()
 
 
-#: The meal's foods, and the numbers of the whole meal.
-Known = tuple[list[Said], frozenset[float]]
+#: The meal's foods, and the whole meal (its totals).
+Known = tuple[list[Said], Said]
 
 _DOUBT = re.compile(
     r"\s*[(\[,;—–-]*\s*(?:à |il faut |pensez à |penser à )?v[ée]rifi\w*"
@@ -65,6 +73,11 @@ _NOT = re.compile(
     r"|\bnon[- ]transform[ée](e?s?)",
     re.IGNORECASE,
 )
+#: A quantity that may be of sodium or salt, and the words for each.
+_NA_QTY = re.compile(r"(\d+(?:[.,]\d+)?)\s*(mg|g)\b", re.IGNORECASE)
+_NA_WORD = re.compile(r"\b(sel|sodium)\b", re.IGNORECASE)
+_NA_AFTER = re.compile(r"\s*(?:de\s+|d['’]\s*)(sel|sodium)\b", re.IGNORECASE)
+_SENTENCE_END = re.compile(r"[.;!?](?=\s|$)")
 _ADDED_SUGAR = re.compile(r"sucres? ajout|ajouts? de sucre", re.IGNORECASE)
 _SUGARS = ("sucre", "sirop", "glucose", "fructose", "dextrose", "saccharose")
 _MEAL_WORDS = frozenset("total totale repas ensemble".split())
@@ -85,7 +98,17 @@ def numbers(
     """What each food and the whole meal may be quoted with."""
     sheets = {str(f.get("id")): f for f in foods}
     said = [_said(item, sheets.get(str(item.get("food_id")))) for item in items]
-    return said, frozenset(_values(totals))
+    sodium, salt = _salts(totals)
+    meal = Said(
+        words=frozenset(),
+        values=frozenset(_values(totals)),
+        percents=frozenset(),
+        nova=None,
+        ingredients="",
+        sodium=frozenset(sodium),
+        salt=frozenset(salt),
+    )
+    return said, meal
 
 
 def clean(texts: list[str], trusted: bool, known: Known | None) -> list[str]:
@@ -120,9 +143,9 @@ def _checked(text: str, known: Known) -> str:
     if _ADDED_SUGAR.search(text) and _no_sugar(about):
         return ""
     text = _nova(text, about)
-    quantities = {100.0}.union(*(food.values for food in named))
-    if not named or words & _MEAL_WORDS:
-        quantities |= known[1]
+    scope = named + ([known[1]] if not named or words & _MEAL_WORDS else [])
+    text = _salt(text, scope)
+    quantities = {100.0}.union(*(food.values for food in scope))
     percents = set().union(*(food.percents for food in about))
     kept = _ASIDE.sub(
         lambda m: m[0] if _true(m[0], quantities, percents) else "", text
@@ -167,6 +190,52 @@ def _said_so(match: re.Match[str], word: str) -> str:
     return f"{word}{match[3]}"
 
 
+def _salt(text: str, scope: list[Said]) -> str:
+    """« sel » quoting sodium becomes « sodium », and the other way."""
+    sodium = set().union(*(food.sodium for food in scope))
+    salt = set().union(*(food.salt for food in scope))
+    fixes: dict[tuple[int, int], set[str]] = {}
+    for match in _NA_QTY.finditer(text):
+        word, kind = _owner(text, match), _kind(match, sodium, salt)
+        if word is not None and kind:
+            fixes.setdefault(word.span(1), set()).add(kind)
+    for (start, end), kinds in sorted(fixes.items(), reverse=True):
+        said = text[start:end]
+        if len(kinds) == 1 and (kind := kinds.pop()) != said.lower():
+            new = kind.capitalize() if said[:1].isupper() else kind
+            text = text[:start] + new + text[end:]
+    return text
+
+
+def _owner(text: str, quantity: re.Match[str]) -> re.Match[str] | None:
+    """The « sel » or « sodium » a quantity is of.
+
+    The one right after it (« 302 mg de sel »), else the last one before
+    it in its sentence.
+    """
+    after = _NA_AFTER.match(text, quantity.end())
+    if after:
+        return after
+    ends = [m.end() for m in _SENTENCE_END.finditer(text, 0, quantity.start())]
+    start = ends[-1] if ends else 0
+    before = list(_NA_WORD.finditer(text, start, quantity.start()))
+    return before[-1] if before else None
+
+
+def _kind(
+    quantity: re.Match[str],
+    sodium: set[tuple[str, float]],
+    salt: set[tuple[str, float]],
+) -> str:
+    """« sodium » or « sel » when the quantity is one and not the other."""
+    unit = quantity[2].lower()
+    is_sodium = _known(quantity[1], {v for u, v in sodium if u == unit})
+    is_salt = _known(quantity[1], {v for u, v in salt if u == unit})
+    if is_sodium == is_salt:
+        return ""
+    return "sodium" if is_sodium else "sel"
+
+
 def _no_sugar(foods: list[Said]) -> bool:
     """Whether the foods' ingredients are known whole and hold no sugar."""
     known = [f.ingredients for f in foods if f.ingredients]
@@ -189,25 +258,42 @@ def _said(item: dict[str, Any], sheet: dict[str, Any] | None) -> Said:
         percents.add(float(about["fruits_veg_pct"]))
     nova = about.get("nova")
     name = str(item.get("name") or "").split(" · ")[0]
+    sodium, salt = _salts(item)
+    per_100g = _salts((sheet or {}).get("per_100g") or {})
     return Said(
         words=frozenset(_words(name)),
         values=frozenset(values),
         percents=frozenset(percents),
         nova=nova if isinstance(nova, int) else None,
         ingredients=ingredients if len(ingredients) < _WHOLE else "",
+        sodium=frozenset(sodium | per_100g[0]),
+        salt=frozenset(salt | per_100g[1]),
     )
 
 
 def _values(found: dict[str, Any]) -> set[float]:
     """The numbers of a line, a sheet per 100 g or the totals."""
     out: set[float] = set()
-    for key, value in found.items():
+    for value in found.values():
         if isinstance(value, bool) or not isinstance(value, int | float):
             continue
         out.add(float(value))
-        if key == "sodium_mg":  # also as grams of sodium or of salt
-            out |= {value / 1000, value / _SALT_PER_NA}
-    return out
+    sodium, salt = _salts(found)  # also in g, and as salt in g or mg
+    return out | {value for _, value in sodium | salt}
+
+
+def _salts(
+    found: dict[str, Any],
+) -> tuple[set[tuple[str, float]], set[tuple[str, float]]]:
+    """Its sodium (mg, g) and its salt (g, mg), as (unit, value)."""
+    mg = found.get("sodium_mg")
+    if isinstance(mg, bool) or not isinstance(mg, int | float):
+        return set(), set()
+    salt_g = mg / _SALT_PER_NA
+    return {("mg", mg), ("g", mg / 1000)}, {
+        ("g", salt_g),
+        ("mg", salt_g * 1000),
+    }
 
 
 def _words(name: str) -> set[str]:

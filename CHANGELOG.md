@@ -35,6 +35,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **« sel » and « sodium » now name what a remark quotes**: « Comté :
+  sel (120,9 mg par 30g) » quoted the comté's sodium (403 mg/100 g ×
+  30 g) as salt, which is 302 mg (sodium × 2,5). The check now reads
+  the word the quantity belongs to (« 302 mg de sel », else the last
+  « sel »/« sodium » before it in its sentence) and corrects it:
+  « sodium (120,9 mg par 30g) », « 0,3 g de sodium » → « 0,3 g de
+  sel ». Salt quoted in mg (« 302 mg de sel ») is now accepted, and the
+  prompt says the « sodium » figure is sodium, not salt.
 - **Meal cards no longer scroll sideways on a phone**: the four buttons
   (Modifier, Refaire ce repas, Réanalyser, Supprimer) stayed on one line
   and pushed the card 60 px past a 390 px screen; they now wrap.
@@ -254,7 +262,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (breakfast 15–25 %, lunch and dinner 30–40 %) are the ANSES sheet
   « Veiller à son équilibre nutritionnel », shown as indicative: ANSES
   said in 2019 no split can be recommended, and none exists for a snack,
-  which shows its share of the day (« 33 % »). Computed by the hub on
+  which shows its share of the day (« 33 % »). The column follows the
+  meal's type: a meal logged without one takes it from the hour (before
+  10:30 breakfast…), so a dinner eaten at 5 am must be said « dîner »
+  or corrected with « Modifier » — documented in the user, AI and MCP
+  guides with the sources' links. Computed by the hub on
   each read (`reference` of `GET /meals/{id}`), never by the AI;
   `GET /nutrition/references` and the MCP tool `nutrition_references`
   give the table and its sources.

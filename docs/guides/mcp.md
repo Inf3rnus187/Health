@@ -259,7 +259,11 @@ du serveur et de `log_meal`) :
 2. recopie **vos mots** dans `description` (sans les résumer : les
    quantités y sont lues) et l'heure dans `eaten_at` ;
 3. laisse `meal_type` vide si vous ne dites pas « déjeuner », « dîner »…
-   (le hub le déduit de l'heure : 5 h → petit-déjeuner) ;
+   (le hub le déduit de l'heure : 5 h → petit-déjeuner) — le repère
+   du repas suit ce type : un dîner pris à 5 h doit être dit « dîner »
+   (`meal_type=dinner`), sinon il est comparé à un petit-déjeuner
+   (15–25 % de la journée au lieu de 30–40 %) ; `update_meal` corrige
+   le type après coup ;
 4. après l'analyse (`get_meal`), dit d'où vient chaque ligne :
    « étiquette » = votre fiche, « Ciqual » = la table, sinon estimée ;
    et, avec `reference`, où chaque nutriment se situe face aux repères

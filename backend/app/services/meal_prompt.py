@@ -78,7 +78,9 @@ les points positifs, les points à surveiller. Les chiffres ci-dessus \
 sont exacts : ne les recalcule jamais ; pour citer une quantité ou un \
 nutriment, recopie exactement le chiffre donné, avec son unité. \
 Un chiffre cité est celui de l'aliment dont tu parles, ou le total du \
-repas en le disant. Une phrase courte par remarque. Ne suppose rien de \
+repas en le disant. Le chiffre « sodium » est du sodium, pas du sel \
+(sel = sodium × 2,5) : écris « sodium » devant lui. Une phrase courte \
+par remarque. Ne suppose rien de \
 la composition au-delà des ingrédients donnés. N'écris pas qu'il \
 faudrait vérifier une étiquette ou une composition. Pas de posologie \
 ni de prescription.

@@ -210,7 +210,11 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
   repas) est retiré par le code ; « ultra-transformé » dit d'un produit
   NOVA 3 est corrigé en « transformé », un pourcentage absent des
   ingrédients est retiré, « sucre ajouté » sans sucre dans les
-  ingrédients aussi.
+  ingrédients aussi ; **« sel » et « sodium » disent ce qu'ils
+  citent** : « sel (120,9 mg par 30 g) » alors que 120,9 mg est le
+  sodium du comté devient « sodium (120,9 mg par 30 g) » (son sel :
+  302 mg, sodium × 2,5), et « 0,3 g de sodium » alors que c'est le sel
+  devient « 0,3 g de sel ».
   **Le même repas donne les mêmes chiffres** dès que ses aliments sont
   dans vos fiches ou dans la table ; seul l'avis (texte, note) peut
   varier si la description change de mots. Plus de « vérifier la
@@ -235,14 +239,31 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
   - Part d'un repas : petit-déjeuner 15–25 %, déjeuner 30–40 %, dîner
     30–40 % (fiche ANSES « Veiller à son équilibre nutritionnel »).
     **Indicatif** : en 2019 l'ANSES a conclu qu'aucune répartition ne
-    pouvait être recommandée. Le repère suit le **type** du repas :
-    un repas de 5 h noté « dîner » est comparé à un dîner (« Modifier »
-    pour changer le type).
+    pouvait être recommandée.
+  - **Le repère suit le type du repas.** Si tu ne dis pas « dîner »
+    (ou petit-déjeuner, déjeuner, collation), le hub déduit le type de
+    l'**heure locale** : avant 10 h 30 petit-déjeuner, avant 15 h
+    déjeuner, avant 18 h collation, sinon dîner. Un repas pris à **5 h
+    devient donc un petit-déjeuner**, comparé à 15–25 % de la journée
+    au lieu de 30–40 %. Le formulaire du site présélectionne le type
+    avec la même règle (à 5 h : « Petit-déjeuner ») : choisis « Dîner »
+    avant d'enregistrer ; à l'assistant, dis « mon dîner » ; dans un
+    raccourci, envoie `meal_type=dinner`. Après coup : **« Modifier »**
+    › type › « Enregistrer et réanalyser » (le repère suit le nouveau
+    type).
   - Ce ne sont **pas vos besoins personnels** (âge, sexe, poids,
     activité, traitement) : un repère pour voir où l'on se situe, pas
     une prescription. Le total du jour (en tête de journée) se compare
     aux repères d'une journée entière.
   - Calculé par le hub à chaque affichage, jamais par l'IA.
+  - Sources :
+    [règlement (UE) 1169/2011 (EUR-Lex)](https://eur-lex.europa.eu/legal-content/FR/ALL/?uri=celex%3A32011R1169) ·
+    [ANSES 2016, fibres (PNNS)](https://www.anses.fr/fr/system/files/NUT2012SA0103Ra-1.pdf) ·
+    [OMS, réduction du sodium](https://www.who.int/fr/news-room/fact-sheets/detail/sodium-reduction) ·
+    [ANSES, « Veiller à son équilibre nutritionnel »](https://www.anses.fr/fr/system/files/NUT-fi-EquilibreNut.pdf) ·
+    [ANSES 2019, répartition temporelle des prises alimentaires](https://www.anses.fr/fr/system/files/NUT2019SA0001Ra.pdf) ·
+    [Santé.fr, Nutri-Score](https://www.sante.fr/nutri-score-comment-decoder-les-etiquettes) ·
+    [Open Food Facts, NOVA](https://fr.openfoodfacts.org/nova).
 - **« Comprendre ces références »** (sous chaque repas, replié) : les
   repères et leurs sources (liens vers le règlement UE, l'ANSES, l'OMS),
   le **Nutri-Score** (A à E : qualité nutritionnelle pour 100 g comparée

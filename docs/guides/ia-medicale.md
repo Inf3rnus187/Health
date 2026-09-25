@@ -186,7 +186,7 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    des aliments qu'elle nomme (leur ligne, leur fiche pour 100 g) ; le
    total du repas seulement si elle ne nomme aucun aliment ou parle du
    repas (« total », « repas ») —, au même arrondi que celui écrit
-   (sodium aussi en g de sodium ou de sel). Sinon la parenthèse qui la
+   (sodium aussi en g, et en sel en g ou en mg : sel = sodium × 2,5). Sinon la parenthèse qui la
    contient est coupée (« grâce au saumon (24,6 g) » : 24,6 g est la
    protéine du repas, le saumon en a 20,5 → « grâce au saumon »), ou la
    remarque est retirée. Un **pourcentage** cité (« 1,4 % ») doit être
@@ -200,7 +200,13 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    NOVA 3, reste tel quel. « **sucre
    ajouté** » dit d'aliments dont les ingrédients sont connus en entier
    et ne contiennent aucun sucre (sucre, sirop, glucose, fructose,
-   dextrose, saccharose) retire la remarque. Une remarque trop longue
+   dextrose, saccharose) retire la remarque. « **sel** » et
+   « **sodium** » doivent nommer ce qu'ils citent : le mot juste après
+   la quantité (« 302 mg de sel »), sinon le dernier avant elle dans sa
+   phrase ; « sel (120,9 mg) » dont 120,9 mg est le sodium devient
+   « sodium (120,9 mg) », « 0,3 g de sodium » dont 0,3 g est le sel
+   devient « 0,3 g de sel » (le prompt le dit aussi : le chiffre
+   « sodium » est du sodium, pas du sel). Une remarque trop longue
    finit à sa dernière phrase complète (300 caractères), jamais au
    milieu d'un mot.
    Aucune posologie ni prescription.
@@ -216,7 +222,19 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    15–25 %, déjeuner et dîner 30–40 % ; aucune pour une collation —
    l'ANSES n'a pu recommander aucune répartition en 2019). Le modèle ne
    reçoit pas ces repères : l'avis et la colonne sont indépendants. Ce
-   ne sont pas des besoins personnels.
+   ne sont pas des besoins personnels. Le repère suit le **type** du
+   repas ; sans type dit, le hub le déduit de l'heure locale (avant
+   10 h 30 petit-déjeuner, avant 15 h déjeuner, avant 18 h collation,
+   sinon dîner) : un dîner pris à 5 h sans le dire est comparé à un
+   petit-déjeuner (15–25 %). « Modifier » corrige le type.
+   Sources :
+   [règlement (UE) 1169/2011 (EUR-Lex)](https://eur-lex.europa.eu/legal-content/FR/ALL/?uri=celex%3A32011R1169) ·
+   [ANSES 2016, fibres (PNNS)](https://www.anses.fr/fr/system/files/NUT2012SA0103Ra-1.pdf) ·
+   [OMS, réduction du sodium](https://www.who.int/fr/news-room/fact-sheets/detail/sodium-reduction) ·
+   [ANSES, « Veiller à son équilibre nutritionnel »](https://www.anses.fr/fr/system/files/NUT-fi-EquilibreNut.pdf) ·
+   [ANSES 2019, répartition temporelle des prises alimentaires](https://www.anses.fr/fr/system/files/NUT2019SA0001Ra.pdf) ·
+   [Santé.fr, Nutri-Score](https://www.sante.fr/nutri-score-comment-decoder-les-etiquettes) ·
+   [Open Food Facts, NOVA](https://fr.openfoodfacts.org/nova).
 
 Statuts et délai : comme les documents (en attente → en cours → lu /
 échec), 15 minutes maximum ; relancé après un redémarrage du worker.

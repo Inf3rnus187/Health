@@ -112,3 +112,30 @@ def test_a_nova_3_is_processed_but_not_ultra_processed() -> None:
     ]
     right = "Les aubergines ne sont pas ultra-transformées (NOVA 3)."
     assert _checked(right) == [right]
+
+
+def test_salt_and_sodium_name_what_they_quote() -> None:
+    comte = {"name": "Comté", "grams": 30, "sodium_mg": 120.9}
+    known = meal_remarks.numbers([*ITEMS, comte], TOTALS, SHEETS)
+
+    def clean(text: str) -> list[str]:
+        return meal_remarks.clean([text], True, known)
+
+    # 120,9 mg is the comté's sodium; its salt is 302 mg (× 2,5)
+    assert clean("Comté : riche en sel (120,9 mg par 30g).") == [
+        "Comté : riche en sodium (120,9 mg par 30g)."
+    ]
+    assert clean("Le comté apporte 302 mg de sel.") == [
+        "Le comté apporte 302 mg de sel."
+    ]
+    assert clean("Le comté apporte 0,3 g de sodium.") == [
+        "Le comté apporte 0,3 g de sel."
+    ]
+    assert clean("Sel des aubergines : 562,4 mg.") == [
+        "Sodium des aubergines : 562,4 mg."
+    ]
+    right = "Aubergines riches en sel : 562,4 mg de sodium, soit 1,4 g de sel."
+    assert clean(right) == [right]
+    assert clean("Le repas apporte du sel (652,2 mg).") == [
+        "Le repas apporte du sodium (652,2 mg)."
+    ]
