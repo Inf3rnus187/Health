@@ -58,6 +58,28 @@ def state() -> dict[str, Any]:
     }
 
 
+def installed() -> dict[str, Any]:
+    """The version the hub runs, for every page's header.
+
+    The host's last update when it finished (all parts at that commit,
+    even those it did not need to rebuild), else the commit it last saw,
+    else the one the API was built from; ``installed_at``: when that
+    update finished (None when unknown).
+    """
+    folder = Path(get_settings().update_dir)
+    last = _read(folder / "status.json")
+    done = last.get("state") == "done" and last.get("commit")
+    info = _read(folder / "update.json")
+    api = get_settings().git_commit or None
+    return {
+        "commit": (last.get("commit") if done else None)
+        or info.get("current")
+        or api,
+        "installed_at": last.get("at") if done else None,
+        "api": api,
+    }
+
+
 def request(user_id: str) -> dict[str, Any]:
     """Ask the host to update (its cron runs ./update.sh within a minute)."""
     folder = Path(get_settings().update_dir)

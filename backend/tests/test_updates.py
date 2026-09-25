@@ -119,3 +119,33 @@ async def test_only_the_administrator_sees_and_installs_updates(
     assert (await client.get(URL, headers=member)).status_code == 403
     assert (await client.post(URL, headers=member)).status_code == 403
     assert not (shared / "update-request").exists()
+
+
+async def test_every_user_sees_the_version_the_hub_runs(
+    client: AsyncClient,
+    member: dict[str, str],
+    shared: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(get_settings(), "git_commit", "9fed481")
+    before = (await client.get("/api/v1/system/version", headers=member)).json()
+    assert before == {
+        "commit": "9fed481",
+        "installed_at": None,
+        "api": "9fed481",
+    }
+    (shared / "status.json").write_text(json.dumps({
+        "state": "done", "message": "À jour (838aeb9) ; reconstruit : api",
+        "at": "2026-09-25T10:09:00+02:00", "commit": "838aeb9",
+    }))  # fmt: skip
+    now = (await client.get("/api/v1/system/version", headers=member)).json()
+    assert (now["commit"], now["installed_at"]) == (
+        "838aeb9",
+        "2026-09-25T10:09:00+02:00",
+    )
+    (shared / "status.json").write_text(json.dumps({
+        "state": "failed", "at": "2026-09-25T11:00:00+02:00",
+        "commit": "a298d45",
+    }))  # fmt: skip
+    failed = (await client.get("/api/v1/system/version", headers=member)).json()
+    assert failed["commit"] == "9fed481"  # a failed update is not installed

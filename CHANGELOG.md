@@ -30,6 +30,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The header shows the version installed**: it showed the page's own
+  build, so after an update of the server alone (« reconstruit : api »)
+  it still read the older commit however often the page was reloaded.
+  It now shows the host's last finished update and its time, the same
+  as « ✓ À jour (…) » (`GET /system/version`, any signed-in user); the
+  page's build is in the tip.
 - **NOVA, percentages and added sugar checked in remarks**: the
   remarks called a NOVA 3 pack (« transformé ») « ultra-transformé »
   (that is NOVA 4), then « pas transformé »; « ne sont pas

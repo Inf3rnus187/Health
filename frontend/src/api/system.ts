@@ -25,6 +25,17 @@ export interface UpdateState {
 }
 
 export const fetchUpdate = () => api<UpdateState>('/system/update');
+
+/** The version the hub runs (the page may be older: only what changed
+ * is rebuilt). */
+export interface HubVersion {
+  commit: string | null;
+  /** When the host's last update finished. */
+  installed_at: string | null;
+  api: string | null;
+}
+
+export const fetchHubVersion = () => api<HubVersion>('/system/version');
 export const requestUpdate = () =>
   api<UpdateState>('/system/update', { method: 'POST' });
 

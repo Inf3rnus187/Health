@@ -101,10 +101,15 @@ reconstruction, l'API redémarre : la page est indisponible une à deux
 minutes, puis propose de recharger. Suivi : `run/update.log`,
 `run/status.json`.
 
-**La version chargée** s'affiche à droite du nom, en haut de chaque page :
-« v20c48fe · 24/09 20:52 » — le commit construit et l'heure de la
-construction (sur téléphone, le commit seul). Après une mise à jour et
-« Recharger », c'est là qu'on voit que la nouvelle version tourne.
+**La version installée** s'affiche à droite du nom, en haut de chaque
+page : « v838aeb9 · 25/09 10:09 » — le commit de la dernière mise à jour
+terminée par l'hôte et son heure (sur téléphone, le commit seul), le même
+que « ✓ À jour (838aeb9) » du bandeau (`GET /system/version`, pour tout
+compte connecté). Une mise à jour qui ne touche que le serveur ne
+reconstruit pas la page : le survol du numéro donne aussi la version de
+la page chargée (« page chargée : v9fed481, construite le … »). Sans
+`update.sh` (construction à la main), c'est le commit de l'API, sinon
+celui de la page.
 `update.sh` et `install.sh` donnent le commit à l'image ; construite à la
 main (`docker compose up -d --build`), la page affiche « version du … »
 (ou passer `GIT_COMMIT=$(git rev-parse --short HEAD)` devant la commande).

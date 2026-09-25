@@ -11,10 +11,25 @@ from typing import Any
 
 from fastapi import APIRouter
 
+from app.core.deps import PrincipalDep
 from app.core.deps_admin import AdminDep
 from app.services import updates
 
 router = APIRouter(prefix="/system", tags=["system"])
+
+
+@router.get("/version")
+async def version(principal: PrincipalDep) -> dict[str, Any]:
+    """The version the hub runs (any signed-in user; no host detail).
+
+    ``commit``: the host's last finished update, else the commit it last
+    saw, else the API's build; ``installed_at``: when that update
+    finished; ``api``: the commit the API itself was built from. A
+    change of the server alone does not rebuild the page, so this, not
+    the page's own build, says what is installed.
+    """
+    del principal
+    return updates.installed()
 
 
 @router.get("/update")
