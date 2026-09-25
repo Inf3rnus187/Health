@@ -7,6 +7,7 @@ import { useStock } from '../../hooks/useStock';
 import { frNumber } from '../../utils/format';
 import { FoodForm } from './FoodForm';
 import { productSummary } from './productText';
+import { RefreshAll, RefreshFood } from './RefreshFood';
 import { bySize, portionText } from './foodLabel';
 import { StockPanel } from './StockPanel';
 import { stockText } from './stockText';
@@ -16,11 +17,14 @@ function per100(food: Food): string {
   const p = food.per_100g;
   const part = (label: string, value?: number) =>
     value == null ? null : `${label} ${frNumber(value, 1)}`;
+  const na = p.sodium_mg;
+  const salt = na == null ? null : `sel ${frNumber(na / 400, 2)} g`;
   return [
     p.energy_kcal == null ? null : `${frNumber(p.energy_kcal, 0)} kcal`,
     part('prot.', p.protein_g),
     part('gluc.', p.carbs_g),
     part('lip.', p.fat_g),
+    salt && `${salt} (sodium ${frNumber(na ?? 0, 0)} mg)`,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -66,6 +70,7 @@ function useDelete(food: Food) {
 function Row(props: { food: Food; level?: StockLevel; onEdit: () => void }) {
   const onDelete = useDelete(props.food);
   const [stock, setStock] = useState(false);
+  const [note, setNote] = useState('');
   const { food } = props;
   return (
     <li className="food-row">
@@ -74,6 +79,7 @@ function Row(props: { food: Food; level?: StockLevel; onEdit: () => void }) {
         <button className="btn ghost" onClick={() => setStock(!stock)}>
           Stock
         </button>
+        <RefreshFood food={food} onDone={setNote} />
         <button className="btn ghost" onClick={props.onEdit}>
           Modifier
         </button>
@@ -81,6 +87,7 @@ function Row(props: { food: Food; level?: StockLevel; onEdit: () => void }) {
           Supprimer
         </button>
       </div>
+      {note && <p className="muted small food-note">{note}</p>}
       {stock && <StockPanel food={food} />}
     </li>
   );
@@ -100,9 +107,12 @@ function Editor(props: {
   const { editing, onEdit } = props;
   if (editing === null) {
     return (
-      <button className="btn" onClick={() => onEdit('new')}>
-        + Ajouter un aliment
-      </button>
+      <div className="quick">
+        <button className="btn" onClick={() => onEdit('new')}>
+          + Ajouter un aliment
+        </button>
+        <RefreshAll foods={props.foods} />
+      </div>
     );
   }
   const food = props.foods.find((f) => f.id === editing) ?? null;

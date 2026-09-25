@@ -12,6 +12,7 @@ empty.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import ValidationError
@@ -58,6 +59,7 @@ def info(product: dict[str, Any], barcode: str) -> dict[str, Any]:
         "serving": _text(product, "serving_size")[:80],
         "other_100g": _others(product.get("nutriments")),
         "url": f"https://fr.openfoodfacts.org/produit/{barcode}",
+        "fetched_at": datetime.now(UTC).date().isoformat(),
     }
     return _checked(found)
 

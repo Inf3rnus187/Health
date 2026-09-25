@@ -31,7 +31,12 @@ security is a first‑class concern (§12).
 - **Outbound calls**: none with personal data. The one lookup, Open
   Food Facts by barcode (`services/food_off.py`), is off by default
   (`FOOD_LOOKUP_ONLINE=false`); when enabled it sends the barcode only
-  (no photo, account or meal) to `OPENFOODFACTS_URL`. A barcode on a
+  (no photo, account or meal) to `OPENFOODFACTS_URL` — when the user asks
+(a lookup, « ↻ Open Food Facts », « Tout relire ») and, unless
+`FOOD_REFRESH_DAYS=0`, by the worker each night for sheets whose page
+is older than that many days (at most 50 a night, one second apart).
+Over time Open Food Facts can thus see which barcodes the hub's address
+asks for, never who eats them. A barcode on a
   photo (`POST /foods/scan`) is decoded on the hub, offline
   (`services/barcode_read.py`, zxing-cpp), and the photo is not kept.
 - **MFA (optional, no web screen yet)**: TOTP —

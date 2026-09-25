@@ -10,6 +10,8 @@ import {
   type FoodIn,
   type PhotoKind,
   readLabel,
+  refreshFood,
+  refreshFoods,
   updateFood,
 } from '../api/foods';
 
@@ -52,3 +54,5 @@ export const useDeleteFoodPhoto = () =>
     deleteFoodPhoto(a.id, a.photoId),
   );
 export const useReadLabel = () => useMutation({ mutationFn: readLabel });
+export const useRefreshFood = () => useFoodAction(refreshFood);
+export const useRefreshFoods = () => useFoodAction(refreshFoods);

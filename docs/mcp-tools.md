@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-110 outils.
+112 outils.
 
 ## Données et métriques
 
@@ -408,6 +408,25 @@ null), ``product`` (an Open Food Facts proposal, only when the hub
 allows it; only the barcode is sent) and ``note``.
 
 Paramètres : `photo_base64`* (string)
+
+### `refresh_food`
+
+Read a saved food's Open Food Facts page again, by its barcode.
+
+No pack to scan again. Replaces the values Open Food Facts gives and
+the product details (Nutri-Score, NOVA, additives…), fills the
+package weight and brand when empty, keeps the user's own fields.
+Answers the sheet and ``changed`` (empty: nothing changed).
+
+Paramètres : `food_id`* (string)
+
+### `refresh_foods`
+
+Read again every saved food that has a barcode (a minute at most).
+
+``updated``, ``unchanged``, ``failed`` (with the reason) and
+``remaining`` (call again). The hub also does it by itself for pages
+older than FOOD_REFRESH_DAYS days.
 
 ### `delete_food`
 

@@ -1749,6 +1749,15 @@ a.tile:hover {
   color: var(--color-primary);
 }
 
+.food-row .row-actions {
+  flex-wrap: wrap;
+}
+
+.food-note {
+  flex-basis: 100%;
+  margin: 0;
+}
+
 .stock-panel {
   flex-basis: 100%;
   display: grid;

@@ -45,6 +45,8 @@ class ProductInfo(BaseModel):
     serving: str = Field(default="", max_length=80)
     other_100g: dict[str, float] = Field(default_factory=dict)
     url: str = Field(default="", max_length=300)
+    #: When the page was read (ISO date).
+    fetched_at: str = Field(default="", max_length=32)
 
     @field_validator("levels", "other_100g")
     @classmethod

@@ -66,6 +66,7 @@ async def test_every_area_of_the_hub_has_tools() -> None:
         "scan_barcode",
         "food_stock",
         "add_stock",
+        "refresh_food",
     }
     assert expected <= names
     assert len(names) >= 50
@@ -429,3 +430,14 @@ async def test_shopping_is_entered_by_name_and_the_stock_read() -> None:
         "DELETE",
         "/api/v1/stock/moves/m1",
     )
+
+
+async def test_a_sheet_is_read_again_without_its_pack() -> None:
+    seen = _capture()
+    await tools_foods.refresh_food("f1")
+    assert (seen[0].method, seen[0].url.path) == (
+        "POST",
+        "/api/v1/foods/f1/refresh",
+    )
+    await tools_foods.refresh_foods()
+    assert seen[1].url.path == "/api/v1/foods/refresh"

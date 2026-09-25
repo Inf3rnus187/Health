@@ -93,3 +93,23 @@ export const others = (found: Record<string, number>) =>
   Object.entries(found)
     .map(([k, v]) => `${NUTRIENTS[k] ?? k.replace(/-/g, ' ')} ${amount(v)}`)
     .join(', ');
+
+const CHANGED: Record<string, string> = {
+  energy_kcal: 'énergie',
+  protein_g: 'protéines',
+  carbs_g: 'glucides',
+  sugars_g: 'sucres',
+  fat_g: 'lipides',
+  sat_fat_g: 'saturés',
+  fiber_g: 'fibres',
+  sodium_mg: 'sodium',
+  product_info: 'infos produit',
+  package_g: 'poids',
+  brand: 'marque',
+};
+
+/** « Mis à jour : sodium, infos produit » or « À jour ». */
+export const changedText = (changed: string[]) =>
+  changed.length
+    ? `Mis à jour : ${changed.map((c) => CHANGED[c] ?? c).join(', ')}`
+    : 'À jour : rien n’a changé';

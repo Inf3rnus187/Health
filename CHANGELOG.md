@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **Nightly Open Food Facts re-reading**: with the lookup on, the
+  worker sends each sheet's barcode again when its page is older than
+  `FOOD_REFRESH_DAYS` (default 30; 0 turns it off) — the barcode only,
+  50 a night at most.
 - **`POST /stock` accepts `?token=`** (an iPhone Shortcut scanning
   groceries): like the other Shortcut routes, the token needs
   `write:measurements` only and is written `token=***` in the logs; it
@@ -26,6 +30,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Salt and sodium shown**: a sheet is filled with the salt printed on
+  the pack and stored as sodium (1 g of salt = 400 mg), but nothing
+  showed the sodium. The sheet now writes it under the salt field and
+  the list shows « sel 0,76 g (sodium 304 mg) ».
 - **Open Food Facts: nothing of the product page is dropped any
   more**: the lookup asked only for the name, brand, weight and 8
   values. A sheet now keeps everything the page gives (`product_info`,
@@ -164,6 +172,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Read Open Food Facts again without the pack**: « ↻ Open Food Facts »
+  on each sheet that has a barcode re-reads its page and says what
+  changed; « ↻ Tout relire sur Open Food Facts » does every sheet (a
+  minute at most). Values the page gives, product details, the weight
+  and brand when empty are replaced; name, units, usual portion, other
+  names, note and photos stay. Each night the worker re-reads pages
+  older than `FOOD_REFRESH_DAYS` (30 by default, 0: never; only with
+  `FOOD_LOOKUP_ONLINE=true`). `POST /foods/{id}/refresh`, `POST
+  /foods/refresh`, MCP `refresh_food`, `refresh_foods`.
 - **Food stock**: « Stock » on a sheet of Mes aliments enters a
   purchase (« J'ai acheté »), a count (« Il m'en reste ») or a loss
   (« Jeté / donné »), in packs, units or grams, and shows what is left

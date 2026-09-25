@@ -33,6 +33,8 @@ export interface ProductInfo {
   /** Other nutrients, grams per 100 g. */
   other_100g: Record<string, number>;
   url: string;
+  /** When the page was read (ISO date). */
+  fetched_at?: string;
 }
 
 export interface FoodIn {
@@ -90,6 +92,25 @@ const json = (method: string, body?: unknown): RequestInit => ({
 });
 
 export const fetchFoods = () => api<Food[]>('/foods');
+
+/** What reading a sheet's Open Food Facts page again changed. */
+export interface Refreshed {
+  food: Food;
+  /** energy_kcal … sodium_mg, product_info, package_g, brand. */
+  changed: string[];
+}
+
+export interface RefreshedAll {
+  updated: { name: string; changed: string[] }[];
+  unchanged: number;
+  failed: { name: string; reason: string }[];
+  remaining: number;
+}
+
+export const refreshFood = (id: string) =>
+  api<Refreshed>(`/foods/${id}/refresh`, json('POST'));
+export const refreshFoods = () =>
+  api<RefreshedAll>('/foods/refresh', json('POST'));
 export const createFood = (body: FoodIn) =>
   api<Food>('/foods', json('POST', body));
 export const updateFood = (id: string, body: FoodIn) =>

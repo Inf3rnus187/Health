@@ -277,16 +277,35 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
     additifs (E330…), repères (sel modéré, sucres…), autres
     nutriments pour 100 g (potassium, vitamines… quand la page les
     donne), labels, catégories, portion indiquée et le lien vers la
-    page. La liste des aliments en montre le résumé. **Une fiche créée
-    avant ce changement** n'a que les 8 valeurs : « Modifier » →
-    « ▥ Code-barres » (son code est déjà rempli) → « Chercher » →
-    « Enregistrer » la complète ;
+    page. La liste des aliments en montre le résumé ;
   - « 📦 Photo de la boîte » garde la photo de l'emballage ; si le
     code-barres y est lisible, il est inscrit sur la fiche (quand elle
     n'en a pas déjà un).
 
   On vérifie puis on enregistre. Chaque fiche est à son utilisateur
   seul.
+
+  **Relire Open Food Facts sans ressortir le paquet** : une fiche qui
+  a un code-barres a le bouton **« ↻ Open Food Facts »** ; il relit sa
+  page par ce code et dit ce qui a changé (« Mis à jour : sodium,
+  infos produit » ou « À jour : rien n'a changé »). **« ↻ Tout relire
+  sur Open Food Facts »**, à côté de « + Ajouter un aliment », le fait
+  pour toutes les fiches (une minute au plus ; au-delà, il dit combien
+  restent : relancer). Sont remplacés : les valeurs que la page donne
+  (une valeur absente de la page est gardée), les infos produit, le
+  poids et la marque s'ils sont vides ; restent les vôtres : nom,
+  unité, portion habituelle, autres noms, note, photos. **Tout seul**,
+  chaque nuit (4 h 40 UTC), le hub relit les fiches dont la page a
+  plus de 30 jours (`FOOD_REFRESH_DAYS`), quelques-unes à la fois. Les
+  repas déjà analysés gardent leur lecture : « Réanalyser » applique
+  les nouvelles valeurs. La date de lecture est dans le détail « Open
+  Food Facts » (« Page lue le … »).
+
+  **Sel et sodium** : la fiche se remplit avec le **sel** imprimé sur
+  le paquet ; le hub l'enregistre en **sodium** (1 g de sel = 400 mg de
+  sodium), comme les repas le comptent. La fiche l'écrit sous le champ
+  (« Sel 0,76 g = sodium 304 mg pour 100 g ») et la liste aussi (« sel
+  0,76 g (sodium 304 mg) »).
 
   **Stock** (bouton « Stock » d'une fiche) : une quantité — en
   boîtes (× le poids de la boîte), en unités (« 6 » tomates) ou en

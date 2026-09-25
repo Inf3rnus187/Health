@@ -111,6 +111,29 @@ async def scan_barcode(photo_base64: str) -> Any:
 
 
 @mcp.tool()
+async def refresh_food(food_id: str) -> Any:
+    """Read a saved food's Open Food Facts page again, by its barcode.
+
+    No pack to scan again. Replaces the values Open Food Facts gives and
+    the product details (Nutri-Score, NOVA, additives…), fills the
+    package weight and brand when empty, keeps the user's own fields.
+    Answers the sheet and ``changed`` (empty: nothing changed).
+    """
+    return await client.post(f"/foods/{food_id}/refresh")
+
+
+@mcp.tool()
+async def refresh_foods() -> Any:
+    """Read again every saved food that has a barcode (a minute at most).
+
+    ``updated``, ``unchanged``, ``failed`` (with the reason) and
+    ``remaining`` (call again). The hub also does it by itself for pages
+    older than FOOD_REFRESH_DAYS days.
+    """
+    return await client.post("/foods/refresh")
+
+
+@mcp.tool()
 async def delete_food(food_id: str) -> Any:
     """Delete a food and its photos (meals keep their reading)."""
     return await client.request("DELETE", f"/foods/{food_id}")

@@ -1,4 +1,5 @@
 import type { ProductInfo } from '../../api/foods';
+import { shortDate } from '../../utils/format';
 import { allergens, levels, others, productSummary } from './productText';
 
 function Line(props: { label: string; text: string }) {
@@ -27,6 +28,7 @@ export function ProductInfoView({ info }: { info: ProductInfo }) {
       <Line label="Labels" text={info.labels} />
       <Line label="Catégories" text={info.categories} />
       <Line label="Portion indiquée" text={info.serving} />
+      <Line label="Page lue le" text={shortDate(info.fetched_at)} />
       {info.url && (
         <a href={info.url} target="_blank" rel="noreferrer" className="small">
           Page du produit sur Open Food Facts

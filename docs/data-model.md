@@ -179,7 +179,8 @@ Added by later migrations (each creates only its own tables, ADR‑0004):
   `product_info` (`0023`, JSON, from Open Food Facts: `ingredients`,
   `allergens`, `traces`, `additives`, `nutriscore`, `nutriscore_score`,
   `nova`, `fruits_veg_pct`, `levels`, `labels`, `categories`, `serving`,
-  `other_100g` — other nutrients in g per 100 g —, `url`).
+  `other_100g` — other nutrients in g per 100 g —, `url`, `fetched_at` —
+  the day the page was read, for the nightly re-reading).
 - `food_stock_moves` (`0022`) — a food's stock entries: `food_id`
   (`CASCADE` with the food), `at`, `kind` (`purchase` +, `out` −,
   `count`: the quantity left at that time), `grams`, `said` (« 3 × 185

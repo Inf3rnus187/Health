@@ -186,7 +186,9 @@ Depuis un autre poste, la même commande à travers SSH :
   `lookup_barcode` (Open Food Facts, seulement si
   `FOOD_LOOKUP_ONLINE=true` : les valeurs et tout le reste de la page —
   ingrédients, Nutri-Score, NOVA, additifs, allergènes… —, à repasser
-  tel quel à `save_food` en `product_info`), `scan_barcode` (une photo du code-barres,
+  tel quel à `save_food` en `product_info`), `refresh_food` / `refresh_foods`
+  (relire la page d'une fiche ou de toutes, par leur code-barres, sans
+  ressortir le paquet), `scan_barcode` (une photo du code-barres,
   lue par le hub hors ligne : l'aliment de la liste qui porte ce code,
   sinon la proposition Open Food Facts si elle est activée ; rien n'est
   enregistré), `read_food_label` (lit l'étiquette : une

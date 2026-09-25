@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     #: the barcode leaves the hub). Off by default: nothing goes out.
     food_lookup_online: bool = False
     openfoodfacts_url: str = "https://world.openfoodfacts.org"
+    #: Read each sheet's Open Food Facts page again after this many days
+    #: (the worker, daily; only when food_lookup_online). 0: never.
+    food_refresh_days: int = 30
     media_encryption_key: str | None = None
     mfa_issuer: str = "Phoenix Health Hub"
     retention_days: int = 0

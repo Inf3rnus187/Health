@@ -12,11 +12,13 @@ import {
   draftOf,
   type FoodDraft,
   foodIn,
+  num,
   VALUES,
   withCiqual,
   withReading,
 } from './foodDraft';
 import { BarcodeLookup, CiqualSearch } from './FoodSources';
+import { frNumber } from '../../utils/format';
 import { PortionField } from './PortionField';
 import { ProductInfoView } from './ProductInfoView';
 import { ShotButton, ShotPreview, StoredShot } from './Shots';
@@ -95,8 +97,21 @@ function Values({ draft, set }: { draft: FoodDraft; set: Set }) {
           />
         ))}
       </div>
+      <Sodium salt={draft.values.salt_g} />
       {draft.product_info && <ProductInfoView info={draft.product_info} />}
     </fieldset>
+  );
+}
+
+/** The salt typed is kept as sodium: say how much. */
+function Sodium({ salt }: { salt: string }) {
+  const grams = num(salt);
+  if (grams == null) return null;
+  return (
+    <p className="muted small">
+      Sel {frNumber(grams, 2)} g = sodium {frNumber(grams * 400, 0)} mg pour 100
+      g (enregistré et compté en sodium dans les repas)
+    </p>
   );
 }
 

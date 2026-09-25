@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from arq import cron
 from arq.connections import RedisSettings
 
 from app.core.config import get_settings
@@ -56,6 +57,19 @@ async def generate_report(ctx: dict[str, Any], report_id: str) -> str:
     return report_id
 
 
+async def refresh_foods(ctx: dict[str, Any]) -> int:
+    """Daily: read again the Open Food Facts pages grown old."""
+    from app.core.db import SessionFactory
+    from app.services import food_refresh
+
+    async with SessionFactory() as session:
+        count = await food_refresh.refresh_stale(
+            session, get_settings().food_refresh_days
+        )
+    _log.info("foods_refreshed", count=count)
+    return count
+
+
 async def _startup(ctx: dict[str, Any]) -> None:
     """Configure logging when the worker boots."""
     configure_logging()
@@ -90,6 +104,8 @@ class WorkerSettings:
         generate_report,
         import_apple_health_job,
     ]
+    #: 04:40 UTC, when nobody is logging a meal.
+    cron_jobs = [cron(refresh_foods, hour={4}, minute={40})]
     on_startup = _startup
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     # Full-history imports can run for many minutes; give them room.
