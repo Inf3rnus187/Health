@@ -87,6 +87,12 @@ _NAMES = (
     ("fiber_g", "fibres", "g"),
     ("sodium_mg", "sodium", "mg"),
 )
+_NOVA = {
+    1: "brut ou peu transformé",
+    2: "ingrédient culinaire transformé",
+    3: "transformé (PAS ultra-transformé)",
+    4: "ultra-transformé",
+}
 _FROM = {
     "écrit": "écrits par le patient",
     "compté": "comptés avec l'unité de sa fiche",
@@ -169,10 +175,18 @@ def _products(foods: list[dict[str, Any]]) -> str:
     lines = ["Informations Open Food Facts (font foi) :"]
     lines += [
         f"- {f['name']} : "
-        + json.dumps(f["open_food_facts"], ensure_ascii=False)
+        + json.dumps(_meaning(f["open_food_facts"]), ensure_ascii=False)
         for f in found
     ]
     return "\n".join(lines) + "\n"
+
+
+def _meaning(details: dict[str, Any]) -> dict[str, Any]:
+    """The details, with what their NOVA group means (3 is not 4)."""
+    group = details.get("nova")
+    if group not in _NOVA:
+        return details
+    return {**details, "nova_signifie": _NOVA[group]}
 
 
 def _foods(foods: list[dict[str, Any]], labels: list[dict[str, Any]]) -> str:

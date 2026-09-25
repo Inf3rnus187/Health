@@ -204,7 +204,10 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
   écrits par l'IA **après** le calcul, d'après ces chiffres exacts ; un
   chiffre cité dans une remarque qui n'est pas celui calculé pour
   l'aliment dont elle parle (ou le total du repas quand elle parle du
-  repas) est retiré par le code.
+  repas) est retiré par le code ; « ultra-transformé » dit d'un produit
+  NOVA 3 est corrigé en « transformé », un pourcentage absent des
+  ingrédients est retiré, « sucre ajouté » sans sucre dans les
+  ingrédients aussi.
   **Le même repas donne les mêmes chiffres** dès que ses aliments sont
   dans vos fiches ou dans la table ; seul l'avis (texte, note) peut
   varier si la description change de mots. Plus de « vérifier la

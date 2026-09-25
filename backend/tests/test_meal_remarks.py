@@ -63,3 +63,43 @@ def test_a_long_remark_ends_at_a_full_sentence() -> None:
     long = "Une phrase complète pour commencer. " + "mot " * 100
     assert meal_remarks.short(long) == "Une phrase complète pour commencer."
     assert meal_remarks.short("mot " * 100).endswith("mot…")
+
+
+EGGPLANT = {
+    "id": "a",
+    "open_food_facts": {
+        "nova": 3,
+        "fruits_veg_pct": 96.05,
+        "ingredients": "Aubergines 60 %, tomates, oignons, huile d'olive, "
+        "sucre (1,4 %), sel",
+    },
+}
+DETAILED = meal_remarks.numbers(ITEMS, TOTALS, [*SHEETS, EGGPLANT])
+
+
+def _checked(text: str) -> list[str]:
+    return meal_remarks.clean([text], True, DETAILED)
+
+
+def test_a_known_nova_group_is_named_right() -> None:
+    assert _checked(
+        "Le Nutri-Score de l'aliment ultra-transformé (aubergines) est A."
+    ) == ["Le Nutri-Score de l'aliment transformé (aubergines) est A."]
+
+
+def test_percentages_come_from_the_ingredients() -> None:
+    kept = "Les aubergines contiennent du sucre ajouté (1,4 %)."
+    assert _checked(kept) == [kept]
+    assert _checked("Les aubergines : 96 % de légumes.") == [
+        "Les aubergines : 96 % de légumes."
+    ]
+    assert _checked("Les aubergines contiennent du sucre ajouté (2,5 %).") == [
+        "Les aubergines contiennent du sucre ajouté."
+    ]
+
+
+def test_added_sugar_needs_sugar_in_the_ingredients() -> None:
+    plain = {**EGGPLANT, "open_food_facts": {"ingredients": "Aubergines, sel"}}
+    known = meal_remarks.numbers(ITEMS, TOTALS, [*SHEETS, plain])
+    said = "Les aubergines contiennent du sucre ajouté."
+    assert meal_remarks.clean([said], True, known) == []

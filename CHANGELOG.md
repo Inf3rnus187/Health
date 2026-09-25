@@ -30,6 +30,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **NOVA, percentages and added sugar checked in remarks**: the
+  remarks called a NOVA 3 pack (« transformé ») « ultra-transformé »
+  (that is NOVA 4). The judgement prompt now says what each group
+  means, and the code corrects « ultra-transformé » said of foods known
+  to be NOVA 1 to 3; a percentage quoted must be in the named foods'
+  ingredients or fruits-and-vegetables share (else its brackets are
+  cut); « sucre ajouté » said of foods whose ingredients are known and
+  hold no sugar drops the remark.
 - **A number quoted belongs to what the remark talks about**: « grâce au
   saumon (24,6 g) » quoted the meal's protein as the salmon's (20,5 g):
   the check only asked that the number exist. It now asks that it be

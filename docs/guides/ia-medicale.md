@@ -177,8 +177,17 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    (sodium aussi en g de sodium ou de sel). Sinon la parenthèse qui la
    contient est coupée (« grâce au saumon (24,6 g) » : 24,6 g est la
    protéine du repas, le saumon en a 20,5 → « grâce au saumon »), ou la
-   remarque est retirée. Une remarque trop longue finit à sa dernière
-   phrase complète (300 caractères), jamais au milieu d'un mot.
+   remarque est retirée. Un **pourcentage** cité (« 1,4 % ») doit être
+   dans les ingrédients des aliments nommés ou leur part de fruits et
+   légumes. « **ultra-transformé** » dit d'aliments dont le groupe NOVA
+   est connu et inférieur à 4 devient « transformé » (NOVA 3) ou « peu
+   transformé » (1, 2) — le modèle reçoit aussi ce que veut dire leur
+   groupe (« 3 : transformé, PAS ultra-transformé »). « **sucre
+   ajouté** » dit d'aliments dont les ingrédients sont connus en entier
+   et ne contiennent aucun sucre (sucre, sirop, glucose, fructose,
+   dextrose, saccharose) retire la remarque. Une remarque trop longue
+   finit à sa dernière phrase complète (300 caractères), jamais au
+   milieu d'un mot.
    Aucune posologie ni prescription.
 8. Les totaux deviennent des relevés `meal` à l'heure du repas, dans les
    mesures nutrition d'Apple Santé ; ce sont des **estimations**

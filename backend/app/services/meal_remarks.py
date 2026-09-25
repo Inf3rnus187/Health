@@ -1,4 +1,4 @@
-"""The model's remarks on a meal, checked against what the code computed.
+"""The model's remarks on a meal, checked against what the code knows.
 
 * A doubt on values that are known (« vérifier l'étiquette réelle ») is
   cut when the meal holds foods of « Mes aliments ».
@@ -7,21 +7,40 @@
   foods it names (their line, their sheet per 100 g), or the meal's
   totals when it names none or speaks of the meal (« total », « repas »),
   at the rounding written (sodium also as grams of sodium or of salt).
-  Otherwise the brackets holding it are cut, or the remark is dropped:
-  « grâce au saumon (24,6 g) » — the meal's protein; the salmon has
-  20,5 g — loses its brackets.
+  A percentage (« 1,4 % ») must be in the named foods' ingredients or
+  their share of fruits and vegetables. Otherwise the brackets holding
+  it are cut, or the remark is dropped: « grâce au saumon (24,6 g) » —
+  the meal's protein; the salmon has 20,5 g — loses its brackets.
+* « ultra-transformé » said of foods whose NOVA group is known and
+  below 4 becomes « transformé » (NOVA 3) or « peu transformé » (1, 2).
+* « sucre ajouté » said of foods whose whole ingredients are known and
+  hold no sugar drops the remark.
 * A remark too long ends at its last full sentence, never mid-word.
 """
 
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from typing import Any
 
-from app.services.text_norm import singular, tokens
+from app.services.text_norm import norm, singular, tokens
 
-#: Per food (the words of its name, its numbers), and the meal's numbers.
-Known = tuple[list[tuple[set[str], set[float]]], set[float]]
+
+@dataclass(frozen=True)
+class Said:
+    """What one food of the meal may be quoted with."""
+
+    words: frozenset[str]
+    values: frozenset[float]
+    percents: frozenset[float]
+    nova: int | None
+    #: Its ingredients, when known whole ("" otherwise).
+    ingredients: str
+
+
+#: The meal's foods, and the numbers of the whole meal.
+Known = tuple[list[Said], frozenset[float]]
 
 _DOUBT = re.compile(
     r"\s*[(\[,;—–-]*\s*(?:à |il faut |pensez à |penser à )?v[ée]rifi\w*"
@@ -30,12 +49,20 @@ _DOUBT = re.compile(
     re.IGNORECASE,
 )
 _QTY = re.compile(r"(\d+(?:[.,]\d+)?)\s*(?:mg|g|kcal|µg)\b", re.IGNORECASE)
+_PCT = re.compile(r"(\d+(?:[.,]\d+)?)\s*%")
+_NUMBER = re.compile(r"\d+(?:[.,]\d+)?")
 _ASIDE = re.compile(r"\s*\([^()]*\)")
+_ULTRA = re.compile(r"ultra[- ]?transform[ée](e?s?)", re.IGNORECASE)
+_ADDED_SUGAR = re.compile(r"sucres? ajout|ajouts? de sucre", re.IGNORECASE)
+_SUGARS = ("sucre", "sirop", "glucose", "fructose", "dextrose", "saccharose")
 _MEAL_WORDS = frozenset("total totale repas ensemble".split())
 _SALT_PER_NA = 400.0  # 1 g of salt = 400 mg of sodium
+_WHOLE = 400  # ingredients the model was given; longer: cut, not known
 _SHORTEST = 12
 _LONGEST = 300
 _NAME_WORD = 3
+_ULTRA_NOVA = 4
+_PROCESSED_NOVA = 3
 
 
 def numbers(
@@ -45,33 +72,20 @@ def numbers(
 ) -> Known:
     """What each food and the whole meal may be quoted with."""
     sheets = {str(f.get("id")): f for f in foods}
-    per_food = []
-    for item in items:
-        values = _values(item)
-        sheet = sheets.get(str(item.get("food_id")))
-        if sheet:
-            values |= _values(sheet.get("per_100g") or {})
-        name = str(item.get("name") or "").split(" · ")[0]
-        per_food.append((_words(name), values))
-    return per_food, _values(totals)
+    said = [_said(item, sheets.get(str(item.get("food_id")))) for item in items]
+    return said, frozenset(_values(totals))
 
 
 def clean(texts: list[str], trusted: bool, known: Known | None) -> list[str]:
-    """The remarks without doubts on known values nor unchecked numbers."""
+    """The remarks without doubts, wrong numbers or wrong claims."""
     out = []
     for text in texts:
         kept = _DOUBT.sub("", text).strip(" ,;—–-") if trusted else text
         if known is not None:
-            kept = _checked(kept, _allowed(kept, known))
+            kept = _checked(kept, known)
         if len(kept.strip()) >= _SHORTEST:
             out.append(kept.strip())
     return out
-
-
-def _checked(text: str, allowed: set[float]) -> str:
-    """Brackets quoting an unchecked number cut; the remark, if it does."""
-    kept = _ASIDE.sub(lambda m: m[0] if _true(m[0], allowed) else "", text)
-    return kept if _true(kept, allowed) else ""
 
 
 def short(text: Any) -> str:
@@ -86,25 +100,78 @@ def short(text: Any) -> str:
     return cut[: cut.rfind(" ")].rstrip(" ,;:") + "…"
 
 
-def _allowed(text: str, known: Known) -> set[float]:
-    """The numbers of the foods the remark names, and the meal's."""
-    per_food, meal = known
-    said = {singular(w) for w in tokens(text)}
-    named = [values for words, values in per_food if words & said]
-    allowed = {100.0}.union(*named)
-    if not named or said & _MEAL_WORDS:
-        allowed |= meal
-    return allowed
+def _checked(text: str, known: Known) -> str:
+    """One remark checked against the foods it names and the meal."""
+    words = {singular(w) for w in tokens(text)}
+    named = [food for food in known[0] if food.words & words]
+    about = named or known[0]
+    if _ADDED_SUGAR.search(text) and _no_sugar(about):
+        return ""
+    text = _nova(text, about)
+    quantities = {100.0}.union(*(food.values for food in named))
+    if not named or words & _MEAL_WORDS:
+        quantities |= known[1]
+    percents = set().union(*(food.percents for food in about))
+    kept = _ASIDE.sub(
+        lambda m: m[0] if _true(m[0], quantities, percents) else "", text
+    )
+    return kept if _true(kept, quantities, percents) else ""
 
 
-def _true(text: str, allowed: set[float]) -> bool:
-    """Each « 557 mg » in ``text`` is an allowed number, as rounded there."""
-    for match in _QTY.finditer(text):
-        raw = match[1].replace(",", ".")
-        digits = len(raw.split(".")[1]) if "." in raw else 0
-        if not any(round(k, digits) == float(raw) for k in allowed):
-            return False
-    return True
+def _true(text: str, quantities: set[float], percents: set[float]) -> bool:
+    """Each quantity and percentage quoted is an allowed one."""
+    return all(
+        _known(match[1], allowed)
+        for pattern, allowed in ((_QTY, quantities), (_PCT, percents))
+        for match in pattern.finditer(text)
+    )
+
+
+def _known(raw: str, allowed: set[float]) -> bool:
+    """« 562,4 » is one of ``allowed``, rounded as written."""
+    value = raw.replace(",", ".")
+    digits = len(value.split(".")[1]) if "." in value else 0
+    return any(round(k, digits) == float(value) for k in allowed)
+
+
+def _nova(text: str, foods: list[Said]) -> str:
+    """« ultra-transformé » said of foods known to be NOVA 1 to 3, fixed."""
+    groups = [f.nova for f in foods if f.nova is not None]
+    if not groups or max(groups) >= _ULTRA_NOVA:
+        return text
+    word = "transformé" if max(groups) == _PROCESSED_NOVA else "peu transformé"
+    return _ULTRA.sub(lambda m: word + m[1], text)
+
+
+def _no_sugar(foods: list[Said]) -> bool:
+    """Whether the foods' ingredients are known whole and hold no sugar."""
+    known = [f.ingredients for f in foods if f.ingredients]
+    return (
+        bool(known)
+        and len(known) == len(foods)
+        and not any(s in norm(i) for i in known for s in _SUGARS)
+    )
+
+
+def _said(item: dict[str, Any], sheet: dict[str, Any] | None) -> Said:
+    """What a line may be quoted with (and its sheet's details)."""
+    values = _values(item) | _values((sheet or {}).get("per_100g") or {})
+    about = (sheet or {}).get("open_food_facts") or {}
+    ingredients = str(about.get("ingredients") or "")
+    percents = {
+        float(n.replace(",", ".")) for n in _NUMBER.findall(ingredients)
+    }
+    if isinstance(about.get("fruits_veg_pct"), int | float):
+        percents.add(float(about["fruits_veg_pct"]))
+    nova = about.get("nova")
+    name = str(item.get("name") or "").split(" · ")[0]
+    return Said(
+        words=frozenset(_words(name)),
+        values=frozenset(values),
+        percents=frozenset(percents),
+        nova=nova if isinstance(nova, int) else None,
+        ingredients=ingredients if len(ingredients) < _WHOLE else "",
+    )
 
 
 def _values(found: dict[str, Any]) -> set[float]:
