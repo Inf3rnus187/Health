@@ -55,10 +55,22 @@ function origin(source?: string): string {
   return ', estimé';
 }
 
+/** How the grams were given, after them: « écrits », « ta portion »… */
+const HOW: Record<string, string> = {
+  écrit: ' écrits',
+  compté: ' comptés',
+  portion: ', ta portion',
+  formulaire: ' saisis',
+  paquet: ', le paquet',
+  IA: ' estimés par l’IA',
+  défaut: ' estimés',
+};
+
 function Foods({ a }: { a: MealAnalysis }) {
-  const kept = (a.items ?? []).map(
-    (i) => `${i.name} (${frNumber(i.grams, 0)} g${origin(i.source)})`,
-  );
+  const kept = (a.items ?? []).map((i) => {
+    const how = HOW[i.grams_from ?? ''] ?? '';
+    return `${i.name} (${frNumber(i.grams, 0)} g${how}${origin(i.source)})`;
+  });
   const dropped = (a.rejected ?? []).map((r) => `${r.name} (${r.reason})`);
   return (
     <p className="muted">
@@ -82,10 +94,12 @@ export function MealAnalysisView({ a }: { a: MealAnalysis }) {
       {a.totals && <NutrientTable totals={a.totals} />}
       <Foods a={a} />
       <p className="muted small">
-        Aliments et quantités : IA ({a.model}
+        Aliments : IA ({a.model}
         {a.vision_model ? ` + photo : ${a.vision_model}` : ''}) et votre
-        description. Valeurs : vos étiquettes 🏷️, la table Ciqual 2025 (ANSES),
-        sinon estimées par l’IA.
+        description. Quantités : écrites ou comptées dans la description, vos
+        fiches, sinon estimées par l’IA (dit sur chaque aliment). Valeurs : vos
+        étiquettes 🏷️, la table Ciqual 2025 (ANSES), sinon estimées. Avis :
+        écrit par l’IA d’après ces valeurs, chiffres vérifiés.
       </p>
     </div>
   );

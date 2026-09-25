@@ -39,6 +39,8 @@ class ProductInfo(BaseModel):
     nutriscore_score: int | None = Field(default=None, ge=-20, le=60)
     nova: int | None = Field(default=None, ge=1, le=4)
     fruits_veg_pct: float | None = Field(default=None, ge=0, le=100)
+    #: Estimated from the ingredients (« ~ » on the product page).
+    fruits_veg_estimated: bool = False
     levels: dict[str, str] = Field(default_factory=dict)
     labels: str = Field(default="", max_length=500)
     categories: str = Field(default="", max_length=500)

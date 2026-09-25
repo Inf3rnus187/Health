@@ -28,8 +28,18 @@ _DOUBT = re.compile(
     re.IGNORECASE,
 )
 _SHORTEST = 12
+#: « 557 mg », « 10.6g », « 83 kcal »: a quantity quoted in a remark.
+_QTY = re.compile(r"(\d+(?:[.,]\d+)?)\s*(?:mg|g|kcal|µg)\b", re.IGNORECASE)
+_ASIDE = re.compile(r"\s*\([^()]*\)")
+_SALT_PER_NA = 400.0  # 1 g of salt = 400 mg of sodium
 #: Keys an item keeps besides its values (set by code, not the model).
-_KEPT = {"food_id": 36, "ciqual": 12, "source": 40, "reference": 160}
+_KEPT = {
+    "food_id": 36,
+    "ciqual": 12,
+    "source": 40,
+    "reference": 160,
+    "grams_from": 12,
+}
 
 
 def check(items: Any) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
@@ -52,21 +62,70 @@ def totals(items: list[dict[str, Any]]) -> dict[str, float]:
     return {k: round(sum(i[k] for i in items), 1) for k in keys}
 
 
-def assessment(answer: dict[str, Any], trusted: bool = False) -> dict[str, Any]:
+def assessment(
+    answer: dict[str, Any],
+    trusted: bool = False,
+    known: set[float] | None = None,
+) -> dict[str, Any]:
     """Score (0-10), verdict and remarks, bounded.
 
     ``trusted``: the meal has foods of « Mes aliments », whose label and
     Open Food Facts values are known; a remark asking to check them
     (« vérifier l'étiquette réelle ») is cut, the rest of it kept.
+    ``known``: the numbers the code computed (:func:`numbers`); a
+    quantity quoted in a remark that is none of them (« 557 mg » for
+    562,4) is cut with its brackets, or the remark is dropped.
     """
     score = _number(answer.get("score"))
-    clean = _sure if trusted else (lambda texts: texts)
+
+    def clean(texts: list[str]) -> list[str]:
+        kept = _sure(texts) if trusted else texts
+        return kept if known is None else _verified(kept, known)
+
     return {
         "score": None if score is None else max(0.0, min(10.0, score)),
         "verdict": str(answer.get("verdict") or "")[:_TEXT] or None,
         "positives": clean(_texts(answer.get("positives"))),
         "watch": clean(_texts(answer.get("watch"))),
     }
+
+
+def numbers(
+    items: list[dict[str, Any]],
+    totals: dict[str, float],
+    foods: list[dict[str, Any]],
+) -> set[float]:
+    """Every number a remark may quote: lines, totals, sheets per 100 g."""
+    found = [*items, totals, *(f.get("per_100g") or {} for f in foods)]
+    known = {100.0}
+    for values in found:
+        for key, value in values.items():
+            if isinstance(value, bool) or not isinstance(value, int | float):
+                continue
+            known.add(float(value))
+            if key == "sodium_mg":  # also as grams of sodium or of salt
+                known |= {value / 1000, value / _SALT_PER_NA}
+    return known
+
+
+def _verified(texts: list[str], known: set[float]) -> list[str]:
+    """The remarks whose quoted quantities are all computed ones."""
+    out = []
+    for text in texts:
+        kept = _ASIDE.sub(lambda m: m[0] if _true(m[0], known) else "", text)
+        if _true(kept, known) and len(kept.strip()) >= _SHORTEST:
+            out.append(kept.strip())
+    return out
+
+
+def _true(text: str, known: set[float]) -> bool:
+    """Each « 557 mg » in ``text`` is a known number, as rounded there."""
+    for match in _QTY.finditer(text):
+        raw = match[1].replace(",", ".")
+        digits = len(raw.split(".")[1]) if "." in raw else 0
+        if not any(round(k, digits) == float(raw) for k in known):
+            return False
+    return True
 
 
 def _sure(texts: list[str]) -> list[str]:

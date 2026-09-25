@@ -25,6 +25,8 @@ export interface ProductInfo {
   /** 1 unprocessed … 4 ultra-processed. */
   nova: number | null;
   fruits_veg_pct: number | null;
+  /** Estimated from the ingredients (« ~ » on the product page). */
+  fruits_veg_estimated?: boolean;
   /** fat, saturated-fat, sugars, salt → low, moderate, high. */
   levels: Record<string, string>;
   labels: string;

@@ -30,6 +30,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Remarks quote exact numbers**: the model wrote its remarks in the
+  same answer as the grams, before the code computed the values, so it
+  quoted its own arithmetic (« 557 mg pour 185 g » where the sheet gives
+  562,4 mg; « 10.6 g » of sugars for 10,4). The reading now has two
+  steps: the foods and grams first; then, from the values the code
+  computed, the score, verdict and remarks, told to copy the numbers.
+  The code then checks every quantity a remark quotes against the
+  computed ones and cuts one that is not (its brackets, or the remark).
+- **Fruits and vegetables %**: the sheet showed an older Open Food Facts
+  field (81 % for a pack whose page says ~96 %); it now takes the one the
+  page shows (« fruits, légumes, légumes secs », given, else estimated:
+  « ~ »). « Tout relire » updates existing sheets.
+- **Grams written are kept, and every line says where its grams come
+  from**: grams written in the description (« tomates 240 g ») now
+  replace the model's for every food, not only those of « Mes
+  aliments »; each line of the analysis shows « écrits », « comptés »,
+  « ta portion », « saisis », « le paquet » or « estimés par l'IA »
+  (« 2 tomates » had become 400 g estimated after 200 g the time
+  before, with nothing to tell).
 - **Salt and sodium shown**: a sheet is filled with the salt printed on
   the pack and stored as sodium (1 g of salt = 400 mg), but nothing
   showed the sodium. The sheet now writes it under the salt field and

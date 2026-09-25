@@ -3,14 +3,16 @@
 1. With a photo, the vision model (e.g. MedGemma 1.5) lists the foods and
    estimates the portions; the user's description takes precedence.
 2. The text model (e.g. MedGemma 27B) names each food, its grams and
-   its Ciqual reference among a short list (:mod:`meal_ciqual`), and
-   judges the meal for the user's declared conditions (score 0-10,
-   verdict, positives, points to watch).
-3. Values come from the Ciqual table for a referenced food, from the
-   label for a food of the user's list (:mod:`meal_foods`, grams read
-   from the description), else from the model's estimate, checked by
-   :mod:`meal_nutrition`; the totals feed Apple's nutrition metrics
-   (:mod:`meal_nutrients`).
+   its Ciqual reference among a short list (:mod:`meal_ciqual`).
+3. The code values them: grams written in the description replace the
+   model's (:mod:`meal_quantity`), the Ciqual table for a referenced
+   food, the label for a food of the user's list (:mod:`meal_foods`),
+   else the model's estimate, checked by :mod:`meal_nutrition`; each
+   line says where its grams come from. The totals feed Apple's
+   nutrition metrics (:mod:`meal_nutrients`).
+4. Only then the text model judges the meal for the user's declared
+   conditions (score 0-10, verdict, positives, points to watch), given
+   those exact values to quote, never to recompute.
 
 States: queued → running → done | failed (with the error), a time limit,
 and readings a worker restart interrupted are re-queued.
@@ -37,6 +39,7 @@ from app.services import (
     meal_nutrients,
     meal_nutrition,
     meal_prompt,
+    meal_quantity,
     meals,
 )
 from app.services.daily_rollup import user_zone
@@ -46,6 +49,7 @@ from app.workers.queue import enqueue, enqueue_many
 _log = get_logger("meal_ai")
 _TIME_LIMIT = 900.0
 _TOKENS = 1500
+_JUDGE_TOKENS = 700
 PENDING = ("queued", "running")
 
 
@@ -86,31 +90,51 @@ async def analyze(session: AsyncSession, meal: Meal) -> dict[str, Any]:
     answer = await ollama.text_json(
         meal_prompt.nutrition(context), max_tokens=_TOKENS
     )
-    items, rejected = _valued(answer, context["refs"], portions)
+    items, rejected = _valued(answer, context, portions)
     totals = meal_nutrition.totals(items)
+    judged = await _judge(context, items, totals, bool(portions))
     await meal_nutrients.record(session, meal, totals)
     return {
         "model": ollama.text_model(),
         "vision_model": get_settings().ollama_vision_model if seen else None,
         "seen": seen,
         "labels": labels,
-        "foods": [meal_foods.label(food) for food, _ in portions],
+        "foods": [meal_foods.label(p[0]) for p in portions],
         "items": items,
         "rejected": rejected,
         "totals": totals,
-        **meal_nutrition.assessment(answer, trusted=bool(portions)),
+        **judged,
         "finished_at": utcnow().isoformat(),
     }
 
 
+async def _judge(
+    context: dict[str, Any],
+    items: list[dict[str, Any]],
+    totals: dict[str, float],
+    trusted: bool,
+) -> dict[str, Any]:
+    """The judgement, written from the values the code computed.
+
+    Checked: a doubt on known labels is cut, and so is a quoted quantity
+    that is not one the code computed.
+    """
+    prompt = meal_prompt.assessment(context, items, totals)
+    answer = await ollama.text_json(prompt, max_tokens=_JUDGE_TOKENS)
+    known = meal_nutrition.numbers(items, totals, context["foods"])
+    return meal_nutrition.assessment(answer, trusted=trusted, known=known)
+
+
 def _valued(
     answer: dict[str, Any],
-    refs: list[dict[str, str]],
+    context: dict[str, Any],
     portions: list[meal_foods.Portion],
 ) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
-    """The model's foods valued: Ciqual, checked, then the user's labels."""
-    offered = {ref["code"] for ref in refs}
-    raw = meal_ciqual.fill(answer.get("items"), offered)
+    """The model's foods valued: grams written, Ciqual, checked, labels."""
+    offered = {ref["code"] for ref in context["refs"]}
+    said = str(context.get("description") or "")
+    lines = meal_quantity.written(answer.get("items"), said)
+    raw = meal_ciqual.fill(lines, offered)
     items, rejected = meal_nutrition.check(raw)
     return meal_foods.apply(items, portions), rejected
 

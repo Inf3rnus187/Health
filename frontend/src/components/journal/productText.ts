@@ -66,7 +66,8 @@ export function productSummary(p: ProductInfo): string {
     p.nutriscore && `Nutri-Score ${p.nutriscore.toUpperCase()}`,
     p.nova != null && NOVA[p.nova],
     p.fruits_veg_pct != null &&
-      `fruits et légumes ${frNumber(p.fruits_veg_pct, 0)} %`,
+      `fruits et légumes ${p.fruits_veg_estimated ? '~' : ''}` +
+        `${frNumber(p.fruits_veg_pct, 2)} %`,
   ]
     .filter(Boolean)
     .join(' · ');

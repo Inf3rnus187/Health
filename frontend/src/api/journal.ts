@@ -25,6 +25,9 @@ export interface MealItem extends MealTotals {
   /** « étiquette »: computed from a food of « Mes aliments ». */
   source?: string;
   food_id?: string;
+  /** How its grams were given: écrit, compté, portion, formulaire,
+   * paquet, IA (the model's estimate), défaut. */
+  grams_from?: string;
 }
 
 export interface MealAnalysis {

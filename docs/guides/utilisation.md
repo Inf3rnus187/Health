@@ -191,9 +191,19 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
      grammes — marqués « Ciqual » ;
   3. sinon l'**estimation de l'IA**, contrôlée (marquée « estimé »).
 
+  Chaque aliment dit **d'où viennent ses grammes** : « 240 g écrits »
+  (dans la description : pesé, c'est exact), « 240 g comptés » (« 2
+  tomates » × l'unité de la fiche), « 185 g, ta portion », « 125 g
+  saisis » (formulaire), « 185 g, le paquet », « 400 g estimés par
+  l'IA ». Pour qu'aucune quantité ne soit estimée : écrire les grammes
+  (balance) ou avoir une fiche avec son unité.
+
   Puis les **nutriments** (énergie, protéines, glucides dont sucres,
   lipides dont saturés, fibres, sodium), une **note 0–10**, un verdict,
-  les points positifs et à surveiller **pour vos maladies déclarées**.
+  les points positifs et à surveiller **pour vos maladies déclarées** —
+  écrits par l'IA **après** le calcul, d'après ces chiffres exacts ; un
+  chiffre cité dans une remarque qui n'est pas un chiffre calculé est
+  retiré par le code.
   **Le même repas donne les mêmes chiffres** dès que ses aliments sont
   dans vos fiches ou dans la table ; seul l'avis (texte, note) peut
   varier si la description change de mots. Plus de « vérifier la

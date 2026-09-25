@@ -22,14 +22,15 @@ from app.models.food import Food
 from app.models.meal import Meal
 from app.services import foods as food_service
 from app.services.food_match import fits, named
-from app.services.meal_quantity import grams_in
+from app.services.meal_quantity import read
 
 #: The label values copied onto an item (energy apart: from the label).
 NUTRIENTS = (
     "protein_g", "carbs_g", "sugars_g", "fat_g", "sat_fat_g", "fiber_g",
     "sodium_mg",
 )  # fmt: skip
-Portion = tuple[Food, float | None]
+#: A food, its grams (None: not said) and how they were said.
+Portion = tuple[Food, float | None, str]
 
 
 async def of_meal(session: AsyncSession, meal: Meal) -> list[Portion]:
@@ -40,11 +41,13 @@ async def of_meal(session: AsyncSession, meal: Meal) -> list[Portion]:
     picked: list[Portion] = []
     for entry in meal.foods or []:
         food = by_id.get(str(entry.get("food_id")))
-        if food is not None:
-            picked.append((food, entry.get("grams") or _eaten(food, said)))
-    taken = {food.id for food, _ in picked}
+        if food is not None and entry.get("grams"):
+            picked.append((food, float(entry["grams"]), "formulaire"))
+        elif food is not None:
+            picked.append((food, *_eaten(food, said)))
+    taken = {portion[0].id for portion in picked}
     said_foods = [f for f in named(known, said) if f.id not in taken]
-    return picked + [(food, _eaten(food, said)) for food in said_foods]
+    return picked + [(food, *_eaten(food, said)) for food in said_foods]
 
 
 def label(food: Food) -> str:
@@ -68,7 +71,7 @@ def context(portions: list[Portion]) -> list[dict[str, Any]]:
             "note": food.note,
             "open_food_facts": _about(food.product_info),
         }
-        for food, grams in portions
+        for food, grams, _ in portions
     ]
 
 
@@ -97,9 +100,9 @@ def apply(
             continue
         used.add(match[0].id)
         out.append(_labelled(match, item.get("grams")))
-    for food, grams in portions:
+    for food, grams, how in portions:
         if food.id not in used and (grams or food.package_g):
-            out.append(_labelled((food, grams), None))
+            out.append(_labelled((food, grams, how), None))
     return out
 
 
@@ -118,7 +121,7 @@ def _again(
     item: dict[str, Any], portions: list[Portion], used: set[str]
 ) -> bool:
     """Whether the item is a second line for a food already counted."""
-    done = [food for food, _ in portions if food.id in used]
+    done = [food for food, _, _ in portions if food.id in used]
     return any(
         food.id == item.get("food_id") or fits(food, str(item["name"]))
         for food in done
@@ -127,8 +130,8 @@ def _again(
 
 def _labelled(portion: Portion, eaten: Any) -> dict[str, Any]:
     """An item computed from the label for the grams eaten."""
-    food, grams = portion
-    amount = float(grams or (eaten if eaten else 0) or food.package_g or 100)
+    food = portion[0]
+    amount, how = _amount(portion, eaten)
     ratio = amount / 100
     per = food.per_100g
     values = {k: round(float(per.get(k) or 0) * ratio, 1) for k in NUTRIENTS}
@@ -143,9 +146,25 @@ def _labelled(portion: Portion, eaten: Any) -> dict[str, Any]:
         **values,
         "food_id": food.id,
         "source": "étiquette",
+        "grams_from": how,
     }
 
 
-def _eaten(food: Food, said: str) -> float | None:
+def _amount(portion: Portion, eaten: Any) -> tuple[float, str]:
+    """The grams eaten and where they come from (said, estimated, pack)."""
+    food, grams, how = portion
+    if grams:
+        return float(grams), how
+    if eaten:
+        return float(eaten), "IA"
+    if food.package_g:
+        return float(food.package_g), "paquet"
+    return 100.0, "défaut"
+
+
+def _eaten(food: Food, said: str) -> tuple[float | None, str]:
     """The grams the description gives, else the usual portion."""
-    return grams_in(food, said) or food.portion_g
+    grams, how = read(food, said)
+    if grams:
+        return grams, how
+    return (food.portion_g, "portion") if food.portion_g else (None, "")

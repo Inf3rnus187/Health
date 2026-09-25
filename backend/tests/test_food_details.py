@@ -23,6 +23,7 @@ PRODUCT = {
         "sugars_100g": 5.6, "fiber_100g": 2.2, "proteins_100g": 1.2,
         "salt_100g": 0.76, "sodium_100g": 0.304,
         "fruits-vegetables-legumes-estimate-from-ingredients_100g": 96.05,
+        "fruits-vegetables-nuts_100g": 80.7,  # older field: not the page's
         "potassium_100g": 0.21, "vitamin-c_100g": 0.004,
     },
     "ingredients_text_fr": "Aubergines 60 %, tomates, oignons, huile de "
@@ -70,6 +71,7 @@ async def test_the_whole_product_page_is_kept(
         3,
         96.05,
     )
+    assert info["fruits_veg_estimated"]  # « ~ », as on the page
     assert info["additives"] == ["E330"] and info["allergens"] == ["celery"]
     assert info["ingredients"].startswith("Aubergines 60 %")
     assert info["levels"]["salt"] == "moderate"
@@ -119,3 +121,42 @@ async def test_the_meal_reading_is_told_and_never_doubts_a_sheet(
     assert analysis["watch"] == ["Quantité de sodium dans les aubergines"]
     (box,) = analysis["items"]
     assert (box["grams"], box["sodium_mg"]) == (185, 562.4)
+
+
+async def test_grams_written_are_kept_and_every_line_says_where_from(
+    client: AsyncClient, auth: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def no_worker(*_: Any) -> bool:
+        return False
+
+    async def text(prompt: str, **_: Any) -> dict[str, Any]:
+        if "Juge ce repas" in prompt:
+            assert "Tomates : 240 g (écrits par le patient" in prompt
+            assert "Concombre : 150 g (estimés" in prompt
+            return {"score": 8, "watch": [
+                "Tomates : 240 g, de quoi bien s'hydrater",
+                "Assez de sucres (10.6 g pour 185 g)",
+                "Trop de sel : 557 mg dans le repas",
+            ]}  # fmt: skip
+        return {"items": [
+            {"name": "Tomates", "grams": 400, "grams_from": "écrit"},
+            {"name": "Concombre", "grams": 150},
+        ]}  # fmt: skip
+
+    monkeypatch.setattr(meal_ai, "enqueue", no_worker)
+    monkeypatch.setattr(ollama, "text_json", text)
+    made = await client.post(
+        "/api/v1/meals",
+        data={"description": "tomates 240 g, un demi concombre"},
+        headers=auth,
+    )
+    async with SessionFactory() as session:
+        await meal_ai.run(session, made.json()["id"])
+    read = await client.get(f"/api/v1/meals/{made.json()['id']}", headers=auth)
+    tomatoes, cucumber = read.json()["analysis"]["items"]
+    assert (tomatoes["grams"], tomatoes["grams_from"]) == (240, "écrit")
+    assert (cucumber["grams"], cucumber["grams_from"]) == (150, "IA")
+    assert read.json()["analysis"]["watch"] == [
+        "Tomates : 240 g, de quoi bien s'hydrater",  # a computed number
+        "Assez de sucres",  # « (10.6 g pour 185 g) »: not computed, cut
+    ]  # « 557 mg » outside brackets: the remark is dropped

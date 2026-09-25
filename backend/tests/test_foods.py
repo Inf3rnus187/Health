@@ -159,6 +159,11 @@ async def test_a_meal_with_its_sachet_is_read_from_the_label(
         return {"items": [{"name": "riz", "grams": 200}], "labels": []}
 
     async def text(prompt: str, **_: Any) -> dict[str, Any]:
+        if "Juge ce repas" in prompt:  # 2nd call: the code's exact values
+            line = "Riz méditerranéen · Marque test · 250 g : 125 g"
+            assert f"{line} (saisis par le patient, étiquette)" in prompt
+            assert "énergie 187,5 kcal" in prompt
+            return {"score": 6, "verdict": "Correct"}
         assert "Étiquettes des produits" in prompt and food["id"] in prompt
         guess = {"name": "Riz", "grams": 200, "protein_g": 5, "carbs_g": 60}
         return {"items": [{**guess, "food_id": food["id"]}, _CHICKEN]}
@@ -186,6 +191,11 @@ async def test_a_meal_with_its_sachet_is_read_from_the_label(
     read = (await client.get(f"{MEALS}/{meal['id']}", headers=auth)).json()
     rice, chicken = read["analysis"]["items"]
     assert (rice["source"], rice["grams"]) == ("étiquette", 125)
+    assert rice["grams_from"] == "formulaire"
+    assert (read["analysis"]["score"], read["analysis"]["verdict"]) == (
+        6,
+        "Correct",
+    )
     assert rice["energy_kcal"] == pytest.approx(187.5)
     assert rice["protein_g"] == pytest.approx(4.4)
     assert rice["sodium_mg"] == 500

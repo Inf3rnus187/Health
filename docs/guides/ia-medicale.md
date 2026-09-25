@@ -127,9 +127,13 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    fixe : la même entrée donne la même sortie) → pour chaque aliment :
    nom, grammes, `food_id` (un de vos aliments) ou `ciqual` (une
    référence **de la liste** : un code hors liste est ignoré), une
-   estimation des nutriments ; puis un avis **pour vos maladies
-   déclarées** : note 0–10, verdict, points positifs, points à
-   surveiller. Aucune posologie ni prescription.
+   estimation des nutriments. **Pas d'avis à ce stade** : il vient
+   après le calcul (étape 7). Les **grammes écrits** dans la
+   description (« tomates 240 g », « 150 g de riz ») remplacent ceux du
+   modèle, par le code, pour chaque ligne ; chaque ligne dit d'où
+   viennent ses grammes (`grams_from` : `écrit`, `compté` — nombre ×
+   l'unité ou le paquet de la fiche —, `portion` — votre portion
+   habituelle —, `formulaire`, `paquet`, `IA` — estimation du modèle).
    Pour un aliment de « Mes aliments » venu d'Open Food Facts, le
    modèle reçoit aussi ses **informations produit**, qui font foi :
    Nutri-Score, groupe NOVA (1 peu transformé … 4 ultra-transformé),
@@ -158,7 +162,20 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    lui est retirée (pas de double compte) ; un aliment choisi ou nommé
    que le modèle a oublié est ajouté (s'il a des grammes ou un poids de
    paquet).
-7. Les totaux deviennent des relevés `meal` à l'heure du repas, dans les
+7. **Avis, d'après les chiffres exacts** : un second appel au modèle
+   texte reçoit la liste calculée par le code (chaque aliment, ses
+   grammes et d'où ils viennent, ses nutriments, sa source), le total
+   du repas, les informations Open Food Facts, vos maladies déclarées,
+   et rend note 0–10, verdict, points positifs, points à surveiller —
+   avec la consigne de **recopier** les chiffres, jamais de les
+   recalculer. Puis le code **vérifie** : toute quantité citée dans une
+   remarque (« 557 mg », « 10.6 g ») doit être une valeur calculée
+   (ligne, total, valeur pour 100 g d'une fiche, au même arrondi que
+   celui écrit ; sodium aussi en g de sodium ou de sel). Sinon la
+   parenthèse qui la contient est coupée (« Assez de sucres (10.6 g
+   pour 185 g) » → « Assez de sucres »), ou la remarque est retirée.
+   Aucune posologie ni prescription.
+8. Les totaux deviennent des relevés `meal` à l'heure du repas, dans les
    mesures nutrition d'Apple Santé ; ce sont des **estimations**
    (±20–30 % typiquement sur les portions), affichées comme telles.
 

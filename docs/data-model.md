@@ -163,7 +163,8 @@ Added by later migrations (each creates only its own tables, ADR‑0004):
   `[{"id", "path"}]` — the pack, its nutrition label), `foods` (`0017`:
   `[{"food_id", "grams"}]`, grams `NULL` = estimated or the whole
   package); `analysis_status` (`NULL`, `queued`, `running`, `done`,
-  `failed`) and `analysis` (JSON: items with their grams and origin,
+  `failed`) and `analysis` (JSON: items with their grams, `grams_from`
+  — écrit, compté, portion, formulaire, paquet, IA — and origin,
   checked nutrients, score and verdict).
 - `foods` (`0017`, `0018`, `0021`, `0023`) — a user's food sheet:
   `name`, `brand`, `aliases` (other names used in a meal, comma-
@@ -178,7 +179,8 @@ Added by later migrations (each creates only its own tables, ADR‑0004):
   `photos` (`[{"id", "kind": "pack" | "label", "path"}]`),
   `product_info` (`0023`, JSON, from Open Food Facts: `ingredients`,
   `allergens`, `traces`, `additives`, `nutriscore`, `nutriscore_score`,
-  `nova`, `fruits_veg_pct`, `levels`, `labels`, `categories`, `serving`,
+  `nova`, `fruits_veg_pct` (the page's « fruits, légumes, légumes secs »,
+  `fruits_veg_estimated` when estimated from the ingredients), `levels`, `labels`, `categories`, `serving`,
   `other_100g` — other nutrients in g per 100 g —, `url`, `fetched_at` —
   the day the page was read, for the nightly re-reading).
 - `food_stock_moves` (`0022`) — a food's stock entries: `food_id`

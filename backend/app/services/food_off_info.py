@@ -26,11 +26,14 @@ _KNOWN = frozenset(
     "nutrition-score-uk nova-group carbon-footprint-from-known-ingredients "
     "carbon-footprint-from-meat-or-fish".split()
 )
+#: The share the page shows: today's Nutri-Score counts « fruits,
+#: légumes, légumes secs » (given, else estimated from the ingredients:
+#: « ~ » on the page); the older « fruits, légumes, noix » only if none.
 _FRUITS = (
-    "fruits-vegetables-legumes_100g",
-    "fruits-vegetables-nuts_100g",
-    "fruits-vegetables-legumes-estimate-from-ingredients_100g",
-    "fruits-vegetables-nuts-estimate-from-ingredients_100g",
+    ("fruits-vegetables-legumes_100g", False),
+    ("fruits-vegetables-legumes-estimate-from-ingredients_100g", True),
+    ("fruits-vegetables-nuts_100g", False),
+    ("fruits-vegetables-nuts-estimate-from-ingredients_100g", True),
 )
 FIELDS = (
     "ingredients_text_fr,ingredients_text,allergens_tags,traces_tags,"
@@ -52,7 +55,7 @@ def info(product: dict[str, Any], barcode: str) -> dict[str, Any]:
         "nutriscore": _grade(product.get("nutriscore_grade")),
         "nutriscore_score": product.get("nutriscore_score"),
         "nova": product.get("nova_group"),
-        "fruits_veg_pct": _fruits(product.get("nutriments")),
+        **_fruits(product.get("nutriments")),
         "levels": _levels(product.get("nutrient_levels")),
         "labels": _text(product, "labels")[:500],
         "categories": _text(product, "categories")[:500],
@@ -97,14 +100,17 @@ def _grade(raw: Any) -> str:
     return value if value in ("a", "b", "c", "d", "e") else ""
 
 
-def _fruits(nutriments: Any) -> float | None:
-    """The share of fruits, vegetables and legumes (%), given or estimated."""
+def _fruits(nutriments: Any) -> dict[str, Any]:
+    """The share of fruits, vegetables and legumes (%), and if estimated."""
     found = nutriments if isinstance(nutriments, dict) else {}
-    for key in _FRUITS:
+    for key, estimated in _FRUITS:
         value = found.get(key)
         if isinstance(value, int | float) and 0 <= value <= 100:  # noqa: PLR2004
-            return round(float(value), 2)
-    return None
+            return {
+                "fruits_veg_pct": round(float(value), 2),
+                "fruits_veg_estimated": estimated,
+            }
+    return {"fruits_veg_pct": None, "fruits_veg_estimated": False}
 
 
 def _levels(raw: Any) -> dict[str, str]:
