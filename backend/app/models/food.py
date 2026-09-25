@@ -42,6 +42,11 @@ class Food(UUIDMixin, TimestampMixin, Base):
     #: energy_kcal, protein_g, carbs_g, sugars_g, fat_g, sat_fat_g,
     #: fiber_g, sodium_mg — per 100 g, from the label.
     per_100g: Mapped[dict[str, Any]] = mapped_column(JSONColumn, default=dict)
+    #: Open Food Facts' details: ingredients, allergens, additives,
+    #: Nutri-Score, NOVA, fruits/vegetables %, levels, other nutrients.
+    product_info: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONColumn, nullable=True
+    )
     #: The user's own words (how it is cooked, what is in it…).
     note: Mapped[str] = mapped_column(Text, default="")
     #: [{"id", "kind": "pack" | "label", "path"}] — photos of the pack and

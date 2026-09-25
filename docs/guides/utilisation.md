@@ -269,7 +269,18 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
     `FOOD_LOOKUP_ONLINE=true` ; seul le code-barres est envoyé ;
     collaboratif : vérifiez contre le paquet ; sinon le code est
     simplement inscrit sur la fiche, et l'on remplit les valeurs
-    (étiquette, Ciqual) ;
+    (étiquette, Ciqual). D'Open Food Facts, la fiche garde **tout ce
+    que donne la page du produit** : les 8 valeurs (le sodium tel
+    qu'indiqué, pas recalculé depuis le sel), et sous « Open Food
+    Facts : Nutri-Score B · NOVA 3 · fruits et légumes 96 % » (un
+    appui ouvre le détail) les ingrédients, allergènes et traces,
+    additifs (E330…), repères (sel modéré, sucres…), autres
+    nutriments pour 100 g (potassium, vitamines… quand la page les
+    donne), labels, catégories, portion indiquée et le lien vers la
+    page. La liste des aliments en montre le résumé. **Une fiche créée
+    avant ce changement** n'a que les 8 valeurs : « Modifier » →
+    « ▥ Code-barres » (son code est déjà rempli) → « Chercher » →
+    « Enregistrer » la complète ;
   - « 📦 Photo de la boîte » garde la photo de l'emballage ; si le
     code-barres y est lisible, il est inscrit sur la fiche (quand elle
     n'en a pas déjà un).

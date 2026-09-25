@@ -6,6 +6,7 @@ import { useDeleteFood, useFoods } from '../../hooks/useFoods';
 import { useStock } from '../../hooks/useStock';
 import { frNumber } from '../../utils/format';
 import { FoodForm } from './FoodForm';
+import { productSummary } from './productText';
 import { bySize, portionText } from './foodLabel';
 import { StockPanel } from './StockPanel';
 import { stockText } from './stockText';
@@ -25,20 +26,29 @@ function per100(food: Food): string {
     .join(' · ');
 }
 
+/** « 185 g · 1 pavé = 100 g · portion : tout (185 g) · 83 kcal… ». */
+function facts(food: Food): string {
+  const unit = food.unit_name || 'unité';
+  return [
+    food.package_g != null && `${frNumber(food.package_g, 0)} g`,
+    food.unit_g != null && `1 ${unit} = ${frNumber(food.unit_g, 0)} g`,
+    food.portion_g != null && portionText(food),
+    `${per100(food) || 'valeurs à compléter'} (100 g)`,
+    food.photos.length > 0 && `${food.photos.length} photo(s)`,
+    food.source && food.source.split(' · ')[0],
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
 function Summary({ food, level }: { food: Food; level?: StockLevel }) {
+  const about = food.product_info ? productSummary(food.product_info) : '';
   return (
     <div>
       <strong>{food.name}</strong>
       {food.brand && <span className="muted"> · {food.brand}</span>}
-      <div className="muted small">
-        {food.package_g != null && `${frNumber(food.package_g, 0)} g · `}
-        {food.unit_g != null &&
-          `1 ${food.unit_name || 'unité'} = ${frNumber(food.unit_g, 0)} g · `}
-        {food.portion_g != null && `${portionText(food)} · `}
-        {per100(food) || 'valeurs à compléter'} (100 g)
-        {food.photos.length > 0 && ` · ${food.photos.length} photo(s)`}
-        {food.source && ` · ${food.source.split(' · ')[0]}`}
-      </div>
+      <div className="muted small">{facts(food)}</div>
+      {about && <div className="muted small">{about}</div>}
       {level && <div className="small">Stock : {stockText(level)}</div>}
     </div>
   );

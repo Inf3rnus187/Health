@@ -165,17 +165,21 @@ Added by later migrations (each creates only its own tables, ADR‑0004):
   package); `analysis_status` (`NULL`, `queued`, `running`, `done`,
   `failed`) and `analysis` (JSON: items with their grams and origin,
   checked nutrients, score and verdict).
-- `foods` (`0017`, `0018`, `0021`) — a user's food sheet: `name`,
-  `brand`, `aliases` (other names used in a meal, comma-separated),
-  `package_g` (box / sachet weight), `unit_name` / `unit_g` (« tomate »
-  = 120 g: « 2 tomates » in a meal is 240 g), `portion_g` (`0021`: what
-  the user usually eats of it — the whole small box, ¼ of the big one —
-  counted when a meal gives no quantity; one sheet per size), `per_100g`
-  (JSON: `energy_kcal`, `protein_g`, `carbs_g`, `sugars_g`, `fat_g`,
-  `sat_fat_g`, `fiber_g`, `sodium_mg`), `note`, `source` (where the
-  values come from: « étiquette », « Ciqual 2025 · code · name », « Open
-  Food Facts · barcode », « saisie »), `barcode`, `photos` (`[{"id",
-  "kind": "pack" | "label", "path"}]`).
+- `foods` (`0017`, `0018`, `0021`, `0023`) — a user's food sheet:
+  `name`, `brand`, `aliases` (other names used in a meal, comma-
+  separated), `package_g` (box / sachet weight), `unit_name` / `unit_g`
+  (« tomate » = 120 g: « 2 tomates » in a meal is 240 g), `portion_g`
+  (`0021`: what the user usually eats of it — the whole small box, ¼ of
+  the big one — counted when a meal gives no quantity; one sheet per
+  size), `per_100g` (JSON: `energy_kcal`, `protein_g`, `carbs_g`,
+  `sugars_g`, `fat_g`, `sat_fat_g`, `fiber_g`, `sodium_mg`), `note`,
+  `source` (where the values come from: « étiquette », « Ciqual 2025 ·
+  code · name », « Open Food Facts · barcode », « saisie »), `barcode`,
+  `photos` (`[{"id", "kind": "pack" | "label", "path"}]`),
+  `product_info` (`0023`, JSON, from Open Food Facts: `ingredients`,
+  `allergens`, `traces`, `additives`, `nutriscore`, `nutriscore_score`,
+  `nova`, `fruits_veg_pct`, `levels`, `labels`, `categories`, `serving`,
+  `other_100g` — other nutrients in g per 100 g —, `url`).
 - `food_stock_moves` (`0022`) — a food's stock entries: `food_id`
   (`CASCADE` with the food), `at`, `kind` (`purchase` +, `out` −,
   `count`: the quantity left at that time), `grams`, `said` (« 3 × 185
@@ -339,3 +343,4 @@ fresh database built from the live models is left untouched (ADR‑0004).
 | `0020_report_hash` | `reports.sha256`. |
 | `0021_food_portion` | `foods.portion_g`. |
 | `0022_food_stock` | `food_stock_moves`. |
+| `0023_food_product_info` | `foods.product_info`. |

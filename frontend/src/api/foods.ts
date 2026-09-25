@@ -14,6 +14,27 @@ export interface Per100g {
 
 export type PhotoKind = 'pack' | 'label';
 
+/** What Open Food Facts says beyond the 8 values (kept on the sheet). */
+export interface ProductInfo {
+  ingredients: string;
+  allergens: string[];
+  traces: string[];
+  additives: string[];
+  nutriscore: string;
+  nutriscore_score: number | null;
+  /** 1 unprocessed … 4 ultra-processed. */
+  nova: number | null;
+  fruits_veg_pct: number | null;
+  /** fat, saturated-fat, sugars, salt → low, moderate, high. */
+  levels: Record<string, string>;
+  labels: string;
+  categories: string;
+  serving: string;
+  /** Other nutrients, grams per 100 g. */
+  other_100g: Record<string, number>;
+  url: string;
+}
+
 export interface FoodIn {
   name: string;
   brand: string;
@@ -29,6 +50,7 @@ export interface FoodIn {
   /** Where the values come from (étiquette, Ciqual, Open Food Facts). */
   source: string;
   barcode: string;
+  product_info?: ProductInfo | null;
 }
 
 export interface Food extends FoodIn {
@@ -45,6 +67,7 @@ export interface LabelReading {
   per_100g: Per100g;
   barcode?: string;
   source?: string;
+  product_info?: ProductInfo | null;
 }
 
 /** A food of the ANSES Ciqual table (values per 100 g, null: unknown). */

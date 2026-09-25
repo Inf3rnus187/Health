@@ -4,7 +4,10 @@ Off unless ``FOOD_LOOKUP_ONLINE=true``: then the hub asks
 ``/api/v2/product/<barcode>.json`` — only the barcode is sent, never who
 asks or what they ate. Open Food Facts is collaborative (ODbL): its
 values are a proposal to check against the pack, like a label read by
-the AI; nothing is saved until the user saves the food.
+the AI; nothing is saved until the user saves the food. Besides the 8
+values, every detail the product page gives (ingredients, Nutri-Score,
+NOVA, additives, allergens, other nutrients…) comes as
+``product_info`` (:mod:`food_off_info`).
 """
 
 from __future__ import annotations
@@ -16,10 +19,13 @@ import httpx
 
 from app.core.config import get_settings
 from app.core.errors import InvalidInputError, NotFoundError
-from app.services import food_label
+from app.services import food_label, food_off_info
 
 _BARCODE = re.compile(r"^\d{8,14}$")
-_FIELDS = "product_name,product_name_fr,brands,product_quantity,nutriments"
+_FIELDS = (
+    "product_name,product_name_fr,brands,product_quantity,nutriments,"
+    + food_off_info.FIELDS
+)
 #: Our name → Open Food Facts nutriment per 100 g.
 _NUTRIMENTS = {
     "energy_kcal": "energy-kcal_100g",
@@ -31,11 +37,12 @@ _NUTRIMENTS = {
     "fiber_g": "fiber_100g",
     "salt_g": "salt_100g",
 }
+_SODIUM = "sodium_100g"  # grams: taken as given, not recomputed from salt
 _TIMEOUT = 10.0
 
 
 async def lookup(barcode: str) -> dict[str, Any]:
-    """Name, brand, net weight and values per 100 g of a barcode."""
+    """Name, brand, net weight, values per 100 g and every detail."""
     settings = get_settings()
     if not settings.food_lookup_online:
         raise InvalidInputError(
@@ -54,6 +61,7 @@ async def lookup(barcode: str) -> dict[str, Any]:
         "per_100g": food_label.values(_per_100g(product.get("nutriments"))),
         "barcode": barcode,
         "source": f"Open Food Facts · {barcode}",
+        "product_info": food_off_info.info(product, barcode),
     }
 
 
@@ -76,4 +84,8 @@ async def _product(base: str, barcode: str) -> dict[str, Any]:
 def _per_100g(nutriments: Any) -> dict[str, Any]:
     """Open Food Facts' values per 100 g, under our names."""
     found = nutriments if isinstance(nutriments, dict) else {}
-    return {ours: found.get(theirs) for ours, theirs in _NUTRIMENTS.items()}
+    values = {ours: found.get(theirs) for ours, theirs in _NUTRIMENTS.items()}
+    sodium = found.get(_SODIUM)
+    if isinstance(sodium, int | float) and not isinstance(sodium, bool):
+        values["sodium_mg"] = round(float(sodium) * 1000, 1)
+    return values

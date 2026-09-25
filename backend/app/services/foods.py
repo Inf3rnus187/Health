@@ -76,4 +76,7 @@ def _fields(data: FoodIn) -> dict[str, Any]:
         "note": data.note.strip(),
         "source": data.source.strip(),
         "barcode": data.barcode,
+        "product_info": data.product_info.model_dump()
+        if data.product_info
+        else None,
     }

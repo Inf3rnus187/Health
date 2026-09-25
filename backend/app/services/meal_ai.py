@@ -98,7 +98,7 @@ async def analyze(session: AsyncSession, meal: Meal) -> dict[str, Any]:
         "items": items,
         "rejected": rejected,
         "totals": totals,
-        **meal_nutrition.assessment(answer),
+        **meal_nutrition.assessment(answer, trusted=bool(portions)),
         "finished_at": utcnow().isoformat(),
     }
 

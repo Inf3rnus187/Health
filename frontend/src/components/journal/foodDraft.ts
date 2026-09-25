@@ -4,6 +4,7 @@ import type {
   FoodIn,
   LabelReading,
   Per100g,
+  ProductInfo,
 } from '../../api/foods';
 
 /** The label lines of the form: salt as printed (sodium is stored). */
@@ -33,6 +34,8 @@ export interface FoodDraft {
   source: string;
   barcode: string;
   values: Record<ValueKey, string>;
+  /** Open Food Facts' details, kept as read (saved back unchanged). */
+  product_info: ProductInfo | null;
 }
 
 const SODIUM_PER_SALT = 400; // 1 g of salt = 400 mg of sodium
@@ -83,6 +86,7 @@ export function draftOf(food: Food | LabelReading | null): FoodDraft {
     source: read.source ?? '',
     barcode: read.barcode ?? '',
     values: valuesOf(read.per_100g),
+    product_info: read.product_info ?? null,
   };
 }
 
@@ -115,6 +119,7 @@ export function withReading(draft: FoodDraft, read: LabelReading): FoodDraft {
     source: read.source ?? 'étiquette',
     barcode: read.barcode ?? draft.barcode,
     values,
+    product_info: read.product_info ?? draft.product_info,
   };
 }
 
@@ -143,5 +148,6 @@ export function foodIn(draft: FoodDraft): FoodIn {
     note: draft.note.trim(),
     source: draft.source.trim() || 'saisie',
     barcode: draft.barcode.replace(/\D/g, ''),
+    product_info: draft.product_info,
   };
 }

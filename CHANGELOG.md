@@ -26,6 +26,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Open Food Facts: nothing of the product page is dropped any
+  more**: the lookup asked only for the name, brand, weight and 8
+  values. A sheet now keeps everything the page gives (`product_info`,
+  migration `0023`): ingredients, allergens and traces, additives,
+  Nutri-Score, NOVA group, fruits and vegetables %, levels (salt,
+  sugars, fat), labels, categories, serving, every other nutrient per
+  100 g and the page's link; sodium is taken as given rather than
+  recomputed from salt. The sheet shows a summary (« Nutri-Score B ·
+  NOVA 3 · fruits et légumes 96 % ») and the details; the meal reading
+  is given them as authoritative. Existing sheets: « Modifier » →
+  « Code-barres » (code filled in) → « Chercher » → « Enregistrer ».
+  MCP `lookup_barcode` returns them and `save_food` keeps them.
+- **No « vérifier l'étiquette » on known values**: when a meal contains
+  foods of « Mes aliments », a remark casting doubt on their label or
+  composition is cut by code (the rest of the remark stays).
 - **Your foods found by the words you use**: a meal named a food of
   « Mes aliments » only with every word of its name, so « un pavé de
   saumon » took the Ciqual table instead of « Saumon sauvage rose ». A

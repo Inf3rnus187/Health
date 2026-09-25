@@ -1737,6 +1737,18 @@ a.tile:hover {
   border-top: 1px solid var(--color-grid);
 }
 
+.product-info {
+  margin-top: 8px;
+}
+
+.product-info p {
+  margin: 4px 0;
+}
+
+.product-info a {
+  color: var(--color-primary);
+}
+
 .stock-panel {
   flex-basis: 100%;
   display: grid;

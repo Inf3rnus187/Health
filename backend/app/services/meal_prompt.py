@@ -32,7 +32,10 @@ Pour chaque aliment, estime la quantité (g) — une quantité donnée \
 ci-dessus pour un produit fait foi — puis ses nutriments ramenés à \
 cette quantité. Pour un produit dont l'étiquette est donnée ci-dessus, \
 utilise ses valeurs (elles font foi : n'écris pas qu'il faudrait \
-vérifier sa composition) et rends son "food_id". Pour les autres, \
+vérifier sa composition ni son étiquette) et rends son "food_id" ; ses \
+informations Open Food Facts (Nutri-Score, groupe NOVA 1 à 4, additifs, \
+allergènes, ingrédients, part de fruits et légumes, repères sel et \
+sucres) font foi aussi : juge le repas avec elles. Pour les autres, \
 choisis dans la liste Ciqual la référence la plus proche (même aliment, \
 même cuisson ou préparation) et rends son code dans "ciqual" (null si \
 aucune ne convient) : ses valeurs seront celles de la table. \

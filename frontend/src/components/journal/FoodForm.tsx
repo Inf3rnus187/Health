@@ -18,6 +18,7 @@ import {
 } from './foodDraft';
 import { BarcodeLookup, CiqualSearch } from './FoodSources';
 import { PortionField } from './PortionField';
+import { ProductInfoView } from './ProductInfoView';
 import { ShotButton, ShotPreview, StoredShot } from './Shots';
 
 type Set = (change: Partial<FoodDraft>) => void;
@@ -94,6 +95,7 @@ function Values({ draft, set }: { draft: FoodDraft; set: Set }) {
           />
         ))}
       </div>
+      {draft.product_info && <ProductInfoView info={draft.product_info} />}
     </fieldset>
   );
 }
@@ -279,7 +281,7 @@ export function FoodForm(props: { food: Food | null; onDone: () => void }) {
   return (
     <form className="form-box food-form" onSubmit={f.onSubmit}>
       <Photos food={props.food} shots={f.shots} reading={f.read.isPending} />
-      <Fill {...f.fill} />
+      <Fill {...f.fill} initial={f.draft.barcode} />
       {f.read.isSuccess && (
         <p className="muted">Valeurs lues par l’IA : vérifiez-les.</p>
       )}

@@ -5,7 +5,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+_MOST = 60
 
 
 class Per100g(BaseModel):
@@ -19,6 +21,38 @@ class Per100g(BaseModel):
     sat_fat_g: float | None = Field(default=None, ge=0, le=100)
     fiber_g: float | None = Field(default=None, ge=0, le=100)
     sodium_mg: float | None = Field(default=None, ge=0, le=40000)
+
+
+class ProductInfo(BaseModel):
+    """What Open Food Facts says beyond the 8 values (see food_off_info).
+
+    ``other_100g``: other nutrients in grams per 100 g; ``levels``: fat,
+    saturated-fat, sugars, salt → low, moderate or high; ``nova``: 1
+    (unprocessed) … 4 (ultra-processed).
+    """
+
+    ingredients: str = Field(default="", max_length=4000)
+    allergens: list[str] = Field(default_factory=list, max_length=60)
+    traces: list[str] = Field(default_factory=list, max_length=60)
+    additives: list[str] = Field(default_factory=list, max_length=60)
+    nutriscore: str = Field(default="", pattern="^[a-e]?$")
+    nutriscore_score: int | None = Field(default=None, ge=-20, le=60)
+    nova: int | None = Field(default=None, ge=1, le=4)
+    fruits_veg_pct: float | None = Field(default=None, ge=0, le=100)
+    levels: dict[str, str] = Field(default_factory=dict)
+    labels: str = Field(default="", max_length=500)
+    categories: str = Field(default="", max_length=500)
+    serving: str = Field(default="", max_length=80)
+    other_100g: dict[str, float] = Field(default_factory=dict)
+    url: str = Field(default="", max_length=300)
+
+    @field_validator("levels", "other_100g")
+    @classmethod
+    def _bounded(cls, value: dict[str, Any]) -> dict[str, Any]:
+        """At most 60 entries with short names."""
+        if len(value) > _MOST or any(len(k) > _MOST for k in value):
+            raise ValueError("too many or too long entries")
+        return value
 
 
 class FoodIn(BaseModel):
@@ -37,6 +71,9 @@ class FoodIn(BaseModel):
     note: str = Field(default="", max_length=4000)
     source: str = Field(default="", max_length=200)
     barcode: str = Field(default="", max_length=20, pattern=r"^\d{0,20}$")
+    #: Open Food Facts' details (ingredients, Nutri-Score, NOVA…); send
+    #: them back unchanged when editing, or they are cleared.
+    product_info: ProductInfo | None = None
 
 
 class FoodOut(BaseModel):
@@ -56,6 +93,7 @@ class FoodOut(BaseModel):
     note: str
     source: str = ""
     barcode: str = ""
+    product_info: dict[str, Any] | None = None
     photos: list[dict[str, Any]]
     created_at: datetime
 

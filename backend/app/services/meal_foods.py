@@ -66,9 +66,21 @@ def context(portions: list[Portion]) -> list[dict[str, Any]]:
             "grams": grams,
             "per_100g": food.per_100g,
             "note": food.note,
+            "open_food_facts": _about(food.product_info),
         }
         for food, grams in portions
     ]
+
+
+def _about(info: dict[str, Any] | None) -> dict[str, Any] | None:
+    """What the model is told of Open Food Facts' details (authoritative)."""
+    if not info:
+        return None
+    keys = ("nutriscore", "nova", "fruits_veg_pct", "additives", "allergens")
+    kept = {key: info.get(key) for key in (*keys, "levels")}
+    kept["ingredients"] = str(info.get("ingredients") or "")[:400]
+    found = {k: v for k, v in kept.items() if v not in (None, "", [], {})}
+    return found or None
 
 
 def apply(

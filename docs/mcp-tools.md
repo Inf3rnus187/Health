@@ -364,6 +364,9 @@ sheets with their own ``package_g`` (and barcode); a meal saying
 « petite boîte » / « grosse boîte » takes the right one.
 ``portion_g``: what the user usually eats of it (the whole small
 box, ¼ of the big one), counted when a meal gives no quantity.
+``product_info``: pass lookup_barcode's ``product_info`` unchanged
+(ingredients, Nutri-Score, NOVA, additives, allergens, other
+nutrients); when replacing a sheet, send it back or it is cleared.
 
 ``per_100g``: energy_kcal, protein_g, carbs_g, sugars_g, fat_g,
 sat_fat_g, fiber_g, sodium_mg (1 g of salt = 400 mg of sodium).
@@ -372,7 +375,7 @@ sat_fat_g, fiber_g, sodium_mg (1 g of salt = 400 mg of sodium).
 « 2 tomates » in a meal is then 240 g. ``source``: where the values
 come from (« étiquette », « Ciqual 2025 · 20385 · … »).
 
-Paramètres : `name`* (string), `per_100g` (object | null, défaut `None`), `package_g` (number | null, défaut `None`), `brand` (string, défaut ``), `aliases` (string, défaut ``), `note` (string, défaut ``), `food_id` (string | null, défaut `None`), `unit_name` (string, défaut ``), `unit_g` (number | null, défaut `None`), `source` (string, défaut ``), `barcode` (string, défaut ``), `portion_g` (number | null, défaut `None`)
+Paramètres : `name`* (string), `per_100g` (object | null, défaut `None`), `package_g` (number | null, défaut `None`), `brand` (string, défaut ``), `aliases` (string, défaut ``), `note` (string, défaut ``), `food_id` (string | null, défaut `None`), `unit_name` (string, défaut ``), `unit_g` (number | null, défaut `None`), `source` (string, défaut ``), `barcode` (string, défaut ``), `portion_g` (number | null, défaut `None`), `product_info` (object | null, défaut `None`)
 
 ### `search_ciqual`
 
@@ -389,7 +392,10 @@ Paramètres : `query`* (string), `limit` (integer, défaut `20`)
 A packaged food by barcode on Open Food Facts (if the hub allows).
 
 Needs FOOD_LOOKUP_ONLINE=true on the hub; only the barcode is sent.
-A proposal to check, then save_food.
+Name, brand, weight, the 8 values per 100 g and ``product_info``:
+everything else the product page gives (ingredients, allergens,
+additives, Nutri-Score, NOVA, fruits and vegetables %, levels, other
+nutrients). A proposal to check, then save_food with all of it.
 
 Paramètres : `barcode`* (string)
 

@@ -130,6 +130,15 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    estimation des nutriments ; puis un avis **pour vos maladies
    déclarées** : note 0–10, verdict, points positifs, points à
    surveiller. Aucune posologie ni prescription.
+   Pour un aliment de « Mes aliments » venu d'Open Food Facts, le
+   modèle reçoit aussi ses **informations produit**, qui font foi :
+   Nutri-Score, groupe NOVA (1 peu transformé … 4 ultra-transformé),
+   additifs, allergènes, repères sel / sucres / gras, part de fruits et
+   légumes et le début des ingrédients (400 caractères). Une remarque
+   qui met en doute des valeurs connues (« vérifier l'étiquette
+   réelle », « vérifier la composition ») est **coupée par le code**
+   quand le repas contient un aliment de vos fiches (le reste de la
+   remarque est gardé : « Quantité de sodium dans les aubergines »).
 5. **Valeurs par le code** : un aliment avec une référence Ciqual prend
    les valeurs de la table pour ses grammes (énergie de la table,
    « < x » compté x/2, « traces » 0, inconnu 0) ; ce que le modèle

@@ -78,7 +78,7 @@ function scanText(r: ScanResult): string {
 }
 
 function useLookup(props: BarcodeProps) {
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(props.initial ?? '');
   const [said, setSaid] = useState('');
   const look = useMutation({ mutationFn: lookupBarcode });
   const go = () =>
@@ -97,6 +97,8 @@ function useLookup(props: BarcodeProps) {
 interface BarcodeProps {
   onFound: (found: LabelReading) => void;
   onCode: (code: string) => void;
+  /** The sheet's barcode: « Chercher » reads its product page again. */
+  initial?: string;
 }
 
 /** A barcode scanned (camera, photo) or typed; Open Food Facts if allowed. */

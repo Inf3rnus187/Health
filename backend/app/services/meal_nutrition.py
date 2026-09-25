@@ -11,6 +11,7 @@ table's values and energy (only its grams are checked).
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from app.services import ciqual
@@ -19,6 +20,14 @@ MACROS = ("protein_g", "carbs_g", "sugars_g", "fat_g", "sat_fat_g", "fiber_g")
 _MAX_GRAMS = 1500.0
 _SODIUM_PER_G = 40.0  # mg per gram of food: above table salt density
 _TEXT = 200
+#: « (vérifier l'étiquette réelle) »: a doubt on values that are known.
+_DOUBT = re.compile(
+    r"\s*[(\[,;—–-]*\s*(?:à |il faut |pensez à |penser à )?v[ée]rifi\w*"
+    r"[^.;()]*(?:étiquette|composition|valeurs?|emballage|teneur)"
+    r"[^.;()]*[)\]]?",
+    re.IGNORECASE,
+)
+_SHORTEST = 12
 #: Keys an item keeps besides its values (set by code, not the model).
 _KEPT = {"food_id": 36, "ciqual": 12, "source": 40, "reference": 160}
 
@@ -43,15 +52,31 @@ def totals(items: list[dict[str, Any]]) -> dict[str, float]:
     return {k: round(sum(i[k] for i in items), 1) for k in keys}
 
 
-def assessment(answer: dict[str, Any]) -> dict[str, Any]:
-    """Score (0-10), verdict and remarks, bounded."""
+def assessment(answer: dict[str, Any], trusted: bool = False) -> dict[str, Any]:
+    """Score (0-10), verdict and remarks, bounded.
+
+    ``trusted``: the meal has foods of « Mes aliments », whose label and
+    Open Food Facts values are known; a remark asking to check them
+    (« vérifier l'étiquette réelle ») is cut, the rest of it kept.
+    """
     score = _number(answer.get("score"))
+    clean = _sure if trusted else (lambda texts: texts)
     return {
         "score": None if score is None else max(0.0, min(10.0, score)),
         "verdict": str(answer.get("verdict") or "")[:_TEXT] or None,
-        "positives": _texts(answer.get("positives")),
-        "watch": _texts(answer.get("watch")),
+        "positives": clean(_texts(answer.get("positives"))),
+        "watch": clean(_texts(answer.get("watch"))),
     }
+
+
+def _sure(texts: list[str]) -> list[str]:
+    """The remarks without a doubt on known values (too short: dropped)."""
+    out = []
+    for text in texts:
+        kept = _DOUBT.sub("", text).strip(" ,;—–-")
+        if len(kept) >= _SHORTEST:
+            out.append(kept)
+    return out
 
 
 def _item(raw: Any) -> tuple[dict[str, Any] | None, str]:

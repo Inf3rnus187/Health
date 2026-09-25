@@ -31,7 +31,9 @@ def _present() -> bool:
 def upgrade() -> None:
     """Add portion_g."""
     if not _present():
-        op.add_column("foods", sa.Column("portion_g", sa.Float(), nullable=True))
+        op.add_column(
+            "foods", sa.Column("portion_g", sa.Float(), nullable=True)
+        )
 
 
 def downgrade() -> None:

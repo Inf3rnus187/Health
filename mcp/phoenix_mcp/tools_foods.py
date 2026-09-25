@@ -34,6 +34,7 @@ async def save_food(
     source: str = "",
     barcode: str = "",
     portion_g: float | None = None,
+    product_info: dict[str, Any] | None = None,
 ) -> Any:
     """Add a food (or replace ``food_id``'s sheet: send every field).
 
@@ -42,6 +43,9 @@ async def save_food(
     « petite boîte » / « grosse boîte » takes the right one.
     ``portion_g``: what the user usually eats of it (the whole small
     box, ¼ of the big one), counted when a meal gives no quantity.
+    ``product_info``: pass lookup_barcode's ``product_info`` unchanged
+    (ingredients, Nutri-Score, NOVA, additives, allergens, other
+    nutrients); when replacing a sheet, send it back or it is cleared.
 
     ``per_100g``: energy_kcal, protein_g, carbs_g, sugars_g, fat_g,
     sat_fat_g, fiber_g, sodium_mg (1 g of salt = 400 mg of sodium).
@@ -58,6 +62,7 @@ async def save_food(
         "unit_name": unit_name,
         "unit_g": unit_g,
         "portion_g": portion_g,
+        "product_info": product_info,
         "per_100g": per_100g or {},
         "note": note,
         "source": source,
@@ -84,7 +89,10 @@ async def lookup_barcode(barcode: str) -> Any:
     """A packaged food by barcode on Open Food Facts (if the hub allows).
 
     Needs FOOD_LOOKUP_ONLINE=true on the hub; only the barcode is sent.
-    A proposal to check, then save_food.
+    Name, brand, weight, the 8 values per 100 g and ``product_info``:
+    everything else the product page gives (ingredients, allergens,
+    additives, Nutri-Score, NOVA, fruits and vegetables %, levels, other
+    nutrients). A proposal to check, then save_food with all of it.
     """
     return await client.get(f"/openfoodfacts/{barcode}")
 
