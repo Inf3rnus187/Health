@@ -135,10 +135,17 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    estimation des nutriments. **Pas d'avis à ce stade** : il vient
    après le calcul (étape 7). Les **grammes écrits** dans la
    description (« tomates 240 g », « 150 g de riz ») remplacent ceux du
-   modèle, par le code, pour chaque ligne ; chaque ligne dit d'où
-   viennent ses grammes (`grams_from` : `écrit`, `compté` — nombre ×
-   l'unité ou le paquet de la fiche —, `portion` — votre portion
-   habituelle —, `formulaire`, `paquet`, `IA` — estimation du modèle).
+   modèle, par le code, pour chaque ligne. Un **nombre** dit (« 2
+   tomates », « un demi concombre », « une tranche de comté ») est lu
+   par le code et multiplié par le poids d'**une** unité que donne le
+   modèle (`unit_g`, jamais la part vue sur une photo) : « 240 g = 2 ×
+   120 g ». Avec une photo, le modèle de vision reçoit aussi la
+   description, qui fait foi ; la photo ne sert qu'à ce que la
+   description ne quantifie pas. Chaque ligne dit d'où viennent ses
+   grammes (`grams_from` : `écrit`, `unités` — nombre dit × poids d'une
+   unité estimé —, `compté` — nombre × l'unité ou le paquet de la fiche
+   —, `portion` — votre portion habituelle —, `formulaire`, `paquet`,
+   `IA` — estimation du modèle).
    Pour un aliment de « Mes aliments » venu d'Open Food Facts, le
    modèle reçoit aussi ses **informations produit**, qui font foi :
    Nutri-Score, groupe NOVA (1 peu transformé … 4 ultra-transformé),

@@ -193,7 +193,9 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
 
   Chaque aliment dit **d'où viennent ses grammes** : « 240 g écrits »
   (dans la description : pesé, c'est exact), « 240 g comptés » (« 2
-  tomates » × l'unité de la fiche), « 185 g, ta portion », « 125 g
+  tomates » × l'unité de la fiche), « 240 g = 2 × 120 g, unité estimée
+  par l'IA » (le nombre que vous dites, jamais la part vue sur la photo,
+  × le poids d'une tomate moyenne estimé par l'IA), « 185 g, ta portion », « 125 g
   saisis » (formulaire), « 185 g, le paquet », « 400 g estimés par
   l'IA ». Pour qu'aucune quantité ne soit estimée : écrire les grammes
   (balance) ou avoir une fiche avec son unité.

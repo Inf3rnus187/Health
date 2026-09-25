@@ -160,3 +160,51 @@ async def test_grams_written_are_kept_and_every_line_says_where_from(
         "Tomates : 240 g, de quoi bien s'hydrater",  # a computed number
         "Assez de sucres",  # « (10.6 g pour 185 g) »: not computed, cut
     ]  # « 557 mg » outside brackets: the remark is dropped
+
+
+async def test_a_count_said_beats_what_the_photo_shows(
+    client: AsyncClient, auth: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def no_worker(*_: Any) -> bool:
+        return False
+
+    async def text(prompt: str, **_: Any) -> dict[str, Any]:
+        if "Juge ce repas" in prompt:
+            assert "Tomate : 240 g (2 × 120 g : nombre dit" in prompt
+            return {"score": 7}
+        assert '"unit_g"' in prompt and "jamais la part vue" in prompt
+        return {"items": [  # the grams a photo of a small salad shows
+            {"name": "Tomate", "grams": 50, "unit_g": 120},
+            {"name": "Concombre", "grams": 30, "unit_g": 300},
+            {"name": "Comté", "grams": 20, "unit_g": 30},
+            {"name": "Poulet", "grams": 100, "unit_g": 5000},  # implausible
+            {"name": "Sel", "grams": 1, "unit_g": 2},  # no count said
+        ]}  # fmt: skip
+
+    monkeypatch.setattr(meal_ai, "enqueue", no_worker)
+    monkeypatch.setattr(ollama, "text_json", text)
+    said = (
+        "Entrée: 2 tomates, un demi concombre, une tranche de comté Plat: "
+        "un filet de poulet cuit, sel"
+    )
+    made = await client.post("/api/v1/meals", data={"description": said},
+                             headers=auth)  # fmt: skip
+    async with SessionFactory() as session:
+        await meal_ai.run(session, made.json()["id"])
+    read = await client.get(f"/api/v1/meals/{made.json()['id']}", headers=auth)
+    lines = {i["name"]: i for i in read.json()["analysis"]["items"]}
+    assert (lines["Tomate"]["grams"], lines["Tomate"]["units"]) == (
+        240,
+        "2 × 120 g",
+    )
+    assert lines["Concombre"]["grams"] == 150  # « un demi » × 300 g
+    assert lines["Concombre"]["units"] == "0,5 × 300 g"
+    assert (lines["Comté"]["grams"], lines["Comté"]["grams_from"]) == (
+        30,
+        "unités",
+    )
+    assert (lines["Poulet"]["grams"], lines["Poulet"]["grams_from"]) == (
+        100,
+        "IA",
+    )
+    assert lines["Sel"]["grams_from"] == "IA"

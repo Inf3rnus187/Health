@@ -164,7 +164,8 @@ Added by later migrations (each creates only its own tables, ADR‑0004):
   `[{"food_id", "grams"}]`, grams `NULL` = estimated or the whole
   package); `analysis_status` (`NULL`, `queued`, `running`, `done`,
   `failed`) and `analysis` (JSON: items with their grams, `grams_from`
-  — écrit, compté, portion, formulaire, paquet, IA — and origin,
+  — écrit, unités (with `units` « 2 × 120 g »), compté, portion,
+  formulaire, paquet, IA — and origin,
   checked nutrients, score and verdict).
 - `foods` (`0017`, `0018`, `0021`, `0023`) — a user's food sheet:
   `name`, `brand`, `aliases` (other names used in a meal, comma-

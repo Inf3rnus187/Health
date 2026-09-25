@@ -1,4 +1,4 @@
-import type { MealAnalysis, MealTotals } from '../../api/journal';
+import type { MealAnalysis, MealItem, MealTotals } from '../../api/journal';
 import { frNumber } from '../../utils/format';
 
 const ROWS: [keyof MealTotals, string, string][] = [
@@ -66,11 +66,19 @@ const HOW: Record<string, string> = {
   défaut: ' estimés',
 };
 
+/** « 240 g = 2 × 120 g, unité estimée par l'IA » or « 185 g, ta portion ». */
+function quantity(i: MealItem): string {
+  const grams = `${frNumber(i.grams, 0)} g`;
+  if (i.grams_from === 'unités' && i.units) {
+    return `${grams} = ${i.units}, unité estimée par l’IA`;
+  }
+  return `${grams}${HOW[i.grams_from ?? ''] ?? ''}`;
+}
+
 function Foods({ a }: { a: MealAnalysis }) {
-  const kept = (a.items ?? []).map((i) => {
-    const how = HOW[i.grams_from ?? ''] ?? '';
-    return `${i.name} (${frNumber(i.grams, 0)} g${how}${origin(i.source)})`;
-  });
+  const kept = (a.items ?? []).map(
+    (i) => `${i.name} (${quantity(i)}${origin(i.source)})`,
+  );
   const dropped = (a.rejected ?? []).map((r) => `${r.name} (${r.reason})`);
   return (
     <p className="muted">

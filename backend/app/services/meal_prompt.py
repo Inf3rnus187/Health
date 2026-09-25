@@ -15,8 +15,9 @@ _LOOK = """Tu es diététicien. Voici {photos} d'un repas et ce que le \
 patient en dit : « {description} ».
 Liste les aliments présents et estime la quantité réellement servie de \
 chacun, en grammes. La description du patient fait foi (quantités, \
-cuisson, absence de matière grasse ou de sauce) ; la photo sert à \
-estimer les portions et à repérer ce qu'il n'a pas cité.{labels}
+nombres d'unités, cuisson, absence de matière grasse ou de sauce) ; la \
+photo sert à estimer ce qu'elle ne quantifie pas et à repérer ce qu'il \
+n'a pas cité.{labels}
 Réponds uniquement en JSON :
 {{"items": [{{"name": "aliment", "grams": 0, \
 "preparation": "cru, grillé…"}}], "labels": [{{"name": "produit", \
@@ -36,9 +37,15 @@ Aliments repérés sur la photo : {seen}
 
 Pour chaque aliment, estime la quantité (g) — une quantité donnée \
 ci-dessus pour un produit fait foi — puis ses nutriments ramenés à \
-cette quantité. Pour un produit dont l'étiquette est donnée ci-dessus, \
-utilise ses valeurs (elles font foi : n'écris pas qu'il faudrait \
-vérifier sa composition ni son étiquette) et rends son "food_id" ; ses \
+cette quantité. Quand la description donne un nombre d'unités \
+(« 2 tomates », « un demi concombre », « une tranche de comté »), rends \
+aussi "unit_g" : le poids d'UNE unité moyenne de cet aliment (une \
+tomate, une tranche), jamais la part vue sur la photo : le logiciel \
+multiplie par le nombre dit. La photo ne sert qu'à estimer ce que la \
+description ne quantifie pas. Pour un produit dont l'étiquette est \
+donnée ci-dessus, utilise ses valeurs (elles font foi : n'écris pas \
+qu'il faudrait vérifier sa composition ni son étiquette) et rends son \
+"food_id" ; ses \
 informations Open Food Facts (Nutri-Score, groupe NOVA 1 à 4, additifs, \
 allergènes, ingrédients, part de fruits et légumes, repères sel et \
 sucres) font foi aussi. Pour les autres, \
@@ -50,7 +57,7 @@ graisse, n'en ajoute pas. N'invente aucun aliment absent de la \
 description et de la photo.
 Réponds uniquement en JSON :
 {{"items": [{{"name": "...", "food_id": null, "ciqual": null, "grams": 0, \
-"protein_g": 0, "carbs_g": 0, \
+"unit_g": null, "protein_g": 0, "carbs_g": 0, \
 "sugars_g": 0, "fat_g": 0, "sat_fat_g": 0, "fiber_g": 0, \
 "sodium_mg": 0}}]}}"""
 
@@ -99,6 +106,7 @@ _FROM = {
     "portion": "sa portion habituelle",
     "formulaire": "saisis par le patient",
     "paquet": "le paquet entier",
+    "unités": "nombre dit par le patient × poids d'une unité estimé",
     "IA": "estimés",
     "défaut": "estimés",
 }
@@ -150,6 +158,8 @@ def _line(item: dict[str, Any]) -> str:
     """« Tomates : 240 g (estimés, Ciqual) — énergie 46,1 kcal, … »."""
     grams = _number(float(item.get("grams") or 0))
     said = _FROM.get(str(item.get("grams_from") or ""), "estimés")
+    if item.get("units"):
+        said = f"{item['units']} : {said}"
     source = item.get("source") or "estimation"
     return f"{item['name']} : {grams} g ({said}, {source}) — {_values(item)}"
 

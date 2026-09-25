@@ -14,9 +14,11 @@ grams. Within the part of the description naming the food
 * else nothing (None): the form's grams, the photo or the package decide.
 
 ``read`` also says how (« écrit », « compté », « portion », « paquet »)
-for the analysis to show. ``written`` applies grams written in the
-description to the model's other lines too (« tomates 240 g »): what
-was weighed is never replaced by an estimate.
+for the analysis to show. ``written`` applies the description to the
+model's other lines too: grams written (« tomates 240 g ») are kept as
+they are; a count (« 2 tomates », « un demi concombre », « une tranche
+de comté ») is read by the code and multiplied by the weight of ONE
+unit the model gives (``unit_g``) — never the share a photo shows.
 """
 
 from __future__ import annotations
@@ -33,6 +35,7 @@ _VAGUE = frozenset(
     "moyen".split()
 )
 _BEFORE, _AFTER = 8, 3  # « un quart de la grosse boîte d'aubergines »
+_MOST_UNIT_G = 1500.0
 
 
 def grams_in(food: Any, text: str) -> float | None:
@@ -57,27 +60,53 @@ def read(food: Any, text: str) -> tuple[float | None, str]:
 
 
 def written(items: Any, text: str) -> Any:
-    """The model's lines, with the grams the description writes for them.
+    """The model's lines, with the quantities the description gives.
 
     Only for lines that are not a food of « Mes aliments » (those are
     read with their sheet). Each line says where its grams come from:
-    « écrit » (the description) or « IA » (the model's estimate).
+    « écrit » (grams in the description), « unités » (a count in the
+    description × the model's weight of one unit, shown as « 2 × 120
+    g ») or « IA » (the model's estimate).
     """
     if not isinstance(items, list):
         return items
-    out: list[Any] = []
-    for raw in items:
-        if not isinstance(raw, dict):
-            out.append(raw)
-            continue
-        item = {k: v for k, v in raw.items() if k != "grams_from"}
-        own = None if item.get("food_id") else str(item.get("name") or "")
-        grams = _written(own, text) if own else None
-        if grams is not None:
-            item["grams"] = grams
-        item["grams_from"] = "écrit" if grams is not None else "IA"
-        out.append(item)
-    return out
+    return [_said(raw, text) if isinstance(raw, dict) else raw for raw in items]
+
+
+def _said(raw: dict[str, Any], text: str) -> dict[str, Any]:
+    """One line of the model, with what the description says of it."""
+    item = {k: v for k, v in raw.items() if k not in ("grams_from", "units")}
+    item["grams_from"] = "IA"
+    name = "" if item.get("food_id") else str(item.get("name") or "")
+    grams = _written(name, text) if name else None
+    if grams is not None:
+        item["grams"], item["grams_from"] = grams, "écrit"
+        return item
+    count, unit = _said_count(name, text), _unit(item.get("unit_g"))
+    if name and count and unit:
+        item["grams"] = round(count * unit, 1)
+        item["grams_from"] = "unités"
+        item["units"] = f"{count:g} × {unit:g} g".replace(".", ",")
+    return item
+
+
+def _said_count(name: str, text: str) -> float | None:
+    """« 2 tomates », « un demi concombre »: the count before the food."""
+    own = {singular(w) for w in tokens(name) if len(w) > 2} - _VAGUE  # noqa: PLR2004
+    for words in parts(text):
+        at = [i for i, w in enumerate(words) if w in own]
+        if at:
+            return _count(words[max(0, at[0] - _BEFORE) : at[0]])[0]
+    return None
+
+
+def _unit(value: Any) -> float | None:
+    """The model's weight of one unit, when plausible."""
+    try:
+        grams = float(str(value).replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+    return grams if 0 < grams <= _MOST_UNIT_G else None
 
 
 def _written(name: str, text: str) -> float | None:
@@ -114,6 +143,15 @@ def _grams_before(before: list[str]) -> float | None:
 
 def _counted(food: Any, before: list[str]) -> tuple[float | None, str]:
     """A count before the food, times its unit or its package."""
+    count, pack = _count(before)
+    if count is None:
+        return _pack(food) if pack else (None, "")
+    unit = food.package_g if pack or not food.unit_g else food.unit_g
+    return (round(count * unit, 1), "compté") if unit else (None, "")
+
+
+def _count(before: list[str]) -> tuple[float | None, bool]:
+    """The count said before a food (« un demi » = ½), and if a pack."""
     count, pack = None, False
     for word in reversed([w for w in before if w not in _FILLERS]):
         if word in PACKS:
@@ -125,10 +163,7 @@ def _counted(food: Any, before: list[str]) -> tuple[float | None, str]:
                 break
             continue
         count = value if count is None else _combine(value, count)
-    if count is None:
-        return _pack(food) if pack else (None, "")
-    unit = food.package_g if pack or not food.unit_g else food.unit_g
-    return (round(count * unit, 1), "compté") if unit else (None, "")
+    return count, pack
 
 
 def _pack(food: Any) -> tuple[float | None, str]:

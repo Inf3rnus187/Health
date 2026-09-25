@@ -28,6 +28,8 @@ export interface MealItem extends MealTotals {
   /** How its grams were given: écrit, compté, portion, formulaire,
    * paquet, IA (the model's estimate), défaut. */
   grams_from?: string;
+  /** « 2 × 120 g »: the count said × the model's weight of one unit. */
+  units?: string;
 }
 
 export interface MealAnalysis {

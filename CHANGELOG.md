@@ -30,6 +30,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A count you write beats what a photo shows**: with a photo, « 2
+  tomates » became 50 g and « un demi concombre » 30 g — the grams the
+  vision model saw of a small salad, which the text model kept. The code
+  now reads the count said (« 2 », « un demi », « une tranche ») and
+  multiplies it by the weight of ONE unit the model gives (`unit_g`,
+  never the share on the photo); the line shows « 240 g = 2 × 120 g,
+  unité estimée par l'IA ». Both prompts say the photo only serves what
+  the description does not quantify.
 - **« un filet de poulet cuit » found its reference**: the Ciqual list
   offered to the model was built word by word, and for « poulet » the
   references with « cuits » came first — « Poulet, manchons marinés,
