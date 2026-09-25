@@ -40,6 +40,7 @@ from app.services import (
     meal_nutrition,
     meal_prompt,
     meal_quantity,
+    meal_remarks,
     meals,
 )
 from app.services.daily_rollup import user_zone
@@ -121,7 +122,7 @@ async def _judge(
     """
     prompt = meal_prompt.assessment(context, items, totals)
     answer = await ollama.text_json(prompt, max_tokens=_JUDGE_TOKENS)
-    known = meal_nutrition.numbers(items, totals, context["foods"])
+    known = meal_remarks.numbers(items, totals, context["foods"])
     return meal_nutrition.assessment(answer, trusted=trusted, known=known)
 
 

@@ -1,0 +1,65 @@
+"""The model's remarks keep only the numbers the code computed."""
+
+from __future__ import annotations
+
+from app.services import meal_remarks
+
+ITEMS = [
+    {"name": "Tomate", "grams": 200, "protein_g": 1.4, "sodium_mg": 8},
+    {"name": "Aubergines cuisinées à la provençale · Marque test · 185 g",
+     "grams": 185, "food_id": "a", "sugars_g": 10.4, "sodium_mg": 562.4},
+    {"name": "Saumon sauvage rose · 200 g", "grams": 100, "food_id": "s",
+     "protein_g": 20.5, "fat_g": 4.4, "sodium_mg": 80},
+]  # fmt: skip
+TOTALS = {
+    "protein_g": 24.6,
+    "carbs_g": 22.7,
+    "fiber_g": 6.6,
+    "sodium_mg": 652.2,
+}
+SHEETS = [{"id": "s", "per_100g": {"sodium_mg": 80, "protein_g": 20.5}}]
+KNOWN = meal_remarks.numbers(ITEMS, TOTALS, SHEETS)
+
+
+def _clean(text: str) -> list[str]:
+    return meal_remarks.clean([text], True, KNOWN)
+
+
+def test_a_number_belongs_to_the_food_the_remark_names() -> None:
+    # 24,6 g is the meal's protein, not the salmon's (20,5 g)
+    assert _clean("Des protéines de qualité grâce au saumon (24,6 g).") == [
+        "Des protéines de qualité grâce au saumon."
+    ]
+    assert _clean("Le saumon apporte 20,5 g de protéines.") == [
+        "Le saumon apporte 20,5 g de protéines."
+    ]
+    assert _clean("Le saumon contient du sodium (80 mg/100g).") == [
+        "Le saumon contient du sodium (80 mg/100g)."
+    ]
+
+
+def test_the_meal_s_totals_when_it_speaks_of_the_meal() -> None:
+    both = (
+        "Les aubergines sont salées (562,4 mg), une grande part du total "
+        "du repas (652,2 mg)."
+    )
+    assert _clean(both) == [both]
+    assert _clean("Des fibres (6,6 g) pour la satiété.") == [
+        "Des fibres (6,6 g) pour la satiété."
+    ]
+
+
+def test_a_wrong_number_is_cut_and_a_doubt_too() -> None:
+    assert _clean("Les aubergines sont salées (557 mg pour 185g).") == [
+        "Les aubergines sont salées."
+    ]
+    assert _clean("Les aubergines apportent 557 mg de sodium.") == []
+    assert _clean("Sodium des aubergines (vérifier l'étiquette réelle)") == [
+        "Sodium des aubergines"
+    ]
+
+
+def test_a_long_remark_ends_at_a_full_sentence() -> None:
+    long = "Une phrase complète pour commencer. " + "mot " * 100
+    assert meal_remarks.short(long) == "Une phrase complète pour commencer."
+    assert meal_remarks.short("mot " * 100).endswith("mot…")

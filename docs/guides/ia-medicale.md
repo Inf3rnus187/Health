@@ -168,12 +168,17 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    du repas, les informations Open Food Facts, vos maladies déclarées,
    et rend note 0–10, verdict, points positifs, points à surveiller —
    avec la consigne de **recopier** les chiffres, jamais de les
-   recalculer. Puis le code **vérifie** : toute quantité citée dans une
-   remarque (« 557 mg », « 10.6 g ») doit être une valeur calculée
-   (ligne, total, valeur pour 100 g d'une fiche, au même arrondi que
-   celui écrit ; sodium aussi en g de sodium ou de sel). Sinon la
-   parenthèse qui la contient est coupée (« Assez de sucres (10.6 g
-   pour 185 g) » → « Assez de sucres »), ou la remarque est retirée.
+   recalculer. Puis le code **vérifie** (`meal_remarks`) : toute
+   quantité citée dans une remarque (« 557 mg », « 24,6 g ») doit être
+   une valeur calculée **pour ce dont la remarque parle** — les valeurs
+   des aliments qu'elle nomme (leur ligne, leur fiche pour 100 g) ; le
+   total du repas seulement si elle ne nomme aucun aliment ou parle du
+   repas (« total », « repas ») —, au même arrondi que celui écrit
+   (sodium aussi en g de sodium ou de sel). Sinon la parenthèse qui la
+   contient est coupée (« grâce au saumon (24,6 g) » : 24,6 g est la
+   protéine du repas, le saumon en a 20,5 → « grâce au saumon »), ou la
+   remarque est retirée. Une remarque trop longue finit à sa dernière
+   phrase complète (300 caractères), jamais au milieu d'un mot.
    Aucune posologie ni prescription.
 8. Les totaux deviennent des relevés `meal` à l'heure du repas, dans les
    mesures nutrition d'Apple Santé ; ce sont des **estimations**

@@ -70,8 +70,11 @@ Donne une note de 0 (à éviter) à 10 (idéal), un verdict en une phrase, \
 les points positifs, les points à surveiller. Les chiffres ci-dessus \
 sont exacts : ne les recalcule jamais ; pour citer une quantité ou un \
 nutriment, recopie exactement le chiffre donné, avec son unité. \
-N'écris pas qu'il faudrait vérifier une étiquette ou une composition. \
-Pas de posologie ni de prescription.
+Un chiffre cité est celui de l'aliment dont tu parles, ou le total du \
+repas en le disant. Une phrase courte par remarque. Ne suppose rien de \
+la composition au-delà des ingrédients donnés. N'écris pas qu'il \
+faudrait vérifier une étiquette ou une composition. Pas de posologie \
+ni de prescription.
 Réponds uniquement en JSON :
 {{"score": 0, "verdict": "...", "positives": ["..."], "watch": ["..."]}}"""
 _NAMES = (

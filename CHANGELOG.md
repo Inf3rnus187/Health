@@ -30,6 +30,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A number quoted belongs to what the remark talks about**: « grâce au
+  saumon (24,6 g) » quoted the meal's protein as the salmon's (20,5 g):
+  the check only asked that the number exist. It now asks that it be
+  one of the values of the foods the remark names, or a meal total when
+  it names none or speaks of the meal; otherwise its brackets are cut.
+  Checks moved to `meal_remarks`. The model is told the same, one short
+  sentence per remark, and to assume nothing of a composition beyond
+  the ingredients given.
+- **Remarks no longer cut mid-sentence**: they were truncated at 200
+  characters (« Il est important de surveiller »); they now end at
+  their last full sentence (300 characters), else at a word with « … ».
 - **Remarks quote exact numbers**: the model wrote its remarks in the
   same answer as the grams, before the code computed the values, so it
   quoted its own arithmetic (« 557 mg pour 185 g » where the sheet gives
