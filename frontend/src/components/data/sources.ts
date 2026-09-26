@@ -2,6 +2,7 @@
 export const SOURCE_LABEL: Record<string, string> = {
   apple: 'Apple Santé (export)',
   'auto-export': 'Health Auto Export',
+  healthkit: 'App iPhone (HealthKit)',
   watch: 'Apple / raccourci (jour)',
   manual: 'Saisie',
   biology: 'Prise de sang (PDF)',

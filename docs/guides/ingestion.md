@@ -5,13 +5,14 @@ Every channel writes the **same canonical metric** for the same concept
 full HealthKit catalog (iOS 26 SDK: 121 quantity + 72 category types) and a
 **configurable mapping table** (`ingest_mappings`). Raw samples are kept;
 daily values are rebuilt from them with one rule (one Apple channel per
-day — native export and Health Auto Export are never added up — plus the
-other sources). Required token scope per route:
+day — native export, Health Auto Export and the iPhone app are never
+added up — plus the other sources). Required token scope per route:
 [API reference](../api.md).
 
 | Channel | Route | Token scope |
 |---------|-------|-------------|
 | Full Apple Health export (`export.zip`) | `POST /imports/apple-health` | `write:measurements` (+ `?token=`) |
+| Your own iPhone app reading HealthKit: samples by UUID, cumulative sums, sleep, workouts, deletions ([below](#iphone-app-healthkit--synchealthkit)); `GET` = what the hub holds | `POST /sync/healthkit`, `GET /sync/healthkit` | `write:measurements` (header only) |
 | Health Auto Export (daily JSON) | `POST /sync/auto-export` | `write:measurements` (+ `?token=`) |
 | SimpleHealthExportCSV (zip of CSV) | `POST /imports/apple-health` | `write:measurements` (+ `?token=`) |
 | iPhone Shortcut (flat map) | `POST /sync/health` | `ingest:watch` |
@@ -58,6 +59,123 @@ for meals): [usage guide](utilisation.md#raccourcis-iphone--une-seule-règle).
   practice behind nginx; medical documents: 25 MB.
 - A body over the nginx cap is refused by nginx (`413`) before it
   reaches the API.
+
+## iPhone app (HealthKit) → `/sync/healthkit`
+
+For an app of your own reading HealthKit on the iPhone: every sample
+type, incremental, by HealthKit UUID. Web app › **Import › « App iPhone
+(HealthKit) » › Créer un jeton pour l'app** mints a `write:measurements`
+token; the app sends it **in the header only** —
+`Authorization: Bearer <token>` (a `?token=` in the URL is refused).
+
+```bash
+curl -s $BASE/sync/healthkit -H "Authorization: Bearer $APP_TOKEN" \
+  -H 'Content-Type: application/json' -d '{
+  "samples": [
+    {"uuid": "6F1C…", "type": "HKQuantityTypeIdentifierHeartRate",
+     "start": "2026-09-26T08:00:00+02:00", "end": "2026-09-26T08:00:00+02:00",
+     "value": 72, "unit": "count/min", "device": "Apple Watch"},
+    {"uuid": "9A02…", "type": "HKQuantityTypeIdentifierOxygenSaturation",
+     "start": "2026-09-26T04:03:00+02:00", "value": 0.97, "unit": "%"},
+    {"uuid": "C3D4…", "type": "HKCategoryTypeIdentifierSleepAnalysis",
+     "start": "2026-09-26T01:00:00+02:00", "end": "2026-09-26T02:00:00+02:00",
+     "value": 4, "device": "Apple Watch"},
+    {"uuid": "E5F6…", "type": "HKCategoryTypeIdentifierHeadache",
+     "start": "2026-09-26T09:00:00+02:00", "end": "2026-09-26T10:00:00+02:00",
+     "value": "HKCategoryValueSeverityModerate"}
+  ],
+  "statistics": [
+    {"type": "HKQuantityTypeIdentifierStepCount",
+     "start": "2026-09-26T08:00:00+02:00", "end": "2026-09-26T09:00:00+02:00",
+     "sum": 412, "unit": "count"}
+  ],
+  "workouts": [
+    {"uuid": "0B1C…", "activity": "HKWorkoutActivityTypeWalking",
+     "start": "2026-09-26T18:00:00+02:00", "end": "2026-09-26T18:45:00+02:00",
+     "energy_kcal": 210, "distance_km": 3.1}
+  ],
+  "deleted": ["1A2B…"]
+}'
+# → {"samples": 4, "statistics": 1, "workouts": 1, "deleted": 1,
+#    "days": 12, "skipped": []}
+```
+
+Every list is optional; per request at most 5000 `samples`, 5000
+`statistics`, 500 `workouts`, 5000 `deleted` (and 25 MB through nginx).
+Dates are ISO 8601; without an offset they are the user's local time.
+
+**`samples`** — one HealthKit sample each (`HKQuantitySample`,
+`HKCategorySample`), keyed by its `uuid` (`sample.uuid.uuidString`): sent
+again, it replaces itself; nothing is ever added twice.
+
+| Kind | `value` | `unit` |
+|------|---------|--------|
+| Discrete quantity (`aggregationStyle` discrete: heart rate, HRV, SpO2, weight, blood pressure's systolic and diastolic samples, glucose, temperature…) | HealthKit's own number: `quantity.doubleValue(for: unit)` — 0.97 for 97 % | the `HKUnit` string (`count/min`, `ms`, `%`, `kg`, `mmHg`, `mg/dL`, `degC`…), converted to the metric's unit |
+| Sleep (`HKCategoryTypeIdentifierSleepAnalysis`) | `sample.value` as is: 0 in bed, 1 asleep (unspecified), 2 awake, 3 core, 4 deep, 5 REM — or the name (`HKCategoryValueSleepAnalysisAsleepDeep`, `asleepDeep`); `end` required | — |
+| Another category | its `HKCategoryValue…` name as in Apple's `export.xml` (`HKCategoryValueSeverityMild`, `HKCategoryValueAppleStandHourStood`…); none for an event that counts (notifications, hand-washing…); `end` for one that lasts (mindfulness: its minutes) | — |
+
+`device` is the recording device (`sample.device?.name`, else
+`sourceRevision.source.name`). A **cumulative** quantity (steps, distance,
+active or resting energy, flights, exercise minutes, nutrition, water…)
+is **refused here**: the iPhone and the watch record the same steps, and
+only HealthKit's statistics count them once — send it in `statistics`.
+
+**`statistics`** — cumulative types as HealthKit adds them up:
+`HKStatisticsCollectionQuery` with `.cumulativeSum` and an hourly
+`intervalComponents`, one entry per hour that has a `sumQuantity()`
+(`type`, `start`, `end`, `sum`, `unit`). A batch replaces the sums it
+overlaps for that type: send today (and yesterday, for late watch syncs)
+again at each sync; changing from hours to days never adds twice. A
+discrete type sent here is refused.
+
+**Sleep** — the stages make the **nights** (wake-up day, 18:00 cut:
+bedtime, wake-up, awakenings) of Travail › Dossier travail et santé ›
+Nuits, and the daily `sleep.asleep` (core + deep + REM +
+unspecified), `sleep.core`, `sleep.deep`, `sleep.rem`, `sleep.awake`,
+`sleep.time_in_bed`. When the iPhone and the watch both recorded a
+night, the device that slept the most is kept, never both.
+
+**`workouts`** — `uuid`, `activity` (`HKWorkoutActivityTypeWalking`, or
+`walking`), `start`, `end`, optional `duration_min` (else end − start),
+`energy_kcal`, `distance_km`. They join the native export's workouts;
+a day's `workout.count`, `workout.total_min`, `workout.energy`,
+`workout.distance` come from one channel (the one with most sessions).
+
+**`deleted`** — the UUIDs of `HKAnchoredObjectQuery`'s deleted objects
+(samples or workouts): removed, their days recomputed; a day left
+without any sample loses the value this channel gave it.
+
+**Answer** — how many `samples`, `statistics`, `workouts` were stored,
+`deleted` removed, `days` of daily values recomputed, and `skipped`:
+`{"type", "reason", "count"}` for each kind of line refused (unknown
+type, cumulative sent as a sample, discrete as a sum, sleep without
+`end` or with a value outside 0-5, category without its name…). A
+refused line never fails the request.
+
+**One channel a day** — the app's data is stored under the source
+`healthkit`, which counts as a HealthKit channel with the native export
+(`apple`) and Health Auto Export (`auto-export`): for each metric and
+day, the channel with the most samples is taken, never their sum. Stop
+Health Auto Export once the app syncs.
+
+**Status** — `GET /sync/healthkit` (same token): `last_sync_at`,
+`samples`, `workouts` and per metric `key`, `label`, `samples`, `last`
+(newest sample): to resume after a reinstall (the anchors are lost).
+
+**Suggested app flow**:
+
+1. Ask HealthKit read authorization for the types you want.
+2. First run: for each type, `HKAnchoredObjectQuery` from `nil`, sent in
+   batches (5000 samples), and hourly statistics day by day, back to the
+   history you want; keep each type's anchor.
+3. Then at each sync (an `HKObserverQuery` with background delivery, or
+   when the app opens): each type's anchored query from its anchor
+   (new samples + deleted UUIDs) and today's and yesterday's hourly
+   statistics; save the new anchors only after a `200`.
+
+Not taken yet: ECG voltages, workout routes (GPS), clinical records,
+samples' metadata — they still come with the full export
+(`POST /imports/apple-health`).
 
 ## Health Auto Export (JSON)
 

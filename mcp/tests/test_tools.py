@@ -48,6 +48,7 @@ async def test_every_area_of_the_hub_has_tools() -> None:
         "metric_overview",
         "data_inventory",
         "reconcile_data",
+        "iphone_app_sync",
         "medical_record",
         "care_overview",
         "document_text",
@@ -289,6 +290,8 @@ async def test_a_meal_with_its_sachet_and_a_food_of_the_list() -> None:
     assert b"Hello" in seen[4].content
     await tools_foods.nutrition_references()
     assert seen[5].url.path == "/api/v1/nutrition/references"
+    await tools_data.iphone_app_sync()
+    assert seen[-1].url.path == "/api/v1/sync/healthkit"
 
 
 async def test_period_facts_and_report_check() -> None:

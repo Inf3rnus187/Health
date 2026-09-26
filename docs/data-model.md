@@ -234,7 +234,13 @@ curated value per day), these keep **every** imported record:
 - `health_samples` — every raw quantity/category sample (metric, exact
   `start_at`, value, unit, device); millions of rows, indexed
   `(user_id, metric_id, start_at)`.
-- `workouts` — one row per session (type, duration, energy, distance).
+- `workouts` — one row per session (type, duration, energy, distance,
+  `source`: `apple` or `healthkit`).
+- `health_samples.external_id` / `workouts.external_id` — the id a row
+  has where it comes from (a HealthKit UUID sent by the iPhone app),
+  unique per user (`ux_samples_user_external`, `ux_workouts_user_external`;
+  NULL for file imports): a UUID sent again replaces its row, a deleted
+  one removes it (migration `0024`).
 - `ecg_records` — ECG metadata (classification, rate, sample count) with
   the voltage CSV stored encrypted on disk; poor-quality traces are
   skipped at import.
@@ -253,6 +259,7 @@ apart by `source` and `device`:
 |------|----------|----------|------------|
 | Native export and SimpleHealthExportCSV zip | `apple` | the recording device | `services/apple_health/importer.py` |
 | Health Auto Export push | `auto-export` | `Health Auto Export` | `services/auto_export.py` |
+| iPhone app sync (`POST /sync/healthkit`): samples keyed by their HealthKit UUID in `external_id`; hourly sums (`external_id` `stat:<hash>`, `device` `Statistiques HealthKit`); each night's minutes per stage under `sleep.*` (`external_id` `night:<key>:<day>`) | `healthkit` | the recording device | `services/healthkit_samples.py`, `healthkit_stats.py`, `healthkit_sleep.py` |
 | A pee (Journal, `/sync/tally`, `/journal/urination`) — metric `elimination.urination`, value 1 | `manual` | `journal` | `services/urination.py` |
 | A night typed by hand (bedtime → wake-up, `value_text` `asleep`, awakenings in `value_num`) | `manual` | `Saisie manuelle` | `services/sleep_manual.py` |
 | A meal's nutrients, one sample per nutrient at the meal's time, in Apple's nutrition metrics | `meal` | `meal:<meal id>` | `services/meal_nutrients.py` |
@@ -350,3 +357,4 @@ fresh database built from the live models is left untouched (ADR‑0004).
 | `0021_food_portion` | `foods.portion_g`. |
 | `0022_food_stock` | `food_stock_moves`. |
 | `0023_food_product_info` | `foods.product_info`. |
+| `0024_healthkit_ids` | `health_samples.external_id`, `workouts.external_id` + unique `(user_id, external_id)` indexes. |

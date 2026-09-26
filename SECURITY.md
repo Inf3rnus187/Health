@@ -109,6 +109,14 @@ admin-only writes.
 
 The scope each route needs is listed in the [API reference](docs/api.md).
 
+**iPhone app sync** (`POST /sync/healthkit`, `GET /sync/healthkit`):
+a `write:measurements` token sent **in the `Authorization` header
+only** — never `?token=` (an app has no reason to put it in a URL). It
+writes, replaces and deletes only its owner's rows of the `healthkit`
+channel, by HealthKit UUID (unique per user: another account's UUIDs are
+never reached), and each sync is audited (`sync` / `healthkit`, counts).
+Nothing leaves the hub.
+
 ### Token in the URL (`?token=`)
 
 For iPhone Shortcuts, these `write:measurements` routes also accept the

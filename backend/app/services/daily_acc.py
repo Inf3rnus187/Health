@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-HEALTHKIT = frozenset({"apple", "auto-export"})
+#: The channels carrying the same HealthKit data (one is taken a day):
+#: the native export, Health Auto Export and the iPhone app.
+HEALTHKIT = frozenset({"apple", "auto-export", "healthkit"})
 
 
 class Acc:

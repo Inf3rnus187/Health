@@ -21,7 +21,7 @@ from app.services.apple_health.units import convert
 from app.services.daily_rollup import user_zone
 
 #: Daily rows written by syncs (not an explicit entry).
-SYNCED = frozenset({"apple", "auto-export", "watch"})
+SYNCED = frozenset({"apple", "auto-export", "healthkit", "watch"})
 
 
 class Reading(NamedTuple):

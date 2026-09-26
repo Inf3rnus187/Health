@@ -1366,6 +1366,20 @@ résultats d'examens), **Chronologie**, **Documents** (ajout + liste),
   `…/api/v1/imports/apple-health?token=…`, à coller dans l'envoi du
   raccourci SimpleHealthExportCSV (champ Fichier `file` = le zip) ; la
   recette pas à pas est sur la carte.
+- **App iPhone (HealthKit)** : pour **ton app** qui lit Santé sur
+  l'iPhone et envoie tout au hub. La carte donne l'adresse
+  (`…/api/v1/sync/healthkit`, POST JSON), **« Créer un jeton pour
+  l'app »** crée un jeton `write:measurements` (« App iPhone
+  (HealthKit) », affiché une seule fois, à mettre dans l'en-tête
+  `Authorization: Bearer …` — jamais dans l'URL), et « Dernière synchro »
+  dit quand l'app a envoyé, combien de relevés et d'entraînements. Ce que
+  l'app envoie : relevés par UUID (renvoyés = remplacés, supprimés dans
+  Santé = supprimés ici), **sommes HealthKit** pour pas, distance,
+  énergie (jamais l'iPhone + la montre deux fois), phases du sommeil
+  (la nuit garde l'appareil qui a le plus dormi), entraînements — le
+  format exact est dans le [guide d'ingestion](ingestion.md#iphone-app-healthkit--synchealthkit).
+  Une journée prend **un seul** canal Apple (export, Health Auto Export
+  ou l'app) : arrête Health Auto Export quand l'app synchronise.
 - **Health Auto Export (JSON)** : URL de synchro quotidienne — voir le
   [guide d'ingestion](ingestion.md#health-auto-export-json).
 - **Jetons d'accès (API)** : créer / révoquer des jetons et choisir leurs

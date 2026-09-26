@@ -44,12 +44,18 @@ class HealthSample(UUIDMixin, TimestampMixin, Base):
     unit: Mapped[str | None] = mapped_column(String(32), nullable=True)
     source: Mapped[str] = mapped_column(String(32), default="apple")
     device: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    #: Its id where it comes from (a HealthKit UUID, sent by the iPhone
+    #: app): sent again it replaces itself, deleted there it goes here.
+    external_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     __table_args__ = (
         Index(
             "ix_samples_user_metric_start", "user_id", "metric_id", "start_at"
         ),
         Index("ix_samples_user_source", "user_id", "source"),
+        Index(
+            "ux_samples_user_external", "user_id", "external_id", unique=True
+        ),
     )
 
 
@@ -70,8 +76,15 @@ class Workout(UUIDMixin, TimestampMixin, Base):
     energy_kcal: Mapped[float | None] = mapped_column(Float, nullable=True)
     distance_km: Mapped[float | None] = mapped_column(Float, nullable=True)
     source: Mapped[str] = mapped_column(String(32), default="apple")
+    #: Its HealthKit UUID when sent by the iPhone app (see HealthSample).
+    external_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
-    __table_args__ = (Index("ix_workouts_user_start", "user_id", "start_at"),)
+    __table_args__ = (
+        Index("ix_workouts_user_start", "user_id", "start_at"),
+        Index(
+            "ux_workouts_user_external", "user_id", "external_id", unique=True
+        ),
+    )
 
 
 class EcgRecord(UUIDMixin, TimestampMixin, Base):

@@ -178,6 +178,10 @@ Depuis un autre poste, la même commande à travers SSH :
   (`update_meal`, `foods` remplace la liste), `add_meal_photo`,
   `delete_meal_photo`, `analyze_meal`, `delete_meal` ; « combien m'ont
   coûté les Uber Eats cette année ? » (`meal_spending`).
+- **App iPhone (HealthKit)** : `iphone_app_sync` — ce que ton app a
+  envoyé (dernière synchro, relevés, entraînements, et par mesure le
+  nombre et le plus récent) : « mon app a-t-elle synchronisé cette
+  nuit ? ». L'envoi lui-même est fait par l'app (`POST /sync/healthkit`).
 - **Mes aliments** : `list_foods`, `save_food` (valeurs pour 100 g,
   autres noms, poids du paquet, **portion habituelle** `portion_g` —
   une fiche par format : petite et grosse boîte —, **unité**

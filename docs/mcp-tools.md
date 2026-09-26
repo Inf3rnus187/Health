@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-113 outils.
+114 outils.
 
 ## Données et métriques
 
@@ -80,6 +80,14 @@ Rebuild one truth from the stored data (no AI).
 
 Merges duplicate keys, aligns with the HealthKit catalog and
 recomputes every daily value from raw samples (in the worker).
+
+### `iphone_app_sync`
+
+What the user's iPhone app (HealthKit sync) has sent to the hub.
+
+``last_sync_at``, ``samples``, ``workouts`` and per metric its count
+and newest sample (``last``): to say whether the app synced and up
+to when. The app pushes with POST /sync/healthkit (not a tool).
 
 ### `add_to_counter`
 

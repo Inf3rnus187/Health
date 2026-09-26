@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **The iPhone app's token goes in the header only**: `POST` and `GET
+  /sync/healthkit` take a `write:measurements` token from the
+  `Authorization` header and refuse `?token=`; they reach only the
+  owner's `healthkit` rows (UUIDs are unique per user) and each sync is
+  audited with its counts.
 - **Explanation links send nothing**: the links of « Comprendre ces
   références » (EU, ANSES, WHO, Santé.fr, Open Food Facts, Ciqual) are
   plain links the browser opens in a new tab only when tapped, without
@@ -264,6 +269,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Sync from your own iPhone app: `POST /sync/healthkit`** — for an app
+  reading HealthKit, incremental and without duplicates:
+  - `samples` keyed by their HealthKit UUID (sent again = replaced),
+    discrete quantities in HealthKit's own unit, categories by their
+    `HKCategoryValue…` name, sleep by its stage number 0-5;
+  - `statistics`: cumulative types (steps, distance, energy…) as
+    HealthKit's hourly sums, so the iPhone and the watch never count
+    twice; a batch replaces the sums it overlaps;
+  - nights from the sleep stages, keeping the device that slept the
+    most, into the daily `sleep.*` values and the Nuits view;
+  - `workouts` by UUID, with the day's `workout.*` totals;
+  - `deleted`: UUIDs removed in the Health app are removed here, and a
+    day left empty loses its value;
+  - refused lines are counted in `skipped` with their reason, never
+    fatal; only the touched days are recomputed.
+  The app's channel (`healthkit`) counts as one Apple channel a day with
+  the native export and Health Auto Export. `GET /sync/healthkit` (and
+  the MCP tool `iphone_app_sync`) says what the hub holds; Import › « App
+  iPhone (HealthKit) » creates the app's token and shows the last sync.
+  Migration `0024` adds `external_id` (unique per user) to raw samples
+  and workouts. Full contract: ingestion guide.
 - **Energy eaten on the home page**: a tile « Énergie apportée (repas) »
   (`nutrition.energy`: the day's kcal from analysed meals, plus any
   logged in Apple Health, with the last meal's time) sits next to

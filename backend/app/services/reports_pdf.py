@@ -41,6 +41,7 @@ _MIN_POINTS = 2
 _SOURCE_FR = {
     "apple_health": "Apple Santé",
     "auto-export": "Health Auto Export",
+    "healthkit": "app iPhone (HealthKit)",
     "watch": "montre et compteurs",
     "manual": "saisie",
     "meal": "repas analysés",

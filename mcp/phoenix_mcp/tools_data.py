@@ -144,6 +144,17 @@ async def reconcile_data() -> Any:
     return await client.post("/data/reconcile")
 
 
+@mcp.tool()
+async def iphone_app_sync() -> Any:
+    """What the user's iPhone app (HealthKit sync) has sent to the hub.
+
+    ``last_sync_at``, ``samples``, ``workouts`` and per metric its count
+    and newest sample (``last``): to say whether the app synced and up
+    to when. The app pushes with POST /sync/healthkit (not a tool).
+    """
+    return await client.get("/sync/healthkit")
+
+
 class OverwriteError(RuntimeError):
     """A write that would silently erase data."""
 

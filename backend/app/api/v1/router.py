@@ -55,6 +55,7 @@ from app.api.v1 import (
     stock,
     summary,
     sync,
+    sync_healthkit,
     system,
     tokens,
     traces,
@@ -121,6 +122,7 @@ api_router.include_router(data.router)
 api_router.include_router(trends.router)
 api_router.include_router(summary.router)
 api_router.include_router(sync.router)
+api_router.include_router(sync_healthkit.router)
 api_router.include_router(export.router)
 api_router.include_router(reports.router)
 api_router.include_router(facts.router)

@@ -334,7 +334,7 @@ fois ; un jeton se révoque à tout moment.
 | `ingest:watch` | Envoyer des relevés montre / Santé (`/ingest/watch`, `/sync/health`, Raccourci). |
 | `ingest:ppc` | Envoyer les données de la PPC. |
 | `ingest:photo` | Envoyer des photos (`/ingest/photo`). |
-| `write:measurements` | Écrire des valeurs, Health Auto Export, import Apple, compteurs, repas, pipi, pointage, prises de médicament. **Modifie** aussi (repas, aliments, sessions de travail) et **supprime par identifiant** : valeurs, repas et leurs photos, aliments et leurs photos, pipis, sessions de travail, prises de médicament. |
+| `write:measurements` | Écrire des valeurs, Health Auto Export, **app iPhone (HealthKit)** — `POST /sync/healthkit`, jeton dans l'en-tête `Authorization` uniquement —, import Apple, compteurs, repas, pipi, pointage, prises de médicament. **Modifie** aussi (repas, aliments, sessions de travail) et **supprime par identifiant** : valeurs, repas et leurs photos, aliments et leurs photos, pipis, sessions de travail, prises de médicament. |
 | `write:metrics` | Créer / modifier des métriques — **pour l'administrateur seulement** (catalogue partagé) ; refusé (403) au jeton d'un autre compte. |
 | `read:all` | **Lire** les données de santé (valeurs, export, rapports, photos…). |
 | `hub:full` | Tout ce que fait l'application web (serveur MCP, assistant), sauf gérer les jetons, la 2FA, supprimer le compte, télécharger le Raccourci et `/system/update` (session web uniquement). |

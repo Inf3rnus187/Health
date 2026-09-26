@@ -122,6 +122,8 @@ signale qu'il est aussi accepté en paramètre d'URL.
 |---|---|---|---|---|
 | POST | `/sync/auto-export` | `write:measurements` + ?token= | JSON libre | Ingest a Health Auto Export JSON payload (JSON body, no file). |
 | POST | `/sync/health` | `ingest:watch` | JSON `HealthSyncPayload` (date_key, metrics) | Ingest a flat ``{healthkit_type: value}`` map (Shortcut-friendly). |
+| GET | `/sync/healthkit` | `write:measurements` | — | What the hub holds from the app (to resume after a reinstall). |
+| POST | `/sync/healthkit` | `write:measurements` | JSON `HealthKitSync` (samples, statistics, workouts, deleted) | Store what the iPhone app read in HealthKit since its last sync. |
 | GET | `/sync/shortcut` | Session uniquement | `base`? | Mint an ingest token and return a pre-filled ``.shortcut``. |
 | POST | `/sync/tally` | `write:measurements` + ?token= | JSON `TallyPayload` (metric, amount, date_key) | Add to a daily counter (café, cigarette, bouteille d'eau). |
 
