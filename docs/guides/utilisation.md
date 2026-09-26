@@ -961,9 +961,10 @@ l'heure locale : un taxi à 00:30 compte pour ce jour-là.
   réveil, de 18 h la veille à 18 h), le sommeil, le nombre de **réveils**
   (phases d'éveil de la montre ; sans phases, les coupures de 5 min et
   plus), les **blocs** (sommeil « en plusieurs fois », coupé d'une heure
-  ou plus), coucher et lever. Quand plusieurs appareils ont enregistré la
-  même nuit, celui qui a vu le plus de sommeil est retenu (pas de double
-  compte). Une nuit sans donnée (montre déchargée) se **saisit** :
+  ou plus), coucher et lever. Les phases viennent de la **montre** (c'est
+  elle qui les enregistre ; l'iPhone n'écrit que « au lit ») ; une nuit
+  que la montre n'a pas enregistrée (non portée, déchargée) prend ce
+  qu'un autre appareil ou une app a noté — un seul, jamais additionnés. Une nuit sans donnée (montre déchargée) se **saisit** :
   coucher, lever, réveils — marquée « saisie » dans le rapport.
 
 Le **rapport PDF complet** (« Dossier travail et santé ») contient, dans
@@ -1376,7 +1377,7 @@ résultats d'examens), **Chronologie**, **Documents** (ajout + liste),
   l'app envoie : relevés par UUID (renvoyés = remplacés, supprimés dans
   Santé = supprimés ici), **sommes HealthKit** pour pas, distance,
   énergie (jamais l'iPhone + la montre deux fois), phases du sommeil
-  (la nuit garde l'appareil qui a le plus dormi), entraînements — le
+  (les phases de la montre, le temps au lit de l'iPhone), entraînements — le
   format exact est dans le [guide d'ingestion](ingestion.md#iphone-app-healthkit--synchealthkit).
   Une journée prend **un seul** canal Apple (export, Health Auto Export
   ou l'app) : arrête Health Auto Export quand l'app synchronise.

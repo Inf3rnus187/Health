@@ -132,8 +132,12 @@ discrete type sent here is refused.
 bedtime, wake-up, awakenings) of Travail › Dossier travail et santé ›
 Nuits, and the daily `sleep.asleep` (core + deep + REM +
 unspecified), `sleep.core`, `sleep.deep`, `sleep.rem`, `sleep.awake`,
-`sleep.time_in_bed`. When the iPhone and the watch both recorded a
-night, the device that slept the most is kept, never both.
+`sleep.time_in_bed`. The **phases come from the Apple Watch** (a
+`device` whose name holds « Watch »: send `sample.device?.name`); only a
+night the watch did not record (not worn, battery flat) takes another
+recorder's (an app), the one with the most sleep — never several added.
+**Time in bed** comes from every device that writes it (the iPhone's
+bedtime schedule), overlaps merged.
 
 **`workouts`** — `uuid`, `activity` (`HKWorkoutActivityTypeWalking`, or
 `walking`), `start`, `end`, optional `duration_min` (else end − start),

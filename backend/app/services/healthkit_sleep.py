@@ -2,10 +2,12 @@
 
 A night is what ends before 18:00 on its wake-up day (the cut of
 :mod:`sleep_nights`, which reads the same raw samples for bedtime,
-wake-up and awakenings). When the iPhone and the watch both recorded,
-the device that slept the most is kept — never both added. Its minutes
-per stage (asleep = core + deep + REM + unspecified, awake, in bed)
-become one sample per stage at noon of the wake-up day, under the
+wake-up and awakenings). Its phases come from the Apple Watch, which
+writes them (asleep = core + deep + REM + unspecified, awake); only a
+night the watch did not record takes another recorder's (an app), the
+one with the most sleep — never several added. Time in bed comes from
+every device that writes it (the iPhone's bedtime), overlaps merged.
+Each total becomes one sample at noon of the wake-up day, under the
 ``sleep.*`` metrics, so the daily values follow the one rule.
 """
 
@@ -26,15 +28,17 @@ from app.services.apple_health.spec import (
     MetricSpec,
 )
 from app.services.healthkit_common import SOURCE, Touched
+from app.services.sleep_nights import is_watch
 
 #: The ids of the nights' totals (``night:<key>:<day>``).
 NIGHT = "night:"
 _CUT = time(18)  # as sleep_nights: after 18:00, the next night
 _NOON = time(12)
 _ASLEEP = "sleep.asleep"
+_BED = "sleep.time_in_bed"
 _KEYS = (
     _ASLEEP, "sleep.core", "sleep.deep", "sleep.rem", "sleep.awake",
-    "sleep.time_in_bed",
+    _BED,
 )  # fmt: skip
 _SPECS = {k: MetricSpec(k, k, "sleep", "duration", "min", "avg") for k in _KEYS}
 
@@ -48,7 +52,7 @@ async def recompute(
     cache = MetricCache()
     raw = await cache.id_for(session, SLEEP_RAW)
     for day in sorted({_wake_day(end, tz) for end in touched.nights}):
-        device, minutes = _best(await _night(session, user_id, raw, day, tz))
+        device, minutes = _pick(await _night(session, user_id, raw, day, tz))
         noon = datetime.combine(day, _NOON, tzinfo=tz).astimezone(UTC)
         ids = [f"{NIGHT}{key}:{day.isoformat()}" for key in _KEYS]
         await session.execute(
@@ -105,18 +109,50 @@ async def _night(
     return list(found.scalars())
 
 
-def _best(samples: list[HealthSample]) -> tuple[str | None, Minutes]:
-    """The device that slept the most, and its minutes per stage."""
+def _pick(samples: list[HealthSample]) -> tuple[str | None, Minutes]:
+    """The night's phases (the watch's) and its time in bed (merged)."""
     per: dict[str | None, Minutes] = {}
+    beds: list[tuple[datetime, datetime]] = []
     for sample in samples:
+        keys = SLEEP_STAGE_MAP.get(sample.value_text or "", ())
+        span = (_utc(sample.start_at), _utc(sample.end_at or sample.start_at))
+        if keys == (_BED,):
+            beds.append(span)
+            continue
         minutes = per.setdefault(sample.device, {})
-        span = _utc(sample.end_at or sample.start_at) - _utc(sample.start_at)
-        for key in SLEEP_STAGE_MAP.get(sample.value_text or "", ()):
-            minutes[key] = minutes.get(key, 0.0) + span.total_seconds() / 60
+        for key in keys:
+            minutes[key] = minutes.get(key, 0.0) + _minutes(*span)
+    device = _recorder(per)
+    out = dict(per[device]) if device in per else {}
+    in_bed = sum(_minutes(*span) for span in _merged(beds))
+    if in_bed:
+        out[_BED] = in_bed
+    return device, out
+
+
+def _recorder(per: dict[str | None, Minutes]) -> str | None:
+    """The watch; without it, the recorder that saw the most sleep."""
     if not per:
-        return None, {}
-    device = max(per, key=lambda d: per[d].get(_ASLEEP, 0.0))
-    return device, per[device]
+        return None
+    return max(per, key=lambda d: (is_watch(d), per[d].get(_ASLEEP, 0.0)))
+
+
+def _merged(
+    spans: list[tuple[datetime, datetime]],
+) -> list[tuple[datetime, datetime]]:
+    """Overlapping intervals merged (iPhone and watch both « in bed »)."""
+    out: list[tuple[datetime, datetime]] = []
+    for start, end in sorted(spans):
+        if out and start <= out[-1][1]:
+            out[-1] = (out[-1][0], max(out[-1][1], end))
+        else:
+            out.append((start, end))
+    return out
+
+
+def _minutes(start: datetime, end: datetime) -> float:
+    """An interval's length in minutes."""
+    return (end - start).total_seconds() / 60
 
 
 def _wake_day(at: datetime, tz: ZoneInfo) -> date:

@@ -40,6 +40,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A night is the watch's**: the Nuits view kept, among the devices of
+  a night, the one that saw the most sleep — another app counting more
+  minutes than the watch won. The Apple Watch (which writes the phases;
+  the iPhone only « in bed ») is now always kept when it recorded the
+  night; another recorder counts only for a night the watch missed,
+  never added to it.
 - **Cigarettes, coffees and water show the time of the last one**: on
   the home page these tiles had a date only — a counter kept the time
   of its first addition, and a time was shown only when its UTC day was
@@ -277,8 +283,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - `statistics`: cumulative types (steps, distance, energy…) as
     HealthKit's hourly sums, so the iPhone and the watch never count
     twice; a batch replaces the sums it overlaps;
-  - nights from the sleep stages, keeping the device that slept the
-    most, into the daily `sleep.*` values and the Nuits view;
+  - nights from the sleep stages — the Apple Watch's phases, the time
+    in bed of every device (the iPhone's bedtime) with overlaps merged —
+    into the daily `sleep.*` values and the Nuits view;
   - `workouts` by UUID, with the day's `workout.*` totals;
   - `deleted`: UUIDs removed in the Health app are removed here, and a
     day left empty loses its value;

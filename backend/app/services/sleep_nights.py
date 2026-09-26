@@ -2,8 +2,10 @@
 
 A night belongs to the day you wake up (like the daily sleep values):
 the samples ending between 18:00 the evening before and 18:00 that day.
-When several devices recorded the same night, the one that saw the most
-sleep is kept (no double counting). Per night:
+The Apple Watch writes the sleep phases (the iPhone only « in bed »): its
+night is the one kept. Only when no watch recorded that night (not worn,
+battery flat) does another recorder count (an app, a night typed by
+hand) — the one that saw the most sleep, never several added. Per night:
 
 * asleep minutes, awake minutes inside the night;
 * awakenings — the awake phases between falling asleep and waking up
@@ -80,7 +82,7 @@ async def nights(
     for (day, origin), samples in groups.items():
         night = read_night(day, samples, origin, tz)
         best = found.get(day)
-        if night and (best is None or night.asleep_min > best.asleep_min):
+        if night and (best is None or _rank(night) > _rank(best)):
             found[day] = night
     await _daily_only(session, user_id, first, last, found)
     return dict(sorted(found.items()))
@@ -127,6 +129,16 @@ def read_night(
         wake_time=asleep[-1][1].astimezone(tz),
         source=origin,
     )
+
+
+def is_watch(device: str | None) -> bool:
+    """Whether a device is an Apple Watch (« Apple Watch de … »)."""
+    return "watch" in (device or "").lower()
+
+
+def _rank(night: Night) -> tuple[bool, float]:
+    """The watch's night first, then the most sleep."""
+    return is_watch(night.source.split(":", 1)[-1]), night.asleep_min
 
 
 def as_dict(night: Night) -> dict[str, Any]:

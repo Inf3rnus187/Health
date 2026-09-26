@@ -135,45 +135,43 @@ def _sleep(
     }
 
 
-async def test_a_night_takes_the_device_that_slept_the_most(
+async def test_a_night_takes_the_watch_phases_and_the_iphone_bed(
     client: AsyncClient, auth: dict[str, str]
 ) -> None:
     app = await _app(client, auth)
     night = [
-        _sleep("N0", "22:50", "06:45", 0, WATCH),  # in bed
         _sleep("N1", "23:00", "01:00", 3, WATCH),  # core
         _sleep("N2", "01:00", "02:00", 4, WATCH),  # deep
         _sleep("N3", "02:00", "03:00", 5, WATCH),  # REM
         _sleep("N4", "03:00", "03:10", 2, WATCH),  # awake
-        _sleep("N5", "03:10", "06:40", 3, WATCH),  # core
-        _sleep("P1", "23:30", "06:30", 1, "iPhone de Test"),  # 420 min
+        _sleep("N5", "03:10", "06:40", 3, WATCH),  # core: 450 min asleep
+        _sleep("P0", "22:50", "06:45", 0, "iPhone de Test"),  # in bed only
+        _sleep("A1", "23:30", "07:30", 1, "Autre app de test"),  # 480 min
     ]
     sent = await client.post(URL, json={"samples": night}, headers=app)
     assert sent.json()["samples"] == 7, sent.text
-    assert await _day(client, auth, "sleep.asleep") == 450  # the watch
+    # the watch's phases, though the other app counted more sleep
+    assert await _day(client, auth, "sleep.asleep") == 450
     assert await _day(client, auth, "sleep.deep") == 60
     assert await _day(client, auth, "sleep.core") == 330
     assert await _day(client, auth, "sleep.awake") == 10
-    assert await _day(client, auth, "sleep.time_in_bed") == 475
+    assert await _day(client, auth, "sleep.time_in_bed") == 475  # iPhone
     nights = await client.get(
         "/api/v1/sleep/nights",
         params={"start": DAY, "end": DAY, "missing": "false"},
         headers=auth,
     )
-    night_view = nights.json()[0]
-    assert (night_view["bedtime"], night_view["wake_time"]) == (
-        "23:00",
-        "06:40",
-    )
-    assert night_view["awakenings"] == 1 and night_view["source"].endswith(
-        WATCH
-    )
+    view = nights.json()[0]
+    assert (view["bedtime"], view["wake_time"]) == ("23:00", "06:40")
+    assert view["awakenings"] == 1 and view["source"].endswith(WATCH)
     state = (await client.get(URL, headers=app)).json()
     assert state["samples"] == 7  # as sent: not the nights' totals
+    # a night the watch did not record: the other recorder, never both
     watch = [s["uuid"] for s in night if s["device"] == WATCH]
     await client.post(URL, json={"deleted": watch}, headers=app)
-    assert await _day(client, auth, "sleep.asleep") == 420  # the iPhone
+    assert await _day(client, auth, "sleep.asleep") == 480
     assert await _day(client, auth, "sleep.deep") is None
+    assert await _day(client, auth, "sleep.time_in_bed") == 475
 
 
 async def test_workouts_are_kept_by_uuid_and_make_their_day(
