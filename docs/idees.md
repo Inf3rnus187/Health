@@ -32,6 +32,23 @@ journal donne sa durée et ses métriques les plus longues (`seconds`,
 avec la même fonction : 10 s → 5 s sur la machine de mesure, jours
 identiques octet pour octet ([performance](performance.md)).
 
+### Égalité entre deux canaux HealthKit un même jour : laissée telle quelle (30/09/2026)
+
+**Le constat.** Quand l'export natif (`apple`) et Health Auto Export
+(`auto-export`) ont exactement autant de relevés un jour donné, la
+règle du jour garde celui qui est lu en premier ; une synchro (lue par
+l'index) et une réconciliation (lue dans l'ordre de la table) pouvaient
+choisir l'autre ([performance](performance.md), entrée (8)).
+
+**Pourquoi rien à coder.** Toutes les données passeront par l'app iOS
+de l'utilisateur et `POST /sync/healthkit` (source `healthkit`) :
+l'export natif et Health Auto Export ne serviront plus. Un nouveau jour
+n'a alors qu'un canal HealthKit, et l'égalité ne se pose plus. Pour les
+anciens jours importés par les deux canaux, la réconciliation lit
+toujours dans le même ordre : son choix est stable. Une règle fixe
+(« tel canal d'abord ») changerait la valeur de ces jours-là une fois,
+sans rien apporter aux nouveaux.
+
 ### Poids unitaire d'un repas à l'autre (décidé le 30/09/2026)
 
 **Le constat.** Sans poids écrit, le poids d'une unité (une tomate, un
