@@ -118,6 +118,10 @@ class Tuning(BaseSettings):
     #: Metrics whose days a reconcile recomputes at the same time, each in
     #: its own process (one core, one connection); 1: one after the other.
     reconcile_parallel: int = Field(4, ge=1, le=32)
+    #: A metric with at least this many samples, and more than one
+    #: process's share of the account's, is cut into periods computed at
+    #: the same time (reconcile_parallel.py).
+    reconcile_split_min_samples: int = Field(100_000, ge=1)
 
     # --- Memory ---------------------------------------------------------------
     #: Leave the objects a process keeps for its whole life out of Python's

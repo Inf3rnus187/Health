@@ -8,7 +8,7 @@ import sys
 from asyncio.subprocess import PIPE, Process
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -19,9 +19,15 @@ from app.core.db import SessionFactory, engine
 from app.models.base import new_uuid, utcnow
 from app.models.health_raw import HealthSample
 from app.models.measurement import Measurement
+from app.models.metric import MetricDefinition
 from app.models.sample_counts import counts
 from app.models.user import User
-from app.services import reconcile, reconcile_parallel, sample_counts
+from app.services import (
+    daily_rollup,
+    reconcile,
+    reconcile_parallel,
+    sample_counts,
+)
 from app.services.apple_health.metrics_cache import MetricCache
 from app.services.apple_health.spec import QUANTITY_SPECS
 from sqlalchemy import delete, select, update
@@ -134,14 +140,79 @@ async def test_largest_metrics_start_first() -> None:
     await _seed(admin)
     async with SessionFactory() as session:
         metrics = await reconcile._sampled(session, admin)
-        order = await reconcile_parallel.largest_first(session, admin, metrics)
+        order = await reconcile_parallel.pieces(
+            session, admin, metrics, ZoneInfo("UTC"), 4
+        )
     keys = {m.id: m.key for m in metrics}
-    assert [keys[i] for i in order] == [
-        "heart.rate",
-        "activity.active_energy",
-        "activity.steps",
-        "body.weight",
+    assert [(keys[p.metric_id], p.span) for p in order] == [
+        ("heart.rate", None),  # 60 samples: under the least to cut
+        ("activity.active_energy", None),
+        ("activity.steps", None),
+        ("body.weight", None),
     ]
+
+
+async def test_a_large_metric_is_cut_into_periods(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cut at local midnights, the parts first: the same days written."""
+    admin = await _user(get_settings().admin_email)
+    await _seed(admin)
+    monkeypatch.setattr(get_settings(), "reconcile_parallel", 1)
+    await _reconcile(admin)
+    expected = await _days(admin)
+    await _wipe(admin)
+    monkeypatch.setattr(get_settings(), "reconcile_split_min_samples", 10)
+    monkeypatch.setattr(get_settings(), "reconcile_parallel", 3)
+    report = await _reconcile(admin)
+    assert await _days(admin) == expected
+    assert report["days"] == len(expected)
+    parts = [s for s in report["slowest"] if s.startswith("heart.rate ")]
+    assert {p.split()[1] for p in parts} == {"1/2", "2/2"}  # 60 of 140
+
+
+async def test_periods_cut_across_a_change_of_time() -> None:
+    """Two periods give every day once, whatever the clocks did."""
+    admin = await _user(get_settings().admin_email)
+    tz = ZoneInfo("Europe/Paris")
+    start = datetime(2026, 3, 27, 21, 10, tzinfo=UTC)
+    spec = QUANTITY_SPECS["HKQuantityTypeIdentifierStepCount"]
+    async with SessionFactory() as session:
+        metric_id = await MetricCache().id_for(session, spec)
+        for i in range(24 * 6):  # every 30 min over the night of 29 March
+            session.add(
+                HealthSample(
+                    id=new_uuid(),
+                    user_id=admin,
+                    metric_id=metric_id,
+                    start_at=start + timedelta(minutes=30 * i),
+                    value_num=10.1 + i,
+                    unit="count",
+                    source="apple",
+                    created_at=utcnow(),
+                )
+            )
+        await session.commit()
+        metric = await session.get(MetricDefinition, metric_id)
+    assert metric is not None
+    whole = await _rollup(admin, metric, tz, [None])
+    for cut in (date(2026, 3, 29), date(2026, 3, 30)):
+        assert (
+            await _rollup(admin, metric, tz, [(None, cut), (cut, None)])
+            == whole
+        )
+
+
+async def _rollup(
+    user_id: str, metric: MetricDefinition, tz: ZoneInfo, spans: list[Any]
+) -> list[tuple[Any, ...]]:
+    """The days written by rebuilding these spans, from none."""
+    await _wipe(user_id)
+    async with SessionFactory() as session:
+        for span in spans:
+            await daily_rollup.rebuild(session, user_id, metric, tz, span=span)
+        await session.commit()
+    return await _days(user_id)
 
 
 async def test_more_processes_than_metrics(
@@ -201,7 +272,8 @@ async def test_one_metric_starts_no_process(
 
 async def test_a_metric_removed_meanwhile_writes_nothing() -> None:
     admin = await _user(get_settings().admin_email)
-    spent = await rollup_worker._one(engine, admin, new_uuid(), ZoneInfo("UTC"))
+    owner = (admin, new_uuid())
+    spent = await rollup_worker._one(engine, owner, None, ZoneInfo("UTC"))
     assert spent[2] == 0
 
 

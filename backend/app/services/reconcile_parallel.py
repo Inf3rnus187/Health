@@ -22,19 +22,26 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
 import sys
 from asyncio.subprocess import PIPE, Process
 from collections import Counter, deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
+from app.models.health_raw import HealthSample
 from app.models.metric import MetricDefinition
 from app.services import sample_counts
+from app.services.daily_rollup import Span
 
 #: (seconds, metric key, days) of one metric's rebuild.
 Spent = tuple[float, str, int]
@@ -67,8 +74,45 @@ async def started(
                 await worker.wait()
 
 
-async def rebuild(workers: list[Process], order: list[str]) -> list[Spent]:
-    """Every metric's days, each metric to the first process free.
+class Piece(NamedTuple):
+    """A metric, or a period of it, given to one process."""
+
+    metric_id: str
+    span: Span | None  # None: the whole metric
+    samples: float  # to start the largest first
+    part: str  # « 1/2 » in the log, or nothing
+
+
+async def pieces(
+    session: AsyncSession,
+    user_id: str,
+    metrics: list[MetricDefinition],
+    tz: ZoneInfo,
+    processes: int,
+) -> list[Piece]:
+    """The metrics to compute, the most samples first (then by key).
+
+    A metric with at least ``RECONCILE_SPLIT_MIN_SAMPLES`` samples and more
+    than one process's share of the account's is cut, at local midnights,
+    into periods of about a share each: no process is left alone with it
+    at the end while the others wait.
+    """
+    samples = await _samples(session, user_id)
+    share = sum(samples[m.id] for m in metrics) / processes
+    least = get_settings().reconcile_split_min_samples
+    out: list[Piece] = []
+    for metric in sorted(metrics, key=lambda m: m.key):
+        n = samples[metric.id]
+        cut = min(processes, math.ceil(n / share)) if n >= least else 1
+        if cut > 1:
+            out += await _cut(session, (user_id, metric.id), n, cut, tz)
+        else:
+            out.append(Piece(metric.id, None, n, ""))
+    return sorted(out, key=lambda piece: -piece.samples)  # stable
+
+
+async def rebuild(workers: list[Process], order: list[Piece]) -> list[Spent]:
+    """Every piece's days, each to the first process free.
 
     A process that fails stops the others (see :func:`started`).
     """
@@ -76,17 +120,6 @@ async def rebuild(workers: list[Process], order: list[str]) -> list[Spent]:
     async with asyncio.TaskGroup() as group:
         tasks = [group.create_task(_feed(w, queue)) for w in workers]
     return [spent for task in tasks for spent in task.result()]
-
-
-async def largest_first(
-    session: AsyncSession, user_id: str, metrics: list[MetricDefinition]
-) -> list[str]:
-    """The metrics' ids, the most samples first (then by key)."""
-    samples: Counter[str] = Counter()
-    for metric_id, _, n, _, _ in await sample_counts.of_user(session, user_id):
-        samples[metric_id] += n
-    ranked = sorted(metrics, key=lambda m: (-samples[m.id], m.key))
-    return [metric.id for metric in ranked]
 
 
 async def _start(user_id: str, tz: ZoneInfo) -> Process:
@@ -105,20 +138,92 @@ async def _start(user_id: str, tz: ZoneInfo) -> Process:
     )
 
 
-async def _feed(worker: Process, order: deque[str]) -> list[Spent]:
-    """Give the process the next metric until none is left."""
+async def _feed(worker: Process, order: deque[Piece]) -> list[Spent]:
+    """Give the process the next piece until none is left.
+
+    One line ``METRIC_ID FIRST STOP`` per piece (``-``: no bound).
+    """
     stdin, stdout = worker.stdin, worker.stdout
     if stdin is None or stdout is None:  # never: both are pipes
         raise RuntimeError("rollup process without pipes")
     done: list[Spent] = []
     while order:
-        stdin.write(f"{order.popleft()}\n".encode())
+        piece = order.popleft()
+        first, stop = piece.span or (None, None)
+        line = f"{piece.metric_id} {first or '-'} {stop or '-'}\n"
+        stdin.write(line.encode())
         await stdin.drain()
-        line = await stdout.readline()
-        if not line:  # it stopped: its error is in the log just above
+        answer = await stdout.readline()
+        if not answer:  # it stopped: its error is in the log just above
             code = await worker.wait()
             raise RuntimeError(f"rollup process stopped (exit {code})")
-        seconds, key, days = json.loads(line)
-        done.append((float(seconds), str(key), int(days)))
+        seconds, key, days = json.loads(answer)
+        done.append((float(seconds), f"{key}{piece.part}", int(days)))
     stdin.close()
     return done
+
+
+async def _cut(
+    session: AsyncSession,
+    owner: tuple[str, str],
+    samples: int,
+    parts: int,
+    tz: ZoneInfo,
+) -> list[Piece]:
+    """The metric in ``parts`` periods of about as many samples each.
+
+    Cut at the local day of the samples at 1/parts, 2/parts… of the
+    metric, found through its index (≈ 50 ms for 400 000 samples).
+    """
+    days: list[date] = []
+    for i in range(1, parts):
+        day = await _day_of(session, owner, samples * i // parts, tz)
+        if day is not None and (not days or day > days[-1]):
+            days.append(day)
+    edges: list[date | None] = [None, *days, None]
+    count = len(edges) - 1
+    return [
+        Piece(
+            owner[1],
+            (edges[i], edges[i + 1]),
+            samples / count,
+            _part(i, count),
+        )
+        for i in range(count)
+    ]
+
+
+async def _day_of(
+    session: AsyncSession, owner: tuple[str, str], rank: int, tz: ZoneInfo
+) -> date | None:
+    """The local day of the metric's sample of this rank in time."""
+    user_id, metric_id = owner
+    at = await session.scalar(
+        select(HealthSample.start_at)
+        .where(
+            HealthSample.user_id == user_id,
+            HealthSample.metric_id == metric_id,
+        )
+        .order_by(HealthSample.start_at)
+        .offset(rank)
+        .limit(1)
+    )
+    return None if at is None else _local(at, tz)
+
+
+def _part(index: int, count: int) -> str:
+    """« 1/2 » in the log, nothing for a whole metric."""
+    return f" {index + 1}/{count}" if count > 1 else ""
+
+
+def _local(at: datetime, tz: ZoneInfo) -> date:
+    """The local day of a sample time (naive: UTC, as SQLite gives)."""
+    return (at if at.tzinfo else at.replace(tzinfo=UTC)).astimezone(tz).date()
+
+
+async def _samples(session: AsyncSession, user_id: str) -> Counter[str]:
+    """Samples per metric, from the counts the database keeps."""
+    samples: Counter[str] = Counter()
+    for metric_id, _, n, _, _ in await sample_counts.of_user(session, user_id):
+        samples[metric_id] += n
+    return samples

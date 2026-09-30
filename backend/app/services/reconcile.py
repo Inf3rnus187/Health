@@ -98,7 +98,9 @@ async def _days(
     if not workers:
         await _recount(session, user_id)
         return [await _rebuild(session, user_id, m, tz) for m in metrics]
-    order = await reconcile_parallel.largest_first(session, user_id, metrics)
+    order = await reconcile_parallel.pieces(
+        session, user_id, metrics, tz, len(workers)
+    )
     await session.commit()  # the processes write: hold nothing open
     days = asyncio.create_task(reconcile_parallel.rebuild(workers, order))
     try:
@@ -120,7 +122,9 @@ async def _rebuild(
 ) -> Spent:
     """One metric's days, committed: (seconds, key, days)."""
     started = time.perf_counter()
-    days = await daily_rollup.rebuild(session, user_id, metric, tz)
+    days = await daily_rollup.rebuild(
+        session, user_id, metric, tz, in_table_order=True
+    )
     await session.commit()
     return time.perf_counter() - started, metric.key, days
 

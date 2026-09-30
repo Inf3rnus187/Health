@@ -429,6 +429,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   per process (331 MB for 4); they stop with the reconcile. `1` runs
   the metrics one after the other, as before (measured: as fast as the
   old code, 10.6 and 9.7 s against 10.8 and 9.7 s).
+- **A large metric is cut into periods computed at the same time**
+  (for everyone; `RECONCILE_SPLIT_MIN_SAMPLES`, 100 000). A reconcile
+  cannot be faster than its largest metric, which one process computed
+  alone (5 s of ≈ 7 s at the user's). A metric with at least that many
+  samples and more than one process's share of the account's is now cut
+  at local midnights into periods of about a share each (log: «
+  activity.active_energy 1/2 »). Each part reads a day more on each side
+  and keeps only its own days, and the whole reconcile reads samples in
+  the table's order (never the index's), so every day gets its samples
+  in the same order: the same values to the last digit, split or not,
+  1 or N processes (44 016 days, same md5; a test cuts across the change
+  of time of 29 March). Test machine, 4 processes: 3.5 → 3.2 s; reading
+  in table order costs nothing (1 process 7.8 → 7.8 s). It matters most
+  with more processes (`RECONCILE_PARALLEL=8` on 16 threads).
 - **Every recompute of daily values reads the samples twice as fast**
   (for everyone: reconcile, iPhone sync, Health Auto Export, work
   entries). Reading a metric's samples cost more than computing its
@@ -437,9 +451,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   SQL SQLAlchemy compiles (same plan, same order of rows), in the same
   transaction. Reading only: 0.87–0.98 → 0.52–0.60 s for 372 316
   samples, 1.80–1.90 → 0.95–0.97 s for 930 782. Full reconcile on the
-  test machine (median of 5, versions in turn): one process 10.4 →
-  7.6 s, two 4.4 → 4.0 s, four 3.5 → 3.5 s (its 4 cores are full
-  there). The 44 016 days written keep the same md5.
+  test machine (medians, versions in turn): one process 10.4 → 7.6 s,
+  two 5.4 → 3.9 s, four 3.9 → 3.0 s. (First published as « two 4.4 →
+  4.0 s, four 3.5 → 3.5 s »: in that measurement the old version's
+  processes, started with `python -m` from the new code's folder, ran
+  the new code; each version now runs from its own folder.) The 44 016
+  days written keep the same md5.
 - **The reconcile no longer waits for its processes nor for its count
   check** (for everyone). Its `RECONCILE_PARALLEL` processes now start
   at the reconcile's beginning and load their code while the catalogue,

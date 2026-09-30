@@ -23,6 +23,59 @@ la méthode ci-dessous, et noté ici (règle de [CLAUDE.md](../CLAUDE.md)).
 
 ## Journal
 
+### 2026-09-30 (8) — couper une grosse métrique en périodes
+
+Une réconciliation ne peut pas aller plus vite que sa plus grosse
+métrique, qu'un seul processus calculait de bout en bout (chez
+l'utilisateur : l'énergie au repos, 5,0–5,3 s sur ≈ 7 s). Une métrique
+qui a au moins `RECONCILE_SPLIT_MIN_SAMPLES` relevés (100 000) et plus
+que la part d'un processus (1/`RECONCILE_PARALLEL` des relevés du
+compte) est maintenant coupée en périodes de jours d'environ une part
+chacune, calculées en même temps par des processus différents. Les
+coupures tombent au jour du relevé placé à 1/2 (1/3, 2/3…) de la
+métrique, trouvé par l'index en ≈ 50 ms, pendant que les processus
+démarrent.
+
+Pour que chaque jour reste calculé exactement comme avant :
+- la coupure tombe toujours à minuit (heure locale), jamais au milieu
+  d'un jour ;
+- chaque morceau lit un jour de plus de chaque côté, puis ne garde que
+  ses propres jours : aucun changement d'heure ne peut déplacer un
+  relevé dans le mauvais morceau (testé à la nuit du 29 mars) ;
+- toute la réconciliation lit les relevés **dans l'ordre de la table**
+  (jamais dans celui de l'index), métrique entière ou morceau, 1 ou N
+  processus : un jour reçoit ses relevés dans le même ordre, donc la
+  même somme au dernier chiffre et le même canal choisi. Les synchros
+  gardent le choix de PostgreSQL.
+
+**Trouvé en chemin, déjà présent avant** : quand les deux canaux
+HealthKit (export natif et Health Auto Export) ont exactement autant de
+relevés un jour donné, la règle garde celui qui arrive en premier à la
+lecture. Le test du découpage sur PostgreSQL l'a montré : même valeur
+(71,05), source `apple` à 13:00 lue par l'index, `auto-export` à 20:00
+lue dans l'ordre de la table. Une synchro (lue par l'index) et une
+réconciliation peuvent donc déjà choisir des canaux différents pour un
+tel jour. La réconciliation lit maintenant toujours dans le même ordre ;
+une règle d'égalité fixe (par exemple l'export natif d'abord) rendrait
+le choix identique partout, mais changerait la valeur retenue de ces
+jours-là : c'est une décision à prendre à part.
+
+**Mesure** (machine de mesure, versions à tour de rôle, 3 fois,
+médianes) : 1 processus 7,8 s → 7,8 s (lire dans l'ordre de la table ne
+coûte rien) ; 4 processus 3,5 s → **3,2 s** (l'énergie active, 930 782
+relevés, coupée en deux : « 1/2 » 1,4 s et « 2/2 » 1,3 s). Avec 2
+processus rien n'est coupé ici (aucune métrique ne dépasse la moitié des
+relevés). Sur 4 cœurs pleins le gain reste modeste ; chez l'utilisateur
+(16 fils), il compte surtout avec `RECONCILE_PARALLEL=8`, où une métrique
+est coupée dès qu'elle dépasse 1/8 des relevés.
+
+**Mêmes résultats** : les 44 016 jours ont le même md5 (`dddedef5…`)
+avec 1, 3 et 4 processus, coupés ou non, après une lecture interrompue ;
+les tests des synchros, de Health Auto Export, du travail et de
+l'équivalence passent sur PostgreSQL. Un test coupe une métrique en deux
+et compare aux jours calculés d'un bloc (il échoue si un morceau garde
+ses jours de marge : deux processus écrivaient alors le même jour).
+
 ### 2026-09-30 (7) — lire les relevés sans la couche SQLAlchemy
 
 Pour recalculer les jours d'une métrique, on lit tous ses relevés
@@ -46,21 +99,25 @@ recalculs en profitent : réconciliation, synchro iPhone, Health Auto
 Export, saisies du travail.
 
 **Mesure** (réconciliation complète, 2,4 M relevés, à chaud, ancienne
-et nouvelle version à tour de rôle, 5 fois, médianes) :
+et nouvelle version à tour de rôle, médianes) :
 
 | Processus | avant | après |
 |---|---:|---:|
 | 1 (et chaque synchro) | 10,4 s | **7,6 s** (−27 %, 5 fois sur 5) |
-| 2 | 4,4 s | **4,0 s** (4 fois sur 5) |
-| 4 | 3,5 s | 3,5 s |
+| 2 | 5,4 s | **3,9 s** (−28 %, 3 fois sur 3) |
+| 4 | 3,9 s | **3,0 s** (−23 %, 5 fois sur 5) |
 
-Avec 4 processus sur les 4 cœurs de la machine de mesure, le processeur
-est plein (84–86 % occupé) : l'énergie active attend PostgreSQL, qui
-parcourt la table et envoie ses 930 000 lignes pendant que les cœurs
-sont pris, et le gain côté Python ne se voit plus. Chez l'utilisateur,
-plus de la moitié des 16 fils restent libres pendant une
-réconciliation : le gain y est attendu, à vérifier sur la ligne
-`reconciled`.
+**Correction.** La première version de ce tableau donnait, avec 2 et 4
+processus, 4,4 → 4,0 s et 3,5 → 3,5 s : la mesure était fausse. Les
+processus d'une réconciliation sont lancés par `python -m`, qui lit
+d'abord le code du dossier courant ; lancée depuis le dossier du
+nouveau code, l'« ancienne » version avait donc des processus qui
+exécutaient le nouveau. Chaque version est maintenant lancée depuis son
+propre dossier (vérifié : l'ancienne parle un autre protocole et aurait
+échoué avec les processus de la nouvelle). La mesure à 1 processus, où
+tout se passe dans le processus principal, n'était pas touchée. Rien de
+tel sur une vraie installation : le code et le dossier y sont les
+mêmes.
 
 **Mêmes résultats** : les 44 016 jours écrits ont le même md5
 (`dddedef5…`) avec 1 et 4 processus, et après une lecture interrompue

@@ -14,7 +14,7 @@ in the web form after the scale synced) is kept.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Sequence
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -32,8 +32,11 @@ from app.services.daily_acc import HEALTHKIT, Acc, reduce_day
 #: Sources that only ever wrote daily roll-ups of HealthKit samples.
 _ROLLUP_SOURCES = HEALTHKIT | {"watch"}
 _STREAM = get_settings().rollup_read_block
+_DAY = timedelta(days=1)
 
 Days = dict[date, dict[str, Acc]]
+#: Local days [first, stop) of a part of a metric; None: no bound.
+Span = tuple[date | None, date | None]
 
 
 async def user_zone(session: AsyncSession, user_id: str) -> ZoneInfo:
@@ -51,9 +54,19 @@ async def rebuild(
     metric: MetricDefinition,
     tz: ZoneInfo,
     since: date | None = None,
+    span: Span | None = None,
+    in_table_order: bool = False,
 ) -> int:
-    """Recompute a metric's daily values from its samples; count days."""
-    days = await _scan(session, user_id, metric, tz, since)
+    """Recompute a metric's daily values from its samples; count days.
+
+    ``span``: only these local days, a part of the metric (the reconcile
+    computes the parts of a large metric at the same time).
+    ``in_table_order``: the samples read in the table's order, never the
+    index's, whatever the size of the metric (the reconcile, whole or in
+    parts: a day's samples always come in the same order).
+    """
+    ordered = in_table_order or span is not None
+    days = await _scan(session, user_id, metric, tz, (since, span, ordered))
     if not days:
         return 0
     existing = await _existing(session, user_id, metric.id, min(days))
@@ -72,9 +85,38 @@ async def _scan(
     user_id: str,
     metric: MetricDefinition,
     tz: ZoneInfo,
-    since: date | None,
+    bounds: tuple[date | None, Span | None, bool],
 ) -> Days:
     """Stream the metric's numeric samples into per-day, per-source sums."""
+    since, span, ordered = bounds
+    stmt = _samples(user_id, metric, tz, since, span)
+    days: Days = {}
+    async for rows in _blocks(session, stmt, in_table_order=ordered):
+        _fold(days, rows, tz, metric.unit)
+    if span is None:
+        return days
+    first, stop = span  # the day more read on each side is dropped
+    return {
+        day: sources
+        for day, sources in days.items()
+        if (first is None or day >= first) and (stop is None or day < stop)
+    }
+
+
+def _samples(
+    user_id: str,
+    metric: MetricDefinition,
+    tz: ZoneInfo,
+    since: date | None,
+    span: Span | None,
+) -> Select[Any]:
+    """The metric's numeric samples, from ``since``, around ``span``.
+
+    Bounds in UTC: SQLite drops the zone of a bound time (local midnight
+    would then be read as UTC midnight). Around a span, a day more on
+    each side: every sample of its days is read, whatever the zone's
+    offset or a change of time that day.
+    """
     stmt = select(
         HealthSample.start_at,
         HealthSample.value_num,
@@ -85,19 +127,23 @@ async def _scan(
         HealthSample.metric_id == metric.id,
         HealthSample.value_num.is_not(None),
     )
+    first, stop = span or (None, None)
     if since is not None:
-        # In UTC: SQLite drops the zone of a bound time (local midnight
-        # would then be read as UTC midnight).
-        floor = datetime.combine(since, time.min, tzinfo=tz).astimezone(UTC)
-        stmt = stmt.where(HealthSample.start_at >= floor)
-    days: Days = {}
-    async for rows in _blocks(session, stmt):
-        _fold(days, rows, tz, metric.unit)
-    return days
+        stmt = stmt.where(HealthSample.start_at >= _midnight(since, tz))
+    if first is not None:
+        stmt = stmt.where(HealthSample.start_at >= _midnight(first - _DAY, tz))
+    if stop is not None:
+        stmt = stmt.where(HealthSample.start_at < _midnight(stop + _DAY, tz))
+    return stmt
+
+
+def _midnight(day: date, tz: ZoneInfo) -> datetime:
+    """The start of a local day, in UTC."""
+    return datetime.combine(day, time.min, tzinfo=tz).astimezone(UTC)
 
 
 async def _blocks(
-    session: AsyncSession, stmt: Select[Any]
+    session: AsyncSession, stmt: Select[Any], in_table_order: bool = False
 ) -> AsyncIterator[Sequence[Any]]:
     """The statement's plain rows, a block at a time (not a row, nor all).
 
@@ -106,7 +152,9 @@ async def _blocks(
     which took half the time of reading a million samples. The table is
     read from its start, not from where another read of it stopped: the
     samples always come in the same order, so a day's sum is the same to
-    the last digit.
+    the last digit. ``in_table_order``: never in the index's order (a
+    full or bitmap scan): a part of a metric and the whole metric give
+    each day's samples in the same order, so the same values.
     """
     connection = await session.connection()
     if connection.dialect.name != "postgresql":
@@ -117,6 +165,8 @@ async def _blocks(
             yield rows
         return
     await connection.execute(text("SET LOCAL synchronize_seqscans = off"))
+    if in_table_order:
+        await connection.execute(text("SET LOCAL enable_indexscan = off"))
     compiled = stmt.compile(dialect=connection.dialect)
     params = [compiled.params[name] for name in compiled.positiontup or ()]
     raw = (await connection.get_raw_connection()).driver_connection
@@ -125,6 +175,8 @@ async def _blocks(
     cursor = await raw.cursor(str(compiled), *params)  # in the transaction
     while rows := await cursor.fetch(_STREAM):
         yield rows
+    if in_table_order:  # the rest of the transaction as the planner likes
+        await connection.execute(text("SET LOCAL enable_indexscan TO DEFAULT"))
 
 
 def _fold(
