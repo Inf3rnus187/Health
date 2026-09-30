@@ -107,6 +107,15 @@ class Tuning(BaseSettings):
     #: A trace this close to one already kept is the same (seconds).
     trace_same_time_s: float = Field(60.0, ge=0)
 
+    # --- Reconcile after an update of the hub -------------------------------
+    #: A new version (GIT_COMMIT) reconciles each user's history once, in
+    #: the background (the catalogue or the day's rule may have changed).
+    reconcile_after_update: bool = True
+    #: The first check waits this long after the worker starts (the API
+    #: applies the migrations meanwhile); then once an hour, at this minute.
+    reconcile_after_update_delay_s: int = Field(120, ge=0)
+    reconcile_check_minute: int = Field(35, ge=0, le=59)
+
     # --- Memory ---------------------------------------------------------------
     #: Leave the objects a process keeps for its whole life out of Python's
     #: garbage collections, once started (app/core/memory.py).

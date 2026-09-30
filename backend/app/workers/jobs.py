@@ -25,6 +25,17 @@ async def reconcile_data(ctx: dict[str, Any], user_id: str) -> str:
     return user_id
 
 
+async def reconcile_after_update(ctx: dict[str, Any]) -> int:
+    """After an update of the hub, reconcile each user once.
+
+    At the worker's start and every hour (services/reconcile_update.py).
+    """
+    from app.core.db import SessionFactory
+    from app.services import reconcile_update
+
+    return await reconcile_update.run_pending(SessionFactory)
+
+
 async def analyze_meal(
     ctx: dict[str, Any], meal_id: str, stamp: str | None = None
 ) -> str:

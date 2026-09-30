@@ -6,6 +6,7 @@ photo-analysis and report jobs are registered here from Phase 4 onward.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Any
 
 from arq import cron
@@ -14,7 +15,12 @@ from arq.connections import RedisSettings
 from app.core import memory
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
-from app.workers.jobs import analyze_document, analyze_meal, reconcile_data
+from app.workers.jobs import (
+    analyze_document,
+    analyze_meal,
+    reconcile_after_update,
+    reconcile_data,
+)
 
 _log = get_logger("worker")
 
@@ -76,12 +82,26 @@ async def _startup(ctx: dict[str, Any]) -> None:
     configure_logging()
     _log.info("worker_started")
     await _resume_documents()
+    await _check_version(ctx)
     memory.freeze()
 
 
 async def _shutdown(ctx: dict[str, Any]) -> None:
     """Give the frozen objects back before the worker ends."""
     memory.thaw()
+
+
+async def _check_version(ctx: dict[str, Any]) -> None:
+    """Reconcile after an update, once the API has migrated the base."""
+    wait = timedelta(seconds=get_settings().reconcile_after_update_delay_s)
+    try:
+        await ctx["redis"].enqueue_job(
+            "reconcile_after_update",
+            _job_id=f"reconcile-after-update:{get_settings().git_commit}",
+            _defer_by=wait,
+        )
+    except Exception as exc:  # noqa: BLE001 - the hourly check follows
+        _log.warning("reconcile_check_not_queued", error=str(exc))
 
 
 async def _resume_documents() -> None:
@@ -108,6 +128,7 @@ class WorkerSettings:
         analyze_document,
         analyze_meal,
         reconcile_data,
+        reconcile_after_update,
         generate_report,
         import_apple_health_job,
     ]
@@ -118,7 +139,13 @@ class WorkerSettings:
             refresh_foods,
             hour={get_settings().food_refresh_hour},
             minute={get_settings().food_refresh_minute},
-        )
+        ),
+        # Every hour: a user left to reconcile after an update (a failure,
+        # a worker restarted before its turn).
+        cron(
+            reconcile_after_update,
+            minute={get_settings().reconcile_check_minute},
+        ),
     ]
     on_startup = _startup
     on_shutdown = _shutdown

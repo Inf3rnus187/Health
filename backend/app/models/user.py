@@ -22,3 +22,8 @@ class User(UUIDMixin, TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     mfa_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    #: The hub's version (GIT_COMMIT) of this user's last full reconcile:
+    #: a new version reconciles again, once (services/reconcile_update.py).
+    reconciled_commit: Mapped[str | None] = mapped_column(
+        String(40), nullable=True
+    )

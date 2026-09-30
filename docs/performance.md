@@ -272,15 +272,16 @@ sur le processus occupé : d'où les pages « Chargement… » qui duraient.
 
 ## Ce qui reste lent, et pourquoi
 
-- **La réconciliation complète** : 11,9 s pour 2,4 millions de relevés.
-  Elle tourne dans le `worker`, pas dans l'API : les pages restent
-  libres pendant ce temps. Aller à quelques secondes demanderait de
-  ranger les relevés par jour **dans PostgreSQL** : le découpage en
-  jours locaux (fuseau horaire), la conversion des unités (dont la règle
-  « 0,97 → 97 % ») et le calcul par source existeraient alors **deux
-  fois**, en Python (synchros, SQLite des tests) et en SQL. Deux copies
-  d'une règle finissent par diverger, et une divergence donnerait des
-  valeurs du jour différentes selon le chemin : pas fait.
+- **La réconciliation complète** : 11,9 s pour 2,4 millions de relevés
+  et 21 métriques sur la machine de mesure ; 20,3 s chez l'utilisateur
+  (2 008 285 relevés, 60 métriques, 25 319 jours). Elle tourne dans le
+  `worker`, pas dans l'API : les pages restent libres pendant ce temps.
+  Son journal donne sa durée et ses cinq métriques les plus longues
+  (`docker compose logs worker | grep reconciled` : `seconds`,
+  `slowest`). Aller à quelques secondes demanderait de ranger les
+  relevés par jour **dans PostgreSQL** : la règle du jour existerait
+  alors en deux copies (SQL et Python), qui finiraient par diverger.
+  **Écarté** ([idées](idees.md)).
 - **`/measurements` sans aucun filtre** (≈ 0,4 s) : 44 000 valeurs,
   12,9 Mo. Le site filtre toujours ; seul un assistant MCP appelé sans
   métrique ni date le demande.

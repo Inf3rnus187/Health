@@ -63,6 +63,10 @@ compose --profile mcp up -d --build mcp` :
   (les migrations s'appliquent au démarrage de l'API), `frontend/` ou
   `nginx/` → `web`, `mcp/` → `mcp` (s'il tourne), `docker-compose.yml` →
   tout ; documentation seule → rien ;
+- après une mise à jour de `backend/`, le worker réconcilie une fois
+  l'historique de chaque compte, en arrière-plan, 2 min après son
+  démarrage (`RECONCILE_AFTER_UPDATE`, plus bas) ; les pages restent
+  utilisables ;
 - `./update.sh --check` dit seulement ce qu'une mise à jour apporterait.
 
 **Pendant la mise à jour.** L'API redémarre quelques secondes (après
@@ -518,6 +522,9 @@ Plus grand : moins d'allers-retours avec la base, plus de mémoire.
 | `UPDATE_FRESH_S` | `180` | Le cron de `update.sh` est « actif » s'il est passé depuis moins longtemps. |
 | `UPDATE_TAKEN_S` | `180` | Une demande « Installer » non prise en charge dans ce délai est signalée. |
 | `UPDATE_RUNNING_S` | `1200` | Une mise à jour « en cours » depuis plus longtemps est considérée comme arrêtée. |
+| `RECONCILE_AFTER_UPDATE` | `true` | Après une mise à jour qui touche `backend/` (nouvelle version `GIT_COMMIT` du worker), l'historique de chaque compte est réconcilié **une fois**, en arrière-plan : le catalogue ou la règle du jour ont pu changer, et les synchros ne recalculent que les jours qu'elles touchent. `false` : seulement après un import de fichier Apple ou par « Réconcilier ». |
+| `RECONCILE_AFTER_UPDATE_DELAY_S` | `120` | Le premier contrôle attend ce temps après le démarrage du worker (l'API applique les migrations pendant ce temps). |
+| `RECONCILE_CHECK_MINUTE` | `35` | Puis un contrôle chaque heure à cette minute : un compte laissé de côté (réconciliation en échec, worker redémarré avant son tour) est repris. Un compte déjà réconcilié sur cette version (à la main aussi) ne l'est pas de nouveau. |
 
 #### Travail, sommeil, médicaments, photos, dépenses
 

@@ -137,9 +137,15 @@ dossier CDA importé (recherche, pages).
   clés en double, aligne les données sur le catalogue Apple, recalcule
   chaque valeur journalière depuis le brut. **Aucune IA.** Elle se lance
   **toute seule** à la fin de chaque import Apple Santé (`export.zip` ou
-  zip SimpleHealthExportCSV) ; le bouton sert après une mise à jour du
-  hub, ou pour tout recalculer à la main. Elle recompte aussi les
-  relevés bruts depuis zéro, en contrôle de l'inventaire.
+  zip SimpleHealthExportCSV), et **une fois après chaque mise à jour du
+  hub** qui touche le serveur (le catalogue ou la règle du jour ont pu
+  changer), en arrière-plan. Les synchros (app iPhone, Health Auto
+  Export) n'en ont pas besoin : chacune recalcule les jours qu'elle
+  touche, avec la même règle. Le bouton sert à tout recalculer à la
+  main. Elle recompte aussi les relevés bruts depuis zéro, en contrôle
+  de l'inventaire. Sa durée et ses métriques les plus longues sont dans
+  le journal : `docker compose logs worker | grep reconciled`
+  (`seconds`, `slowest`).
 - **Une mesure en détail** : choisir une métrique → graphique + chiffres.
 - **Données brutes** : relevés paginés, filtrables par métrique et dates.
 

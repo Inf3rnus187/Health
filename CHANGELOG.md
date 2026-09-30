@@ -387,6 +387,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Each account's history is reconciled once after an update of the
+  hub** (for everyone, in the background). An update may change the
+  catalogue or the day's rule, while the syncs only recompute the days
+  they touch. The worker checks 2 min after it starts, then every hour,
+  and reconciles the accounts not yet reconciled on this version
+  (`users.reconciled_commit`, migration `0028`). A failure is tried
+  again the next hour, and a reconcile done by hand counts. Settings:
+  `RECONCILE_AFTER_UPDATE`, `RECONCILE_AFTER_UPDATE_DELAY_S`,
+  `RECONCILE_CHECK_MINUTE`. The `reconciled` log line now gives the time
+  taken (`seconds`) and the five slowest metrics (`slowest`).
 - **Nothing that sizes, times or paces the hub is fixed in the code**
   (for the administrator): every value — database connections, worker
   jobs and time limits, gunicorn timeouts, nginx sizes, time limits,

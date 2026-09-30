@@ -44,6 +44,7 @@ erDiagram
     bool is_active
     string mfa_secret
     bool mfa_enabled
+    string reconciled_commit
   }
   metric_definitions {
     string id PK
@@ -123,7 +124,9 @@ follow the specification §5.2 (plus `auth_sessions`, see
   or `user`), `timezone` (`Europe/Paris` by default: every local day is
   computed in it), `unit_system` (`metric`), `is_active` (an inactive
   account can neither log in nor use its tokens), `mfa_secret` /
-  `mfa_enabled` (optional TOTP, migration `0003`).
+  `mfa_enabled` (optional TOTP, migration `0003`), `reconciled_commit`
+  (the hub's version, `GIT_COMMIT`, of the account's last full
+  reconcile: a new version reconciles it once more, migration `0028`).
 - `measurements` — besides the typed value columns: `recorded_at` (the
   time sent with the value, else when it was written; a counter added
   to for the user's current day — `POST /sync/tally` — takes the time
@@ -377,3 +380,4 @@ fresh database built from the live models is left untouched (ADR‑0004).
 | `0025_samples_user_start` | Index `ix_samples_user_start` on `health_samples (user_id, start_at)` ([performance](performance.md)). |
 | `0026_meal_analysis_after` | `meals.analysis_after` (a reading put off, POST /meals `analysis_delay_min`). |
 | `0027_sample_counts` | `sample_counts` and its `health_samples` triggers, filled from the samples (the table locked against writes meanwhile: 1.8 s for 2.4 million samples) ([performance](performance.md)). |
+| `0028_user_reconciled_commit` | `users.reconciled_commit` (the version of the account's last full reconcile). |

@@ -5,19 +5,29 @@ reste à décider, et comment le faire proprement. Une entrée terminée part
 dans le [CHANGELOG](../CHANGELOG.md) et sort d'ici. Les phases déjà
 livrées sont dans la [feuille de route](architecture.md#roadmap).
 
-## En attente d'une décision
-
-### Réconciliation calculée dans PostgreSQL
-
-Aujourd'hui : 11,9 s pour 2,4 millions de relevés, dans le worker, sans
-bloquer les pages ([performance](performance.md)). Descendre à quelques
-secondes demande de ranger les relevés par jour dans PostgreSQL : le
-découpage en jours locaux, la conversion des unités (dont « 0,97 →
-97 % ») et le calcul par source existeraient alors **en deux copies**,
-Python (synchros, tests) et SQL, qui finiraient par diverger. Pas fait
-tant que ce risque n'est pas accepté.
-
 ## Décidé, rien à coder
+
+### Réconciliation calculée dans PostgreSQL : écartée (30/09/2026)
+
+**L'idée.** Ranger les relevés par jour dans PostgreSQL pour passer la
+réconciliation complète de 12 à 20 s (2 M relevés, 60 métriques chez
+l'utilisateur) à quelques secondes (estimation, non mesurée).
+
+**Pourquoi c'est écarté.** Aujourd'hui il n'existe **qu'une copie** de
+la règle du jour (`daily_rollup.rebuild`) : la réconciliation, la synchro
+iPhone, Health Auto Export et une saisie à la main l'appellent toutes.
+Un même jour ne peut donc pas avoir deux valeurs selon le chemin. La
+version SQL créerait une deuxième copie (découpage en jours locaux avec
+le fuseau, conversions d'unités dont « 0,97 → 97 % », calcul par
+source), gardée en Python pour les synchros et les tests : deux copies
+finissent par diverger. Le gain (quelques secondes sur une opération
+rare, en arrière-plan) ne vaut pas ce risque. Règle retenue : les
+performances s'améliorent sans rien casser ni ajouter de risque.
+
+**Ce qui a été fait à la place.** La réconciliation se relance seule une
+fois après chaque mise à jour du hub qui touche le serveur, et son
+journal donne sa durée et ses métriques les plus longues (`seconds`,
+`slowest`) pour voir où part le temps sur de vraies données.
 
 ### Poids unitaire d'un repas à l'autre (décidé le 30/09/2026)
 

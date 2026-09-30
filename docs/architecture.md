@@ -194,5 +194,5 @@ Phases, per the specification (§18):
 9. **Hardening & docs** — MFA, media encryption, RGPD erasure, SBOM+scans in CI. ✅
 
 Next — not started, or waiting for a decision: [ideas and work to come](idees.md)
-(drive baskets when the stock runs low, reconcile in SQL, the planned
-hardening).
+(drive baskets when the stock runs low, Leclerc first; the planned
+hardening; what was decided against, and why).
