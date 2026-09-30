@@ -122,7 +122,9 @@ async def get_meal(meal_id: str) -> Any:
     ``reference`` (computed by the hub): each nutrient against the
     official daily reference (``day``, ``day_pct``) and the meal type's
     indicative part of the day (``low``–``high``, ``verdict`` below /
-    within / above; none for a snack). See nutrition_references.
+    within / above; none for a snack). See nutrition_references. The
+    remarks (``positives``, ``watch``) agree with these verdicts: one
+    that said the opposite was replaced by the hub's sentence.
     """
     return await client.get(f"/meals/{meal_id}")
 

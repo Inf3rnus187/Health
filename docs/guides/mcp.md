@@ -277,7 +277,9 @@ du serveur et de `log_meal`) :
    et, avec `reference`, où chaque nutriment se situe face aux repères
    officiels du type de repas (« sodium 657 mg : dans le repère d'un
    dîner, 600–800 mg »), en rappelant que ce sont ceux d'un
-   adulte-type.
+   adulte-type. Les remarques de l'analyse (`positives`, `watch`)
+   disent déjà la même chose que `reference` : le hub remplace celles
+   qui contredisaient un verdict.
 
 Même si l'assistant oublie `foods`, le hub reconnaît une fiche nommée
 dans la description (son nom, un autre nom, ou « un pavé de saumon »

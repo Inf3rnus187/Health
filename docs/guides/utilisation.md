@@ -296,6 +296,12 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
     une prescription. Le total du jour (en tête de journée) se compare
     aux repères d'une journée entière.
   - Calculé par le hub à chaque affichage, jamais par l'IA.
+  - **L'avis de l'IA dit la même chose** : elle reçoit ces verdicts
+    avant d'écrire, et une remarque qui les contredit (« apport modéré
+    en protéines » quand la colonne dit « au-dessus ») est remplacée
+    par la phrase du hub : « Protéines 36 g : au-dessus de la part d'un
+    dîner (15–20 g). ». Changer le type (« Modifier ») relance
+    l'analyse : l'avis suit le nouveau repère.
   - Sources :
     [règlement (UE) 1169/2011 (EUR-Lex)](https://eur-lex.europa.eu/legal-content/FR/ALL/?uri=celex%3A32011R1169) ·
     [ANSES 2016, fibres (PNNS)](https://www.anses.fr/fr/system/files/NUT2012SA0103Ra-1.pdf) ·

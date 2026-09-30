@@ -72,7 +72,7 @@ leurs étiquettes et Open Food Facts, la table Ciqual) — quantités et \
 nutriments EXACTS :
 {items}
 Total du repas : {totals}
-{products}
+{references}{products}
 Donne une note de 0 (à éviter) à 10 (idéal), un verdict en une phrase, \
 les points positifs, les points à surveiller. Les chiffres ci-dessus \
 sont exacts : ne les recalcule jamais ; pour citer une quantité ou un \
@@ -141,8 +141,13 @@ def assessment(
     context: dict[str, Any],
     items: list[dict[str, Any]],
     totals: dict[str, float],
+    references: str = "",
 ) -> str:
-    """The judgement prompt: the code's exact values, the product details."""
+    """The judgement prompt: the code's exact values, the product details.
+
+    ``references``: the verdicts of the reference table
+    (:func:`meal_verdicts.prompt_lines`), which the remarks follow.
+    """
     seen = context.get("seen") or []
     return _ASSESS.format(
         meal=context["meal"],
@@ -152,6 +157,7 @@ def assessment(
         conditions=", ".join(context.get("conditions") or []) or "aucune",
         items="\n".join(f"- {_line(item)}" for item in items) or "(rien)",
         totals=_values(totals),
+        references=references,
         products=_products(context.get("foods") or []),
     )
 

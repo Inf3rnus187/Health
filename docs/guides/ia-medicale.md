@@ -221,13 +221,29 @@ Ce n'est ni un diagnostic ni une prescription : le texte le rappelle.
    70 g, saturés 20 g ; ANSES : fibres 30 g ; OMS : sodium < 2 000 mg)
    et à la part indicative du type de repas (fiche ANSES : petit-déjeuner
    15–25 %, déjeuner et dîner 30–40 % ; aucune pour une collation —
-   l'ANSES n'a pu recommander aucune répartition en 2019). Le modèle ne
-   reçoit pas ces repères : l'avis et la colonne sont indépendants. Ce
-   ne sont pas des besoins personnels. Le repère suit le **type** du
+   l'ANSES n'a pu recommander aucune répartition en 2019). Ce ne sont
+   pas des besoins personnels.
+   **L'avis suit ces verdicts** (`services/meal_verdicts.py`) : le
+   modèle reçoit, avant d'écrire, chaque nutriment avec son verdict
+   calculé (« Protéines 36 g : au-dessus de la part d'un dîner
+   (15–20 g) »), la consigne « au-dessus se dit élevé, dans la part
+   modéré, en dessous faible ; ne les contredis jamais ». Puis le code
+   vérifie ce qu'il a écrit : une remarque qui qualifie **un** nutriment
+   (faible, peu, pauvre, léger · modéré, raisonnable, correct, pas trop
+   · élevé, riche, important, trop, excès…) à l'opposé de son verdict
+   est **remplacée par la phrase du code** (« apport modéré en
+   protéines » → « Protéines 36 g : au-dessus de la part d'un dîner
+   (15–20 g). ») ; dans le verdict en une phrase, seul le morceau faux
+   est retiré (« Repas équilibré, apport modéré en protéines » →
+   « Repas équilibré. »). Une remarque qui nomme plusieurs nutriments
+   ou aucun niveau net dans un même membre de phrase n'est pas touchée
+   (« riche en protéines mais pauvre en fibres » est lu en deux
+   morceaux). Une collation n'a pas de part : rien à suivre. Le repère suit le **type** du
    repas ; sans type dit, le hub le déduit de l'heure locale (avant
    10 h 30 petit-déjeuner, avant 15 h déjeuner, avant 18 h collation,
    sinon dîner) : un dîner pris à 5 h sans le dire est comparé à un
-   petit-déjeuner (15–25 %). « Modifier » corrige le type.
+   petit-déjeuner (15–25 %). « Modifier » corrige le type et relance
+   l'analyse : l'avis suit alors le nouveau type.
    Sources :
    [règlement (UE) 1169/2011 (EUR-Lex)](https://eur-lex.europa.eu/legal-content/FR/ALL/?uri=celex%3A32011R1169) ·
    [ANSES 2016, fibres (PNNS)](https://www.anses.fr/fr/system/files/NUT2012SA0103Ra-1.pdf) ·

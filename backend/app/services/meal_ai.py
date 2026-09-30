@@ -41,7 +41,9 @@ from app.services import (
     meal_nutrition,
     meal_prompt,
     meal_quantity,
+    meal_reference,
     meal_remarks,
+    meal_verdicts,
     meals,
 )
 from app.services.daily_rollup import user_zone
@@ -131,7 +133,8 @@ async def analyze(session: AsyncSession, meal: Meal) -> dict[str, Any]:
     )
     items, rejected = _valued(answer, context, portions)
     totals = meal_nutrition.totals(items)
-    judged = await _judge(context, items, totals, bool(portions))
+    reference = meal_reference.compare({"totals": totals}, meal.meal_type)
+    judged = await _judge(context, items, totals, bool(portions), reference)
     await meal_nutrients.record(session, meal, totals)
     return {
         "model": ollama.text_model(),
@@ -152,16 +155,21 @@ async def _judge(
     items: list[dict[str, Any]],
     totals: dict[str, float],
     trusted: bool,
+    reference: dict[str, Any] | None,
 ) -> dict[str, Any]:
     """The judgement, written from the values the code computed.
 
-    Checked: a doubt on known labels is cut, and so is a quoted quantity
-    that is not one the code computed.
+    The model is given the reference table's verdicts. Checked: a doubt
+    on known labels is cut, a quoted quantity that is not one the code
+    computed too, and a remark against a verdict becomes the code's own
+    sentence (:mod:`meal_verdicts`).
     """
-    prompt = meal_prompt.assessment(context, items, totals)
+    lines = meal_verdicts.prompt_lines(reference)
+    prompt = meal_prompt.assessment(context, items, totals, lines)
     answer = await ollama.text_json(prompt, max_tokens=_JUDGE_TOKENS)
     known = meal_remarks.numbers(items, totals, context["foods"])
-    return meal_nutrition.assessment(answer, trusted=trusted, known=known)
+    judged = meal_nutrition.assessment(answer, trusted=trusted, known=known)
+    return meal_verdicts.align(judged, reference)
 
 
 def _valued(

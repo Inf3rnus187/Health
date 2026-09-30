@@ -62,6 +62,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A meal's AI remarks agree with its reference table** (for
+  everyone): the table could say « protéines : au-dessus de la part du
+  dîner » while a remark said « apport modéré ». The model now gets each
+  nutrient's verdict before it writes, and a remark that calls a
+  nutrient low, moderate or high against its verdict is replaced by the
+  hub's sentence (« Protéines 36 g : au-dessus de la part d'un dîner
+  (15–20 g). »); in the one-line verdict only the wrong part is cut.
+  Snacks have no part, nothing to follow. `reference.rows` also gives
+  the meal's `value`.
 - **A proof of 25 to 30 MB is accepted**: nginx stopped it at 25 MB
   (413) while the API allows 30; nginx now takes 32 MB by default.
 - **The work reports write the rules in force**: « Jours de plus de

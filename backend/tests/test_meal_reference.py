@@ -54,6 +54,7 @@ def test_a_breakfast_has_its_part_and_a_snack_only_the_day() -> None:
     snack = meal_reference.compare({"totals": TOTALS}, "snack")
     assert snack is not None and snack["share_pct"] is None
     assert snack["rows"]["sodium_mg"] == {
+        "value": TOTALS["sodium_mg"],
         "day": 2000,
         "unit": "mg",
         "kind": "limit",

@@ -68,10 +68,11 @@ SOURCES: dict[str, dict[str, str]] = {
 def compare(analysis: Any, meal_type: str) -> dict[str, Any] | None:
     """The meal's totals against the day's references and its meal's part.
 
-    Each row: ``day`` (the reference a day), ``unit``, ``kind``,
-    ``source``, ``day_pct`` (the meal's share of it) and, for a meal
-    type with a part (not a snack), ``low``/``high`` (that part) and
-    ``verdict`` (below, within, above). None without totals.
+    Each row: ``value`` (the meal's), ``day`` (the reference a day),
+    ``unit``, ``kind``, ``source``, ``day_pct`` (the meal's share of it)
+    and, for a meal type with a part (not a snack), ``low``/``high``
+    (that part) and ``verdict`` (below, within, above). None without
+    totals. The AI's remarks follow these verdicts (:mod:`meal_verdicts`).
     """
     totals = analysis.get("totals") if isinstance(analysis, dict) else None
     if not isinstance(totals, dict):
@@ -107,6 +108,7 @@ def _row(
         return None
     day, unit, kind, source = DAILY[key]
     row: dict[str, Any] = {
+        "value": value,
         "day": day,
         "unit": unit,
         "kind": kind,
