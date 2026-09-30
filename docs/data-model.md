@@ -233,7 +233,9 @@ curated value per day), these keep **every** imported record:
 
 - `health_samples` — every raw quantity/category sample (metric, exact
   `start_at`, value, unit, device); millions of rows, indexed
-  `(user_id, metric_id, start_at)`.
+  `(user_id, metric_id, start_at)` (one metric over a period) and
+  `(user_id, start_at)` (every metric by date, newest first: Données'
+  « Tout ce qui est enregistré »; migration `0025`).
 - `workouts` — one row per session (type, duration, energy, distance,
   `source`: `apple` or `healthkit`).
 - `health_samples.external_id` / `workouts.external_id` — the id a row
@@ -358,3 +360,4 @@ fresh database built from the live models is left untouched (ADR‑0004).
 | `0022_food_stock` | `food_stock_moves`. |
 | `0023_food_product_info` | `foods.product_info`. |
 | `0024_healthkit_ids` | `health_samples.external_id`, `workouts.external_id` + unique `(user_id, external_id)` indexes. |
+| `0025_samples_user_start` | Index `ix_samples_user_start` on `health_samples (user_id, start_at)` ([performance](performance.md)). |

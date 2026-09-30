@@ -7,6 +7,7 @@ to ~29 % of outliers) keep one bad day from faking a trend.
 
 from __future__ import annotations
 
+from bisect import bisect_left, bisect_right
 from datetime import date, timedelta
 from statistics import median
 
@@ -23,11 +24,13 @@ def daily_median(samples: list[Point]) -> list[Point]:
 
 def rolling_median(points: list[Point], days: int) -> list[Point]:
     """Median of each point's trailing ``days``-day window."""
+    ordered = sorted(points)
+    dates = [d for d, _ in ordered]
+    values = [v for _, v in ordered]
     out: list[Point] = []
     for day, _ in points:
-        start = day - timedelta(days=days - 1)
-        window = [v for d, v in points if start <= d <= day]
-        out.append((day, median(window)))
+        start = bisect_left(dates, day - timedelta(days=days - 1))
+        out.append((day, median(values[start : bisect_right(dates, day)])))
     return out
 
 

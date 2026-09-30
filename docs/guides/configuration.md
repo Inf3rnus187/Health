@@ -70,7 +70,9 @@ chaque mise à jour qui la touche). Une page ouverte à ce moment-là
 affiche « Le hub ne répond pas (redémarrage après une mise à jour ?) —
 nouvel essai toutes les 5 s… » et revient seule, **toujours connectée** :
 seule une session refusée par le hub (jeton révoqué, 14 jours sans
-visite) ramène à la page de connexion.
+visite) ramène à la page de connexion. Une mise à jour qui ajoute un
+index sur les relevés le construit au démarrage : quelques secondes de
+plus (≈ 3 s pour 2,35 millions de relevés, migration `0025`).
 
 **Notification dans la page.** Toutes les 5 minutes, la page compare sa
 version à celle installée (`/version.json`, une par construction de
@@ -226,6 +228,14 @@ requête d'une seconde ou plus finit par `slow`. Les lignes de nginx
 de l'API ; `-` pour une page ou un fichier servi par nginx seul) : une
 page lente avec un `api=` court vient du réseau ou du navigateur, un
 `api=` long de l'API.
+
+nginx garde en mémoire une réponse de l'API jusqu'à 2 Mo (32 × 64 Ko,
+`proxy_buffers` dans `nginx/default.conf`) : une photo de repas n'est
+plus écrite sur le disque (« buffered to a temporary file »). Les
+tampons sont pris au besoin et rendus à la fin de la requête ; une
+réponse plus grande (export, rapport PDF) déborde dans un fichier
+temporaire comme avant, sans erreur. Les durées mesurées avant / après
+chaque optimisation sont dans [performance.md](../performance.md).
 
 ## Variables d'environnement
 

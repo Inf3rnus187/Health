@@ -38,6 +38,10 @@ A feature is not done until it is documented **in the same commit**:
    with its migration (`backend/alembic/versions`, guarded, ADR-0004).
 7. **AI**: a change of what a model reads or answers goes in
    `docs/guides/ia-medicale.md`.
+8. **Performance**: a change made for speed is measured before and
+   after (method and fake data set in `docs/performance.md`), its
+   answers compared with the old code's, and both figures go in
+   `docs/performance.md` and the CHANGELOG entry.
 
 The pre-commit hook `docs-updated` refuses a commit that changes code
 without CHANGELOG.md and a hand-written document.

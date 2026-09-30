@@ -53,6 +53,8 @@ class HealthSample(UUIDMixin, TimestampMixin, Base):
             "ix_samples_user_metric_start", "user_id", "metric_id", "start_at"
         ),
         Index("ix_samples_user_source", "user_id", "source"),
+        #: Every metric by date (Données), newest first.
+        Index("ix_samples_user_start", "user_id", "start_at"),
         Index(
             "ux_samples_user_external", "user_id", "external_id", unique=True
         ),

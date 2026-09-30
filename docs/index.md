@@ -19,6 +19,8 @@
   - [MCP tools](mcp-tools.md) — every tool and its parameters.
 - [Architecture](architecture.md) — services, request flow, roadmap.
 - [Data model](data-model.md) — the fixed schema and the dynamic registry.
+- [Performances](performance.md) — mesures avant / après de chaque
+  optimisation, méthode, ce qui reste lent, tampons nginx.
 - [Architecture Decision Records](adr/) — the structural decisions.
 - [CLAUDE.md](../CLAUDE.md) — the rules for every change: privacy,
   isolation, and the documents each commit must update.

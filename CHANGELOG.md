@@ -43,13 +43,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Pages with years of Apple data load several times faster** (2.35
+  million fake samples over 5 years, median of 3 calls, see
+  [docs/performance.md](docs/performance.md)): Santé → Activité 1 274 →
+  116 ms, Accueil 614 → 118 ms, Santé → Corps 580 → 80 ms, Santé → Cœur
+  361 → 50 ms, Données « Tout ce qui est enregistré » 294 → 84 ms. Rolling
+  averages read only their own window instead of the whole series for
+  each day; a metric's view reads the days it shows (counts, first day
+  and sources come from the database) instead of years of rows; a new
+  index `(user_id, start_at)` on raw samples (migration `0025`, about 3 s
+  to build on 2.35 million samples at the first start) lists every
+  metric by date without sorting. Same numbers as before: every answer
+  compared byte for byte.
 - **Pages no longer wait behind a photo or a scan**: turning an iPhone
   photo into a JPEG (a meal's, a food's, a progress photo), reading a
   label or a barcode, and the OCR of documents, receipts and lab PDFs
   ran inside the API's process and froze it while they worked: with two
-  processes, any page request landing on the busy one waited (a meal
-  with 3 photos sent by a Shortcut: 3.6 s for a request that takes
-  20 ms). That work now runs in a thread; the API keeps answering.
+  processes, any page request landing on the busy one waited. While a
+  meal with 3 large photos is received, the slowest small request took
+  3 650 ms; it now takes 22 ms ([docs/performance.md](docs/performance.md)).
+  That work runs in a thread; the API keeps answering.
 - **An update no longer logs you out**: a page loaded while the API
   restarted (502) threw the session away; it now shows « Le hub ne
   répond pas (redémarrage après une mise à jour ?) — nouvel essai toutes
@@ -294,8 +307,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   line — UTC time (like nginx's), client, request, status, milliseconds;
   a request of a second or more ends with `slow`. nginx's lines end with
   `rt=` (total) and `api=` (the API's share). Every other API log line
-  starts with its UTC time too. nginx keeps a meal photo in memory
-  instead of a temporary file (« buffered to a temporary file »).
+  starts with its UTC time too. nginx keeps an API answer of up to 2 MB
+  (a meal photo) in memory instead of a temporary file (« buffered to a
+  temporary file »); a larger one still spills to a file, as before.
 - **Sync from your own iPhone app: `POST /sync/healthkit`** — for an app
   reading HealthKit, incremental and without duplicates:
   - `samples` keyed by their HealthKit UUID (sent again = replaced),

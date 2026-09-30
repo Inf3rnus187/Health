@@ -40,6 +40,29 @@ async def test_overview_numbers(
     assert body["day_label"] == "Moyenne du jour"
 
 
+async def test_counts_cover_all_time_and_the_series_its_window(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    await _weights(client, auth)
+    old = [
+        {"metric_key": "body.weight", "date_key": "2024-01-05", "value": 120},
+        {"metric_key": "body.weight", "date_key": "2026-08-01", "value": 110},
+    ]
+    await client.post(MEAS, json={"items": old}, headers=auth)
+    body = (
+        await client.get(
+            "/api/v1/metrics/body.weight/overview",
+            params={"days": 30},
+            headers=auth,
+        )
+    ).json()
+    assert body["days_count"] == 5 and body["first_day"] == "2024-01-05"
+    assert body["sources"] == [{"source": "manual", "count": 5}]
+    assert [p["value"] for p in body["series"]] == [108.0, 107.0, 106.0]
+    assert body["avg30"] == pytest.approx(107.0)  # 08-01: 50 days before
+    assert body["day"] == {"date": "2026-09-20", "value": 106.0}
+
+
 async def test_home_tile_matches_the_overview(
     client: AsyncClient, auth: dict[str, str]
 ) -> None:

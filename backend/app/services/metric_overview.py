@@ -12,7 +12,7 @@ from datetime import date, timedelta
 from statistics import fmean
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.measurement import Measurement
@@ -28,7 +28,7 @@ DAY_LABEL = {
     "max": "Maximum du jour",
 }
 
-Row = tuple[date, float, str]
+Row = tuple[date, float]
 
 
 async def overview(
@@ -36,12 +36,13 @@ async def overview(
 ) -> dict[str, Any]:
     """Everything a page shows about one metric."""
     metric = await metrics_service.get_metric(session, key)
-    newest, rows = await _daily(session, user_id, metric.id)
     out = _head(metric)
-    if newest is None or not rows:
+    newest = await _newest(session, user_id, metric.id)
+    if newest is None:
         return out
+    last = newest.date_key
+    rows = await _since(session, user_id, metric.id, last, max(days, 30))
     reading = await readings.latest(session, user_id, metric, newest)
-    last = rows[-1][0]
     out.update(
         latest={
             "value": round(reading.value, 2),
@@ -51,9 +52,10 @@ async def overview(
         },
         day={"date": last.isoformat(), "value": rows[-1][1]},
         **_stats(rows, last),
+        **await _history(session, user_id, metric.id),
         series=[
             {"date": d.isoformat(), "value": round(v, 2)}
-            for d, v, _ in rows
+            for d, v in rows
             if d > last - timedelta(days=days)
         ],
     )
@@ -75,40 +77,75 @@ def _head(metric: MetricDefinition) -> dict[str, Any]:
     }
 
 
-async def _daily(
+def _numeric(user_id: str, metric_id: str) -> list[Any]:
+    """The user's numeric daily values of one metric."""
+    return [
+        Measurement.user_id == user_id,
+        Measurement.metric_id == metric_id,
+        Measurement.value_num.is_not(None),
+    ]
+
+
+async def _newest(
     session: AsyncSession, user_id: str, metric_id: str
-) -> tuple[Measurement | None, list[Row]]:
-    """The newest daily row and every numeric daily value, oldest first."""
+) -> Measurement | None:
+    """The newest numeric daily row (the day shown, the latest reading)."""
     result = await session.execute(
         select(Measurement)
-        .where(
-            Measurement.user_id == user_id,
-            Measurement.metric_id == metric_id,
-            Measurement.value_num.is_not(None),
-        )
-        .order_by(Measurement.date_key)
+        .where(*_numeric(user_id, metric_id))
+        .order_by(Measurement.date_key.desc(), Measurement.recorded_at.desc())
+        .limit(1)
     )
-    measured = list(result.scalars().all())
-    rows = [(m.date_key, float(m.value_num or 0.0), m.source) for m in measured]
-    return (measured[-1] if measured else None), rows
+    return result.scalar_one_or_none()
+
+
+async def _since(
+    session: AsyncSession, user_id: str, metric_id: str, last: date, days: int
+) -> list[Row]:
+    """The daily values of the last ``days`` days, oldest first.
+
+    Only the window a page shows is read, not years of values: the
+    counts over all time come from :func:`_history`.
+    """
+    result = await session.execute(
+        select(Measurement.date_key, Measurement.value_num)
+        .where(
+            *_numeric(user_id, metric_id),
+            Measurement.date_key > last - timedelta(days=days),
+        )
+        .order_by(Measurement.date_key, Measurement.recorded_at)
+    )
+    return [(day, float(value)) for day, value in result.all()]
+
+
+async def _history(
+    session: AsyncSession, user_id: str, metric_id: str
+) -> dict[str, Any]:
+    """Days counted, first day and sources over all time, by the database."""
+    result = await session.execute(
+        select(
+            Measurement.source,
+            func.count(),
+            func.min(Measurement.date_key),
+        )
+        .where(*_numeric(user_id, metric_id))
+        .group_by(Measurement.source)
+    )
+    found = sorted(result.all(), key=lambda row: (-row[1], row[2], row[0]))
+    return {
+        "days_count": sum(int(row[1]) for row in found),
+        "first_day": min(row[2] for row in found).isoformat(),
+        "sources": [{"source": row[0], "count": int(row[1])} for row in found],
+    }
 
 
 def _stats(rows: list[Row], last: date) -> dict[str, Any]:
-    """Averages, range, coverage and sources."""
-    week = [v for d, v, _ in rows if d > last - timedelta(days=7)]
-    month = [v for d, v, _ in rows if d > last - timedelta(days=30)]
-    sources: dict[str, int] = {}
-    for _, _, source in rows:
-        sources[source] = sources.get(source, 0) + 1
+    """7 / 30-day averages and the 30-day range."""
+    week = [v for d, v in rows if d > last - timedelta(days=7)]
+    month = [v for d, v in rows if d > last - timedelta(days=30)]
     return {
         "avg7": round(fmean(week), 2) if week else None,
         "avg30": round(fmean(month), 2) if month else None,
         "min30": round(min(month), 2) if month else None,
         "max30": round(max(month), 2) if month else None,
-        "days_count": len(rows),
-        "first_day": rows[0][0].isoformat(),
-        "sources": [
-            {"source": s, "count": n}
-            for s, n in sorted(sources.items(), key=lambda kv: -kv[1])
-        ],
     }

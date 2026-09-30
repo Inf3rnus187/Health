@@ -75,11 +75,20 @@ async def aggregate(
     agg: str,
     window_days: int,
 ) -> list[tuple[date, float]]:
-    """Return a rolling-aggregated series for a numeric metric."""
-    rows = await query(session, user_id, metric_key=metric_key)
-    points = [
-        (r.date_key, r.value_num) for r in rows if r.value_num is not None
-    ]
+    """Return a rolling-aggregated series for a numeric metric.
+
+    Reads only the day and the value (no full rows): a dashboard builds
+    one series per metric of its domain.
+    """
+    metric = await metrics_service.get_metric(session, metric_key)
+    result = await session.execute(
+        select(Measurement.date_key, Measurement.value_num).where(
+            Measurement.user_id == user_id,
+            Measurement.metric_id == metric.id,
+            Measurement.value_num.is_not(None),
+        )
+    )
+    points = [(day, float(value)) for day, value in result.all()]
     return rolling(points, window_days, agg)
 
 
