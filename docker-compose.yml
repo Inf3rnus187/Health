@@ -10,6 +10,21 @@ x-db-url: &db_url >-
 services:
   db:
     image: postgres:16-alpine
+    # PostgreSQL's memory (docs/guides/configuration.md, « Base de
+    # données »): its own defaults unless set in .env.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=${DB_SHARED_BUFFERS:-128MB}
+      - -c
+      - effective_cache_size=${DB_EFFECTIVE_CACHE_SIZE:-4GB}
+      - -c
+      - work_mem=${DB_WORK_MEM:-4MB}
+      - -c
+      - maintenance_work_mem=${DB_MAINTENANCE_WORK_MEM:-64MB}
+    # Shared memory of parallel queries (Docker's 64 MB is too small once
+    # work_mem grows); a ceiling, nothing is taken until used.
+    shm_size: ${DB_SHM_SIZE:-256mb}
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}

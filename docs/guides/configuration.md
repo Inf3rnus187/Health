@@ -390,6 +390,18 @@ réglages.
 | `WORKER_MAX_TRIES` | `1` | Essais d'une tâche (`1` : pas de reprise automatique). |
 | `WORKER_KEEP_RESULT_S` | `3600` | Durée pendant laquelle Redis garde le résultat d'une tâche. |
 
+PostgreSQL lui-même (`docker-compose.yml`, service `db`) : ses propres
+valeurs par défaut tant que `.env` ne dit rien. Un changement redémarre
+la base au prochain `docker compose up -d` (quelques secondes).
+
+| Variable | Défaut | Rôle |
+|----------|--------|------|
+| `DB_SHARED_BUFFERS` | `128MB` | Mémoire de PostgreSQL pour garder tables et index. Environ 25 % de la mémoire libre de la machine au plus. Les grandes lectures d'une table entière n'y passent pas (petit tampon à part) : c'est le cache du système qui les sert. |
+| `DB_EFFECTIVE_CACHE_SIZE` | `4GB` | Ce que PostgreSQL peut compter trouver en cache (le sien + celui du système) pour choisir ses index. **N'alloue rien.** |
+| `DB_WORK_MEM` | `4MB` | Mémoire d'un tri ou d'un regroupement avant de passer par le disque, **par opération** : une requête peut en utiliser plusieurs. |
+| `DB_MAINTENANCE_WORK_MEM` | `64MB` | Mémoire des créations d'index et des nettoyages (migrations, `VACUUM`). |
+| `DB_SHM_SIZE` | `256mb` | Mémoire partagée des requêtes parallèles (`/dev/shm` du conteneur ; Docker n'en donne que 64 Mo). Un plafond : rien n'est pris sans usage. |
+
 #### Serveur API (gunicorn, `docker-compose.yml`)
 
 | Variable | Défaut | Rôle |

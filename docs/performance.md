@@ -23,6 +23,36 @@ la méthode ci-dessous, et noté ici (règle de [CLAUDE.md](../CLAUDE.md)).
 
 ## Journal
 
+### 2026-09-30 (4) — la mémoire de PostgreSQL, réglable
+
+Les réglages mémoire de PostgreSQL passent dans `.env` (`DB_SHARED_BUFFERS`,
+`DB_EFFECTIVE_CACHE_SIZE`, `DB_WORK_MEM`, `DB_MAINTENANCE_WORK_MEM`,
+`DB_SHM_SIZE`). Par défaut : les valeurs de PostgreSQL, rien ne change.
+
+**Mesure** : machine de mesure, mêmes données (2,4 M relevés), chaque
+réglage à chaud, puis juste après avoir vidé le cache du système
+(`echo 3 > /proc/sys/vm/drop_caches`, ce qui arrive quand la mémoire
+manque).
+
+| | 128 Mo (défaut) | 2 Go, cache prévu 8 Go, work_mem 32 Mo, maintenance 512 Mo |
+|---|---:|---:|
+| `count(*)`, à chaud | 67 ms | 66 ms |
+| Regroupement par métrique et source, à chaud | 203–217 ms | 236–271 ms |
+| Le même, cache du système vidé | 532 ms | 564 ms |
+| Réconciliation complète, à chaud | 10,8 s | 10,0 s |
+| La même, cache du système vidé | 11,8 s | 11,3 s |
+
+Sur cette machine (14 Go libres), **pas de gain net** :
+- les lectures d'une table entière passent par un petit tampon à part,
+  pas par `shared_buffers` ;
+- le cache du système garde déjà tout ;
+- la réconciliation passe son temps en calcul Python (un cœur), pas à
+  lire la base.
+
+Le réglage peut aider sur une machine dont le cache du système est à
+l'étroit (4 Go disponibles sur 62 chez l'utilisateur) : à vérifier sur
+place avec la ligne `reconciled` du worker (`seconds` : 17,0 s avant).
+
 ### 2026-09-30 (3) — inventaire, liste complète, tableaux de bord, réconciliation
 
 Rien de retiré : mêmes données, même précision, chaque réponse comparée

@@ -387,6 +387,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **PostgreSQL's memory is set in `.env`** (for the administrator):
+  `DB_SHARED_BUFFERS`, `DB_EFFECTIVE_CACHE_SIZE`, `DB_WORK_MEM`,
+  `DB_MAINTENANCE_WORK_MEM`, and `DB_SHM_SIZE` for parallel queries
+  (Docker's 64 MB was too small once work_mem grows; now 256 MB, a
+  ceiling). The defaults are PostgreSQL's own, so nothing changes until
+  set. Measured on the test machine with 2 GB instead of 128 MB: no net
+  gain there (reconcile 10.8 → 10.0 s, whole-table reads unchanged),
+  since table scans bypass the buffers and the OS cache already holds
+  everything. It may help a host short of cache (docs/performance.md).
 - **Each account's history is reconciled once after an update of the
   hub** (for everyone, in the background). An update may change the
   catalogue or the day's rule, while the syncs only recompute the days

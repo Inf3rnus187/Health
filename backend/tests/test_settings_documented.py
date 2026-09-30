@@ -23,6 +23,11 @@ OUTSIDE = [
     "WEB_PROXY_BUFFERS",
     "WEB_PROXY_BUSY_KB",
     "WEB_ASSETS_CACHE_DAYS",
+    "DB_SHARED_BUFFERS",
+    "DB_EFFECTIVE_CACHE_SIZE",
+    "DB_WORK_MEM",
+    "DB_MAINTENANCE_WORK_MEM",
+    "DB_SHM_SIZE",
 ]
 
 
@@ -47,3 +52,9 @@ def test_the_web_server_values_reach_nginx() -> None:
         assert f"${{{name}}}" in template, name
         assert f"${{{name}:-" in compose, name
         assert f"{name}=" in dockerfile, name
+
+
+def test_the_database_values_reach_postgresql() -> None:
+    compose = (ROOT / "docker-compose.yml").read_text()
+    for name in (n for n in OUTSIDE if n.startswith("DB_")):
+        assert f"${{{name}:-" in compose, name
