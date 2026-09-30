@@ -41,8 +41,10 @@ async def push(
     sums replace those they overlap. A cumulative type sent as samples,
     a discrete one as statistics, an unknown type or value is refused
     and counted in ``skipped`` (``type``, ``reason``, ``count``), never
-    fatal. The touched days are recomputed (``days``). Token scope
-    ``write:measurements``, in the ``Authorization`` header only.
+    fatal. The touched days are recomputed (``days``: from the first to
+    the last day the request changes, so a first sync may send years of
+    history in successive requests). Token scope ``write:measurements``,
+    in the ``Authorization`` header only.
     """
     result = await healthkit_sync.sync(session, principal.user.id, body)
     await audit.record(

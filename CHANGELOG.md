@@ -440,6 +440,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   per process (331 MB for 4); they stop with the reconcile. `1` runs
   the metrics one after the other, as before (measured: as fast as the
   old code, 10.6 and 9.7 s against 10.8 and 9.7 s).
+- **The iPhone app's first full sync no longer reads the whole history
+  again at every request** (for everyone using the app). A first sync
+  sends years of history in requests of at most 5 000 samples and 5 000
+  sums; each recomputed every touched metric from its first day received
+  up to today (a request of 2023 read 2023–2026 again, native export
+  included). Each request now recomputes only the days it changes, from
+  the first to the last, read in the table's order as the reconcile
+  reads; days left without samples are found by that recompute and
+  cleared in one statement instead of one query per day. Measured on 20
+  such requests over an existing export: 43.0–45.1 → 24.4–27.2 s, the
+  longest request 3.7–4.4 → 2.0–2.1 s, days recomputed 29 300 → 1 713;
+  the same fingerprint of all days in each run (the old code varied on
+  one day between runs, at the 17th digit).
 - **A large metric is cut into periods computed at the same time**
   (for everyone; `RECONCILE_SPLIT_MIN_SAMPLES`, 100 000). A reconcile
   cannot be faster than its largest metric, which one process computed

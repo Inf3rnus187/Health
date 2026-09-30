@@ -65,10 +65,27 @@ async def rebuild(
     index's, whatever the size of the metric (the reconcile, whole or in
     parts: a day's samples always come in the same order).
     """
+    bounds = (since, span, in_table_order)
+    return len(await rebuild_days(session, user_id, metric, tz, bounds))
+
+
+async def rebuild_days(
+    session: AsyncSession,
+    user_id: str,
+    metric: MetricDefinition,
+    tz: ZoneInfo,
+    bounds: tuple[date | None, Span | None, bool] = (None, None, False),
+) -> set[date]:
+    """:func:`rebuild`, returning the days that have numeric samples.
+
+    ``bounds``: ``(since, span, in_table_order)``. Each day returned now
+    has its value; a day not returned has no numeric sample.
+    """
+    since, span, in_table_order = bounds
     ordered = in_table_order or span is not None
     days = await _scan(session, user_id, metric, tz, (since, span, ordered))
     if not days:
-        return 0
+        return set()
     existing = await _existing(session, user_id, metric.id, min(days))
     for day, sources in days.items():
         value, source, at = reduce_day(sources, metric.aggregation_hint)
@@ -77,7 +94,7 @@ async def rebuild(
             continue
         _write(session, user_id, metric, day, (value, source, at), row)
     await session.flush()
-    return len(days)
+    return set(days)
 
 
 async def _scan(

@@ -150,6 +150,14 @@ a day's `workout.count`, `workout.total_min`, `workout.energy`,
 (samples or workouts): removed, their days recomputed; a day left
 without any sample loses the value this channel gave it.
 
+**First sync, then deltas** — the first time, the app sends the whole
+history, necessarily in successive requests (5 000 `samples` and 5 000
+`statistics` at most each); after that, only what changed. Each request
+recomputes the days it changes, from its first to its last one, not
+up to today: a request of 2023 does not read 2024–2026 again (measured
+on a first sync of 20 requests over an existing export: 43–45 s → 24–
+27 s, [performance](../performance.md)). Send the history in any order.
+
 **Answer** — how many `samples`, `statistics`, `workouts` were stored,
 `deleted` removed, `days` of daily values recomputed, and `skipped`:
 `{"type", "reason", "count"}` for each kind of line refused (unknown

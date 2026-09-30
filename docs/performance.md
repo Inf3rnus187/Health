@@ -23,6 +23,49 @@ la méthode ci-dessous, et noté ici (règle de [CLAUDE.md](../CLAUDE.md)).
 
 ## Journal
 
+### 2026-09-30 (10) — le premier envoi complet de l'app iPhone
+
+L'app iPhone de l'utilisateur envoie tout l'historique la première
+fois, puis des deltas. Une requête `POST /sync/healthkit` porte au plus
+5 000 relevés et 5 000 sommes : deux millions de relevés, c'est au moins
+400 requêtes. Chaque requête recalculait chaque métrique touchée **de son
+premier jour reçu jusqu'à aujourd'hui** : une requête de 2023 relisait
+2023–2026, export natif compris, et cela à chaque requête. Deux
+changements, sans toucher au calcul d'un jour :
+- **seuls les jours reçus** sont recalculés, du premier au dernier (les
+  jours suivants gardent leurs relevés, donc leurs valeurs), lus dans
+  l'ordre de la table comme par la réconciliation ;
+- **les jours devenus vides** (plus aucun relevé de ce canal) sont
+  trouvés par ce recalcul, qui vient de lire tous leurs relevés, et
+  effacés en une requête, au lieu d'une requête par jour (225 par
+  requête d'envoi ici).
+
+**Banc** : sur la base de mesure (export natif déjà là), 20 requêtes
+comme les enverrait l'app, les plus anciennes d'abord : chacune porte
+5 000 fréquences cardiaques (une toutes les 5 min) et 5 000 sommes
+horaires d'énergie au repos, à partir du 1ᵉʳ janvier 2023. Base remise à
+l'identique avant chaque passage ; ancienne et nouvelle version à tour
+de rôle, deux fois.
+
+| | avant | après |
+|---|---:|---:|
+| 20 requêtes | 43,0–45,1 s | **24,4–27,2 s** |
+| requête la plus longue | 3,7–4,4 s | **2,0–2,1 s** |
+| jours recalculés | 29 300 | 1 713 |
+
+**Mêmes résultats** : les deux passages de la nouvelle version donnent
+la même empreinte de tous les jours, identique au premier passage de
+l'ancienne. L'ancienne, elle, varie d'un passage à l'autre sur un jour
+(énergie au repos du 7 mai 2025 : 1221.4 ou 1221.4000000000003) : elle
+relisait tous les jours jusqu'à aujourd'hui dans l'ordre choisi par
+PostgreSQL, qui change quand les statistiques de la table bougent. Un
+test vérifie qu'un jour vidé perd bien sa valeur (il échoue sans
+l'effacement).
+
+**Ce qui reste** : l'écriture des lignes elles-mêmes (≈ 120 µs par
+relevé, dont la moitié pour le compteur de relevés tenu par la base,
+appelé à chaque ligne car SQLAlchemy les envoie une par une).
+
 ### 2026-09-30 (9) — plusieurs comptes réconciliés en même temps
 
 Le `worker` exécute jusqu'à 10 tâches à la fois (`WORKER_MAX_JOBS`).

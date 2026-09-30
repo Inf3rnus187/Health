@@ -20,7 +20,7 @@ any sample loses the value this channel had given it.
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -38,7 +38,7 @@ from app.services import (
     healthkit_stats,
     healthkit_workouts,
 )
-from app.services.healthkit_common import SOURCE, Touched
+from app.services.healthkit_common import SOURCE, Touched, chunks
 
 
 async def sync(
@@ -134,48 +134,48 @@ async def _per_metric(session: AsyncSession, user_id: str) -> list[Any]:
 async def _days(
     session: AsyncSession, user_id: str, tz: ZoneInfo, touched: Touched
 ) -> int:
-    """Recompute each touched metric from its first changed day on."""
+    """Recompute each touched metric over the days the sync changed.
+
+    From its first to its last changed day, not to today: a first sync
+    sends years of history in requests of 5 000 samples, and each
+    request recomputing from its first day to today read the whole
+    history again (days after the last one received keep their samples,
+    so their values). Read in the table's order, as the reconcile reads.
+    A changed day left without any sample loses this channel's value.
+    """
     total = 0
     for metric_id, instants in touched.metrics.items():
         metric = await session.get(MetricDefinition, metric_id)
         if metric is None:
             continue
         days = {_utc(at).astimezone(tz).date() for at in instants}
-        total += await daily_rollup.rebuild(
-            session, user_id, metric, tz, min(days)
+        span = (min(days), max(days) + timedelta(days=1))
+        found = await daily_rollup.rebuild_days(
+            session, user_id, metric, tz, (None, span, True)
         )
-        for day in days:
-            await _clear_if_empty(session, user_id, metric_id, day, tz)
+        total += len(found)
+        await _clear_empty(session, user_id, metric_id, days - found)
     return total
 
 
-async def _clear_if_empty(
-    session: AsyncSession, user_id: str, metric_id: str, day: date, tz: ZoneInfo
+async def _clear_empty(
+    session: AsyncSession, user_id: str, metric_id: str, days: set[date]
 ) -> None:
-    """Drop this channel's daily value of a day left without samples."""
-    first = datetime.combine(day, time.min, tzinfo=tz).astimezone(UTC)
-    left = await session.execute(
-        select(HealthSample.id)
-        .where(
-            HealthSample.user_id == user_id,
-            HealthSample.metric_id == metric_id,
-            HealthSample.value_num.is_not(None),
-            HealthSample.start_at >= first,
-            HealthSample.start_at < first + timedelta(days=1),
+    """Drop this channel's daily value of the days left without samples.
+
+    The recompute has just read every sample of the changed days: those
+    it found none for are empty (one statement, not one per day).
+    """
+    for part in chunks(sorted(days)):
+        await session.execute(
+            delete(Measurement).where(
+                Measurement.user_id == user_id,
+                Measurement.metric_id == metric_id,
+                Measurement.date_key.in_(part),
+                Measurement.event_id.is_(None),
+                Measurement.source == SOURCE,
+            )
         )
-        .limit(1)
-    )
-    if left.first() is not None:
-        return
-    await session.execute(
-        delete(Measurement).where(
-            Measurement.user_id == user_id,
-            Measurement.metric_id == metric_id,
-            Measurement.date_key == day,
-            Measurement.event_id.is_(None),
-            Measurement.source == SOURCE,
-        )
-    )
 
 
 def _utc(at: datetime) -> datetime:
