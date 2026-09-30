@@ -30,106 +30,116 @@ tant que ce risque n'est pas accepté.
 
 ## Idées
 
-### Paniers drive préparés quand le stock baisse
+### Paniers drive remplis par le hub quand le stock baisse
 
-**Le besoin.** Quand un aliment de « Mes aliments » passe sous un seuil,
-le hub prépare le panier de courses chez l'enseigne drive de chaque
-utilisateur (Leclerc Drive, Carrefour, Auchan, Intermarché, Courses U…).
+**Ce qui est décidé.**
+- Le hub **crée et remplit le panier** chez l'enseigne drive de chaque
+  utilisateur, rien de plus. **La commande et le paiement se font
+  toujours par l'utilisateur, dans la vraie appli de son magasin.**
+  Aucune route, aucun outil, aucune ligne de code ne commande ni ne paie.
+- **Le hub le fait tout seul**, par une tâche planifiée du worker : il
+  regarde le stock et ajoute au panier ce qui manque, quand il le faut.
+- **Le MCP du hub reçoit les outils du panier.** L'assistant de
+  l'utilisateur, qui parle au hub par ce MCP, peut ainsi lire la liste
+  de courses, chercher un produit, ajouter, retirer ou vider le panier.
+- **Chaque utilisateur saisit ses identifiants** de son enseigne dans le
+  hub ; le hub les garde et s'en sert proprement (règles plus bas).
 
 **Ce que le hub sait déjà.**
 - Le stock de chaque aliment : achats, pertes, comptages, et ce que les
   repas analysés en ont pris (`services/stock_level.py`).
 - Le code-barres (EAN) de chaque fiche et sa page Open Food Facts : de
-  quoi retrouver le même produit chez une enseigne.
+  quoi retrouver le même produit chez l'enseigne.
 - Il manque un **seuil** par aliment : il n'existe pas encore.
 
-**La réalité des enseignes.** Aucune enseigne ne publie d'API ouverte
-pour remplir le panier d'un client ; les projets de la communauté
-(références plus bas) le confirment et passent tous par le site privé
-de l'enseigne. Seule piste officielle : Intermarché (Les Mousquetaires)
-a un portail développeurs, qu'il reste à lire. Passer par le site privé
-avec la session du client :
-- va contre la plupart des conditions d'utilisation ;
-- peut casser à chaque mise à jour du site (un vérificateur Auchan est
-  mort avec le nouveau site en 2023, un serveur MCP Carrefour a été
-  archivé en 2026) ;
-- se heurte à l'anti-robot DataDome (Leclerc, Auchan) : seul un vrai
-  navigateur Chrome passe, et des appels en rafale (5 ajouts au panier
-  en parallèle) se font bloquer ; il faut un appel à la fois, à rythme
-  humain ;
-- peut faire bloquer le compte client.
+**Ce qu'il faut construire.**
 
-**Le plan, par étapes (chacune utile seule).**
+1. **Seuil et liste de courses.**
+   - Un seuil par aliment (« en racheter sous 2 boîtes ») et la quantité
+     visée (« remonter à 6 »).
+   - Une page « Liste de courses » : ce qui est sous son seuil et
+     combien en racheter.
+   - La même liste dans l'API et le MCP.
+2. **Le drive de chaque utilisateur** (page Compte → « Mon drive ») :
+   - l'enseigne, le magasin et les identifiants ;
+   - un bouton « Tester la connexion » ;
+   - l'interrupteur « Remplir le panier tout seul » ;
+   - l'heure de passage.
+3. **Le produit de l'enseigne pour chaque fiche.**
+   - Il est trouvé par le code-barres, sinon par le nom ; l'utilisateur
+     le confirme une fois et le hub le retient pour la suite.
+   - Un produit introuvable ou en rupture est signalé, jamais remplacé
+     sans son accord.
+4. **La tâche planifiée** (worker, horaire réglable dans `.env` et par
+   utilisateur), pour chaque utilisateur qui l'a activée :
+   - calculer la liste ;
+   - **lire d'abord le panier** et n'ajouter que la différence (pas de
+     double ajout d'un passage à l'autre, ni par-dessus un ajout fait à
+     la main) ;
+   - noter ce qui a été ajouté, ce qui a échoué et pourquoi, dans un
+     journal visible sur la page et lisible par le MCP.
+5. **Les outils MCP du hub** (et les routes de l'API qui vont avec) :
+   - `shopping_list` : la liste de courses ;
+   - `drive_search` : chercher un produit chez l'enseigne ;
+   - `drive_cart` : lire le panier ;
+   - `drive_add_to_cart`, `drive_update_quantity`, `drive_remove_from_cart`,
+     `drive_clear_cart` : le modifier ;
+   - `drive_fill_cart` : remplir le panier depuis la liste, maintenant ;
+   - `drive_history` : le journal des passages.
 
-1. **Seuil et liste de courses, sans rien envoyer dehors.**
-   - Un seuil par aliment (« en racheter sous 2 boîtes »).
-   - Une page « Liste de courses » : ce qui est sous son seuil, la
-     quantité pour revenir au niveau voulu, avec code-barres et marque.
-   - Export texte et partage depuis l'iPhone.
-   - L'outil MCP « que dois-je racheter ? ».
-2. **Liens vers l'enseigne choisie (au choix de chaque utilisateur).**
-   Chaque ligne ouvre la recherche de l'enseigne par code-barres ou par
-   nom ; l'utilisateur ajoute au panier sur le site. Le lien part de
-   son navigateur, pas du hub ; il ne porte que le produit.
-3. **Panier rempli par l'assistant, sur l'ordinateur de l'utilisateur
-   (la voie à privilégier).** Des serveurs MCP existent déjà pour
-   Leclerc, Auchan, Intermarché et Carrefour (références plus bas). Ils
-   tournent sur l'ordinateur de l'utilisateur et remplissent le panier
-   dans son propre navigateur Chrome, où il est déjà connecté.
-   L'assistant (Claude Desktop…) est branché sur le MCP du hub et sur
-   celui de l'enseigne : il lit la liste de courses dans le hub, puis
-   remplit le panier. Le hub n'envoie rien dehors et ne garde **aucun
-   identifiant**. Il suffit de rendre la liste lisible par l'assistant,
-   avec le code-barres, la marque, la quantité et le produit déjà acheté
-   chez cette enseigne s'il est connu. Le guide MCP dira comment
-   brancher les deux.
-4. **Panier rempli par le hub lui-même**, seulement là où une API
-   officielle ou un accès partenaire existe (portail Intermarché à
-   étudier), ou après accord explicite de l'utilisateur sur les risques
-   ci-dessus. Sans API officielle, cela demanderait un navigateur Chrome
-   dans un conteneur du hub, avec la session de chaque utilisateur :
-   c'est plus exposé à DataDome depuis un serveur, et une session vaut
-   un mot de passe.
+   Aucun outil ne commande ni ne paie, et aucun ne lit les identifiants.
+6. **Un module par enseigne**, derrière la même interface (chercher, lire
+   le panier, ajouter, changer la quantité, retirer). On commence par
+   l'enseigne de l'utilisateur.
+   - Là où une API officielle existe (portail Intermarché à étudier), on
+     l'utilise.
+   - Sinon, on fait comme les projets de la communauté : la session de
+     l'utilisateur dans un vrai Chrome, tenu par un conteneur dédié du
+     hub, un appel à la fois, à rythme humain (DataDome).
 
-Dans tous les cas, **ni commande ni paiement automatiques** : aucun des
-outils existants ne le fait, et le hub non plus. La validation et le
-paiement se font sur le site de l'enseigne.
+**Points techniques à régler (d'après les références).**
+- DataDome repère plus facilement un Chrome qui tourne sur un serveur
+  sans écran. À tester avec l'enseigne choisie avant de s'engager.
+- La première connexion peut demander un CAPTCHA ou un code reçu par
+  SMS ou e-mail : l'utilisateur le saisit une fois dans la page « Mon
+  drive », puis le hub garde la session.
+- Le site d'une enseigne change sans prévenir. Chaque module a ses tests
+  sur des réponses enregistrées. Un échec de passage est signalé dans le
+  journal, sans rien casser dans le reste du hub.
 
-**Les identifiants, s'il faut aller jusqu'à l'étape 4.**
+**Les identifiants.**
 - Chaque utilisateur saisit les siens, pour lui seul. On ne les
   enregistre que depuis une session web : pas de jeton API ni d'accès
   MCP, comme pour la gestion des jetons.
 - Ils sont chiffrés au repos, avec une clé dédiée
   (`DRIVE_CREDENTIALS_KEY`) documentée dans `.env.example`,
-  `configuration.md` et `SECURITY.md`.
+  `configuration.md` et `SECURITY.md`. La session gardée (cookies) est
+  chiffrée de la même façon, car elle vaut un mot de passe.
 - Ils ne ressortent jamais : ni dans une réponse de l'API (elle dit
   seulement « enregistré le … »), ni dans un journal, un export, un
   rapport ou un outil MCP.
-- Quand l'enseigne le permet, le hub garde un jeton de session plutôt
-  que le mot de passe ; un cookie de session se protège comme un mot de
-  passe. Une double authentification est relayée à l'utilisateur,
-  jamais contournée.
+- Une double authentification est relayée à l'utilisateur, jamais
+  contournée.
 - L'utilisateur peut les supprimer à tout moment, et ils sont effacés
   avec le compte. Chaque usage est noté dans le journal d'audit, sans le
   secret.
-- Tests : isolement entre deux comptes (fixture `member`), et aucun
-  secret dans les réponses, les journaux ni les exports.
+- Tests : isolement entre deux comptes (fixture `member`), aucun secret
+  dans les réponses, les journaux ni les exports, et aucun chemin de
+  commande ou de paiement.
 
-**Ce qui sort du hub.** Aux étapes 1 à 3, rien : la liste reste dans le
-hub, et c'est le navigateur ou l'assistant de l'utilisateur qui parle à
-l'enseigne. À l'étape 4, le produit et la quantité, rien d'autre.
-- C'est optionnel (à activer par chaque utilisateur) et documenté, selon
-  la règle du hub pour tout appel sortant.
-- Aucune donnée de santé ne part : ni repas, ni analyses, ni valeurs.
-- Un panier révèle quand même des habitudes alimentaires ; l'enseigne
-  les voit déjà quand on commande chez elle.
+**Ce qui sort du hub.**
+- Vers l'enseigne choisie, et seulement si l'utilisateur a activé son
+  drive : ses identifiants, les produits cherchés et les quantités du
+  panier.
+- Aucune donnée de santé : ni repas, ni analyses, ni valeurs.
+- C'est un appel sortant du hub, donc documenté dans `SECURITY.md` et
+  `configuration.md`, selon la règle du hub.
+- Le panier révèle des habitudes alimentaires ; l'enseigne les voit déjà
+  quand on commande chez elle.
+- Les risques (conditions d'utilisation de l'enseigne, compte bloqué)
+  sont expliqués sur la page « Mon drive » avant d'activer.
 
-**À décider.**
-- Quelles enseignes, en commençant par la tienne.
-- Jusqu'où automatiser : liste seule, liste avec liens, panier rempli par
-  l'assistant (étape 3), ou par le hub (étape 4).
-- Accepter ou non le risque « conditions d'utilisation » des étapes 3
-  et 4.
+**Reste à choisir.** L'enseigne et le magasin par lesquels commencer.
 
 **Références** (lues le 30/09/2026 ; certains sites n'étaient pas
 lisibles depuis l'environnement de travail et restent à lire).
