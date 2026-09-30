@@ -23,6 +23,51 @@ la méthode ci-dessous, et noté ici (règle de [CLAUDE.md](../CLAUDE.md)).
 
 ## Journal
 
+### 2026-09-30 (6) — la réconciliation sans temps mort
+
+Chez l'utilisateur, une réconciliation de 9,1–9,3 s (4 processus) se
+décomposait ainsi, mesurée étape par étape sur la version précédente
+(les mêmes appels que `reconcile.run`, chronométrés un à un) :
+
+| Étape | chez l'utilisateur | machine de mesure |
+|---|---:|---:|
+| catalogue + alias | 0,8–0,9 s | 0,1 s |
+| recomptage des relevés | 1,2 s | 0,6 s |
+| liste des métriques | 0,4 s | 0,2 s |
+| jours (4 processus) | 6,7–6,8 s | 3,7–3,9 s |
+| dont la plus longue métrique | 5,0–5,1 s | 3,1–3,3 s |
+
+Deux temps morts, sans rapport avec le calcul :
+- les 4 processus démarraient au début de la phase « jours » : leur
+  chargement (1 à 2 s) s'ajoutait à la plus longue métrique ;
+- le recomptage (une vérification des nombres de relevés) passait
+  seul, avant.
+
+Maintenant les processus démarrent **au début** de la réconciliation
+et chargent leur code pendant le catalogue, la fusion des alias et la
+liste (ils ne lisent rien avant qu'on leur donne une métrique), et le
+recomptage se fait dans le processus principal **pendant** que les
+autres calculent les jours. Son verrou sur les relevés dure le même
+temps qu'avant (validé dès la fin du recomptage). Le calcul des jours
+n'a pas changé d'une ligne.
+
+**Mesure** (machine de mesure, 4 processus, à chaud, les deux versions
+lancées à tour de rôle, 5 fois) : durée totale du programme,
+lancement de Python compris, médiane **5,73 s → 5,30 s**, la nouvelle
+plus rapide les 5 fois ; durée annoncée par la réconciliation
+5,2 s → 4,6 s (médiane de 3). Sur 4 cœurs, les 4 processus, le
+recomptage et PostgreSQL se partagent le processeur : le gain y est
+plus faible que chez l'utilisateur (16 fils, plus de la moitié libres),
+où il peut aller jusqu'à ≈ 2,9 s (1,7 s de démarrage et 1,2 s de
+recomptage), à vérifier sur la ligne `reconciled` ou avec la commande
+« 1 contre 4 processus » de la section (5).
+
+**Mêmes résultats** : les 44 016 jours écrits ont le même md5 qu'avant
+(`dddedef5…`) avec 1, 4 et 8 processus ; les nombres de relevés
+recomptés sont exacts (0 écart avec un `GROUP BY` sur les 2 415 530
+relevés). Un test vérifie que des nombres faussés sont bien corrigés
+pendant le calcul des jours (et échoue si le recomptage est retiré).
+
 ### 2026-09-30 (5) — la réconciliation sur plusieurs cœurs
 
 La réconciliation passait son temps en calcul Python, **sur un seul

@@ -429,6 +429,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   per process (331 MB for 4); they stop with the reconcile. `1` runs
   the metrics one after the other, as before (measured: as fast as the
   old code, 10.6 and 9.7 s against 10.8 and 9.7 s).
+- **The reconcile no longer waits for its processes nor for its count
+  check** (for everyone). Its `RECONCILE_PARALLEL` processes now start
+  at the reconcile's beginning and load their code while the catalogue,
+  the alias merge and the metric list run (1 to 2 s at the user's), and
+  the raw samples' counts are rebuilt (a check) while the processes
+  compute the days, instead of before (1.2 s at the user's); the counts'
+  lock on the samples lasts as long as before. The days' computation is
+  unchanged. Measured on the test machine (4 processes, both versions
+  in turn, 5 times): 5.73 → 5.30 s median, faster each time; the 44 016
+  days written keep the same md5 with 1, 4 and 8 processes and the
+  counts are exact. On 4 cores the gain is small; at the user's (16
+  threads, half free) up to ≈ 2.9 s of the 9.2 s may go.
 - **PostgreSQL's memory is set in `.env`** (for the administrator):
   `DB_SHARED_BUFFERS`, `DB_EFFECTIVE_CACHE_SIZE`, `DB_WORK_MEM`,
   `DB_MAINTENANCE_WORK_MEM`, and `DB_SHM_SIZE` for parallel queries

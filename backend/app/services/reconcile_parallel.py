@@ -12,8 +12,10 @@ free, so that a long one does not start alone at the end.
 Each process is a program of its own (:mod:`app.cli.rollup_worker`,
 ``python -m``): it inherits none of the worker's connections, and does
 not depend on how the reconcile was started (a worker, a script given on
-Python's input…). The processes live as long as one reconcile and each
-holds one database connection.
+Python's input…). The processes are started at the reconcile's start
+(:func:`started`): they load their code (1 to 2 s) while the reconcile's
+first steps run, and touch no data until given a metric. They live as
+long as one reconcile and each holds one database connection.
 """
 
 from __future__ import annotations
@@ -24,6 +26,8 @@ import os
 import sys
 from asyncio.subprocess import PIPE, Process
 from collections import Counter, deque
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -38,34 +42,51 @@ Spent = tuple[float, str, int]
 _ROOT = str(Path(__file__).resolve().parents[2])
 
 
-async def rebuild(
-    session: AsyncSession,
-    user_id: str,
-    metrics: list[MetricDefinition],
-    tz: ZoneInfo,
-    processes: int,
-) -> list[Spent]:
-    """Every metric's days, ``processes`` metrics at a time.
+@asynccontextmanager
+async def started(
+    user_id: str, tz: ZoneInfo, processes: int
+) -> AsyncIterator[list[Process]]:
+    """``processes`` processes, started now and stopped on leaving.
 
-    A process that fails stops the others: the metric each one was on is
-    not committed, those already done are (as one after the other).
+    On an error or a cancel they are killed: the metric each one was on
+    is not committed, those already done are (as one after the other).
     """
-    order = deque(await _largest_first(session, user_id, metrics))
-    await session.commit()  # the processes write: hold nothing open
     workers: list[Process] = []
     try:
-        for _ in range(min(processes, len(order))):
+        for _ in range(processes):
             workers.append(await _start(user_id, tz))
-        async with asyncio.TaskGroup() as group:
-            tasks = [group.create_task(_feed(w, order)) for w in workers]
+        yield workers
         for worker in workers:
-            await worker.wait()  # its input is closed: it ends by itself
+            if worker.stdin is not None:
+                worker.stdin.close()  # the ones left without a metric too
+            await worker.wait()
     finally:
         for worker in workers:
             if worker.returncode is None:  # an error or a cancel
                 worker.kill()
                 await worker.wait()
+
+
+async def rebuild(workers: list[Process], order: list[str]) -> list[Spent]:
+    """Every metric's days, each metric to the first process free.
+
+    A process that fails stops the others (see :func:`started`).
+    """
+    queue = deque(order)
+    async with asyncio.TaskGroup() as group:
+        tasks = [group.create_task(_feed(w, queue)) for w in workers]
     return [spent for task in tasks for spent in task.result()]
+
+
+async def largest_first(
+    session: AsyncSession, user_id: str, metrics: list[MetricDefinition]
+) -> list[str]:
+    """The metrics' ids, the most samples first (then by key)."""
+    samples: Counter[str] = Counter()
+    for metric_id, _, n, _, _ in await sample_counts.of_user(session, user_id):
+        samples[metric_id] += n
+    ranked = sorted(metrics, key=lambda m: (-samples[m.id], m.key))
+    return [metric.id for metric in ranked]
 
 
 async def _start(user_id: str, tz: ZoneInfo) -> Process:
@@ -101,14 +122,3 @@ async def _feed(worker: Process, order: deque[str]) -> list[Spent]:
         done.append((float(seconds), str(key), int(days)))
     stdin.close()
     return done
-
-
-async def _largest_first(
-    session: AsyncSession, user_id: str, metrics: list[MetricDefinition]
-) -> list[str]:
-    """The metrics' ids, the most samples first (then by key)."""
-    samples: Counter[str] = Counter()
-    for metric_id, _, n, _, _ in await sample_counts.of_user(session, user_id):
-        samples[metric_id] += n
-    ranked = sorted(metrics, key=lambda m: (-samples[m.id], m.key))
-    return [metric.id for metric in ranked]

@@ -5,7 +5,9 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
-from asyncio.subprocess import PIPE
+from asyncio.subprocess import PIPE, Process
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -17,11 +19,12 @@ from app.core.db import SessionFactory, engine
 from app.models.base import new_uuid, utcnow
 from app.models.health_raw import HealthSample
 from app.models.measurement import Measurement
+from app.models.sample_counts import counts
 from app.models.user import User
-from app.services import reconcile, reconcile_parallel
+from app.services import reconcile, reconcile_parallel, sample_counts
 from app.services.apple_health.metrics_cache import MetricCache
 from app.services.apple_health.spec import QUANTITY_SPECS
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 
 #: HealthKit type → (unit, samples): the largest first once ranked.
 _METRICS = {
@@ -112,7 +115,7 @@ async def test_parallel_writes_the_same_days(
     real = reconcile_parallel.rebuild
 
     async def spy(*args: Any) -> list[reconcile_parallel.Spent]:
-        used.append(args[-1])
+        used.append(len(args[0]))  # the processes it was given
         return await real(*args)
 
     monkeypatch.setattr(reconcile_parallel, "rebuild", spy)
@@ -131,7 +134,7 @@ async def test_largest_metrics_start_first() -> None:
     await _seed(admin)
     async with SessionFactory() as session:
         metrics = await reconcile._sampled(session, admin)
-        order = await reconcile_parallel._largest_first(session, admin, metrics)
+        order = await reconcile_parallel.largest_first(session, admin, metrics)
     keys = {m.id: m.key for m in metrics}
     assert [keys[i] for i in order] == [
         "heart.rate",
@@ -139,6 +142,61 @@ async def test_largest_metrics_start_first() -> None:
         "activity.steps",
         "body.weight",
     ]
+
+
+async def test_more_processes_than_metrics(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """8 processes for 4 metrics: the same days, every process ends."""
+    admin = await _user(get_settings().admin_email)
+    await _seed(admin)
+    monkeypatch.setattr(get_settings(), "reconcile_parallel", 1)
+    await _reconcile(admin)
+    expected = await _days(admin)
+    await _wipe(admin)
+    ended: list[int | None] = []
+    real = reconcile_parallel.started
+
+    @asynccontextmanager
+    async def spy(*args: Any) -> AsyncIterator[list[Process]]:
+        async with real(*args) as workers:
+            yield workers
+        ended.extend(worker.returncode for worker in workers)
+
+    monkeypatch.setattr(reconcile_parallel, "started", spy)
+    monkeypatch.setattr(get_settings(), "reconcile_parallel", 8)
+    await _reconcile(admin)
+    assert await _days(admin) == expected
+    assert ended == [0] * 8
+
+
+async def test_counts_rebuilt_while_days_are_computed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The raw counts are still checked and made exact, meanwhile."""
+    admin = await _user(get_settings().admin_email)
+    await _seed(admin)
+    async with SessionFactory() as session:
+        truth = sorted(await sample_counts.of_user(session, admin))
+        await session.execute(update(counts).values(n=999))
+        await session.commit()
+    monkeypatch.setattr(get_settings(), "reconcile_parallel", 2)
+    await _reconcile(admin)
+    async with SessionFactory() as session:
+        assert sorted(await sample_counts.of_user(session, admin)) == truth
+
+
+async def test_one_metric_starts_no_process(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    admin = await _user(get_settings().admin_email)
+    async with SessionFactory() as session:
+        await reconcile.run(session, admin)  # no sample at all
+        assert await reconcile._processes(session, admin) == 0
+    monkeypatch.setattr(get_settings(), "reconcile_parallel", 4)
+    await _seed(admin)
+    async with SessionFactory() as session:
+        assert await reconcile._processes(session, admin) == 4
 
 
 async def test_a_metric_removed_meanwhile_writes_nothing() -> None:
