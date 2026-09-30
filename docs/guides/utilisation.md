@@ -143,7 +143,10 @@ dossier CDA importé (recherche, pages).
   Export) n'en ont pas besoin : chacune recalcule les jours qu'elle
   touche, avec la même règle. Le bouton sert à tout recalculer à la
   main. Elle recompte aussi les relevés bruts depuis zéro, en contrôle
-  de l'inventaire. Sa durée et ses métriques les plus longues sont dans
+  de l'inventaire. Elle recalcule plusieurs métriques en même temps
+  (4 par défaut, réglage `RECONCILE_PARALLEL`), chacune sur un cœur du
+  processeur : environ deux fois plus vite, avec exactement les mêmes
+  valeurs. Sa durée et ses métriques les plus longues sont dans
   le journal : `docker compose logs worker | grep reconciled`
   (`seconds`, `slowest`).
 - **Une mesure en détail** : choisir une métrique → graphique + chiffres.

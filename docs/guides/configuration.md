@@ -339,7 +339,7 @@ nginx (`X-Real-IP`) et la durée de la requête.
 | Variable | Rôle |
 |----------|------|
 | `WEB_PORT` | Port de l'interface (`8082`). |
-| `API_WORKERS` | Processus de l'API (`4`). Environ un par cœur ; 8 au plus avec les 100 connexions par défaut de PostgreSQL (`DB_POOL_SIZE` + `DB_MAX_OVERFLOW` par processus, 10 par défaut, plus celles du `worker`). Mesures : [performance.md](../performance.md). |
+| `API_WORKERS` | Processus de l'API (`4`). Environ un par cœur ; 8 au plus avec les 100 connexions par défaut de PostgreSQL (`DB_POOL_SIZE` + `DB_MAX_OVERFLOW` par processus, 10 par défaut, plus celles du `worker` et, pendant une réconciliation, `RECONCILE_PARALLEL`). Mesures : [performance.md](../performance.md). |
 | `VITE_MAP_KEY` | Clé MapTiler gratuite pour le fond de carte (rebuild `web`). |
 | `VITE_TILE_URL` / `VITE_TILE_ATTRIB` | Autre fournisseur de tuiles ; `none` = tracé seul. |
 
@@ -383,7 +383,7 @@ réglages.
 | Variable | Défaut | Rôle |
 |----------|--------|------|
 | `DB_POOL_SIZE` | `5` | Connexions PostgreSQL gardées ouvertes par processus (API ou worker). |
-| `DB_MAX_OVERFLOW` | `5` | Connexions en plus pendant un pic, par processus. Total ≈ (`API_WORKERS` + 1) × (`DB_POOL_SIZE` + `DB_MAX_OVERFLOW`) : rester sous les 100 connexions de PostgreSQL. |
+| `DB_MAX_OVERFLOW` | `5` | Connexions en plus pendant un pic, par processus. Total ≈ (`API_WORKERS` + 1) × (`DB_POOL_SIZE` + `DB_MAX_OVERFLOW`) + `RECONCILE_PARALLEL` : rester sous les 100 connexions de PostgreSQL (4 × 10 + 10 + 4 = 54 par défaut). |
 | `DB_POOL_TIMEOUT_S` | `30` | Attente d'une connexion libre avant l'erreur. |
 | `WORKER_MAX_JOBS` | `10` | Tâches de fond menées en même temps par le worker. |
 | `WORKER_JOB_TIMEOUT_S` | `7200` | Durée maximale d'une tâche (un gros import Apple). |
@@ -537,6 +537,7 @@ Plus grand : moins d'allers-retours avec la base, plus de mémoire.
 | `RECONCILE_AFTER_UPDATE` | `true` | Après une mise à jour qui touche `backend/` (nouvelle version `GIT_COMMIT` du worker), l'historique de chaque compte est réconcilié **une fois**, en arrière-plan : le catalogue ou la règle du jour ont pu changer, et les synchros ne recalculent que les jours qu'elles touchent. `false` : seulement après un import de fichier Apple ou par « Réconcilier ». |
 | `RECONCILE_AFTER_UPDATE_DELAY_S` | `120` | Le premier contrôle attend ce temps après le démarrage du worker (l'API applique les migrations pendant ce temps). |
 | `RECONCILE_CHECK_MINUTE` | `35` | Puis un contrôle chaque heure à cette minute : un compte laissé de côté (réconciliation en échec, worker redémarré avant son tour) est repris. Un compte déjà réconcilié sur cette version (à la main aussi) ne l'est pas de nouveau. |
+| `RECONCILE_PARALLEL` | `4` | Nombre de métriques qu'une réconciliation recalcule **en même temps**, chacune dans son propre processus (un cœur du processeur et une connexion à la base chacun, environ 85 Mo de mémoire chacun, pendant la réconciliation seulement). Même règle, mêmes jours, au chiffre près : seul le temps change (environ 10 s → 5 s avec 4 sur la machine de mesure, [performance](../performance.md)). Les métriques qui ont le plus de relevés partent en premier. Au-delà du nombre de cœurs libres, aucun gain. `1` : une métrique après l'autre, comme avant. Les synchros n'en dépendent pas. |
 
 #### Travail, sommeil, médicaments, photos, dépenses
 

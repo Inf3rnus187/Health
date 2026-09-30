@@ -18,7 +18,7 @@ from datetime import UTC, date, datetime, time
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -93,6 +93,11 @@ async def _scan(
     days: Days = {}
     # Plain rows (no ORM loading: a rebuild reads millions of them).
     connection = await session.connection()
+    if connection.dialect.name == "postgresql":
+        # A large table is read from its start, not from where another
+        # read of it stopped: the samples always come in the same order,
+        # so a day's sum is the same to the last digit.
+        await connection.execute(text("SET LOCAL synchronize_seqscans = off"))
     result = await connection.stream(stmt.execution_options(yield_per=_STREAM))
     async for rows in result.partitions():  # a block at a time, not a row
         _fold(days, rows, tz, metric.unit)

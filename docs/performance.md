@@ -23,6 +23,73 @@ la méthode ci-dessous, et noté ici (règle de [CLAUDE.md](../CLAUDE.md)).
 
 ## Journal
 
+### 2026-09-30 (5) — la réconciliation sur plusieurs cœurs
+
+La réconciliation passait son temps en calcul Python, **sur un seul
+cœur** : chaque relevé est lu, converti dans l'unité de la métrique,
+puis ajouté à son jour (16,6 s chez l'utilisateur, dont 3,9 s pour la
+seule énergie au repos). Les métriques ne partagent rien : chacune
+n'écrit que ses propres jours. Elles sont donc maintenant recalculées
+`RECONCILE_PARALLEL` à la fois (4 par défaut), chacune dans son propre
+processus, avec sa propre connexion et **la même fonction**
+(`daily_rollup.rebuild`, inchangée). Les métriques qui ont le plus de
+relevés partent en premier, pour qu'une longue ne démarre pas seule à
+la fin. Les processus sont lancés en `spawn` (un interpréteur neuf, qui
+n'hérite d'aucune connexion du worker) et s'arrêtent avec la
+réconciliation.
+
+**Mesure** : machine de mesure (4 cœurs), 2,4 M relevés factices,
+21 métriques, à chaud. Chaque réglage est lancé à tour de rôle avec
+l'ancien code (arbre git du commit précédent, importé par `PYTHONPATH`),
+trois fois, puis on garde la médiane.
+
+| `RECONCILE_PARALLEL` | 1ʳᵉ série | 2ᵉ série |
+|---|---:|---:|
+| ancien code | 10,8 s | 9,7 s |
+| `1` (une métrique après l'autre) | 10,6 s | 9,7 s |
+| `2` | — | 6,3 s |
+| `3` | — | 4,9 s |
+| `4` (défaut) | 5,4 s | 5,2 s |
+
+Sur 4 cœurs, 3 et 4 processus se valent : PostgreSQL et le processus
+principal ont aussi besoin d'un cœur, et la plus grosse métrique
+(énergie active, 3 à 4 s) fixe un plancher. Sur une machine avec plus
+de cœurs libres (16 fils chez l'utilisateur), 4 garde de la marge.
+
+**Mémoire et connexions** : 4 processus prennent 331 Mo au total au
+pic (environ 85 Mo chacun, relevé dans `/proc` toutes les 0,2 s) et une
+connexion chacun ; il n'en reste aucun une fois la réconciliation
+finie.
+
+**Mêmes résultats** : la table `measurements` est vidée de ses jours
+Apple, recalculée, puis exportée triée (`COPY … ORDER BY`) et comparée
+par md5. Les 44 016 lignes sont **identiques octet pour octet** avec
+1, 2 et 4 processus, et aussi quand une lecture de la table a été
+interrompue juste avant (6 passages, même md5).
+
+**Un écart qui existait déjà, corrigé** : pour une grosse métrique,
+PostgreSQL lit toute la table, en commençant là où la lecture précédente
+s'est arrêtée (`synchronize_seqscans`). Après une lecture interrompue
+(un curseur fermé en route), l'**ancien code** donnait donc 4 ou
+5 jours différents sur 44 016, au 13ᵉ chiffre (1243.550000000001
+contre 1243.5500000000009 kcal) : une somme de nombres à virgule dépend
+de l'ordre. Avec plusieurs lectures en même temps, cela arrivait à
+chaque fois. La lecture d'un recalcul part maintenant toujours du début
+de la table (`SET LOCAL synchronize_seqscans = off`, pour cette
+transaction seulement) : même ordre, mêmes sommes, sans coût mesurable
+(la ligne `1` ci-dessus).
+
+**À vérifier chez toi**, après la mise à jour (la réconciliation
+automatique d'après mise à jour passe deux minutes après le démarrage
+du worker) :
+
+```bash
+docker compose logs worker --since 30m | grep reconciled
+```
+
+`seconds` était de 16,6 s ; `slowest` donne maintenant le temps de
+chaque métrique dans son processus.
+
 ### 2026-09-30 (4) — la mémoire de PostgreSQL, réglable
 
 Les réglages mémoire de PostgreSQL passent dans `.env` (`DB_SHARED_BUFFERS`,
@@ -302,16 +369,19 @@ sur le processus occupé : d'où les pages « Chargement… » qui duraient.
 
 ## Ce qui reste lent, et pourquoi
 
-- **La réconciliation complète** : 11,9 s pour 2,4 millions de relevés
-  et 21 métriques sur la machine de mesure ; 20,3 s chez l'utilisateur
-  (2 008 285 relevés, 60 métriques, 25 319 jours). Elle tourne dans le
+- **La réconciliation complète** : environ 5 s pour 2,4 millions de
+  relevés et 21 métriques sur la machine de mesure avec 4 processus
+  (10 s sur un seul cœur) ; 16,6 s chez l'utilisateur avant le passage
+  en parallèle (2 008 285 relevés, 60 métriques). Elle tourne dans le
   `worker`, pas dans l'API : les pages restent libres pendant ce temps.
   Son journal donne sa durée et ses cinq métriques les plus longues
   (`docker compose logs worker | grep reconciled` : `seconds`,
-  `slowest`). Aller à quelques secondes demanderait de ranger les
-  relevés par jour **dans PostgreSQL** : la règle du jour existerait
-  alors en deux copies (SQL et Python), qui finiraient par diverger.
-  **Écarté** ([idées](idees.md)).
+  `slowest`). La plus grosse métrique fixe le plancher (3,9 s chez
+  l'utilisateur pour l'énergie au repos) : un seul processus la
+  calcule. Descendre plus bas demanderait de ranger les relevés par
+  jour **dans PostgreSQL** : la règle du jour existerait alors en deux
+  copies (SQL et Python), qui finiraient par diverger. **Écarté**
+  ([idées](idees.md)).
 - **`/measurements` sans aucun filtre** (≈ 0,4 s) : 44 000 valeurs,
   12,9 Mo. Le site filtre toujours ; seul un assistant MCP appelé sans
   métrique ni date le demande.

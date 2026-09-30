@@ -1,0 +1,142 @@
+"""Several metrics rebuilt at once: the same days as one after the other."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+from typing import Any
+from zoneinfo import ZoneInfo
+
+import pytest
+from app.core.config import get_settings
+from app.core.db import SessionFactory
+from app.models.base import new_uuid, utcnow
+from app.models.health_raw import HealthSample
+from app.models.measurement import Measurement
+from app.models.user import User
+from app.services import reconcile, reconcile_parallel
+from app.services.apple_health.metrics_cache import MetricCache
+from app.services.apple_health.spec import QUANTITY_SPECS
+from sqlalchemy import delete, select
+
+#: HealthKit type → (unit, samples): the largest first once ranked.
+_METRICS = {
+    "HKQuantityTypeIdentifierHeartRate": ("count/min", 60),
+    "HKQuantityTypeIdentifierActiveEnergyBurned": ("kcal", 40),
+    "HKQuantityTypeIdentifierStepCount": ("count", 30),
+    "HKQuantityTypeIdentifierBodyMass": ("kg", 10),
+}
+
+
+async def _user(email: str) -> str:
+    async with SessionFactory() as session:
+        user = (
+            await session.execute(select(User).where(User.email == email))
+        ).scalar_one()
+        return user.id
+
+
+async def _seed(user_id: str) -> None:
+    """Samples of four metrics over a few days, in two HealthKit channels."""
+    start = datetime(2026, 3, 1, 5, 0, tzinfo=UTC)
+    async with SessionFactory() as session:
+        for kind, (unit, n) in _METRICS.items():
+            metric_id = await MetricCache().id_for(
+                session, QUANTITY_SPECS[kind]
+            )
+            for i in range(n):
+                session.add(
+                    HealthSample(
+                        id=new_uuid(),
+                        user_id=user_id,
+                        metric_id=metric_id,
+                        start_at=start + timedelta(hours=7 * i),
+                        value_num=0.1 * i + 70.3,
+                        unit=unit,
+                        source="apple" if i % 3 else "auto-export",
+                        created_at=utcnow(),
+                    )
+                )
+        await session.commit()
+
+
+async def _days(user_id: str) -> list[tuple[Any, ...]]:
+    """The user's daily rows, sorted: what the pages show."""
+    async with SessionFactory() as session:
+        rows = await session.execute(
+            select(
+                Measurement.metric_id,
+                Measurement.date_key,
+                Measurement.source,
+                Measurement.value_num,
+                Measurement.recorded_at,
+            )
+            .where(Measurement.user_id == user_id)
+            .order_by(Measurement.metric_id, Measurement.date_key)
+        )
+        return [tuple(row) for row in rows.all()]
+
+
+async def _wipe(user_id: str) -> None:
+    async with SessionFactory() as session:
+        await session.execute(
+            delete(Measurement).where(Measurement.user_id == user_id)
+        )
+        await session.commit()
+
+
+async def _reconcile(user_id: str) -> dict[str, Any]:
+    async with SessionFactory() as session:
+        return await reconcile.run(session, user_id)
+
+
+async def test_parallel_writes_the_same_days(
+    monkeypatch: pytest.MonkeyPatch, member: dict[str, str]
+) -> None:
+    """3 processes or 1: the same rows, and only the user's own."""
+    admin = await _user(get_settings().admin_email)
+    other = await _user("membre@example.com")
+    await _seed(admin)
+    await _seed(other)
+    monkeypatch.setattr(get_settings(), "reconcile_parallel", 1)
+    one_by_one = await _reconcile(admin)
+    expected = await _days(admin)
+    assert one_by_one["metrics"] == 4 and len(expected) == one_by_one["days"]
+    await _wipe(admin)
+
+    used: list[int] = []
+    real = reconcile_parallel.rebuild
+
+    async def spy(*args: Any) -> list[reconcile_parallel.Spent]:
+        used.append(args[-1])
+        return await real(*args)
+
+    monkeypatch.setattr(reconcile_parallel, "rebuild", spy)
+    monkeypatch.setattr(get_settings(), "reconcile_parallel", 3)
+    at_once = await _reconcile(admin)
+    assert used == [3]
+    assert await _days(admin) == expected
+    assert at_once["days"] == one_by_one["days"]
+    assert len(at_once["slowest"]) == 4
+    assert await _days(other) == []  # the other account is not touched
+
+
+async def test_largest_metrics_start_first() -> None:
+    """Ranked by samples, so a long metric never starts last."""
+    admin = await _user(get_settings().admin_email)
+    await _seed(admin)
+    async with SessionFactory() as session:
+        metrics = await reconcile._sampled(session, admin)
+        order = await reconcile_parallel._largest_first(session, admin, metrics)
+    keys = {m.id: m.key for m in metrics}
+    assert [keys[i] for i in order] == [
+        "heart.rate",
+        "activity.active_energy",
+        "activity.steps",
+        "body.weight",
+    ]
+
+
+async def test_a_metric_removed_meanwhile_writes_nothing() -> None:
+    admin = await _user(get_settings().admin_email)
+    spent = await reconcile_parallel._one(admin, new_uuid(), ZoneInfo("UTC"))
+    assert spent[2] == 0

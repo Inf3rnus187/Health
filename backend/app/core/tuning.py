@@ -115,6 +115,9 @@ class Tuning(BaseSettings):
     #: applies the migrations meanwhile); then once an hour, at this minute.
     reconcile_after_update_delay_s: int = Field(120, ge=0)
     reconcile_check_minute: int = Field(35, ge=0, le=59)
+    #: Metrics whose days a reconcile recomputes at the same time, each in
+    #: its own process (one core, one connection); 1: one after the other.
+    reconcile_parallel: int = Field(4, ge=1, le=32)
 
     # --- Memory ---------------------------------------------------------------
     #: Leave the objects a process keeps for its whole life out of Python's

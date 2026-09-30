@@ -27,7 +27,10 @@ performances s'améliorent sans rien casser ni ajouter de risque.
 **Ce qui a été fait à la place.** La réconciliation se relance seule une
 fois après chaque mise à jour du hub qui touche le serveur, et son
 journal donne sa durée et ses métriques les plus longues (`seconds`,
-`slowest`) pour voir où part le temps sur de vraies données.
+`slowest`) pour voir où part le temps sur de vraies données. Puis elle a
+été répartie sur plusieurs cœurs (`RECONCILE_PARALLEL`, 4 par défaut),
+avec la même fonction : 10 s → 5 s sur la machine de mesure, jours
+identiques octet pour octet ([performance](performance.md)).
 
 ### Poids unitaire d'un repas à l'autre (décidé le 30/09/2026)
 

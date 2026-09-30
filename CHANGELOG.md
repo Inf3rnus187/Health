@@ -62,6 +62,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A day's value no longer changes in its last digit from one
+  recompute to the next** (for everyone). PostgreSQL starts reading a
+  large table where the previous read of it stopped, so the samples of
+  a big metric came in a different order after another read had been
+  interrupted, and a sum could differ at its 13th digit (1 243,55 kcal
+  stored as 1243.550000000001 or 1243.5500000000009: 4 or 5 days out
+  of 44 016 on the test data, invisible on the pages). A recompute now
+  always reads from the table's start: same order, same sums, however
+  many recomputes run at once.
 - **The slow pages left are fast, nothing left out** (same fake data,
   old and new code side by side over HTTP, all 71 GET routes compared:
   identical answers; see [docs/performance.md](docs/performance.md)):
@@ -387,6 +396,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A reconcile uses several processor cores** (for everyone, and for
+  the administrator: `RECONCILE_PARALLEL`, 4 by default). Recomputing a
+  metric's days is Python work on one core; the metrics share nothing,
+  so 4 are now recomputed at the same time, each in its own process
+  with its own database connection, by the unchanged rule
+  (`daily_rollup.rebuild`), the ones with the most samples first.
+  Measured on the test machine (4 cores, 2.4 million fake samples, 21
+  metrics, warm, median of 3, old code run in turn): 10.8 s → 5.4 s,
+  then 9.7 s → 5.2 s in a second series (2 processes 6.3 s, 3 4.9 s:
+  on 4 cores, 3 and 4 are alike, PostgreSQL needs a core too, and the
+  largest metric sets the floor); the days written are
+  identical, byte for byte, with 1, 2 or 4 processes (44 016 daily
+  rows, same md5). Cost while it runs: about 85 MB and one connection
+  per process (331 MB for 4); they stop with the reconcile. `1` runs
+  the metrics one after the other, as before (measured: as fast as the
+  old code, 10.6 and 9.7 s against 10.8 and 9.7 s).
 - **PostgreSQL's memory is set in `.env`** (for the administrator):
   `DB_SHARED_BUFFERS`, `DB_EFFECTIVE_CACHE_SIZE`, `DB_WORK_MEM`,
   `DB_MAINTENANCE_WORK_MEM`, and `DB_SHM_SIZE` for parallel queries

@@ -12,7 +12,8 @@ Run after each Apple import (and on demand from the web page):
 
 Also after each update of the hub, once per user (:mod:`reconcile_update`).
 The log line ``reconciled`` gives the time it took (``seconds``) and the
-slowest metrics (``slowest``), to see where it goes on real data.
+slowest metrics (``slowest``), to see where it goes on real data. Step 2
+runs ``RECONCILE_PARALLEL`` metrics at a time (:mod:`reconcile_parallel`).
 """
 
 from __future__ import annotations
@@ -29,7 +30,13 @@ from app.core.logging import get_logger
 from app.models.health_raw import HealthSample
 from app.models.metric import MetricDefinition
 from app.models.user import User
-from app.services import canonical, catalog_sync, daily_rollup, sample_counts
+from app.services import (
+    canonical,
+    catalog_sync,
+    daily_rollup,
+    reconcile_parallel,
+    sample_counts,
+)
 
 _log = get_logger("reconcile")
 #: The slowest metrics named in the log line.
@@ -65,15 +72,31 @@ async def _rebuild_all(
     metrics: list[MetricDefinition],
     tz: ZoneInfo,
 ) -> tuple[int, list[str]]:
-    """Every metric's days, and the slowest (« heart.rate 6.2 s »)."""
-    days, spent = 0, []
-    for metric in metrics:
-        started = time.perf_counter()
-        days += await daily_rollup.rebuild(session, user_id, metric, tz)
-        await session.commit()
-        spent.append((time.perf_counter() - started, metric.key))
+    """Every metric's days, and the slowest (« heart.rate 6.2 s »).
+
+    ``RECONCILE_PARALLEL`` metrics at a time on as many processor cores
+    (:mod:`reconcile_parallel`); 1: one after the other, here.
+    """
+    processes = get_settings().reconcile_parallel
+    if processes > 1 and len(metrics) > 1:
+        spent = await reconcile_parallel.rebuild(
+            session, user_id, metrics, tz, processes
+        )
+    else:
+        spent = [await _rebuild(session, user_id, m, tz) for m in metrics]
     spent.sort(reverse=True)
-    return days, [f"{key} {s:.1f} s" for s, key in spent[:_SLOWEST]]
+    days = sum(n for _, _, n in spent)
+    return days, [f"{key} {s:.1f} s" for s, key, _ in spent[:_SLOWEST]]
+
+
+async def _rebuild(
+    session: AsyncSession, user_id: str, metric: MetricDefinition, tz: ZoneInfo
+) -> reconcile_parallel.Spent:
+    """One metric's days, committed: (seconds, key, days)."""
+    started = time.perf_counter()
+    days = await daily_rollup.rebuild(session, user_id, metric, tz)
+    await session.commit()
+    return time.perf_counter() - started, metric.key, days
 
 
 async def _stamp(session: AsyncSession, user_id: str) -> None:
