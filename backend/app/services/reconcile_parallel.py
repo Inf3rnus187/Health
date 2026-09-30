@@ -6,32 +6,36 @@ sample, converting it, adding it to its day): 16.6 s for 60 metrics on
 nothing — each writes only its own days — so ``RECONCILE_PARALLEL``
 processes rebuild them at the same time, each with its own connection
 and the unchanged :func:`daily_rollup.rebuild` (same rule, same days).
-The metrics with the most samples start first, so that a long one does
-not start alone at the end.
+The metrics with the most samples go first, each to the first process
+free, so that a long one does not start alone at the end.
 
-The processes are started with ``spawn``: a fresh interpreter, which
-inherits none of the worker's open connections. They live as long as
-one reconcile and each holds one database connection at a time.
+Each process is a program of its own (:mod:`app.cli.rollup_worker`,
+``python -m``): it inherits none of the worker's connections, and does
+not depend on how the reconcile was started (a worker, a script given on
+Python's input…). The processes live as long as one reconcile and each
+holds one database connection.
 """
 
 from __future__ import annotations
 
 import asyncio
-import multiprocessing
-import time
-from collections import Counter
-from concurrent.futures import ProcessPoolExecutor
+import json
+import os
+import sys
+from asyncio.subprocess import PIPE, Process
+from collections import Counter, deque
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.pool import NullPool
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
 from app.models.metric import MetricDefinition
-from app.services import daily_rollup, sample_counts
+from app.services import sample_counts
 
 #: (seconds, metric key, days) of one metric's rebuild.
 Spent = tuple[float, str, int]
+#: The folder holding the ``app`` package, for the processes' imports.
+_ROOT = str(Path(__file__).resolve().parents[2])
 
 
 async def rebuild(
@@ -41,50 +45,62 @@ async def rebuild(
     tz: ZoneInfo,
     processes: int,
 ) -> list[Spent]:
-    """Every metric's days, ``processes`` metrics at a time."""
-    order = await _largest_first(session, user_id, metrics)
+    """Every metric's days, ``processes`` metrics at a time.
+
+    A process that fails stops the others: the metric each one was on is
+    not committed, those already done are (as one after the other).
+    """
+    order = deque(await _largest_first(session, user_id, metrics))
     await session.commit()  # the processes write: hold nothing open
-    loop = asyncio.get_running_loop()
-    pool = ProcessPoolExecutor(
-        min(processes, len(order)),
-        mp_context=multiprocessing.get_context("spawn"),
-    )
+    workers: list[Process] = []
     try:
-        return list(
-            await asyncio.gather(
-                *(
-                    loop.run_in_executor(pool, one, user_id, metric_id, tz)
-                    for metric_id in order
-                )
-            )
-        )
+        for _ in range(min(processes, len(order))):
+            workers.append(await _start(user_id, tz))
+        async with asyncio.TaskGroup() as group:
+            tasks = [group.create_task(_feed(w, order)) for w in workers]
+        for worker in workers:
+            await worker.wait()  # its input is closed: it ends by itself
     finally:
-        await asyncio.to_thread(pool.shutdown, True, cancel_futures=True)
+        for worker in workers:
+            if worker.returncode is None:  # an error or a cancel
+                worker.kill()
+                await worker.wait()
+    return [spent for task in tasks for spent in task.result()]
 
 
-def one(user_id: str, metric_id: str, tz: ZoneInfo) -> Spent:
-    """In a process of the pool: one metric's days, then committed."""
-    return asyncio.run(_one(user_id, metric_id, tz))
-
-
-async def _one(user_id: str, metric_id: str, tz: ZoneInfo) -> Spent:
-    """The metric rebuilt on the process's own connection."""
-    started = time.perf_counter()
-    engine = create_async_engine(
-        get_settings().database_url, poolclass=NullPool
+async def _start(user_id: str, tz: ZoneInfo) -> Process:
+    """A process of :mod:`app.cli.rollup_worker`, same environment."""
+    paths = [_ROOT, os.environ.get("PYTHONPATH", "")]
+    env = {**os.environ, "PYTHONPATH": os.pathsep.join(filter(None, paths))}
+    return await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-m",
+        "app.cli.rollup_worker",
+        user_id,
+        tz.key,
+        stdin=PIPE,
+        stdout=PIPE,
+        env=env,
     )
-    try:
-        async with AsyncSession(
-            engine, expire_on_commit=False, autoflush=False
-        ) as session:
-            metric = await session.get(MetricDefinition, metric_id)
-            if metric is None:  # removed meanwhile: nothing to write
-                return time.perf_counter() - started, metric_id, 0
-            days = await daily_rollup.rebuild(session, user_id, metric, tz)
-            await session.commit()
-    finally:
-        await engine.dispose()
-    return time.perf_counter() - started, metric.key, days
+
+
+async def _feed(worker: Process, order: deque[str]) -> list[Spent]:
+    """Give the process the next metric until none is left."""
+    stdin, stdout = worker.stdin, worker.stdout
+    if stdin is None or stdout is None:  # never: both are pipes
+        raise RuntimeError("rollup process without pipes")
+    done: list[Spent] = []
+    while order:
+        stdin.write(f"{order.popleft()}\n".encode())
+        await stdin.drain()
+        line = await stdout.readline()
+        if not line:  # it stopped: its error is in the log just above
+            code = await worker.wait()
+            raise RuntimeError(f"rollup process stopped (exit {code})")
+        seconds, key, days = json.loads(line)
+        done.append((float(seconds), str(key), int(days)))
+    stdin.close()
+    return done
 
 
 async def _largest_first(

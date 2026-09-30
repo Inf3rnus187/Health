@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import asyncio
+import os
+import sys
+from asyncio.subprocess import PIPE
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
 import pytest
+from app.cli import rollup_worker
 from app.core.config import get_settings
-from app.core.db import SessionFactory
+from app.core.db import SessionFactory, engine
 from app.models.base import new_uuid, utcnow
 from app.models.health_raw import HealthSample
 from app.models.measurement import Measurement
@@ -138,5 +143,45 @@ async def test_largest_metrics_start_first() -> None:
 
 async def test_a_metric_removed_meanwhile_writes_nothing() -> None:
     admin = await _user(get_settings().admin_email)
-    spent = await reconcile_parallel._one(admin, new_uuid(), ZoneInfo("UTC"))
+    spent = await rollup_worker._one(engine, admin, new_uuid(), ZoneInfo("UTC"))
     assert spent[2] == 0
+
+
+async def test_started_from_a_script_on_python_input() -> None:
+    """The processes do not depend on how the reconcile was started."""
+    admin = await _user(get_settings().admin_email)
+    await _seed(admin)
+    script = (
+        "import asyncio, sys\n"
+        "from app.core.db import SessionFactory\n"
+        "from app.services import reconcile\n"
+        "async def main():\n"
+        "    async with SessionFactory() as session:\n"
+        "        report = await reconcile.run(session, sys.argv[1])\n"
+        "    print('days', report['days'])\n"
+        "asyncio.run(main())\n"
+    )
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        "-",
+        admin,
+        stdin=PIPE,
+        stdout=PIPE,
+        env={**os.environ, "RECONCILE_PARALLEL": "2"},
+    )
+    out, _ = await process.communicate(script.encode())
+    assert process.returncode == 0
+    assert out.decode().splitlines()[-1] == f"days {len(await _days(admin))}"
+
+
+async def test_a_process_that_fails_stops_the_reconcile(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An error in a process is the reconcile's error, not a hang."""
+    admin = await _user(get_settings().admin_email)
+    await _seed(admin)
+    monkeypatch.setattr(get_settings(), "reconcile_parallel", 2)
+    monkeypatch.setenv("DATABASE_URL", "sqlite+aiosqlite:////nowhere/x.db")
+    with pytest.raises(ExceptionGroup) as failed:
+        await _reconcile(admin)
+    assert "rollup process stopped" in str(failed.value.exceptions[0])

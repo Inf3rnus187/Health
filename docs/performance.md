@@ -34,9 +34,16 @@ n'écrit que ses propres jours. Elles sont donc maintenant recalculées
 processus, avec sa propre connexion et **la même fonction**
 (`daily_rollup.rebuild`, inchangée). Les métriques qui ont le plus de
 relevés partent en premier, pour qu'une longue ne démarre pas seule à
-la fin. Les processus sont lancés en `spawn` (un interpréteur neuf, qui
-n'hérite d'aucune connexion du worker) et s'arrêtent avec la
-réconciliation.
+la fin : chaque processus prend la suivante dès qu'il a fini. Chaque
+processus est un programme à part (`python -m app.cli.rollup_worker`),
+qui n'hérite d'aucune connexion du worker et ne dépend pas de la façon
+dont la réconciliation a été lancée. Ils s'arrêtent avec elle.
+
+(Première version : `multiprocessing` en `spawn`. Chaque processus
+relisait alors le script principal, et une réconciliation lancée par un
+script donné sur l'entrée de Python, `python - <<EOF`, échouait. Ce cas
+est maintenant couvert par un test. Mêmes temps, mêmes jours, même md5
+avec la nouvelle version.)
 
 **Mesure** : machine de mesure (4 cœurs), 2,4 M relevés factices,
 21 métriques, à chaud. Chaque réglage est lancé à tour de rôle avec
@@ -89,6 +96,52 @@ docker compose logs worker --since 30m | grep reconciled
 
 `seconds` était de 16,6 s ; `slowest` donne maintenant le temps de
 chaque métrique dans son processus.
+
+**Chez l'utilisateur** (16 fils, machine partagée avec d'autres
+conteneurs, 4 Go de mémoire libre sur 62) : 16,6 s → **13,8 s**
+seulement. Chaque métrique y a pris environ deux fois plus longtemps
+qu'en séquentiel (énergie au repos 3,9 → 7,2 s, énergie active
+2,8 → 5,1 s, pas 0,8 → 2,9 s) : une ressource partagée sature quand
+4 tournent ensemble (processeur pris par d'autres conteneurs, disque
+si la table de 1,4 Go n'est plus dans le cache du système, ou temps
+volé par l'hyperviseur). Pour le savoir, la commande ci-dessous
+relance la réconciliation avec 1 puis 4 processus et relève pendant
+chaque passage l'état de la machine (`vmstat`).
+
+#### Mesurer chez soi : 1 contre 4 processus
+
+Depuis le dossier du hub, avec l'identifiant du compte (le `user_id` de
+la ligne `reconciled`). La réconciliation écrit les mêmes valeurs que
+le bouton « Réconcilier » : rien ne change dans les données.
+
+```bash
+U=identifiant-du-compte
+S='
+import asyncio, sys
+from app.core.db import SessionFactory
+from app.services import reconcile
+async def main():
+    async with SessionFactory() as session:
+        r = await reconcile.run(session, sys.argv[1])
+    print("RÉSULTAT", r["seconds"], "s |", ", ".join(r["slowest"][:3]))
+asyncio.run(main())
+'
+echo "cœurs $(nproc), charge $(cut -d' ' -f1-3 /proc/loadavg)"; free -m | sed -n 2p
+for n in 1 4 1 4; do
+  vmstat 1 > /tmp/vm.txt & VM=$!
+  docker compose exec -T -e RECONCILE_PARALLEL=$n worker python -c "$S" "$U" 2>&1 | grep RÉSULTAT
+  kill $VM; wait $VM 2>/dev/null
+  awk -v n=$n 'NR==2{for(i=1;i<=NF;i++)c[$i]=i} NR>3{k++; us+=$c["us"]+$c["sy"]; id+=$c["id"]; wa+=$c["wa"]; st+=$c["st"]; bi+=$c["bi"]} END{printf "  -> %s processus : CPU occupé %d %%, libre %d %%, attente disque %d %%, volé %d %%, lu sur disque %d Mo\n", n, us/k, id/k, wa/k, st/k, bi/1024}' /tmp/vm.txt
+done
+```
+
+Lecture : « libre » proche de 0 avec 4 processus → le processeur est
+déjà pris (moins de processus n'y changera rien, plus non plus) ;
+« attente disque » ou « lu sur disque » élevés → la table est relue sur
+le disque faute de mémoire ; « volé » élevé → l'hyperviseur donne ces
+cœurs à d'autres machines. Sur la machine de mesure : 1 processus
+10,7 s, CPU occupé 28 %, libre 70 % ; 4 processus 5,5 s, occupé 71 %,
+libre 28 %, rien lu sur le disque.
 
 ### 2026-09-30 (4) — la mémoire de PostgreSQL, réglable
 

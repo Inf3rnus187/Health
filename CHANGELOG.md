@@ -62,6 +62,21 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **A reconcile started by a script given on Python's input no longer
+  fails** (for the administrator: `docker compose exec worker python -
+  <<EOF …`). The parallel reconcile's first version started its
+  processes with `multiprocessing` (`spawn`), which makes each one
+  re-read the main script: « <stdin> » is no file, the processes died
+  and the reconcile stopped (`BrokenProcessPool`). The worker itself,
+  started by `arq`, was not affected. Each process is now a program of
+  its own (`python -m app.cli.rollup_worker`), fed one metric at a
+  time, whatever started the reconcile; a process that fails stops the
+  others at once (the metric each was on is not committed). Same times
+  and the same days, same md5, on the test data; a test covers the
+  script case. Measured at the user's: 16.6 → 13.8 s only, each metric
+  about twice as long as alone; docs/performance.md gives a command
+  that measures 1 against 4 processes and what the machine does
+  meanwhile.
 - **A day's value no longer changes in its last digit from one
   recompute to the next** (for everyone). PostgreSQL starts reading a
   large table where the previous read of it stopped, so the samples of
