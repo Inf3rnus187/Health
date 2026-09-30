@@ -58,8 +58,15 @@ async def log_meal(
     photo_filename: str = "repas.jpg",
     more_photos_base64: list[str] | None = None,
     foods: list[dict[str, Any]] | None = None,
+    analysis_delay_min: float | None = None,
 ) -> Any:
     """Log a meal, then the AI reads it (minutes; poll get_meal).
+
+    ``analysis_delay_min``: put the reading off by that many minutes
+    (e.g. 2, at most the hub's MEAL_ANALYSIS_MAX_DELAY_MIN, 60 by
+    default) to send more photos (add_meal_photo) or changes
+    (update_meal) first: all are read together, once, at
+    ``analysis_after``. None: read at once. analyze_meal reads it now.
 
     Call list_foods first. ``description``: the user's own words, with
     their quantities (« 2 tomates, un pavé de saumon »), never a summary:
@@ -88,6 +95,9 @@ async def log_meal(
         "eaten_at": eaten_at or "",
         "description": description,
         "foods": json.dumps(foods) if foods else "",
+        "analysis_delay_min": ""
+        if analysis_delay_min is None
+        else f"{analysis_delay_min:g}",
     }
     files: list[tuple[str, tuple[str, bytes, str]]] = []
     if photo_base64:

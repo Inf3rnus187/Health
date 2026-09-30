@@ -25,7 +25,7 @@ def queued(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """The meals handed to the worker (none really runs)."""
     seen: list[str] = []
 
-    async def worker(_: str, meal_id: str) -> bool:
+    async def worker(_: str, meal_id: str, *__: Any, **___: Any) -> bool:
         seen.append(meal_id)
         return True
 

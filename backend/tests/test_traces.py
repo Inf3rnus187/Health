@@ -95,7 +95,7 @@ async def test_a_delivery_becomes_a_priced_meal_in_the_file(
     auth: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     monkeypatch.setattr(meal_ai, "enqueue", no_worker)
@@ -136,7 +136,7 @@ async def test_a_trace_typed_by_hand_with_its_meal(
     auth: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     monkeypatch.setattr(meal_ai, "enqueue", no_worker)

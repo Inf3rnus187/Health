@@ -345,6 +345,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A meal's AI reading can wait**: `POST /meals` takes
+  `analysis_delay_min` (minutes; empty = at once, as before; at most
+  `MEAL_ANALYSIS_MAX_DELAY_MIN`, 60 by default), and so does the MCP
+  tool `log_meal`. Photos and changes sent meanwhile start nothing: the
+  planned reading reads everything, once; the answer's `analysis_after`
+  says when, the Journal shows « Analyse IA prévue à 20:32 » and
+  « Réanalyser » reads it at once (migration `0026`).
+- **A meal's nutrient table no longer widens the page on a phone**: with
+  the references' columns it pushed the Journal 21 px sideways at
+  390 px; it now scrolls inside its card.
 - **`API_WORKERS`** (default 4, was a fixed 2): the API processes
   answering at the same time; each holds at most 10 database
   connections. Ten people opening Accueil then Santé together: a page in

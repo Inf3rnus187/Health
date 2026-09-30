@@ -92,7 +92,7 @@ async def test_the_meal_reading_is_told_and_never_doubts_a_sheet(
     ).json()
     await client.post("/api/v1/foods", json=body, headers=auth)
 
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     async def text(prompt: str, **_: Any) -> dict[str, Any]:
@@ -126,7 +126,7 @@ async def test_the_meal_reading_is_told_and_never_doubts_a_sheet(
 async def test_grams_written_are_kept_and_every_line_says_where_from(
     client: AsyncClient, auth: dict[str, str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     async def text(prompt: str, **_: Any) -> dict[str, Any]:
@@ -165,7 +165,7 @@ async def test_grams_written_are_kept_and_every_line_says_where_from(
 async def test_a_count_said_beats_what_the_photo_shows(
     client: AsyncClient, auth: dict[str, str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     async def text(prompt: str, **_: Any) -> dict[str, Any]:

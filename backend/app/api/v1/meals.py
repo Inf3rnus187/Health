@@ -23,16 +23,30 @@ router = APIRouter(prefix="/meals", tags=["journal"])
 TapDep = Annotated[Principal, Depends(require_scope_flex(WRITE_MEASUREMENTS))]
 
 
+def _fields(
+    meal_type: Annotated[str, Form()] = "",
+    eaten_at: Annotated[str, Form()] = "",
+    description: Annotated[str, Form()] = "",
+    foods: Annotated[str, Form()] = "",
+    analysis_delay_min: Annotated[str, Form()] = "",
+) -> dict[str, str]:
+    """The meal form's text fields, read from the form by FastAPI."""
+    return {
+        "meal_type": meal_type,
+        "eaten_at": eaten_at,
+        "description": description,
+        "foods": foods,
+        "delay": analysis_delay_min,
+    }
+
+
 @router.post("", response_model=MealOut, status_code=status.HTTP_201_CREATED)
 async def create(
     principal: TapDep,
     session: SessionDep,
-    meal_type: Annotated[str, Form()] = "",
-    eaten_at: Annotated[str, Form()] = "",
-    description: Annotated[str, Form()] = "",
+    form: Annotated[dict[str, str], Depends(_fields)],
     file: Annotated[UploadFile | str | None, File()] = None,
     photos: Annotated[list[UploadFile | str] | None, File()] = None,
-    foods: Annotated[str, Form()] = "",
 ) -> Meal:
     """Log a meal for the health follow-up, then read it with the AI.
 
@@ -45,21 +59,28 @@ async def create(
     offset, or ``23/09/2026 20:30`` — a time without offset is local).
     An empty field (an iPhone Shortcut without photo) counts as absent.
 
+    ``analysis_delay_min``: put the AI reading off by that many minutes
+    (``2``, ``0.5``; at most ``MEAL_ANALYSIS_MAX_DELAY_MIN``, 60 by
+    default); empty: read at once. Photos (``POST /meals/{id}/photos``)
+    and changes sent meanwhile are read with it, in one reading;
+    ``analysis_after`` says when it starts.
+
     Health only: such a meal is never a work proof and has no price. A
     meal paid for (receipt, delivery, expense report) is a proof —
     ``POST /evidence`` with ``meal=true`` — which logs its meal here too.
     """
     fields = {
-        "meal_type": meal_type,
-        "eaten_at": _when(eaten_at),
-        "description": description,
-        "foods": meal_form.portions(foods),
+        "meal_type": form["meal_type"],
+        "eaten_at": _when(form["eaten_at"]),
+        "description": form["description"],
+        "foods": meal_form.portions(form["foods"]),
     }
     sent = [await _photo(f) for f in [file, *(photos or [])]]
     shots = [s for s in sent if s is not None]
+    delay = meal_form.delay(form["delay"])
     meal = await meals.create(session, principal.user.id, fields, shots)
     await session.commit()
-    await meal_ai.queue(session, meal)
+    await meal_ai.queue(session, meal, delay)
     return meal
 
 

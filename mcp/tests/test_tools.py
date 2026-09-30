@@ -261,6 +261,9 @@ async def test_a_meal_is_sent_as_a_form_with_its_photo() -> None:
     body = seen[0].content
     assert seen[0].url.path == "/api/v1/meals"
     assert b"salade, poulet" in body and b'filename="repas.jpg"' in body
+    await tools_journal.log_meal("salade", analysis_delay_min=2)
+    later = seen[1].content
+    assert b"analysis_delay_min=2" in later  # no photo: a plain form
 
 
 async def test_a_meal_with_its_sachet_and_a_food_of_the_list() -> None:

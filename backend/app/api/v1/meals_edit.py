@@ -33,9 +33,12 @@ async def update(
 async def analyze(
     meal_id: str, principal: WriteDep, session: SessionDep
 ) -> dict[str, str]:
-    """Read the meal again with the current models."""
+    """Read the meal again with the current models, at once.
+
+    A reading put off (``analysis_delay_min``) is replaced by this one.
+    """
     meal = await meals.get(session, principal.user.id, meal_id)
-    queued = await meal_ai.queue(session, meal)
+    queued = await meal_ai.queue(session, meal, now=True)
     return {"status": "queued" if queued else "unavailable"}
 
 

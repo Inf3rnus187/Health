@@ -79,28 +79,38 @@ function Legend({ reference }: { reference: MealReference }) {
   return <p className="muted small">{text}</p>;
 }
 
+/** One line per nutrient: the meal's value and its reference cells. */
+function Rows(props: { totals: MealTotals; reference?: MealReference | null }) {
+  const { totals, reference } = props;
+  return (
+    <tbody>
+      {ROWS.map(([key, label, unit]) => (
+        <tr key={key}>
+          <td>{label}</td>
+          <td>
+            {frNumber(totals[key], key === 'energy_kcal' ? 0 : 1)} {unit}
+          </td>
+          <RefCells r={reference?.rows[key]} />
+        </tr>
+      ))}
+    </tbody>
+  );
+}
+
 /** The meal's nutrients, each against its official reference. */
 export function NutrientTable(props: {
   totals: MealTotals;
   reference?: MealReference | null;
 }) {
-  const { totals, reference } = props;
+  const { reference } = props;
   return (
     <>
-      <table className="nutri-table">
-        {reference && <Head reference={reference} />}
-        <tbody>
-          {ROWS.map(([key, label, unit]) => (
-            <tr key={key}>
-              <td>{label}</td>
-              <td>
-                {frNumber(totals[key], key === 'energy_kcal' ? 0 : 1)} {unit}
-              </td>
-              <RefCells r={reference?.rows[key]} />
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="nutri-scroll">
+        <table className="nutri-table">
+          {reference && <Head reference={reference} />}
+          <Rows totals={props.totals} reference={reference} />
+        </table>
+      </div>
       {reference && <Legend reference={reference} />}
     </>
   );

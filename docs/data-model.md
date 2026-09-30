@@ -165,7 +165,8 @@ Added by later migrations (each creates only its own tables, ADR‑0004):
   `[{"id", "path"}]` — the pack, its nutrition label), `foods` (`0017`:
   `[{"food_id", "grams"}]`, grams `NULL` = estimated or the whole
   package); `analysis_status` (`NULL`, `queued`, `running`, `done`,
-  `failed`) and `analysis` (JSON: items with their grams, `grams_from`
+  `failed`), `analysis_after` (`0026`: a reading put off — when it
+  starts; `NULL` once it runs or when read at once) and `analysis` (JSON: items with their grams, `grams_from`
   — écrit, unités (with `units` « 2 × 120 g »), compté, portion,
   formulaire, paquet, IA — and origin,
   checked nutrients, score and verdict).
@@ -361,3 +362,4 @@ fresh database built from the live models is left untouched (ADR‑0004).
 | `0023_food_product_info` | `foods.product_info`. |
 | `0024_healthkit_ids` | `health_samples.external_id`, `workouts.external_id` + unique `(user_id, external_id)` indexes. |
 | `0025_samples_user_start` | Index `ix_samples_user_start` on `health_samples (user_id, start_at)` ([performance](performance.md)). |
+| `0026_meal_analysis_after` | `meals.analysis_after` (a reading put off, POST /meals `analysis_delay_min`). |

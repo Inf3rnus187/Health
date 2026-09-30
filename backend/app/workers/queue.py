@@ -6,6 +6,7 @@ stays responsive and the job can be retried/reprocessed later.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Any
 
 from arq import create_pool
@@ -17,12 +18,21 @@ from app.core.logging import get_logger
 _log = get_logger("queue")
 
 
-async def enqueue(function: str, *args: Any) -> bool:
-    """Enqueue ``function`` with ``args``; return whether it was queued."""
-    return await enqueue_many(function, [args]) == 1
+async def enqueue(
+    function: str, *args: Any, defer: timedelta | None = None
+) -> bool:
+    """Enqueue ``function`` with ``args``; return whether it was queued.
+
+    ``defer``: the worker runs it that much later (None: at once).
+    """
+    return await enqueue_many(function, [args], defer=defer) == 1
 
 
-async def enqueue_many(function: str, calls: list[tuple[Any, ...]]) -> int:
+async def enqueue_many(
+    function: str,
+    calls: list[tuple[Any, ...]],
+    defer: timedelta | None = None,
+) -> int:
     """Enqueue one job per argument tuple over one connection; count them."""
     queued = 0
     try:
@@ -30,7 +40,7 @@ async def enqueue_many(function: str, calls: list[tuple[Any, ...]]) -> int:
             RedisSettings.from_dsn(get_settings().redis_url)
         )
         for args in calls:
-            await pool.enqueue_job(function, *args)
+            await pool.enqueue_job(function, *args, _defer_by=defer)
             queued += 1
         await pool.aclose()
     except Exception as exc:  # noqa: BLE001

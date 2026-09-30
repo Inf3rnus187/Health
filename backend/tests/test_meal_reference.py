@@ -75,7 +75,7 @@ async def test_a_meal_carries_its_reference_and_stays_its_users(
     member: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     monkeypatch.setattr(meal_ai, "enqueue", no_worker)

@@ -545,11 +545,16 @@ santé, marqué « 🧾 Note de frais ».
 | `foods` | Texte | non | aliments de « Mes aliments » : `[{"food_id": "…", "grams": 125}]` (un aliment nommé dans la description est reconnu sans ça) |
 | `eaten_at` | Texte | non | vide = maintenant ; `2026-09-23T20:30`, `2026-09-23T20:30:00+02:00` ou `23/09/2026 20:30` (sans fuseau = heure locale) |
 | `meal_type` | Texte | non | `breakfast`, `lunch`, `snack`, `dinner` ; vide = d'après l'heure (avant 10:30, 15:00, 18:00) |
+| `analysis_delay_min` | Texte | non | vide = l'analyse part tout de suite ; `2` (ou `0,5`) = elle part dans 2 minutes, le temps d'ajouter d'autres photos ou de corriger le repas : tout est lu ensemble, une seule fois (60 min au plus, `MEAL_ANALYSIS_MAX_DELAY_MIN`) |
 
 Un champ laissé vide (pas de photo) compte comme absent. La
 réponse (201) donne le repas : `date_key`, `meal_type`, `has_photo`,
-`analysis_status` (`queued`). L'analyse IA (une à quelques minutes)
-apparaît ensuite dans **Journal**.
+`analysis_status` (`queued`) et, si l'analyse est différée,
+`analysis_after` (l'heure où elle part). L'analyse IA (une à quelques
+minutes) apparaît ensuite dans **Journal** ; un repas différé y affiche
+« Analyse IA prévue à 20:32 ». Une photo ajoutée pendant ce délai
+(`POST /api/v1/meals/<id>/photos`) ne relance rien : elle est lue avec
+l'analyse prévue. « Réanalyser » lit le repas tout de suite.
 
 **Le raccourci** (un seul, pour maintenant comme pour hier) :
 
@@ -574,6 +579,9 @@ apparaît ensuite dans **Journal**.
    `eaten_at` (Texte = *Date formatée*), `photos` (**Fichier** = *Menu
    « Photo ? »* : une ou plusieurs photos, la première est l'assiette),
    et si l'étape 5 existe `meal_type` (Texte = *Menu « Repas ? »*).
+   Pour envoyer d'autres photos juste après (un 2ᵉ raccourci, une
+   autre app), ajoute `analysis_delay_min` (Texte = `2`) : l'analyse
+   attend 2 minutes et lit tout.
 7. **Afficher la notification** « Repas noté, analyse en cours ».
 
 En ligne de commande, le même appel :
@@ -583,6 +591,9 @@ curl -s -X POST "http://<hub>/api/v1/meals?token=$TOKEN" \
   -F description="2 œufs, pain complet, café sans sucre" \
   -F eaten_at="2026-09-23T20:30" -F meal_type=dinner -F file=@repas.jpg \
   -F photos=@sachet.jpg -F photos=@valeurs.jpg
+# analyse dans 2 minutes : le temps d'ajouter une photo
+curl -s -X POST "http://<hub>/api/v1/meals?token=$TOKEN" \
+  -F description="pâtes au pesto" -F analysis_delay_min=2
 ```
 
 **Voir le dernier repas face aux repères** (lecture seule, jeton

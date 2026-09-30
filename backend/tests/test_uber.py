@@ -109,7 +109,7 @@ async def test_eats_orders_are_the_establishment_not_the_zone(
     auth: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     monkeypatch.setattr(meal_ai, "enqueue", no_worker)

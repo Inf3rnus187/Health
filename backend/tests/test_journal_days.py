@@ -24,7 +24,7 @@ async def _tap(
 async def test_a_day_of_the_journal(
     client: AsyncClient, auth: dict[str, str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     monkeypatch.setattr(meal_ai, "enqueue", no_worker)

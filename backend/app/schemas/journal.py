@@ -52,14 +52,18 @@ class MealOut(BaseModel):
     photo_ids: list[str] = []
     foods: list[dict[str, Any]] = []
     analysis_status: str | None = None
+    #: A reading put off: when it starts (photos, foods may come till then).
+    analysis_after: datetime | None = None
     analysis: dict[str, Any] | None = None
     created_at: datetime
 
-    @field_validator("eaten_at")
+    @field_validator("eaten_at", "analysis_after")
     @classmethod
-    def _aware(cls, value: datetime) -> datetime:
+    def _aware(cls, value: datetime | None) -> datetime | None:
         """Always send the instant with its UTC offset."""
-        return value if value.tzinfo else value.replace(tzinfo=UTC)
+        if value is None or value.tzinfo:
+            return value
+        return value.replace(tzinfo=UTC)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

@@ -36,7 +36,7 @@ async def test_traces_go_with_their_files_and_meals(
     auth: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     monkeypatch.setattr(meal_ai, "enqueue", no_worker)
@@ -77,7 +77,7 @@ async def test_meals_stay_unless_asked_and_go_on_their_own(
     auth: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     monkeypatch.setattr(meal_ai, "enqueue", no_worker)

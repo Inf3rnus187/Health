@@ -41,6 +41,15 @@ function Extras({ meal }: { meal: Meal }) {
 
 function Reading({ meal }: { meal: Meal }) {
   const status = meal.analysis_status;
+  const later = meal.analysis_after;
+  if (status === 'queued' && later && new Date(later) > new Date()) {
+    return (
+      <p className="muted">
+        Analyse IA prévue à {clock(later)} (photos et changements d’ici là lus
+        avec elle).
+      </p>
+    );
+  }
   if (status === 'queued' || status === 'running') {
     return <p className="muted">Analyse IA en cours…</p>;
   }

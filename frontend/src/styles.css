@@ -1688,8 +1688,10 @@ a.tile:hover {
 }
 
 @media (max-width: 640px) {
+  /* one line: the card's width, not its widest table's */
   .meal-card {
     flex-direction: column;
+    flex-wrap: nowrap;
     align-items: center;
   }
   .meal-body {
@@ -1804,6 +1806,13 @@ a.tile:hover {
   list-style: none;
   padding: 0;
   margin: 4px 0;
+}
+
+/* A long table (the references' columns on a phone) scrolls in its
+   card instead of widening the page. */
+.nutri-scroll {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .nutri-table td,

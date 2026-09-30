@@ -284,6 +284,12 @@ Paramètres : `entry_id`* (string)
 
 Log a meal, then the AI reads it (minutes; poll get_meal).
 
+``analysis_delay_min``: put the reading off by that many minutes
+(e.g. 2, at most the hub's MEAL_ANALYSIS_MAX_DELAY_MIN, 60 by
+default) to send more photos (add_meal_photo) or changes
+(update_meal) first: all are read together, once, at
+``analysis_after``. None: read at once. analyze_meal reads it now.
+
 Call list_foods first. ``description``: the user's own words, with
 their quantities (« 2 tomates, un pavé de saumon »), never a summary:
 the hub reads the grams in it. ``foods``: the foods of the user's
@@ -306,7 +312,7 @@ for (receipt, delivery, expense report) is a proof: add_evidence
 with kind « repas » or « livraison » and trace={"amount": …,
 "meal": True} — it logs the meal here too.
 
-Paramètres : `description`* (string), `meal_type` (string, défaut ``), `eaten_at` (string | null, défaut `None`), `photo_base64` (string | null, défaut `None`), `photo_filename` (string, défaut `repas.jpg`), `more_photos_base64` (array | null, défaut `None`), `foods` (array | null, défaut `None`)
+Paramètres : `description`* (string), `meal_type` (string, défaut ``), `eaten_at` (string | null, défaut `None`), `photo_base64` (string | null, défaut `None`), `photo_filename` (string, défaut `repas.jpg`), `more_photos_base64` (array | null, défaut `None`), `foods` (array | null, défaut `None`), `analysis_delay_min` (number | null, défaut `None`)
 
 ### `list_meals`
 

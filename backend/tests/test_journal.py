@@ -111,7 +111,7 @@ async def test_meal_is_read_checked_and_feeds_nutrition(
     auth: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     async def vision(prompt: str, image: bytes, **_: Any) -> dict[str, Any]:
@@ -226,7 +226,7 @@ async def test_meal_type_defaults_to_the_hour(
     auth: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     monkeypatch.setattr(meal_ai, "enqueue", no_worker)
@@ -244,7 +244,7 @@ async def test_a_meal_shortcut_like_the_iphone_sends_it(
 ) -> None:
     """Token in the URL, yesterday's time day first, empty optional fields."""
 
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     monkeypatch.setattr(meal_ai, "enqueue", no_worker)

@@ -63,6 +63,8 @@ export interface Meal {
   photo_ids: string[];
   foods: FoodPortion[];
   analysis_status: string | null;
+  /** A reading put off: when it starts (photos may still be added). */
+  analysis_after?: string | null;
   analysis: MealAnalysis | null;
   /** Its totals against official daily references (by the hub). */
   reference?: MealReference | null;

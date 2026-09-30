@@ -151,7 +151,7 @@ async def test_a_meal_with_its_sachet_is_read_from_the_label(
 ) -> None:
     food = await _rice(client, auth)
 
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     async def vision(prompt: str, image: Any, **_: Any) -> dict[str, Any]:
@@ -214,7 +214,7 @@ async def test_a_food_named_in_a_meal_is_found_without_picking_it(
 ) -> None:
     await _rice(client, auth)
 
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     async def text(prompt: str, **_: Any) -> dict[str, Any]:

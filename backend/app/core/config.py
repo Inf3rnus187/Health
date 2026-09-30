@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     #: Read each sheet's Open Food Facts page again after this many days
     #: (the worker, daily; only when food_lookup_online). 0: never.
     food_refresh_days: int = 30
+    #: The longest a meal's AI reading may be put off (POST /meals
+    #: ``analysis_delay_min``), in minutes.
+    meal_analysis_max_delay_min: float = 60.0
     media_encryption_key: str | None = None
     mfa_issuer: str = "Phoenix Health Hub"
     retention_days: int = 0

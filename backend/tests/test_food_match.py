@@ -136,7 +136,7 @@ async def test_the_breakfast_is_valued_from_my_sheets(
             per_100g={"energy_kcal": 83},
         )  # fmt: skip
 
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     async def text(prompt: str, **_: Any) -> dict[str, Any]:

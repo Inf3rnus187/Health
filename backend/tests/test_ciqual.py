@@ -102,7 +102,7 @@ def _answer(salmon_grams: int) -> dict[str, Any]:
 async def test_a_meal_is_valued_from_the_table_whatever_the_model_says(
     client: AsyncClient, auth: dict[str, str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     prompts: list[str] = []

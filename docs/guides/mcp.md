@@ -176,7 +176,9 @@ Depuis un autre poste, la même commande à travers SSH :
   `list_urinations`, `delete_urination`), « note mon déjeuner : … »
   (`log_meal` : description, type, heure, `photo_base64` pour l'assiette,
   `more_photos_base64` jusqu'à 6 photos de l'emballage, `foods` de « Mes
-  aliments » avec leurs grammes), corriger un repas après coup
+  aliments » avec leurs grammes, `analysis_delay_min` pour différer
+  l'analyse le temps d'ajouter des photos ou de corriger — tout est lu
+  ensemble à `analysis_after`), corriger un repas après coup
   (`update_meal`, `foods` remplace la liste), `add_meal_photo`,
   `delete_meal_photo`, `analyze_meal`, `delete_meal` ; « combien m'ont
   coûté les Uber Eats cette année ? » (`meal_spending`).

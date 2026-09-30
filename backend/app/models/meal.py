@@ -41,6 +41,11 @@ class Meal(UUIDMixin, TimestampMixin, Base):
     analysis_status: Mapped[str | None] = mapped_column(
         String(16), nullable=True
     )
+    #: A reading put off (POST /meals ``analysis_delay_min``): when it
+    #: starts; None once it runs, or when read at once.
+    analysis_after: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     #: Items, nutrients (checked), assessment — see meal_ai.
     analysis: Mapped[dict[str, Any] | None] = mapped_column(
         JSONColumn, nullable=True

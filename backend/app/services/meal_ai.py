@@ -21,6 +21,7 @@ and readings a worker restart interrupted are re-queued.
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
@@ -54,23 +55,60 @@ _JUDGE_TOKENS = 700
 PENDING = ("queued", "running")
 
 
-async def queue(session: AsyncSession, meal: Meal) -> bool:
-    """Mark a meal for (re-)reading and hand it to the worker."""
-    meal.analysis_status = "queued"
-    await session.commit()
-    if await enqueue("analyze_meal", meal.id):
+async def queue(
+    session: AsyncSession,
+    meal: Meal,
+    delay: timedelta | None = None,
+    *,
+    now: bool = False,
+) -> bool:
+    """Mark a meal for (re-)reading and hand it to the worker.
+
+    ``delay``: read it that much later (photos or foods may still come).
+    A meal waiting for its time keeps it: what changes meanwhile is read
+    then. ``now``: an explicit request, read at once.
+    """
+    if delay is None and not now and _waiting(meal):
         return True
-    meal.analysis_status = None
+    after = utcnow() + delay if delay else None
+    meal.analysis_status, meal.analysis_after = "queued", after
+    await session.commit()
+    stamp = after.isoformat() if after else None
+    if await enqueue("analyze_meal", meal.id, stamp, defer=delay):
+        return True
+    meal.analysis_status, meal.analysis_after = None, None
     await session.commit()
     return False
 
 
-async def run(session: AsyncSession, meal_id: str) -> None:
-    """Worker entry point: read one meal, record the outcome."""
+def _waiting(meal: Meal) -> bool:
+    """Queued for a later time not reached yet."""
+    after = meal.analysis_after
+    queued = meal.analysis_status == "queued"
+    return queued and after is not None and utc(after) > utcnow()
+
+
+def _replaced(meal: Meal, stamp: str | None) -> bool:
+    """A job for a time since changed (put off again, or read at once)."""
+    if stamp is None:
+        return False
+    after = meal.analysis_after
+    planned = datetime.fromisoformat(stamp)
+    return after is None or abs(utc(after) - planned) > timedelta(seconds=1)
+
+
+async def run(
+    session: AsyncSession, meal_id: str, stamp: str | None = None
+) -> None:
+    """Worker entry point: read one meal, record the outcome.
+
+    ``stamp``: the time a put-off reading was planned for; a job whose
+    time was changed since does nothing (the new one will read it).
+    """
     meal = await session.get(Meal, meal_id)
-    if meal is None:
+    if meal is None or _replaced(meal, stamp):
         return
-    meal.analysis_status = "running"
+    meal.analysis_status, meal.analysis_after = "running", None
     await session.commit()
     try:
         result = await asyncio.wait_for(analyze(session, meal), _TIME_LIMIT)

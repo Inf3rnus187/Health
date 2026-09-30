@@ -168,7 +168,7 @@ async def test_a_counter_shows_the_time_of_its_last_addition(
 async def test_home_shows_the_energy_brought_by_meals(
     client: AsyncClient, auth: dict[str, str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    async def no_worker(*_: Any) -> bool:
+    async def no_worker(*_: Any, **__: Any) -> bool:
         return False
 
     monkeypatch.setattr(meal_ai, "enqueue", no_worker)
