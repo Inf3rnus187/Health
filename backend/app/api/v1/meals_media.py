@@ -8,6 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, UploadFile, status
 from fastapi.responses import Response
 
+from app.core.config import get_settings
 from app.core.deps import Principal, ReaderDep, SessionDep, require_scope
 from app.core.errors import InvalidInputError
 from app.core.scopes import WRITE_MEASUREMENTS
@@ -18,7 +19,7 @@ from app.services import meal_ai, meal_extra, meal_photo, meals
 router = APIRouter(prefix="/meals", tags=["journal"])
 
 WriteDep = Annotated[Principal, Depends(require_scope(WRITE_MEASUREMENTS))]
-MOST_PHOTOS = 6
+MOST_PHOTOS = get_settings().meal_max_photos
 #: ``read=false``: change several photos, then read the meal once.
 ReadQuery = Annotated[bool, Query(alias="read")]
 

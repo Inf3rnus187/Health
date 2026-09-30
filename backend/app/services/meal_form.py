@@ -13,7 +13,7 @@ from app.core.errors import InvalidInputError
 from app.schemas.food import FoodPortion
 
 _PORTIONS = TypeAdapter(list[FoodPortion])
-MOST_FOODS = 20
+MOST_FOODS = get_settings().meal_max_foods
 
 
 def portions(text: str) -> list[dict[str, Any]] | None:

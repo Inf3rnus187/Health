@@ -13,18 +13,34 @@ from datetime import date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from app.core.config import get_settings
 from app.models.work import WorkSession
 from app.services.timed_entries import utc
 from app.services.work_math import Day
 
-MIN_REST_H = 11.0
-MAX_SPREAD_H = 13.0
-LONG_SESSION_H = 12.0
-MAX_12W_AVG_H = 44.0
-_NIGHT = (time(21, 0), time(6, 0))
+_S = get_settings()
+MIN_REST_H = _S.work_min_rest_hours
+MAX_SPREAD_H = _S.work_max_spread_hours
+LONG_SESSION_H = _S.work_long_session_hours
+MAX_12W_AVG_H = _S.work_max_avg_hours
+_NIGHT = (
+    time.fromisoformat(_S.work_night_start),
+    time.fromisoformat(_S.work_night_end),
+)
 _SUNDAY = 6
-_WEEKS = 12
+_WEEKS = _S.work_avg_weeks
+AVG_WEEKS = _WEEKS
 Span = tuple[datetime, datetime]
+
+
+def _hour(at: time) -> str:
+    """« 21 h », « 5 h 30 »."""
+    return f"{at.hour} h" + (f" {at.minute:02d}" if at.minute else "")
+
+
+#: The night as a report writes it: « 21 h », « 21 h - 6 h ».
+NIGHT_FROM = _hour(_NIGHT[0])
+NIGHT_TEXT = f"{NIGHT_FROM} - {_hour(_NIGHT[1])}"
 
 
 def landmarks(

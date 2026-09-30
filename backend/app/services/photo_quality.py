@@ -12,10 +12,13 @@ from typing import Any
 
 from PIL import Image, ImageFilter, ImageStat
 
-_MIN_SIDE = 300
-_DARK = 35.0
-_BRIGHT = 235.0
-_BLURRY = 12.0
+from app.core.config import get_settings
+
+_S = get_settings()
+_MIN_SIDE = _S.photo_min_side
+_DARK = _S.photo_dark
+_BRIGHT = _S.photo_bright
+_BLURRY = _S.photo_blurry
 # Laplacian (edge) filter; the offset keeps negative responses in 0-255.
 _LAPLACIAN = ImageFilter.Kernel(
     (3, 3), (0, 1, 0, 1, -4, 1, 0, 1, 0), scale=1, offset=128

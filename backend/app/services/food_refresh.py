@@ -27,9 +27,10 @@ from app.core.errors import AppError, InvalidInputError
 from app.models.food import Food
 from app.services import food_off, foods
 
-_BUDGET_S = 60.0  # one « Tout relire » answers within a minute
-_PER_RUN = 50
-_PAUSE_S = 1.0
+#: One « Tout relire » answers within this (a minute by default).
+_BUDGET_S = get_settings().food_refresh_budget_s
+_PER_RUN = get_settings().food_refresh_per_night
+_PAUSE_S = get_settings().food_refresh_pause_s
 
 
 async def refresh(food: Food) -> list[str]:

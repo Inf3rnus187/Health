@@ -38,7 +38,7 @@ _NUTRIMENTS = {
     "salt_g": "salt_100g",
 }
 _SODIUM = "sodium_100g"  # grams: taken as given, not recomputed from salt
-_TIMEOUT = 10.0
+_TIMEOUT = get_settings().openfoodfacts_timeout_s
 
 
 async def lookup(barcode: str) -> dict[str, Any]:

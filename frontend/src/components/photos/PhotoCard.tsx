@@ -14,16 +14,15 @@ import { usePhotoAnalysis } from '../../hooks/usePhotos';
 import { AnalysisV2View } from './AnalysisV2';
 import { AuthImage } from './AuthImage';
 import { angleLabel, STATUS_LABEL } from './labels';
-
-const REFRESH_DELAYS = [1500, 4000, 8000, 13000];
+import { hub, ms } from '../../settings';
 
 function refreshLater(client: QueryClient, id: string): void {
-  for (const delay of REFRESH_DELAYS) {
+  for (const delay of hub().photo_refresh_s) {
     setTimeout(() => {
       void client.invalidateQueries({ queryKey: ['photos'] });
       void client.invalidateQueries({ queryKey: ['photo-analysis', id] });
       void client.invalidateQueries({ queryKey: ['evolution-trend'] });
-    }, delay);
+    }, ms(delay));
   }
 }
 

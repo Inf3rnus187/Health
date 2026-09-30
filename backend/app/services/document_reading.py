@@ -14,12 +14,13 @@ from __future__ import annotations
 from typing import Any
 
 from app.core import ollama
+from app.core.config import get_settings
 from app.services import document_prompt
 from app.services.document_text import DocContent
 from app.services.textfold import fold as _fold
 
-_VALUES_TOKENS = 1024
-_SUMMARY_TOKENS = 900
+_VALUES_TOKENS = get_settings().document_ai_values_tokens
+_SUMMARY_TOKENS = get_settings().document_ai_summary_tokens
 _TEXT_MAX = 300
 
 

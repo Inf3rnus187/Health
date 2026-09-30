@@ -11,12 +11,14 @@ import io
 import pillow_heif
 from PIL import Image, ImageOps
 
+from app.core.config import get_settings
+
 # Apple devices (and mirror cameras) capture HEIC/HEIF, which PIL and web
 # browsers cannot read natively; registering the opener lets us decode it
 # and re-encode a browser-safe JPEG.
 pillow_heif.register_heif_opener()
 
-_MAX_SIDE = 1280
+_MAX_SIDE = get_settings().image_max_side
 
 
 def normalize_bytes(data: bytes, max_side: int = _MAX_SIDE) -> bytes:

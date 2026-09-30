@@ -15,6 +15,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
+from app.core.config import get_settings
 from app.services import work_parse
 from app.services.table_read import Row
 
@@ -34,7 +35,7 @@ _TITLES = {
 #: Titles this short ("id") must match exactly.
 _SHORT = 3
 #: A comment's start further back than this is not its work time.
-_MAX_WORK = timedelta(hours=12)
+_MAX_WORK = timedelta(hours=get_settings().work_ticket_max_hours)
 
 
 class Day(NamedTuple):

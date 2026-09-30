@@ -23,6 +23,7 @@ from typing import Any, NamedTuple
 from sqlalchemy import delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models.base import new_uuid, utcnow
 from app.models.health_raw import HealthSample
 from app.models.metric import MetricDefinition
@@ -33,8 +34,8 @@ from app.services.apple_health.spec import MetricSpec, synth_spec
 from app.services.apple_health.units import PERCENT_0_100
 
 _SOURCE = "auto-export"
-_RAW_CHUNK = 2000
-_ROLLUP_CHUNK = 400
+_RAW_CHUNK = get_settings().sync_chunk
+_ROLLUP_CHUNK = get_settings().sync_rollup_chunk
 _BLOOD_PRESSURE = {
     "systolic": "HKQuantityTypeIdentifierBloodPressureSystolic",
     "diastolic": "HKQuantityTypeIdentifierBloodPressureDiastolic",

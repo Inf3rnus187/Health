@@ -14,8 +14,8 @@ import {
 } from 'recharts';
 
 import type { WorkWeek } from '../../api/work';
+import { hub } from '../../settings';
 
-const MAX_WEEK = 48;
 const MARGIN = { top: 8, right: 16, left: -8 };
 const OFF: Record<string, string> = {
   arret: 'arrêt',
@@ -61,7 +61,10 @@ export function WeeksChart(props: { weeks: WorkWeek[]; contract: number }) {
           labelFormatter={(week: string) => label(week, props.weeks)}
         />
         <ReferenceLine y={props.contract} stroke="var(--color-ok)" />
-        <ReferenceLine y={MAX_WEEK} stroke="var(--color-danger)" />
+        <ReferenceLine
+          y={hub().work_max_week_hours}
+          stroke="var(--color-danger)"
+        />
         <Bar
           dataKey="site"
           name="Sur place"

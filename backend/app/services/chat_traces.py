@@ -22,13 +22,14 @@ from datetime import date, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from app.core.config import get_settings
 from app.services import chat_read
 from app.services.chat_read import Chat, Message
 from app.services.trace_model import Trace
 
 _ME = ("moi", "me", "you", "vous", "yo", "ich", "io", "eu")
 _MINUTE = timedelta(minutes=1)
-_LONGEST = 8000
+_LONGEST = get_settings().chat_trace_max_chars
 _TEXT = "text/plain; charset=utf-8"
 
 

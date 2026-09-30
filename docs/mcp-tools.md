@@ -6,7 +6,7 @@ configuration et connexion d'un client : [guide MCP](guides/mcp.md).
 Paramètre suivi de `*` : obligatoire ; sinon la valeur par défaut est
 indiquée.
 
-114 outils.
+115 outils.
 
 ## Données et métriques
 
@@ -17,6 +17,14 @@ Home tiles: latest value, 7-day average and change per key metric.
 ``at``: time of the last reading (a counter's last addition); the
 kcal eaten (nutrition.energy, from analysed meals) sit next to active
 and resting energy — spent = active + resting.
+
+### `hub_settings`
+
+The hub's limits and timings, as its administrator set them.
+
+``meal_photos`` (photos a meal takes), ``meal_analysis_max_delay_min``
+(the longest ``analysis_delay_min`` of log_meal), ``page_sizes``,
+``work_max_week_hours`` and the web page's timings (seconds).
 
 ### `list_domains`
 

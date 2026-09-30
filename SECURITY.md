@@ -67,11 +67,21 @@ asks for, never who eats them. A barcode on a
 - **nginx writes no body sent to disk**: what a page, a Shortcut or an
   app sends through `/api/` (meal photos, documents, Health Auto
   Export's JSON…) is streamed to the API as it arrives
-  (`proxy_request_buffering off`, `nginx/default.conf`); it used to sit
-  unencrypted in a temporary file of the `web` container
+  (`proxy_request_buffering off`, `nginx/default.conf.template`); it
+  used to sit unencrypted in a temporary file of the `web` container
   (`client_temp`) until the API had it. Answers over 2 MB (an export, a
-  report, a large decrypted photo) still spill briefly to nginx's
-  `proxy_temp`, inside the container, never on a volume.
+  report, a large decrypted photo; `WEB_PROXY_BUFFERS` ×
+  `WEB_PROXY_BUFFER_KB`) still spill briefly to nginx's `proxy_temp`,
+  inside the container, never on a volume.
+- **Every size and time limit is the operator's** (`.env`,
+  docs/guides/configuration.md, « Réglages de fonctionnement »): a
+  request through nginx is capped at `WEB_MAX_BODY_MB` (32 MB; it was a
+  fixed 25 MB, below the 30 MB a proof may weigh), each file by its own
+  limit (`MAX_UPLOAD_MB`, `MEDICAL_MAX_MB`, `EVIDENCE_MAX_MB`). Raising
+  them lets larger bodies reach the API; a value out of bounds stops the
+  API at start with the variable named. nginx's template is filled with
+  the `WEB_…` variables only (`NGINX_ENVSUBST_FILTER`): no other
+  variable of the container reaches its configuration.
 - **Compression never touches a secret**: nginx gzips text (the page's
   code, the API's JSON) except the answers that carry a session or a
   token — `/api/v1/auth/…`, `/api/v1/tokens`, `/api/v1/sync/shortcut` —
@@ -128,6 +138,7 @@ admin-only writes.
 
 | Level | How | May |
 |-------|-----|-----|
+| **Anyone** | no sign-in | `GET /health` (up or not) and `GET /system/settings`: the web page's timings and form limits from the environment (retries, polls, « Par page » choices, photos per meal, longest analysis delay, weekly work maximum) — no secret, nothing of an account, read before the login page. |
 | **Web session** | `POST /auth/login` | Everything on the account's data. The **only** level for managing tokens (`/tokens`), MFA (`/auth/mfa/*`), deleting the account (`DELETE /me`) and downloading the pre-filled Shortcut (`GET /sync/shortcut`) — `InteractiveDep` in `core/deps.py`. |
 | **Admin** | web session of an account with role `admin` (today: only the account created by the seed) | Also `GET`/`POST /system/update` — admin **web session** only, never a token (`AdminDep`, `core/deps_admin.py`). Also the shared metric catalogue, `POST /metrics` and `PATCH /metrics/{key}` — admin session, or an admin's token carrying `write:metrics` (or `hub:full`) (`CatalogDep`). |
 | **`hub:full` token** | API token (MCP server, assistant) | What the web session does, **except** tokens, MFA, account deletion, the Shortcut download and `/system/update`; the catalogue only if its owner is admin. |

@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models.meal import Meal
 from app.models.work import Evidence
 from app.services import evidence, evidence_files, trace_import, traces
@@ -25,8 +26,8 @@ from app.services.daily_rollup import user_zone
 from app.services.timed_entries import day_bounds, utc
 from app.services.trace_model import Trace
 
-MAX_LISTED = 50
-_SAME_TIME = timedelta(minutes=1)
+MAX_LISTED = get_settings().import_report_lines
+_SAME_TIME = timedelta(seconds=get_settings().trace_same_time_s)
 
 
 async def import_traces(

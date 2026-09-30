@@ -8,6 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **The web page's settings are public, and hold nothing private**:
+  `GET /system/settings` (read before signing in) gives only timings and
+  form limits from the environment — no secret, nothing of an account.
+- **A request may now be 32 MB through nginx** (`WEB_MAX_BODY_MB`, was a
+  fixed 25): a proof of up to 30 MB (`EVIDENCE_MAX_MB`) was refused by
+  nginx before the API that accepts it. The API's own limits still
+  apply to each file.
+
 - **Compressed answers never carry a secret**: nginx gzips text but
   not sign-in, session renewal, API tokens nor a Shortcut with its token
   (BREACH).
@@ -53,6 +61,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (session, or an admin's `write:metrics` token); reading is unchanged.
 
 ### Fixed
+
+- **A proof of 25 to 30 MB is accepted**: nginx stopped it at 25 MB
+  (413) while the API allows 30; nginx now takes 32 MB by default.
+- **The work reports write the rules in force**: « Jours de plus de
+  10 h », « semaines de plus de 48 h », « Heures de nuit (21 h - 6 h) »,
+  the Code du travail landmarks and « fin après 21 h » follow the
+  settings instead of fixed text.
 
 - **The site no longer stays on « Le hub ne répond pas » after an
   update**: an update rebuilding the API alone gave its new container a
@@ -345,6 +360,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Nothing that sizes, times or paces the hub is fixed in the code**
+  (for the administrator): every value — database connections, worker
+  jobs and time limits, gunicorn timeouts, nginx sizes, time limits,
+  compression, buffers and cache, AI budgets and time limits, image
+  sizes, upload limits, import and sync batches, Open Food Facts
+  schedule, update detection, work and sleep rules (legal maxima, night
+  hours, pairing windows), medication windows, photo quality and trend
+  rules, late orders, and the web page's retries, polls, refreshes and
+  « Par page » choices — is set in `.env`, with the old value as
+  default (`backend/app/core/tuning.py`, `nginx/default.conf.template`,
+  `docker-compose.yml`). All listed in `.env.example` and
+  `docs/guides/configuration.md` (« Réglages de fonctionnement »); a
+  test fails if one is added without its documentation. The page reads
+  its own from `GET /system/settings` before it shows anything
+  (fallback: the defaults). Kept in code on purpose: physical and
+  format constants, reader internals, layout, and the official meal
+  references.
 - **A meal's AI reading can wait**: `POST /meals` takes
   `analysis_delay_min` (minutes; empty = at once, as before; at most
   `MEAL_ANALYSIS_MAX_DELAY_MIN`, 60 by default), and so does the MCP

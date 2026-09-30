@@ -24,11 +24,11 @@ from app.services import photo_method, robust_stats, weight_trend
 from app.services.robust_stats import Point
 
 ANGLES = ("face", "profil", "dos")
-_MIN_DAYS = 8
-_MIN_SPAN = 21
-_SLOPE_WINDOW = 90
-_EDGE = 7
-_STABLE = 0.5  # score points per 30 days
+_MIN_DAYS = get_settings().photo_trend_min_days
+_MIN_SPAN = get_settings().photo_trend_min_span_days
+_SLOPE_WINDOW = get_settings().photo_trend_window_days
+_EDGE = get_settings().photo_trend_smooth_days
+_STABLE = get_settings().photo_trend_stable  # score points per 30 days
 _PAIR = 2  # a before/after difference needs two days
 
 Row = tuple[Photo, dict[str, Any]]

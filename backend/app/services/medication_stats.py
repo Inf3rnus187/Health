@@ -22,6 +22,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.errors import InvalidInputError
 from app.models.base import utcnow
 from app.models.medical import Treatment
@@ -29,8 +30,8 @@ from app.models.medication import MedicationIntake
 from app.services.daily_rollup import user_zone
 from app.services.timed_entries import local_day, utc
 
-LATE_ENTRY = timedelta(hours=1)
-DEFAULT_DAYS = 30
+LATE_ENTRY = timedelta(minutes=get_settings().medication_late_entry_min)
+DEFAULT_DAYS = get_settings().adherence_days
 
 
 async def span(

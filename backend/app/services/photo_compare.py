@@ -19,10 +19,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import ollama
+from app.core.config import get_settings
 from app.models.photo import Photo
 from app.services import photo_method, photo_quality, photo_storage
 
-_SIDE = 640
+_SIDE = get_settings().photo_compare_side
 _GAP = 16
 
 

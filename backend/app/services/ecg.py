@@ -7,10 +7,11 @@ from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import crypto
+from app.core.config import get_settings
 from app.core.errors import NotFoundError
 from app.models.health_raw import EcgRecord
 
-MAX_POINTS = 5000
+MAX_POINTS = get_settings().ecg_max_points
 
 
 async def series(

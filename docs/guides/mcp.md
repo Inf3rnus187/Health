@@ -5,7 +5,7 @@ client MCP) **l'accès à tout le hub** : données Apple Santé, Dossier,
 Suivi, documents et leur texte, marqueurs, poids, photos, Journal (pipi,
 repas), aliments et table Ciqual, médicaments et observance, rapports
 avec synthèse et vérification, automatisations, heures de travail,
-dossier travail et santé — **114 outils**, listés avec leurs paramètres
+dossier travail et santé — **115 outils**, listés avec leurs paramètres
 dans [`mcp-tools.md`](../mcp-tools.md) (généré depuis le serveur). Chaque
 outil appelle l'API REST : il voit exactement ce que voient les pages.
 
@@ -284,6 +284,15 @@ dans la description (son nom, un autre nom, ou « un pavé de saumon »
 pour « Saumon sauvage rose » : voir le [guide IA](ia-medicale.md)).
 Corriger : « le saumon de 5 h, c'est ma fiche Saumon sauvage rose » →
 `update_meal` avec `foods`, qui relance l'analyse.
+
+### Connaître les limites du hub
+
+`hub_settings` donne les limites réglées par l'administrateur (`.env`,
+[configuration](configuration.md), « Réglages de fonctionnement ») :
+photos qu'un repas accepte (`meal_photos`), délai d'analyse maximal
+(`meal_analysis_max_delay_min`, pour `log_meal` `analysis_delay_min`),
+choix de pagination, maximum hebdomadaire du travail, et les rythmes de
+la page web. Un assistant s'y fie plutôt qu'à des valeurs apprises.
 
 ## Dépannage
 

@@ -49,9 +49,9 @@ from app.services.timed_entries import utc
 from app.workers.queue import enqueue, enqueue_many
 
 _log = get_logger("meal_ai")
-_TIME_LIMIT = 900.0
-_TOKENS = 1500
-_JUDGE_TOKENS = 700
+_TIME_LIMIT = get_settings().meal_ai_time_limit_s
+_TOKENS = get_settings().meal_ai_max_tokens
+_JUDGE_TOKENS = get_settings().meal_ai_judge_tokens
 PENDING = ("queued", "running")
 
 

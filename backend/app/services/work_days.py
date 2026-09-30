@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models.base import utcnow
 from app.models.measurement import Measurement
 from app.models.work import WorkSession
@@ -39,7 +40,7 @@ REMOTE = MetricSpec(
 SPECS = (HOURS, START, END, REMOTE)
 #: A clock-in without clock-out is "at work now" this long; after it the
 #: clock-out is "missing", and a new clock-in starts a new session.
-OPEN_FOR = timedelta(hours=16)
+OPEN_FOR = timedelta(hours=get_settings().work_open_session_hours)
 
 
 async def refresh(

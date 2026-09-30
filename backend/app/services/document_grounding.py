@@ -14,9 +14,10 @@ import re
 from datetime import date
 from typing import Any, NamedTuple
 
+from app.core.config import get_settings
 from app.services import doc_dates
 
-_MAX_REJECTED = 30
+_MAX_REJECTED = get_settings().document_ai_rejected_max
 
 
 class Grounded(NamedTuple):

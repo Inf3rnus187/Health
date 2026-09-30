@@ -9,12 +9,15 @@ from datetime import UTC, datetime
 from typing import TypeVar
 from zoneinfo import ZoneInfo
 
+from app.core.config import get_settings
+
 #: The channel the app's data is stored under (one HealthKit channel per
 #: day, like the native export and Health Auto Export: never added up).
 SOURCE = "healthkit"
 QUANTITY = "HKQuantityTypeIdentifier"
 CATEGORY = "HKCategoryTypeIdentifier"
-_CHUNK = 500  # ids per IN (…): SQLite limits bound parameters
+#: Ids per IN (…): SQLite limits bound parameters (SQL_IN_CHUNK).
+_CHUNK = get_settings().sql_in_chunk
 
 T = TypeVar("T")
 

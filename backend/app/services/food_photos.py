@@ -16,7 +16,7 @@ from app.models.food import Food
 from app.services import imaging, photo_storage
 
 KINDS = ("pack", "label")
-_LABEL_SIDE = 2048
+_LABEL_SIDE = get_settings().image_read_side
 
 
 def add(food: Food, data: bytes, content_type: str, kind: str) -> str:

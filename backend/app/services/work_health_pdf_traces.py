@@ -9,6 +9,8 @@ from fpdf import FPDF
 
 from app.services.pdf_blocks import table
 from app.services.pdf_text import heading, line
+from app.services.work_legal import NIGHT_FROM
+from app.services.work_math import MAX_DAY_HOURS
 
 #: Short trace names for the day-by-day journal.
 SHORT = {
@@ -78,15 +80,16 @@ def _facts(tr: dict[str, Any]) -> list[str]:
         f"Jours sans pointage où une trace vous place quelque part ou "
         f"montre votre activité (tickets) : "
         f"{len(tr['unclocked_days'])} ({_dates(tr['unclocked_days'])}).",
-        f"Traces après 21 h un jour travaillé : {len(tr['late'])} ("
+        f"Traces après {NIGHT_FROM} un jour travaillé : {len(tr['late'])} ("
         + ", ".join(
             f"{_d(x['date'])} {x['time']} {SHORT.get(x['kind'], '')}"
             for x in tr["late"][:10]
         )
         + ").",
         f"Repas livrés ou achetés : {d['orders']} pour {d['total']:g} EUR, "
-        f"dont {d['late']} après 21 h et {d['on_long_days']} les jours longs "
-        "(plus de 10 h ou débauche après 21 h) pour "
+        f"dont {d['late']} après {NIGHT_FROM} et {d['on_long_days']} les "
+        f"jours longs (plus de {MAX_DAY_HOURS:g} h ou débauche après "
+        f"{NIGHT_FROM}) pour "
         f"{d['long_days_total']:g} EUR.",
         "Note moyenne de ces repas (analyse IA, sur 10) : "
         + ("-" if d["avg_score"] is None else f"{d['avg_score']:g}")

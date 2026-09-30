@@ -374,6 +374,7 @@ signale qu'il est aussi accepté en paramètre d'URL.
 | POST | `/stock` | `write:measurements` + ?token= | JSON `StockIn` (food_id, barcode, food, kind, packs, units, grams, at, note) | Enter a purchase, a loss (thrown, given) or a count of one food. |
 | DELETE | `/stock/moves/{move_id}` | `write:measurements` | `move_id` | Delete a move entered by mistake (the audit log keeps it). |
 | GET | `/stock/{food_id}/moves` | `read:all` | `food_id` | A food's history: its moves (newest first) and the meals that ate it. |
+| GET | `/system/settings` | Public | — | The web page's timings and its forms' limits (no sign-in). |
 | GET | `/system/update` | Session uniquement | — | Changes waiting on GitHub, the parts to rebuild, the last update. |
 | POST | `/system/update` | Session uniquement | — | Ask the host to update now (its cron runs ./update.sh). |
 | GET | `/system/version` | Tout jeton | — | The version the hub runs (any signed-in user; no host detail). |

@@ -32,6 +32,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from app.core.config import get_settings
 from app.services.text_norm import norm, singular, tokens
 
 
@@ -82,9 +83,10 @@ _ADDED_SUGAR = re.compile(r"sucres? ajout|ajouts? de sucre", re.IGNORECASE)
 _SUGARS = ("sucre", "sirop", "glucose", "fructose", "dextrose", "saccharose")
 _MEAL_WORDS = frozenset("total totale repas ensemble".split())
 _SALT_PER_NA = 400.0  # 1 g of salt = 400 mg of sodium
-_WHOLE = 400  # ingredients the model was given; longer: cut, not known
+#: Ingredients the model was given; longer: cut, not known.
+_WHOLE = get_settings().meal_ingredients_max_chars
 _SHORTEST = 12
-_LONGEST = 300
+_LONGEST = get_settings().meal_remark_max_chars
 _NAME_WORD = 3
 _ULTRA_NOVA = 4
 _PROCESSED_NOVA = 3

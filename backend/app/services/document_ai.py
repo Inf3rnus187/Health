@@ -24,6 +24,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import ollama
+from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.models.base import utcnow
 from app.models.medical import MedicalDocument
@@ -41,7 +42,8 @@ from app.workers.queue import enqueue, enqueue_many
 
 _log = get_logger("document_ai")
 _KIND_OF = {"fibroscan": "imagerie"}
-_TIME_LIMIT = 1800.0  # seconds for one document, all model calls included
+#: Seconds for one document, all model calls included.
+_TIME_LIMIT = get_settings().document_ai_time_limit_s
 PENDING = ("queued", "running")
 
 

@@ -15,6 +15,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.deps import Principal
 from app.core.errors import InvalidInputError, NotFoundError
 from app.core.scopes import HUB_FULL
@@ -26,7 +27,7 @@ from app.services.daily_rollup import user_zone
 from app.services.text_norm import norm
 from app.services.timed_entries import day_bounds, utc
 
-_FUTURE = timedelta(minutes=10)
+_FUTURE = timedelta(minutes=get_settings().medication_future_min)
 _SHORTEST_PART = 3
 
 

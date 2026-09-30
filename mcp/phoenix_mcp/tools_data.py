@@ -26,6 +26,17 @@ async def health_summary() -> Any:
 
 
 @mcp.tool()
+async def hub_settings() -> Any:
+    """The hub's limits and timings, as its administrator set them.
+
+    ``meal_photos`` (photos a meal takes), ``meal_analysis_max_delay_min``
+    (the longest ``analysis_delay_min`` of log_meal), ``page_sizes``,
+    ``work_max_week_hours`` and the web page's timings (seconds).
+    """
+    return await client.get("/system/settings")
+
+
+@mcp.tool()
 async def list_domains() -> Any:
     """Domain codes and their French names (Cœur, Biologie, Sommeil…)."""
     return await client.get("/catalog/domains")

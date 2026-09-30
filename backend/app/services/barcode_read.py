@@ -18,7 +18,7 @@ from app.core.errors import InvalidInputError
 from app.services import imaging  # noqa: F401 - registers the HEIC opener
 
 _FORMATS = zxingcpp.barcode_formats_from_str("EAN13,EAN8,UPCA,UPCE")
-_SIDE = 2400
+_SIDE = get_settings().barcode_read_side
 _DIGITS = range(8, 15)
 
 

@@ -11,12 +11,13 @@ diagnoses, given the VERIFIED values so it never has to guess a number.
 
 from __future__ import annotations
 
+from app.core.config import get_settings
 from app.services import biology_catalog as bio
 from app.services import metabolic_catalog as cat
 
-_CHUNK = 5000
-_MAX_CHUNKS = 8
-_SUMMARY_CHARS = 12000
+_CHUNK = get_settings().document_ai_chunk_chars
+_MAX_CHUNKS = get_settings().document_ai_max_chunks
+_SUMMARY_CHARS = get_settings().document_ai_summary_chars
 
 #: FibroScan metrics a document may carry: key → (label, unit).
 LIVER = {

@@ -17,10 +17,12 @@ from app.services import (
     work_absence,
     work_health_pdf_days,
     work_health_pdf_traces,
+    work_legal,
 )
 from app.services import work_health_pdf_more as more
 from app.services.pdf_blocks import table
 from app.services.pdf_text import heading, line
+from app.services.work_math import MAX_DAY_HOURS, MAX_WEEK_HOURS
 
 _ORIGINS = {
     "tap": "pointage (Raccourci / GPS)",
@@ -107,8 +109,8 @@ def _work(pdf: FPDF, data: dict[str, Any]) -> None:
         f"Embauche moyenne {w['avg_start'] or '-'}, débauche moyenne "
         f"{w['avg_end'] or '-'}.",
         f"Heures au-delà du contrat (par semaine) : {w['overtime_hours']:g} h.",
-        f"Jours de plus de 10 h : {w['days_over_10h']} ; semaines de plus "
-        f"de 48 h : {w['weeks_over_48h']}.",
+        f"Jours de plus de {MAX_DAY_HOURS:g} h : {w['days_over_10h']} ; "
+        f"semaines de plus de {MAX_WEEK_HOURS:g} h : {w['weeks_over_48h']}.",
         "Journée la plus longue : "
         + (
             f"{_d(longest['date'])}, {longest['hours']:g} h" if longest else "-"
@@ -125,8 +127,9 @@ def _legal(pdf: FPDF, data: dict[str, Any]) -> None:
     line(
         pdf,
         5,
-        f"Heures de nuit (21 h - 6 h) : {lg['night_hours']:g} h ; plus longue "
-        f"suite de jours travaillés : {lg['max_consecutive_days']}.",
+        f"Heures de nuit ({work_legal.NIGHT_TEXT}) : {lg['night_hours']:g} h"
+        " ; plus longue suite de jours travaillés : "
+        f"{lg['max_consecutive_days']}.",
     )
     table(
         pdf,
@@ -144,14 +147,15 @@ def _legal_rows(lg: dict[str, Any]) -> list[list[Any]]:
         for w in lg["over_44h_12_weeks"][:6]
     )
     return [
-        ["Repos quotidien < 11 h", len(lg["short_rests"]),
-         _list(lg["short_rests"], "rest_hours")],
-        ["Amplitude > 13 h", len(lg["spread_over_13h"]),
-         _list(lg["spread_over_13h"], "hours")],
-        ["Sessions de 12 h et plus", len(lg["long_sessions"]),
-         _list(lg["long_sessions"], "hours")],
-        ["Moyenne > 44 h sur 12 semaines", len(lg["over_44h_12_weeks"]),
-         windows],
+        [f"Repos quotidien < {work_legal.MIN_REST_H:g} h",
+         len(lg["short_rests"]), _list(lg["short_rests"], "rest_hours")],
+        [f"Amplitude > {work_legal.MAX_SPREAD_H:g} h",
+         len(lg["spread_over_13h"]), _list(lg["spread_over_13h"], "hours")],
+        [f"Sessions de {work_legal.LONG_SESSION_H:g} h et plus",
+         len(lg["long_sessions"]), _list(lg["long_sessions"], "hours")],
+        [f"Moyenne > {work_legal.MAX_12W_AVG_H:g} h sur "
+         f"{work_legal.AVG_WEEKS} semaines",
+         len(lg["over_44h_12_weeks"]), windows],
         ["Dimanches travaillés", len(lg["sundays"]), _dates(lg["sundays"])],
         ["Jours fériés travaillés", len(lg["holidays"]),
          _dates(lg["holidays"])],

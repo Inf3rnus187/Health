@@ -16,6 +16,7 @@ from typing import Any, cast
 from sqlalchemy import CursorResult, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models.health_raw import HealthSample
 from app.models.metric import MetricDefinition
 from app.services.apple_health import hk_catalog
@@ -23,7 +24,7 @@ from app.services.apple_health.hk_values import category_value
 from app.services.apple_health.spec import synth_spec
 from app.services.apple_health.units import PERCENT_0_100
 
-_BATCH = 5000
+_BATCH = get_settings().catalog_sync_batch
 
 
 def _by_key() -> dict[str, tuple[str, hk_catalog.HkType]]:

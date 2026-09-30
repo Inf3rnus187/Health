@@ -14,6 +14,8 @@ from datetime import date, timedelta
 from statistics import fmean
 from typing import Any
 
+from app.core.config import get_settings
+
 #: Bands of worked hours for the night-after comparison.
 BANDS = (
     ("Jour non travaillé", None, None),
@@ -30,7 +32,7 @@ HEALTH = {
     "habit.cigarettes": "Cigarettes",
     "habit.coffee": "Cafés",
 }
-_MIN_PAIRS = 5
+_MIN_PAIRS = get_settings().work_corr_min_pairs
 
 
 def pearson(xs: list[float], ys: list[float]) -> dict[str, Any] | None:

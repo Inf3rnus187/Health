@@ -14,9 +14,9 @@ import {
   logUrination,
   type Meal,
 } from '../api/journal';
+import { hub, ms } from '../settings';
 import type { Range } from '../utils/range';
 
-const POLL_MS = 5000;
 /** Metrics the journal feeds (their pages refresh after a change). */
 const FED = [
   'journal-days',
@@ -63,7 +63,8 @@ export function useMeals(range: Range) {
   return useQuery({
     queryKey: ['meals', range],
     queryFn: () => fetchMeals(range),
-    refetchInterval: (query) => (pending(query.state.data) ? POLL_MS : false),
+    refetchInterval: (query) =>
+      pending(query.state.data) ? ms(hub().poll_s) : false,
   });
 }
 

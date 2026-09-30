@@ -47,7 +47,7 @@ and tested:
 | **Photo pipeline** (upload → EXIF‑strip/normalize → Ollama vision → compare) | ✅ |
 | **Dashboards** per domain (`/dashboard/{domain}` + React domain tabs) | ✅ |
 | **Exports** of daily values CSV/JSON/XLSX/FHIR + async **clinical PDF** reports | ✅ |
-| **MCP server** — 114 tools covering the whole hub, as a REST‑API client (each client uses its own `hub:full` token) | ✅ |
+| **MCP server** — 115 tools covering the whole hub, as a REST‑API client (each client uses its own `hub:full` token) | ✅ |
 | **Automations** (trigger→action: reminder/capture) + run endpoint | ✅ |
 | **Hardening**: optional TOTP MFA (API only, no web screen yet), at‑rest file encryption, RGPD erasure | ✅ |
 | **Supply chain**: gitleaks, pip‑audit, pnpm audit, Trivy, syft SBOM (CI) | ✅ |
@@ -138,7 +138,7 @@ Every variable is explained in the
 | [Ingestion](docs/guides/ingestion.md) | Apple Santé, Health Auto Export, ta propre app iPhone (HealthKit), Raccourcis, montre, PPC, photos. |
 | [MCP](docs/guides/mcp.md) | Brancher un assistant (Claude Desktop / Code, stdio) de façon sûre. |
 | [Référence API](docs/api.md) | Toutes les routes, leurs paramètres et le droit exigé (générée depuis le code). |
-| [Outils MCP](docs/mcp-tools.md) | Les 114 outils et leurs paramètres (générée depuis le serveur). |
+| [Outils MCP](docs/mcp-tools.md) | Les 115 outils et leurs paramètres (générée depuis le serveur). |
 | [Performances](docs/performance.md) | Mesures avant / après de chaque optimisation, méthode, ce qui reste lent, plusieurs utilisateurs. |
 | [Multi-utilisateur](docs/multi-utilisateur.md) | Ce qui manque pour plusieurs comptes (on ne peut pas encore en créer un second) : analyse et plan. |
 | [Sécurité](SECURITY.md) | Niveaux d'accès, chiffrement, limites connues. |
@@ -274,7 +274,7 @@ docker compose exec api \
       - sinon, fond **Carto** par défaut, sans clé (les serveurs publics
         d'OpenStreetMap **bloquent** les apps tierces, d'où ce choix) ;
       - `VITE_TILE_URL` / `VITE_TILE_ATTRIB` pour tout autre fournisseur
-        (ajoutez son domaine à `img-src` dans `nginx/default.conf`) ;
+        (ajoutez son domaine à `img-src` dans `nginx/default.conf.template`) ;
         `VITE_TILE_URL=none` = trace seule, sans fond ni appel externe.
       La carte est la seule exception à la CSP « self ».
   - Les ECG marqués **« mauvais enregistrement »** (Poor Recording) sont
@@ -398,7 +398,7 @@ phoenix-health-hub/
 │   └── app/{core,models,schemas,services,api,workers,seed}
 ├── frontend/               # React + Vite + TS (theme, api, components)
 ├── nginx/                  # reverse proxy + React build image
-├── mcp/                    # MCP server (114 tools, API client)
+├── mcp/                    # MCP server (115 tools, API client)
 ├── tools/                  # custom code-limit checker
 └── docs/                   # architecture, data model, guides, ADRs
 ```

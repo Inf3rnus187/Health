@@ -50,6 +50,14 @@ essai toutes les 5 s… » et revient seule, toujours connectée (en moins
 de 10 s une fois l'API relancée, même si la mise à jour n'a reconstruit
 qu'elle).
 
+Ces rythmes (nouvel essai, renouvellement de la session, recherche d'une
+nouvelle version, suivi d'une analyse IA), les choix « Par page » et les
+seuils du travail (10 h par jour, 48 h par semaine, nuit à partir de
+21 h…) sont les valeurs par défaut : l'administrateur du hub les change
+dans `.env` ([configuration](configuration.md), « Réglages de
+fonctionnement »). La page les lit au chargement, et les rapports PDF
+écrivent toujours les seuils en vigueur.
+
 **Chargement.** Le site ne télécharge d'abord que l'accueil ; chaque
 page (Santé, Travail, Journal…) arrive à sa première ouverture — un bref
 « Chargement… » la première fois, puis plus rien. Après une mise à jour,
@@ -1004,7 +1012,9 @@ l'ordre :
    sommeil.
 2. **Travail** : heures (sessions complètes), jours de présence pointée,
    moyennes, embauche / débauche moyennes, heures au-delà du contrat,
-   jours > 10 h, semaines > 48 h, plus longue journée.
+   jours > 10 h, semaines > 48 h, plus longue journée (seuils par
+   défaut, écrits tels que réglés : `WORK_MAX_DAY_HOURS`,
+   `WORK_MAX_WEEK_HOURS`, `WORK_NIGHT_START`…).
 3. **Repères du Code du travail**, avec les dates : repos quotidien de
    moins de 11 h, amplitude de plus de 13 h, sessions de 12 h et plus,
    moyenne de plus de 44 h sur 12 semaines, dimanches et jours fériés

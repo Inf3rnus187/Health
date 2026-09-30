@@ -6,6 +6,8 @@
 // that does not answer (restarting after an update: 502) never logs
 // out: only a refused refresh token does.
 
+import { hub, ms } from '../settings';
+
 interface ApiError {
   code: string;
   detail: string;
@@ -46,9 +48,6 @@ export function keepTokens(pair: TokenPair): void {
  * that did not answer (keep the session, try again). */
 export type Renewal = 'renewed' | 'refused' | 'unreachable';
 
-/** Longest wait for the hub's answer before calling it unreachable. */
-const REFRESH_TIMEOUT = 15_000;
-
 async function refreshWith(
   token: string,
 ): Promise<TokenPair | 'refused' | 'unreachable'> {
@@ -56,7 +55,8 @@ async function refreshWith(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refresh_token: token }),
-    signal: AbortSignal.timeout(REFRESH_TIMEOUT),
+    // the longest wait before calling the hub unreachable
+    signal: AbortSignal.timeout(ms(hub().refresh_timeout_s)),
   }).catch(() => null);
   if (!res || res.status >= 500) return 'unreachable';
   return res.ok ? ((await res.json()) as TokenPair) : 'refused';

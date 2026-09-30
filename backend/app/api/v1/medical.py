@@ -7,6 +7,7 @@ from typing import Annotated
 from fastapi import APIRouter, Form, UploadFile, status
 from fastapi.responses import Response
 
+from app.core.config import get_settings
 from app.core.deps import SessionDep, UserDep
 from app.core.errors import InvalidInputError
 from app.models.medical import MedicalDocument
@@ -16,7 +17,8 @@ from app.services import audit, document_ai, medical
 
 router = APIRouter(prefix="/medical", tags=["medical"])
 
-_MAX_BYTES = 25 * 1024 * 1024
+_MAX_MB = get_settings().medical_max_mb
+_MAX_BYTES = _MAX_MB * 1024 * 1024
 
 
 @router.post(
@@ -100,5 +102,5 @@ async def _read(file: UploadFile) -> bytes:
     """Read an upload, enforcing the size cap."""
     data = await file.read()
     if len(data) > _MAX_BYTES:
-        raise InvalidInputError("Fichier trop volumineux (max 25 Mo)")
+        raise InvalidInputError(f"Fichier trop volumineux (max {_MAX_MB} Mo)")
     return data

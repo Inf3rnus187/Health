@@ -1,7 +1,8 @@
 import { lazy, type ComponentType } from 'react';
 
+import { hub, ms } from '../settings';
+
 const RELOADED_AT = 'pages.reloadedAt';
-const ONCE_A_MINUTE = 60_000;
 
 // A page's code left behind by an update (the hub was updated while the
 // page stayed open): load the new version, at most once a minute, then
@@ -9,7 +10,7 @@ const ONCE_A_MINUTE = 60_000;
 function reloadOnce(error: unknown): Promise<never> {
   try {
     const last = Number(sessionStorage.getItem(RELOADED_AT) ?? 0);
-    if (Date.now() - last > ONCE_A_MINUTE) {
+    if (Date.now() - last > ms(hub().reload_guard_s)) {
       sessionStorage.setItem(RELOADED_AT, String(Date.now()));
       window.location.reload();
       return new Promise<never>(() => undefined);

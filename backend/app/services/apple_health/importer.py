@@ -14,6 +14,7 @@ from typing import IO, Any, NamedTuple
 from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models.base import new_uuid, utcnow
 from app.models.health_raw import HealthSample, Workout
 from app.schemas.measurement import MeasurementIn
@@ -39,9 +40,9 @@ from app.services.apple_health.spec import (
 from app.services.apple_health.timeparse import to_dt, to_float
 from app.services.apple_health.units import convert
 
-_BATCH = 5000
-_COMMIT_EVERY = 50000
-_ROLLUP_BATCH = 500
+_BATCH = get_settings().import_batch
+_COMMIT_EVERY = get_settings().import_commit_every
+_ROLLUP_BATCH = get_settings().import_rollup_batch
 _WORKOUT_CANON = {spec.key: spec.unit for spec in WORKOUT_SPECS}
 
 Progress = Callable[[int], Awaitable[None]]

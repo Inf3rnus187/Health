@@ -15,6 +15,7 @@ from typing import Any, TypeVar
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models.meal import Meal
 from app.models.medical import Appointment
 from app.models.work import Absence, Evidence, WorkSession
@@ -22,7 +23,7 @@ from app.services import meals as meal_service
 from app.services import work_days
 from app.services.daily_rollup import user_zone
 
-_CHUNK = 500
+_CHUNK = get_settings().delete_chunk
 Row = TypeVar("Row", Evidence, WorkSession, Absence, Meal, Appointment)
 
 

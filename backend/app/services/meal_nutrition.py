@@ -13,10 +13,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.core.config import get_settings
 from app.services import ciqual, meal_remarks
 
 MACROS = ("protein_g", "carbs_g", "sugars_g", "fat_g", "sat_fat_g", "fiber_g")
-_MAX_GRAMS = 1500.0
+_MAX_GRAMS = get_settings().meal_line_max_g
 _SODIUM_PER_G = 40.0  # mg per gram of food: above table salt density
 #: Keys an item keeps besides its values (set by code, not the model).
 _KEPT = {

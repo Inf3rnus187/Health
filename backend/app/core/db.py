@@ -21,9 +21,18 @@ engine = create_async_engine(
     echo=_settings.debug,
     pool_pre_ping=True,
     future=True,
-    # Up to 10 connections per process: API_WORKERS processes, plus the
-    # worker's, stay under PostgreSQL's 100 (see API_WORKERS).
-    **({"pool_size": 5, "max_overflow": 5} if _POOLED else {}),
+    # DB_POOL_SIZE + DB_MAX_OVERFLOW connections per process (10 by
+    # default): API_WORKERS processes, plus the worker's, stay under
+    # PostgreSQL's 100 (see API_WORKERS).
+    **(
+        {
+            "pool_size": _settings.db_pool_size,
+            "max_overflow": _settings.db_max_overflow,
+            "pool_timeout": _settings.db_pool_timeout_s,
+        }
+        if _POOLED
+        else {}
+    ),
 )
 
 SessionFactory = async_sessionmaker(

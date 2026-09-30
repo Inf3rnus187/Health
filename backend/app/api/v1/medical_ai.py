@@ -7,11 +7,13 @@ from typing import Any
 
 from fastapi import APIRouter, status
 
+from app.core.config import get_settings
 from app.core.deps import SessionDep, UserDep
 from app.services import document_ai, document_text, medical
 
 router = APIRouter(prefix="/medical", tags=["medical"])
-_TEXT_MAX = 200_000  # characters returned (a long report fits)
+#: Characters returned (a long report fits).
+_TEXT_MAX = get_settings().document_text_max
 
 
 @router.post("/documents/analyze-all", status_code=status.HTTP_202_ACCEPTED)

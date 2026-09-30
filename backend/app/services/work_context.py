@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.errors import NotFoundError
 from app.models.health_raw import HealthSample
 from app.models.work import Evidence, WorkSession
@@ -36,7 +37,7 @@ _DAYS = (
     "samedi",
     "dimanche",
 )
-_MORNING = 12
+_MORNING = get_settings().work_morning_hour
 #: Local day → (rank in the list, item, its local start, its local end).
 _Items = dict[date, list[tuple[int, Evidence, datetime, datetime | None]]]
 #: What the viewer shows of a proof (the file itself is fetched apart).

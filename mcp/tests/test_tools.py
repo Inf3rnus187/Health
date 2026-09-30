@@ -85,6 +85,13 @@ async def test_requests_carry_the_token_and_drop_unset_params() -> None:
     }
 
 
+async def test_hub_settings_read_the_limits() -> None:
+    seen = _capture(payload={"meal_analysis_max_delay_min": 60})
+    got = await tools_data.hub_settings()
+    assert got == {"meal_analysis_max_delay_min": 60}
+    assert seen[0].url.path == "/api/v1/system/settings"
+
+
 async def test_daily_summary_filters_one_day() -> None:
     seen = _capture(payload=[])
     await tools_data.daily_summary("2026-09-16")

@@ -14,10 +14,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.core.config import get_settings
 from app.services import ciqual
 
 SOURCE = "Ciqual"
-_MAX_GRAMS = 1500.0
+_MAX_GRAMS = get_settings().meal_line_max_g
 
 
 def refs(texts: list[str]) -> list[dict[str, str]]:

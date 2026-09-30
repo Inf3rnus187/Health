@@ -7,12 +7,16 @@ from typing import Any
 
 from fpdf import FPDF
 
+from app.core.config import get_settings
 from app.services import work_absence
 from app.services.pdf_blocks import table
 from app.services.pdf_text import heading, line
-from app.services.work_math import MAX_WEEK_HOURS
+from app.services.work_legal import AVG_WEEKS, MAX_12W_AVG_H
+from app.services.work_math import MAX_DAY_HOURS, MAX_WEEK_HOURS
 
-_CHART_WEEKS = 52
+_CHART_WEEKS = get_settings().work_chart_weeks
+_WEEK_HEAD = ["Semaine", "Heures", "Distance", "Jours", "Heures sup",
+              f"> {MAX_WEEK_HOURS:g} h", "Absent (j)", "Objectif"]  # fmt: skip
 _BLUE, _GREEN, _RED = (37, 99, 235), (22, 163, 74), (220, 38, 38)
 _ORANGE = (245, 158, 11)
 _PURPLE = (139, 92, 246)
@@ -58,8 +62,7 @@ def _tables(stats: dict[str, Any]) -> list[tuple[str, list[str], list[Any]]]:
         ("Court, moyen et long terme",
          ["Période", "Heures", "Jours", "Absent (j)", "Moy./sem. présente",
           "Heures sup"], periods),
-        ("Semaines", ["Semaine", "Heures", "Distance", "Jours", "Heures sup",
-                      "> 48 h", "Absent (j)", "Objectif"], weeks),
+        ("Semaines", _WEEK_HEAD, weeks),
         ("Mois", ["Mois", "Heures", "Distance", "Jours", "Heures sup"],
          months),
     ]  # fmt: skip
@@ -79,13 +82,14 @@ def _summary(pdf: FPDF, stats: dict[str, Any]) -> None:
         f"débauche moyenne : {stats['avg_end'] or '-'}",
         f"Heures supplémentaires (au-delà du contrat, par semaine) : "
         f"{stats['overtime_hours']:g} h",
-        f"Jours de plus de 10 h : {stats['days_over_10h']} ; semaines de "
-        f"plus de 48 h : {stats['weeks_over_48h']}",
+        f"Jours de plus de {MAX_DAY_HOURS:g} h : {stats['days_over_10h']} ; "
+        f"semaines de plus de {MAX_WEEK_HOURS:g} h : {stats['weeks_over_48h']}",
         "Journée la plus longue : "
         + (f"{longest['date']} ({longest['hours']:g} h)" if longest else "-"),
         *work_absence.texts(stats),
-        "Repères du Code du travail : 10 h par jour et 48 h par semaine au "
-        "plus (44 h en moyenne sur 12 semaines).",
+        f"Repères du Code du travail : {MAX_DAY_HOURS:g} h par jour et "
+        f"{MAX_WEEK_HOURS:g} h par semaine au plus ({MAX_12W_AVG_H:g} h en "
+        f"moyenne sur {AVG_WEEKS} semaines).",
     ):
         line(pdf, 6, text)
 
@@ -108,7 +112,8 @@ def _chart(pdf: FPDF, weeks: list[dict[str, Any]], contract: float) -> None:
     line(
         pdf,
         4,
-        f"Vert : contrat ({contract:g} h). Rouge : 48 h. Barre orange : "
+        f"Vert : contrat ({contract:g} h). Rouge : {MAX_WEEK_HOURS:g} h. "
+        "Barre orange : "
         "semaine avec absence ou jour férié (trait vert : objectif réduit). "
         "Violet : heures à distance.",
     )

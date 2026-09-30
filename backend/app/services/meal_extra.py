@@ -9,12 +9,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.core.config import get_settings
 from app.core.errors import NotFoundError
 from app.models.base import new_uuid
 from app.models.meal import Meal
 from app.services import imaging, meal_photo, photo_storage
 
-_SIDE = 2048
+_SIDE = get_settings().image_read_side
 
 
 def add(meal: Meal, data: bytes, content_type: str) -> str:

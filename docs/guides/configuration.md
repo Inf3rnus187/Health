@@ -77,7 +77,7 @@ plus (≈ 3 s pour 2,35 millions de relevés, migration `0025`).
 Quand une mise à jour ne reconstruit que l'API, son nouveau conteneur
 reçoit une autre adresse sur le réseau Docker : nginx redemande
 l'adresse de `api` au DNS de Docker toutes les 10 s (`resolver
-127.0.0.11` dans `nginx/default.conf`), la page revient donc seule.
+127.0.0.11` dans `nginx/default.conf.template`), la page revient donc seule.
 Avant, nginx gardait l'adresse lue à son démarrage et répondait 502
 (« connect() failed (111: Connection refused) ») jusqu'à `docker compose
 restart web`.
@@ -204,9 +204,9 @@ Puis, si la mise à jour touche les données (voir le CHANGELOG) :
 |---------|------|
 | `db` | PostgreSQL (volume `pgdata`). |
 | `redis` | File des tâches de fond. |
-| `api` | FastAPI (`/api/v1`), applique les migrations au démarrage ; lit `run/` (état des mises à jour). Appelle aussi Ollama : lecture d'une étiquette nutritionnelle (Mes aliments) et, quand la file (Redis) est indisponible, rapport construit sur place, synthèse clinique comprise. `API_WORKERS` processus (4 par défaut) répondent en même temps, chacun avec au plus 10 connexions à PostgreSQL. |
+| `api` | FastAPI (`/api/v1`), applique les migrations au démarrage ; lit `run/` (état des mises à jour). Appelle aussi Ollama : lecture d'une étiquette nutritionnelle (Mes aliments) et, quand la file (Redis) est indisponible, rapport construit sur place, synthèse clinique comprise. `API_WORKERS` processus (4 par défaut) répondent en même temps, chacun avec au plus `DB_POOL_SIZE` + `DB_MAX_OVERFLOW` connexions à PostgreSQL (10 par défaut). |
 | `worker` | Tâches longues : imports Apple, lecture IA des documents, des photos et des repas, rapports, réconciliation. |
-| `web` | Nginx + interface React, port `WEB_PORT` ; compresse le texte envoyé (gzip), sauf les réponses qui portent une session ou un jeton. |
+| `web` | Nginx + interface React, port `WEB_PORT` ; compresse le texte envoyé (gzip), sauf les réponses qui portent une session ou un jeton. Sa configuration (`nginx/default.conf.template`) est remplie au démarrage par les variables `WEB_…` (« Serveur web » plus bas). |
 | `mcp` | Serveur MCP (optionnel, profil `mcp`), publié sur `MCP_BIND:MCP_PORT` (pas derrière nginx) — voir le [guide MCP](mcp.md). |
 
 Volumes et dossiers montés :
@@ -239,7 +239,7 @@ page lente avec un `api=` court vient du réseau ou du navigateur, un
 
 Ce que tu envoies au hub (photos de repas, documents, JSON de Health
 Auto Export) passe directement de nginx à l'API, au fil de l'eau
-(`proxy_request_buffering off` dans `nginx/default.conf`) : plus de
+(`proxy_request_buffering off` dans `nginx/default.conf.template`) : plus de
 fichier temporaire sur le disque de nginx ni d'avertissement « a client
 request body is buffered to a temporary file ». La limite de 25 Mo par
 requête reste. Dans l'autre sens, nginx garde en mémoire une réponse de
@@ -256,7 +256,7 @@ erreur. Les mesures avant / après de chaque optimisation sont dans
 | Variable | Défaut | Rôle |
 |----------|--------|------|
 | `SECRET_KEY` | — (obligatoire, ≥ 32 car.) | Signe les sessions (JWT). Générée par `install.sh`. |
-| `ACCESS_TOKEN_TTL_MIN` | `15` | Durée du jeton d'accès. La page web le renouvelle seule (toutes les 12 min, et à la première réponse 401) avec le jeton de rafraîchissement : une page restée ouverte ne se déconnecte pas. |
+| `ACCESS_TOKEN_TTL_MIN` | `15` | Durée du jeton d'accès. La page web le renouvelle seule (`WEB_RENEW_MARGIN_S` avant la fin, 3 min par défaut, et à la première réponse 401) avec le jeton de rafraîchissement : une page restée ouverte ne se déconnecte pas. |
 | `REFRESH_TOKEN_TTL_DAYS` | `14` | Durée maximale d'une connexion. |
 | `JWT_ALGORITHM` | `HS256` | Algorithme de signature. |
 | `CORS_ORIGINS` | vide | Origines navigateur autorisées (vide = même origine). |
@@ -282,7 +282,7 @@ erreur. Les mesures avant / après de chaque optimisation sont dans
 | `FOOD_LOOKUP_ONLINE` | `false` (défaut) : le hub ne sort pas sur Internet. `true` : « Code-barres » dans Mes aliments (saisi, ou lu sur une photo quand aucun de vos aliments ne le porte) interroge `OPENFOODFACTS_URL` avec **le code-barres seul** (ni photo, ni compte, ni repas, ni donnée de santé) et reçoit la fiche produit entière (valeurs, ingrédients, Nutri-Score, NOVA, additifs, allergènes…). La lecture du code sur la photo se fait toujours sur le hub, hors ligne, et la photo n'est pas gardée. |
 | — (pas de variable) | Les repères officiels d'un repas (UE, ANSES, OMS) sont dans le code, hors ligne. Les liens « Comprendre ces références » (Santé.fr, Open Food Facts, ciqual.anses.fr, EUR-Lex, ANSES, OMS) ne sont jamais appelés par le hub : le navigateur les ouvre à la demande, dans un nouvel onglet, sans référent ; un lien produit ne porte que son code-barres. |
 | `MEAL_ANALYSIS_MAX_DELAY_MIN` | `60` : délai maximal, en minutes, qu'un envoi de repas peut demander avant son analyse IA (`POST /meals` `analysis_delay_min`, outil MCP `log_meal`). |
-| `FOOD_REFRESH_DAYS` | `30` (défaut) : chaque nuit (4 h 40 UTC), le worker relit la page Open Food Facts des fiches qui ont un code-barres et n'ont pas été relues depuis ce nombre de jours (50 au plus par nuit, une seconde d'écart ; seul le code-barres sort). `0` : jamais. Sans effet si `FOOD_LOOKUP_ONLINE=false`. Les boutons « ↻ Open Food Facts » et « Tout relire » restent disponibles. |
+| `FOOD_REFRESH_DAYS` | `30` (défaut) : chaque nuit (`FOOD_REFRESH_HOUR`:`FOOD_REFRESH_MINUTE` UTC, 4 h 40 par défaut), le worker relit la page Open Food Facts des fiches qui ont un code-barres et n'ont pas été relues depuis ce nombre de jours (`FOOD_REFRESH_PER_NIGHT` au plus par nuit, 50 par défaut, `FOOD_REFRESH_PAUSE_S` d'écart ; seul le code-barres sort). `0` : jamais. Sans effet si `FOOD_LOOKUP_ONLINE=false`. Les boutons « ↻ Open Food Facts » et « Tout relire » restent disponibles. |
 | `OPENFOODFACTS_URL` | `https://world.openfoodfacts.org` (une instance miroir possible). |
 | `RETENTION_DAYS` | `0` = tout garder. |
 
@@ -290,12 +290,12 @@ Tailles d'envoi maximales :
 
 | Envoi | Limite |
 |-------|--------|
-| Toute requête passant par nginx | 25 Mo (`client_max_body_size 25m`, `nginx/default.conf`). |
-| `/api/v1/imports/apple-health` | Aucune (envoi en flux, délai 1 h). |
-| `/api/v1/sync/auto-export` | Aucune (délai 10 min). |
-| Document médical | 25 Mo (`api/v1/medical.py`). |
-| Fichier de preuve | 30 Mo côté API, mais nginx refuse d'abord au-delà de 25 Mo. |
-| Photo (corps, repas, aliment) | `MAX_UPLOAD_MB` par photo ; une requête (un repas avec plusieurs photos) reste sous les 25 Mo de nginx. |
+| Toute requête passant par nginx | `WEB_MAX_BODY_MB` (32 Mo). |
+| `/api/v1/imports/apple-health` | Aucune (envoi en flux, délai `WEB_IMPORT_TIMEOUT_S`, 1 h). |
+| `/api/v1/sync/auto-export` | Aucune (délai `WEB_SYNC_TIMEOUT_S`, 10 min). |
+| Document médical | `MEDICAL_MAX_MB` (25 Mo). |
+| Fichier de preuve | `EVIDENCE_MAX_MB` (30 Mo). nginx s'arrêtait avant, à 25 Mo : `WEB_MAX_BODY_MB` vaut désormais 32 pour laisser passer une preuve de 30 Mo. |
+| Photo (corps, repas, aliment) | `MAX_UPLOAD_MB` par photo ; une requête (un repas avec plusieurs photos) reste sous `WEB_MAX_BODY_MB`. |
 
 ### IA (Ollama) — un modèle par tâche
 
@@ -309,8 +309,8 @@ Tailles d'envoi maximales :
 Utiliser **exactement** le nom affiché par `ollama list`. Détail du
 fonctionnement et des limites : [guide IA médicale](ia-medicale.md).
 La lecture d'une étiquette tourne **dans l'API**, pas dans le worker
-(`services/food_label.py`, 100 s au plus, sinon « Lecture trop longue :
-réessayer ») ; les photos, documents et repas sont lus par le worker.
+(`services/food_label.py`, `LABEL_AI_TIME_LIMIT_S` au plus, 100 s par
+défaut, sinon « Lecture trop longue : réessayer ») ; les photos, documents et repas sont lus par le worker.
 Les valeurs d'un aliment du repas sont calculées par le code depuis la
 table Ciqual ou l'étiquette d'un aliment de « Mes aliments » ; à défaut,
 c'est l'estimation du modèle, vérifiée (`services/meal_ai.py`).
@@ -335,7 +335,7 @@ nginx (`X-Real-IP`) et la durée de la requête.
 | Variable | Rôle |
 |----------|------|
 | `WEB_PORT` | Port de l'interface (`8082`). |
-| `API_WORKERS` | Processus de l'API (`4`). Environ un par cœur ; 8 au plus avec les 100 connexions par défaut de PostgreSQL (10 par processus, plus celles du `worker`). Mesures : [performance.md](../performance.md). |
+| `API_WORKERS` | Processus de l'API (`4`). Environ un par cœur ; 8 au plus avec les 100 connexions par défaut de PostgreSQL (`DB_POOL_SIZE` + `DB_MAX_OVERFLOW` par processus, 10 par défaut, plus celles du `worker`). Mesures : [performance.md](../performance.md). |
 | `VITE_MAP_KEY` | Clé MapTiler gratuite pour le fond de carte (rebuild `web`). |
 | `VITE_TILE_URL` / `VITE_TILE_ATTRIB` | Autre fournisseur de tuiles ; `none` = tracé seul. |
 
@@ -352,6 +352,201 @@ nginx (`X-Real-IP`) et la durée de la requête.
 
 Limite connue : le conteneur `mcp` reçoit tout `.env` (`env_file`),
 secrets compris, alors qu'il n'en a pas besoin. Détails : [guide MCP](mcp.md).
+
+### Réglages de fonctionnement (rien n'est fixé dans le code)
+
+Tout ce qui dimensionne, cadence ou limite le hub se règle dans `.env` :
+processus, connexions, délais, tailles, lots, budgets de l'IA, règles de
+calcul, rythmes de la page web. Les défauts ci-dessous sont les valeurs
+d'avant ; une variable absente de `.env` garde son défaut. Après une
+modification : `docker compose up -d` (compose recrée les services dont
+la configuration a changé ; pas besoin de reconstruire les images).
+Source : `backend/app/core/tuning.py` (API et worker),
+`nginx/default.conf.template` et `docker-compose.yml` (serveur web et
+gunicorn). Une valeur hors bornes (négative, heure `9pm`…) empêche l'API
+de démarrer, avec le nom de la variable dans le journal.
+
+Ce qui reste dans le code, volontairement : les constantes physiques et
+de format (1 g de sel = 400 mg de sodium, un mille = 1,609 km, une date
+`AAAAMMJJ` de 8 caractères), les réglages internes des lecteurs de
+fichiers (longueur minimale d'un mot reconnu…), la mise en page (tailles
+des graphiques, nombre de lignes affichées dans une carte) et les repères
+officiels d'un repas (UE, ANSES, OMS), qui sont des sources, pas des
+réglages.
+
+#### Base de données et tâches de fond
+
+| Variable | Défaut | Rôle |
+|----------|--------|------|
+| `DB_POOL_SIZE` | `5` | Connexions PostgreSQL gardées ouvertes par processus (API ou worker). |
+| `DB_MAX_OVERFLOW` | `5` | Connexions en plus pendant un pic, par processus. Total ≈ (`API_WORKERS` + 1) × (`DB_POOL_SIZE` + `DB_MAX_OVERFLOW`) : rester sous les 100 connexions de PostgreSQL. |
+| `DB_POOL_TIMEOUT_S` | `30` | Attente d'une connexion libre avant l'erreur. |
+| `WORKER_MAX_JOBS` | `10` | Tâches de fond menées en même temps par le worker. |
+| `WORKER_JOB_TIMEOUT_S` | `7200` | Durée maximale d'une tâche (un gros import Apple). |
+| `WORKER_MAX_TRIES` | `1` | Essais d'une tâche (`1` : pas de reprise automatique). |
+| `WORKER_KEEP_RESULT_S` | `3600` | Durée pendant laquelle Redis garde le résultat d'une tâche. |
+
+#### Serveur API (gunicorn, `docker-compose.yml`)
+
+| Variable | Défaut | Rôle |
+|----------|--------|------|
+| `API_WORKERS` | `4` | Processus qui répondent en même temps (voir « Interface web »). |
+| `API_TIMEOUT_S` | `30` | Un processus qui ne donne plus signe de vie depuis ce temps est redémarré. Une requête longue (un rapport) ne le rend pas muet : les processus sont asynchrones. |
+| `API_GRACEFUL_S` | `30` | À l'arrêt (une mise à jour), temps laissé aux requêtes en cours pour finir. |
+| `API_KEEPALIVE_S` | `2` | Temps pendant lequel une connexion reste ouverte entre deux requêtes. |
+
+#### Serveur web (nginx, `nginx/default.conf.template`)
+
+Remplies au démarrage du conteneur `web` (seules les variables `WEB_…`
+sont remplacées ; défauts dans `nginx/Dockerfile` et `docker-compose.yml`).
+
+| Variable | Défaut | Rôle |
+|----------|--------|------|
+| `WEB_MAX_BODY_MB` | `32` | Taille maximale d'une requête (un repas et toutes ses photos ensemble). Garder ≥ `EVIDENCE_MAX_MB` et `MEDICAL_MAX_MB`. L'import Apple et Health Auto Export n'ont pas de limite. |
+| `WEB_API_TIMEOUT_S` | `120` | Attente de la réponse de l'API. |
+| `WEB_SYNC_TIMEOUT_S` | `600` | Idem pour Health Auto Export (`/sync/auto-export`). |
+| `WEB_IMPORT_TIMEOUT_S` | `3600` | Idem pour l'envoi d'un export Apple (`/imports/apple-health`). |
+| `WEB_GZIP_LEVEL` | `5` | Compression, de `1` (rapide) à `9` (plus petit). |
+| `WEB_GZIP_MIN_BYTES` | `1024` | Une réponse plus petite part non compressée. |
+| `WEB_DNS_TTL_S` | `10` | nginx redemande l'adresse de l'API à Docker à cet intervalle (une API reconstruite change d'adresse). |
+| `WEB_PROXY_BUFFER_KB` | `64` | Taille d'un tampon de réponse. |
+| `WEB_PROXY_BUFFERS` | `32` | Nombre de tampons : `WEB_PROXY_BUFFERS` × `WEB_PROXY_BUFFER_KB` (2 Mo) restent en mémoire, au-delà la réponse passe par un fichier temporaire. |
+| `WEB_PROXY_BUSY_KB` | `128` | Part des tampons en cours d'envoi au navigateur : ≥ `WEB_PROXY_BUFFER_KB` et < (`WEB_PROXY_BUFFERS` − 1) × `WEB_PROXY_BUFFER_KB`, sinon nginx refuse de démarrer. |
+| `WEB_ASSETS_CACHE_DAYS` | `30` | Durée de cache des fichiers du site dans le navigateur (leurs noms changent à chaque version). |
+
+#### Page web (lus par la page avant son affichage)
+
+La page les demande à `GET /api/v1/system/settings` (sans connexion : ni
+secret ni donnée d'un compte). Hub injoignable : elle prend les défauts.
+
+| Variable | Défaut | Rôle |
+|----------|--------|------|
+| `WEB_RETRY_S` | `5` | Pendant un redémarrage du hub, la page réessaie à cet intervalle, sans déconnecter. |
+| `WEB_RENEW_MARGIN_S` | `180` | La session est renouvelée ce temps avant la fin du jeton d'accès (`ACCESS_TOKEN_TTL_MIN`) : toutes les 12 min par défaut, jamais plus d'une fois par 30 s. |
+| `WEB_REFRESH_TIMEOUT_S` | `15` | Attente d'un renouvellement avant de juger le hub injoignable. |
+| `WEB_UPDATE_CHECK_S` | `300` | Recherche d'une nouvelle version installée (et à chaque retour sur l'onglet). |
+| `WEB_UPDATE_LOOK_S` | `20` | La même, pendant une mise à jour lancée depuis la page. |
+| `WEB_UPDATE_STATE_S` | `15` | État de la mise à jour (administrateur) pendant qu'elle tourne. |
+| `WEB_UPDATE_RECENT_S` | `1800` | Une mise à jour finie depuis moins longtemps est confirmée (« ✓ … installée »). |
+| `WEB_POLL_S` | `5` | Une lecture IA en cours (repas, document) est regardée à cet intervalle. |
+| `WEB_RECONCILE_REFRESH_S` / `WEB_RECONCILE_REFRESH_STEPS` | `10` / `18` | Après « Réconcilier » (Données), les pages sont rafraîchies à cet intervalle, ce nombre de fois (3 min). |
+| `WEB_REANALYSIS_REFRESH_S` / `WEB_REANALYSIS_REFRESH_STEPS` | `10` / `12` | Idem après « Réanalyser tout l'historique » (photos). |
+| `WEB_PHOTO_REFRESH_S` | `1.5,4,8,13` | Après « Réanalyser » une photo, elle est relue après ces délais (secondes, séparés par des virgules). |
+| `WEB_RELOAD_GUARD_S` | `60` | Une page absente après une mise à jour recharge le site au plus une fois dans ce délai, puis affiche l'erreur. |
+| `WEB_PAGE_SIZES` | `10,25,50,100,200` | Choix « Par page » des listes. |
+
+La page reçoit aussi, de la même route, le nombre de photos d'un repas
+(`MEAL_MAX_PHOTOS` + 1), le délai d'analyse maximal
+(`MEAL_ANALYSIS_MAX_DELAY_MIN`) et le maximum hebdomadaire tracé sur le
+graphique du travail (`WORK_MAX_WEEK_HOURS`).
+
+#### IA (Ollama)
+
+| Variable | Défaut | Rôle |
+|----------|--------|------|
+| `OLLAMA_TIMEOUT_S` | `600` | Attente d'une réponse d'Ollama. |
+| `OLLAMA_CONCURRENCY` | `1` | Appels au modèle en même temps, par processus (Ollama met les autres en file). |
+| `MEAL_AI_TIME_LIMIT_S` | `900` | Durée maximale de l'analyse d'un repas (au-delà : « échec », à relancer). |
+| `MEAL_AI_MAX_TOKENS` / `MEAL_AI_JUDGE_TOKENS` | `1500` / `700` | Longueur maximale de la lecture du repas, puis de son verdict. |
+| `DOCUMENT_AI_TIME_LIMIT_S` | `1800` | Durée maximale de la lecture d'un document médical. |
+| `DOCUMENT_AI_CHUNK_CHARS` / `DOCUMENT_AI_MAX_CHUNKS` | `5000` / `8` | Un long document est lu par morceaux de cette taille, ce nombre au plus. |
+| `DOCUMENT_AI_VALUES_TOKENS` / `DOCUMENT_AI_SUMMARY_TOKENS` | `1024` / `900` | Longueur maximale des valeurs lues, puis du résumé. |
+| `DOCUMENT_AI_SUMMARY_CHARS` | `12000` | Caractères du document donnés au modèle pour le résumé. |
+| `DOCUMENT_AI_REJECTED_MAX` | `30` | Valeurs du modèle écartées (absentes du texte) gardées pour être montrées. |
+| `LABEL_AI_TIME_LIMIT_S` | `100` | Durée maximale de la lecture d'une étiquette (Mes aliments). |
+| `OCR_MAX_PAGES` / `OCR_DPI` | `12` / `200` | Pages d'un scan lues, et leur résolution. |
+| `MEAL_REMARK_MAX_CHARS` | `300` | Une remarque du modèle plus longue est coupée à la fin d'une phrase. |
+| `MEAL_INGREDIENTS_MAX_CHARS` | `400` | Une liste d'ingrédients plus longue n'est pas donnée au modèle (il ne l'invente pas). |
+| `IMAGE_READ_SIDE` | `2048` | Plus grand côté (pixels) d'une image lue : étiquette, photo ajoutée à un repas. |
+| `BARCODE_READ_SIDE` | `2400` | Idem pour un code-barres (barres fines). |
+| `PHOTO_COMPARE_SIDE` | `640` | Idem pour deux photos comparées côte à côte. |
+
+#### Tailles et limites
+
+| Variable | Défaut | Rôle |
+|----------|--------|------|
+| `EVIDENCE_MAX_MB` | `30` | Fichier de preuve. |
+| `MEDICAL_MAX_MB` | `25` | Document médical. |
+| `IMAGE_MAX_SIDE` | `1280` | Plus grand côté (pixels) d'une photo gardée. |
+| `MEAL_MAX_PHOTOS` | `6` | Photos ajoutées à la première d'un repas (7 en tout). |
+| `MEAL_MAX_FOODS` | `20` | Lignes « aliment » d'un repas. |
+| `MEAL_DESCRIPTION_MAX` | `2000` | Caractères de la description d'un repas. |
+| `MEAL_LINE_MAX_G` | `1500` | Une ligne de repas au-delà est refusée comme impossible (grammes). |
+| `ECG_MAX_POINTS` / `ROUTE_MAX_POINTS` | `5000` / `3000` | Points d'un ECG ou d'un tracé GPS envoyés à la page (réduits au-delà, l'original reste entier). |
+| `DOCUMENT_TEXT_MAX` | `200000` | Caractères du texte d'un document renvoyés par l'API. |
+
+#### Open Food Facts (si `FOOD_LOOKUP_ONLINE=true`)
+
+| Variable | Défaut | Rôle |
+|----------|--------|------|
+| `OPENFOODFACTS_TIMEOUT_S` | `10` | Attente d'Open Food Facts. |
+| `FOOD_REFRESH_HOUR` / `FOOD_REFRESH_MINUTE` | `4` / `40` | Heure (UTC) de la relecture de nuit. |
+| `FOOD_REFRESH_PER_NIGHT` | `50` | Fiches relues par nuit. |
+| `FOOD_REFRESH_PAUSE_S` | `1` | Écart entre deux fiches. |
+| `FOOD_REFRESH_BUDGET_S` | `60` | « Tout relire » répond dans ce délai ; la nuit reprend le reste. |
+
+#### Lots (imports, synchros, recalculs)
+
+Plus grand : moins d'allers-retours avec la base, plus de mémoire.
+
+| Variable | Défaut | Rôle |
+|----------|--------|------|
+| `IMPORT_BATCH` | `5000` | Lignes écrites d'un coup par un import. |
+| `IMPORT_COMMIT_EVERY` | `50000` | Un import Apple enregistre sa progression tous les N relevés. |
+| `IMPORT_ROLLUP_BATCH` / `IMPORT_OBS_BATCH` | `500` / `1000` | Jours recalculés, observations cliniques écrites par lot. |
+| `ROLLUP_READ_BLOCK` | `20000` | Relevés lus par bloc pour recalculer les valeurs du jour. |
+| `SYNC_CHUNK` / `SYNC_ROLLUP_CHUNK` | `2000` / `400` | Lignes écrites, jours recalculés par lot pendant une synchro. |
+| `CATALOG_SYNC_BATCH` | `5000` | Lignes par lot quand le catalogue des métriques change. |
+| `DELETE_CHUNK` | `500` | Éléments supprimés par lot (suppression en masse). |
+| `SQL_IN_CHUNK` | `500` | Identifiants par requête `IN (…)` (900 au plus). |
+| `UPLOAD_CHUNK_KB` | `1024` | Morceaux d'écriture d'un gros envoi sur le disque. |
+| `IMPORT_REPORT_LINES` | `50` | Lignes listées dans le compte rendu d'un import (lignes ignorées, périodes). |
+| `CHAT_TRACE_MAX_CHARS` | `8000` | Caractères d'une trace tirée d'une conversation exportée. |
+| `TRACE_SAME_TIME_S` | `60` | Deux traces aussi proches sont la même (pas de doublon). |
+
+#### Journaux et mises à jour
+
+| Variable | Défaut | Rôle |
+|----------|--------|------|
+| `LOG_SLOW_MS` | `1000` | Une requête de l'API au moins aussi longue finit par `slow` dans le journal. |
+| `UPDATE_FRESH_S` | `180` | Le cron de `update.sh` est « actif » s'il est passé depuis moins longtemps. |
+| `UPDATE_TAKEN_S` | `180` | Une demande « Installer » non prise en charge dans ce délai est signalée. |
+| `UPDATE_RUNNING_S` | `1200` | Une mise à jour « en cours » depuis plus longtemps est considérée comme arrêtée. |
+
+#### Travail, sommeil, médicaments, photos, dépenses
+
+| Variable | Défaut | Rôle |
+|----------|--------|------|
+| `WORK_MAX_DAY_HOURS` / `WORK_MAX_WEEK_HOURS` | `10` / `48` | Maxima du Code du travail : jour, semaine (comptes, rouge du graphique, textes des rapports). |
+| `WORK_MAX_SPREAD_HOURS` | `13` | Amplitude maximale d'une journée. |
+| `WORK_MIN_REST_HOURS` | `11` | Repos quotidien minimal. |
+| `WORK_LONG_SESSION_HOURS` | `12` | Une session aussi longue est signalée. |
+| `WORK_MAX_AVG_HOURS` / `WORK_AVG_WEEKS` | `44` / `12` | Moyenne hebdomadaire maximale, sur ce nombre de semaines. |
+| `WORK_NIGHT_START` / `WORK_NIGHT_END` | `21:00` / `06:00` | Heures de nuit (heure locale, `HH:MM`). |
+| `WORK_MAX_SESSION_HOURS` | `72` | Une session plus longue est refusée comme erreur de saisie. |
+| `WORK_OPEN_SESSION_HOURS` | `16` | Une embauche sans débauche vaut « au travail » ce temps. |
+| `WORK_PAIR_MAX_HOURS` | `20` | À l'import, une embauche et une débauche plus éloignées ne sont pas appariées. |
+| `WORK_PAIR_SEARCH_HOURS` | `20` | L'autre bout d'une session est cherché aussi loin. |
+| `WORK_TICKET_MAX_HOURS` | `12` | Un temps de ticket supérieur n'est pas cru. |
+| `WORK_CHART_WEEKS` | `52` | Semaines du graphique du rapport de travail. |
+| `WORK_HIGHLIGHT_DAYS` | `20` | « Journées les plus significatives » listées. |
+| `WORK_CONTINUOUS_HOURS` | `24` | Une session aussi longue est « nuit comprise ». |
+| `WORK_STAY_HOURS` | `6` | Une trace aussi longue (parking, hôtel) marque aussi les jours suivants. |
+| `WORK_MORNING_HOUR` | `12` | Une débauche manquante est aussi cherchée dans les traces du lendemain avant cette heure (un taxi à 3 h 47). |
+| `WORK_CORR_MIN_PAIRS` | `5` | Jours nécessaires à une corrélation (dossier travail ↔ santé). |
+| `SLEEP_MANUAL_MAX_HOURS` | `20` | Nuit saisie à la main la plus longue. |
+| `SLEEP_AWAKENING_MIN` / `SLEEP_BLOCK_GAP_MIN` | `5` / `60` | Une interruption aussi longue est un réveil ; un écart aussi long commence un autre bloc de sommeil. |
+| `SLEEP_SAMPLE_MAX_HOURS` | `48` | Durée maximale d'un relevé de sommeil (borne de recherche). |
+| `MEDICATION_FUTURE_MIN` | `10` | Une prise peut être notée jusqu'à ce délai dans le futur (décalage d'horloge). |
+| `MEDICATION_LATE_ENTRY_MIN` | `60` | Une prise notée plus tard que ça après l'heure réelle est « saisie tardive ». |
+| `ADHERENCE_DAYS` | `30` | Jours couverts par l'observance quand aucune période n'est donnée. |
+| `PHOTO_MIN_SIDE` | `300` | Une photo plus petite (pixels) est refusée. |
+| `PHOTO_DARK` / `PHOTO_BRIGHT` / `PHOTO_BLURRY` | `35` / `235` / `12` | Luminosité moyenne (0-255) en dessous ou au-dessus de laquelle une photo est refusée ; netteté sous laquelle elle est floue. |
+| `PHOTO_TREND_MIN_DAYS` / `PHOTO_TREND_MIN_SPAN_DAYS` | `8` / `21` | Une tendance des photos demande ce nombre de jours, sur au moins cette durée. |
+| `PHOTO_TREND_WINDOW_DAYS` / `PHOTO_TREND_SMOOTH_DAYS` | `90` / `7` | Pente lue sur les derniers jours ; lissage sur ce nombre de jours. |
+| `PHOTO_TREND_STABLE` | `0.5` | Sous cette pente (points par 30 jours), la tendance est « stable ». |
+| `SPENDING_TOP` | `10` | Établissements listés dans Dépenses. |
+| `SPENDING_LATE_FROM_HOUR` / `SPENDING_LATE_UNTIL_HOUR` | `21` / `5` | Commandes « tardives » : de cette heure à celle-là (heure locale ; la plage peut passer minuit ou non). |
 
 ### Internes (compose, scripts)
 

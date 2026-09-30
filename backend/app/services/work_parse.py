@@ -21,6 +21,8 @@ from datetime import UTC, date, datetime, timedelta, timezone
 from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
+from app.core.config import get_settings
+
 MONTHS = {
     "janv": 1, "janvier": 1, "jan": 1, "january": 1,
     "fevr": 2, "fevrier": 2, "fev": 2, "feb": 2, "february": 2,
@@ -69,7 +71,7 @@ _TIME = re.compile(
 #: A session as (clock-in, clock-out); either may be missing.
 Span = tuple[datetime | None, datetime | None]
 #: Automatic pairing never spans more than this (48 h shifts: by hand).
-_PAIR_MAX = timedelta(hours=20)
+_PAIR_MAX = timedelta(hours=get_settings().work_pair_max_hours)
 _MORNING = 12
 
 

@@ -8,10 +8,11 @@ from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import crypto
+from app.core.config import get_settings
 from app.core.errors import NotFoundError
 from app.models.health_raw import RouteFile
 
-MAX_POINTS = 3000
+MAX_POINTS = get_settings().route_max_points
 _TRKPT = re.compile(r"<trkpt\b[^>]*>")
 _LAT = re.compile(r'lat="(-?\d+(?:\.\d+)?)"')
 _LON = re.compile(r'lon="(-?\d+(?:\.\d+)?)"')

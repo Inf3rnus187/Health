@@ -21,6 +21,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models.health_raw import HealthSample
 from app.models.measurement import Measurement
 from app.models.metric import MetricDefinition
@@ -30,7 +31,7 @@ from app.services.daily_acc import HEALTHKIT, Acc, reduce_day
 
 #: Sources that only ever wrote daily roll-ups of HealthKit samples.
 _ROLLUP_SOURCES = HEALTHKIT | {"watch"}
-_STREAM = 20000
+_STREAM = get_settings().rollup_read_block
 
 Days = dict[date, dict[str, Acc]]
 

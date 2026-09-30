@@ -1,6 +1,10 @@
 # Serves the React build and reverse-proxies the API. The application
 # only exposes HTTP internally; TLS is terminated by the operator's own
 # proxy in front of this container (§12).
+#
+# A template: each WEB_… value is filled in at start from the container's
+# environment (docker-compose.yml, .env; defaults in nginx/Dockerfile;
+# docs/guides/configuration.md). nginx's own $variables are left alone.
 
 # The access log never shows an API token: an iPhone Shortcut sends it in
 # the URL (?token=…), logged as token=*** (the API's own log does the same).
@@ -22,15 +26,16 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
-    client_max_body_size 25m;
+    client_max_body_size ${WEB_MAX_BODY_MB}m;
     access_log /var/log/nginx/access.log no_token;
 
-    # The API's address is asked of Docker's DNS again every 10 s: an
+    # The API's address is asked of Docker's DNS again (every 10 s by
+    # default, WEB_DNS_TTL_S): an
     # update that rebuilds api alone gives its new container a new
     # address, and a name resolved once at start would keep the old one
     # until nginx restarts (« connect() failed (111: Connection
     # refused) », 502 on every call while the API runs fine).
-    resolver 127.0.0.11 valid=10s ipv6=off;
+    resolver 127.0.0.11 valid=${WEB_DNS_TTL_S}s ipv6=off;
     set $api http://api:8000;
 
     # Text is compressed on the way out: the page's code 1 MB → 0.3 MB,
@@ -38,8 +43,8 @@ server {
     # that carry a session or a token are not (below): with compression,
     # their size could leak a secret (BREACH).
     gzip on;
-    gzip_comp_level 5;
-    gzip_min_length 1024;
+    gzip_comp_level ${WEB_GZIP_LEVEL};
+    gzip_min_length ${WEB_GZIP_MIN_BYTES};
     gzip_proxied any;
     gzip_vary on;
     gzip_types application/json application/javascript text/javascript text/css
@@ -78,8 +83,8 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         client_max_body_size 0;
         proxy_request_buffering off;
-        proxy_read_timeout 3600s;
-        proxy_send_timeout 3600s;
+        proxy_read_timeout ${WEB_IMPORT_TIMEOUT_S}s;
+        proxy_send_timeout ${WEB_IMPORT_TIMEOUT_S}s;
     }
 
     # Health Auto Export posts its whole history as one large JSON body
@@ -92,8 +97,8 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         client_max_body_size 0;
-        proxy_read_timeout 600s;
-        proxy_send_timeout 600s;
+        proxy_read_timeout ${WEB_SYNC_TIMEOUT_S}s;
+        proxy_send_timeout ${WEB_SYNC_TIMEOUT_S}s;
         # Streamed to the API as it arrives: the health data never lands
         # in a temporary file of nginx (« a client request body is
         # buffered to a temporary file »). HTTP/1.1 so a chunked body
@@ -108,16 +113,17 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 120s;
+        proxy_read_timeout ${WEB_API_TIMEOUT_S}s;
         # Bodies sent (a meal's photos, a document, a Shortcut's JSON)
         # are streamed to the API: never written to nginx's disk.
         proxy_http_version 1.1;
         proxy_request_buffering off;
-        # Answers of up to 2 MB (a meal photo) stay in memory; a larger
-        # one (an export, a report) spills to a temporary file, as before.
-        proxy_buffer_size 64k;
-        proxy_buffers 32 64k;
-        proxy_busy_buffers_size 128k;
+        # Answers of up to 2 MB (a meal photo; WEB_PROXY_BUFFERS ×
+        # WEB_PROXY_BUFFER_KB) stay in memory; a larger one (an export, a
+        # report) spills to a temporary file, as before.
+        proxy_buffer_size ${WEB_PROXY_BUFFER_KB}k;
+        proxy_buffers ${WEB_PROXY_BUFFERS} ${WEB_PROXY_BUFFER_KB}k;
+        proxy_busy_buffers_size ${WEB_PROXY_BUSY_KB}k;
     }
 
     location = /health {
@@ -135,7 +141,7 @@ server {
 
     # Long-cache immutable build assets.
     location /assets/ {
-        expires 30d;
+        expires ${WEB_ASSETS_CACHE_DAYS}d;
         add_header Cache-Control "public, immutable";
     }
 }

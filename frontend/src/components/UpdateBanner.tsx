@@ -7,11 +7,10 @@ import {
   useRequestUpdate,
   useUpdateState,
 } from '../hooks/useUpdates';
+import { hub, ms } from '../settings';
 import { readStored, writeStored } from '../utils/stored';
 import { CopyButton } from './CopyButton';
 
-/** An update done this recently is confirmed (« ✓ … installée »). */
-const RECENT_MS = 30 * 60 * 1000;
 const LOG = 'tail -50 run/update.log';
 
 /** « 01:12 » today, « 23/09 01:12 » another day. */
@@ -158,7 +157,8 @@ function Done({ u, onHide }: { u: UpdateState; onHide: () => void }) {
 
 function recent(u: UpdateState): boolean {
   const at = u.since ? Date.parse(u.since) : NaN;
-  return Date.now() - at < RECENT_MS;
+  // an update done this recently is confirmed (« ✓ … installée »)
+  return Date.now() - at < ms(hub().update_recent_s);
 }
 
 interface Seen {

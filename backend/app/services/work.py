@@ -16,6 +16,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.errors import InvalidInputError, NotFoundError
 from app.models.base import new_uuid, utcnow
 from app.models.work import WorkSession
@@ -24,10 +25,10 @@ from app.services.daily_rollup import user_zone
 from app.services.timed_entries import utc
 
 #: Longest session accepted (48 h without leaving happens).
-MAX_SESSION = timedelta(hours=72)
+MAX_SESSION = timedelta(hours=get_settings().work_max_session_hours)
 _TIMES = ("start_at", "end_at")
 #: A lone clock-in and a lone clock-out this close are one session.
-_HALF = timedelta(hours=20)
+_HALF = timedelta(hours=get_settings().work_pair_search_hours)
 #: Where the work was done: on site, or remote.
 PLACES = ("site", "remote")
 
@@ -159,7 +160,8 @@ async def _apply(
         length = utc(row.end_at) - utc(row.start_at)
         if not timedelta(0) < length <= MAX_SESSION:
             raise InvalidInputError(
-                "La débauche doit suivre l'embauche, 72 h au plus."
+                f"La débauche doit suivre l'embauche, "
+                f"{get_settings().work_max_session_hours:g} h au plus."
             )
     await _absorb(session, row, tz)
     await _no_overlap(session, row, tz)

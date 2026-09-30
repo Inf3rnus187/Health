@@ -20,6 +20,7 @@ from typing import Any, NamedTuple
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models.work import Absence
 from app.services import absences, table_read, trace_columns, work_parse
 from app.services.table_read import Row
@@ -58,7 +59,7 @@ _WORKED = re.compile(
     r"teletravail|remote|home ?office|formation|deplacement|mission"
 )
 _SHORT = 3
-MAX_LISTED = 50
+MAX_LISTED = get_settings().import_report_lines
 #: A half-day flag column (one record per half day) and half-day words.
 _FLAG = re.compile(r"^(is ?am|matin|morning|demi-journee du matin)$")
 _PM = re.compile(r"apres-?midi|\bpm\b|\b1[34]h")

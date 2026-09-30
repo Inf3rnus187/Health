@@ -45,8 +45,15 @@ services:
       # The commit running (./update.sh exports it), printed on reports.
       GIT_COMMIT: ${GIT_COMMIT:-}
       # API processes answering at the same time (one per core is a good
-      # start; each holds up to 10 database connections).
+      # start; each holds up to DB_POOL_SIZE + DB_MAX_OVERFLOW database
+      # connections).
       WEB_CONCURRENCY: ${API_WORKERS:-4}
+      # A process silent this long is restarted; one stopping finishes
+      # its requests within this; a kept-alive connection waits this.
+      GUNICORN_CMD_ARGS: >-
+        --timeout ${API_TIMEOUT_S:-30}
+        --graceful-timeout ${API_GRACEFUL_S:-30}
+        --keep-alive ${API_KEEPALIVE_S:-2}
     # Reach Ollama running on the Docker host (Linux needs this mapping so
     # OLLAMA_URL=http://host.docker.internal:11434 resolves).
     extra_hosts:
@@ -109,6 +116,20 @@ services:
         VITE_TILE_ATTRIB: ${VITE_TILE_ATTRIB:-}
         # The version shown next to the name (./update.sh sets it).
         GIT_COMMIT: ${GIT_COMMIT:-}
+    # Sizes, time limits, compression and cache of the web server
+    # (nginx/default.conf.template; docs/guides/configuration.md).
+    environment:
+      WEB_MAX_BODY_MB: ${WEB_MAX_BODY_MB:-32}
+      WEB_API_TIMEOUT_S: ${WEB_API_TIMEOUT_S:-120}
+      WEB_SYNC_TIMEOUT_S: ${WEB_SYNC_TIMEOUT_S:-600}
+      WEB_IMPORT_TIMEOUT_S: ${WEB_IMPORT_TIMEOUT_S:-3600}
+      WEB_GZIP_LEVEL: ${WEB_GZIP_LEVEL:-5}
+      WEB_GZIP_MIN_BYTES: ${WEB_GZIP_MIN_BYTES:-1024}
+      WEB_DNS_TTL_S: ${WEB_DNS_TTL_S:-10}
+      WEB_PROXY_BUFFER_KB: ${WEB_PROXY_BUFFER_KB:-64}
+      WEB_PROXY_BUFFERS: ${WEB_PROXY_BUFFERS:-32}
+      WEB_PROXY_BUSY_KB: ${WEB_PROXY_BUSY_KB:-128}
+      WEB_ASSETS_CACHE_DAYS: ${WEB_ASSETS_CACHE_DAYS:-30}
     depends_on: [api]
     ports:
       - "${WEB_PORT:-8082}:80"

@@ -2,13 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import { fetchUpdate, installedBuild, requestUpdate } from '../api/system';
-
-const EVERY = 5 * 60 * 1000;
-/** While the host updates, the new build is looked for this often. */
-const UPDATING = 20 * 1000;
+import { hub, ms } from '../settings';
 
 /** Whether a newer build than this page was installed on the server
- * (looked for every 5 min, on focus, every 20 s while ``updating``). */
+ * (looked for every ``update_check_s``, on focus, every
+ * ``update_look_s`` while ``updating``). */
 export function useNewBuild(updating = false): boolean {
   const [newer, setNewer] = useState(false);
   useEffect(() => {
@@ -17,7 +15,8 @@ export function useNewBuild(updating = false): boolean {
         if (build && build !== __BUILD_ID__) setNewer(true);
       });
     look();
-    const timer = setInterval(look, updating ? UPDATING : EVERY);
+    const every = updating ? hub().update_look_s : hub().update_check_s;
+    const timer = setInterval(look, ms(every));
     window.addEventListener('focus', look);
     return () => {
       clearInterval(timer);
@@ -37,8 +36,8 @@ export function useUpdateState(enabled = true) {
     retry: false,
     refetchInterval: (q) =>
       ['requested', 'running'].includes(q.state.data?.state ?? '')
-        ? 15_000
-        : EVERY,
+        ? ms(hub().update_state_s)
+        : ms(hub().update_check_s),
   });
 }
 

@@ -1,8 +1,14 @@
-const SIZES = [10, 25, 50, 100, 200];
+import { hub } from '../settings';
 
 interface PageSizeProps {
   value: number;
   onChange: (size: number) => void;
+}
+
+/** The hub's choices (WEB_PAGE_SIZES), and the list's own size if the
+ * administrator left it out: the select always shows what is used. */
+function choices(value: number): number[] {
+  return [...new Set([...hub().page_sizes, value])].sort((a, b) => a - b);
 }
 
 export function PageSize({ value, onChange }: PageSizeProps) {
@@ -14,7 +20,7 @@ export function PageSize({ value, onChange }: PageSizeProps) {
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
       >
-        {SIZES.map((size) => (
+        {choices(value).map((size) => (
           <option key={size} value={size}>
             {size}
           </option>

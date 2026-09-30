@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-query';
 
 import { fetchDailyValues, fetchInventory, reconcileData } from '../api/data';
+import { hub, ms } from '../settings';
 
 const REFRESHED = [
   ['inventory'],
@@ -15,16 +16,19 @@ const REFRESHED = [
   ['evolution-trend'],
   ['evolution-markers'],
 ];
-const STEP_MS = 10_000;
-const STEPS = 18; // ~3 minutes: a full history takes a while
 
 function refreshStaggered(client: QueryClient): void {
-  for (let step = 1; step <= STEPS; step += 1) {
-    setTimeout(() => {
-      for (const queryKey of REFRESHED) {
-        void client.invalidateQueries({ queryKey });
-      }
-    }, step * STEP_MS);
+  // ~3 minutes by default: a full history takes a while
+  const { reconcile_refresh_s: every, reconcile_refresh_steps: steps } = hub();
+  for (let step = 1; step <= steps; step += 1) {
+    setTimeout(
+      () => {
+        for (const queryKey of REFRESHED) {
+          void client.invalidateQueries({ queryKey });
+        }
+      },
+      step * ms(every),
+    );
   }
 }
 

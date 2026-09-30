@@ -29,6 +29,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models.health_raw import HealthSample
 from app.models.measurement import Measurement
 from app.services import measurements, metrics, timed_entries
@@ -38,9 +39,9 @@ from app.services.timed_entries import utc
 #: A night runs from 18:00 the day before to 18:00 the wake-up day.
 _CUT = time(18, 0)
 #: No sleep sample lasts longer (a night, a nap, « au lit »: hours).
-_LONGEST = timedelta(days=2)
-_AWAKENING = timedelta(minutes=5)
-_BLOCK_GAP = timedelta(minutes=60)
+_LONGEST = timedelta(hours=get_settings().sleep_sample_max_hours)
+_AWAKENING = timedelta(minutes=get_settings().sleep_awakening_min)
+_BLOCK_GAP = timedelta(minutes=get_settings().sleep_block_gap_min)
 
 Interval = tuple[datetime, datetime]
 

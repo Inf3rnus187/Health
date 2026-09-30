@@ -10,17 +10,21 @@ continuous sessions, days off worked, then the longest spans.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, time
 from typing import Any
 
+from app.core.config import get_settings
 from app.services import absences, work_legal
 from app.services.work_math import clock_text
 
-LIMIT = 20
-_CONTINUOUS = 24.0
-_REST = 13.0
-_MAX_DAY = 10.0
-_LATE = 21.0
+_S = get_settings()
+LIMIT = _S.work_highlight_days
+_CONTINUOUS = _S.work_continuous_hours
+_REST = _S.work_max_spread_hours
+_MAX_DAY = _S.work_max_day_hours
+#: The night starts at this hour (WORK_NIGHT_START, 21:00 by default).
+_NIGHT = time.fromisoformat(_S.work_night_start)
+_LATE = _NIGHT.hour + _NIGHT.minute / 60
 _MIDNIGHT = 24.0
 _WEEKEND = {5: "samedi travaillé", 6: "dimanche travaillé"}
 
@@ -50,9 +54,12 @@ def _flags(row: dict[str, Any], feasts: set[date]) -> list[str]:
     if span >= _CONTINUOUS:
         flags.append(f"session continue de {hm(span)}, nuit comprise")
     elif span > _REST:
-        flags.append(f"amplitude {hm(span)} > 13 h (repos de 11 h impossible)")
+        flags.append(
+            f"amplitude {hm(span)} > {_REST:g} h "
+            f"(repos de {work_legal.MIN_REST_H:g} h impossible)"
+        )
     if hours > _MAX_DAY and span < _CONTINUOUS:
-        flags.append(f"{hm(hours)} de travail > 10 h")
+        flags.append(f"{hm(hours)} de travail > {_MAX_DAY:g} h")
     flags.append(_WEEKEND.get(row["weekday"], ""))
     flags.append("jour férié travaillé" if row["date"] in feasts else "")
     if row["absence"]:
@@ -60,7 +67,9 @@ def _flags(row: dict[str, Any], feasts: set[date]) -> list[str]:
         flags.append(f"travaillé pendant : {label.lower()}")
     if row["end"] >= _LATE and span < _CONTINUOUS:
         flags.append(
-            "fin après minuit" if row["end"] >= _MIDNIGHT else "fin après 21 h"
+            "fin après minuit"
+            if row["end"] >= _MIDNIGHT
+            else f"fin après {work_legal.NIGHT_FROM}"
         )
     return [f for f in flags if f]
 

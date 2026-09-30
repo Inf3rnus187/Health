@@ -19,6 +19,7 @@ from sqlalchemy import delete as sql_delete
 from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models.base import new_uuid, utcnow
 from app.models.health_raw import (
     ClinicalDocument,
@@ -38,7 +39,7 @@ from app.services.apple_health.importer import (
 )
 from app.services.apple_health.parser import Item
 
-_OBS_BATCH = 1000
+_OBS_BATCH = get_settings().import_obs_batch
 
 
 async def process(session: AsyncSession, job: ImportJob) -> None:

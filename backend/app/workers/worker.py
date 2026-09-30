@@ -104,10 +104,19 @@ class WorkerSettings:
         generate_report,
         import_apple_health_job,
     ]
-    #: 04:40 UTC, when nobody is logging a meal.
-    cron_jobs = [cron(refresh_foods, hour={4}, minute={40})]
+    #: 04:40 UTC by default (FOOD_REFRESH_HOUR / _MINUTE), when nobody
+    #: is logging a meal.
+    cron_jobs = [
+        cron(
+            refresh_foods,
+            hour={get_settings().food_refresh_hour},
+            minute={get_settings().food_refresh_minute},
+        )
+    ]
     on_startup = _startup
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
-    # Full-history imports can run for many minutes; give them room.
-    job_timeout = 7200
-    max_tries = 1
+    # Full-history imports can run for many minutes (WORKER_JOB_TIMEOUT_S).
+    job_timeout = get_settings().worker_job_timeout_s
+    max_tries = get_settings().worker_max_tries
+    max_jobs = get_settings().worker_max_jobs
+    keep_result = get_settings().worker_keep_result_s

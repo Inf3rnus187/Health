@@ -9,11 +9,8 @@ import {
   setAccessToken,
 } from '../api/client';
 import type { User } from '../api/types';
+import { hub, ms } from '../settings';
 import { AuthContext } from './context';
-
-/** Renew the 15-minute access token before it runs out (a hidden tab
- * waits: its first call renews it). */
-const RENEW_EVERY = 12 * 60 * 1000;
 
 type SetUser = (user: User | null) => void;
 
@@ -40,7 +37,6 @@ function forget(): void {
   setAccessToken(null);
 }
 
-const RETRY_EVERY = 5000;
 const pause = (ms: number) => new Promise((done) => setTimeout(done, ms));
 
 /** Back into the session kept in this browser. A hub that does not
@@ -62,7 +58,7 @@ async function restore(
       return;
     }
     setWaiting(true);
-    await pause(RETRY_EVERY);
+    await pause(ms(hub().retry_s));
   }
 }
 
@@ -77,7 +73,9 @@ function useKeepAlive(user: User | null, expire: () => void): void {
     const renew = () => {
       if (document.visibilityState === 'visible') void renewSession();
     };
-    const timer = setInterval(renew, RENEW_EVERY);
+    // Renewed before the access token runs out (a hidden tab waits:
+    // its first call renews it).
+    const timer = setInterval(renew, ms(hub().renew_every_s));
     return () => clearInterval(timer);
   }, [user]);
 }

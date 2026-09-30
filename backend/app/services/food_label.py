@@ -16,6 +16,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from app.core import ollama
+from app.core.config import get_settings
 from app.core.errors import InvalidInputError
 from app.schemas.food import Per100g
 from app.services import imaging
@@ -28,8 +29,8 @@ Réponds uniquement en JSON :
 "per_100g": {"energy_kcal": 0, "protein_g": 0, "carbs_g": 0, \
 "sugars_g": 0, "fat_g": 0, "sat_fat_g": 0, "fiber_g": 0, "salt_g": 0, \
 "sodium_mg": 0}}"""
-_TIME_LIMIT = 100.0
-_SIDE = 2048
+_TIME_LIMIT = get_settings().label_ai_time_limit_s
+_SIDE = get_settings().image_read_side
 
 
 async def read(data: bytes) -> dict[str, Any]:

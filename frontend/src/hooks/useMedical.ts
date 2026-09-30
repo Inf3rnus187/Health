@@ -8,9 +8,8 @@ import {
   uploadMedicalDoc,
 } from '../api/medical';
 import type { MedicalDoc } from '../api/types';
+import { hub, ms } from '../settings';
 import { RECORD_KEYS } from './useRecord';
-
-const POLL_MS = 5000;
 
 function pending(docs: MedicalDoc[] | undefined): boolean {
   return (docs ?? []).some(
@@ -32,7 +31,8 @@ export function useMedicalDocs() {
       }
       return docs;
     },
-    refetchInterval: (query) => (pending(query.state.data) ? POLL_MS : false),
+    refetchInterval: (query) =>
+      pending(query.state.data) ? ms(hub().poll_s) : false,
   });
 }
 

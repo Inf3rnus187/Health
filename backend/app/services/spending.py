@@ -22,6 +22,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models.work import Evidence
 from app.services.daily_rollup import user_zone
 from app.services.timed_entries import day_bounds, utc
@@ -32,8 +33,9 @@ KINDS: dict[str, tuple[str, ...]] = {
     "repas": ("repas",),
     "tout": ("livraison", "repas"),
 }
-LATE_FROM, LATE_UNTIL = 21, 5
-TOP = 10
+LATE_FROM = get_settings().spending_late_from_hour
+LATE_UNTIL = get_settings().spending_late_until_hour
+TOP = get_settings().spending_top
 _DAYS_MAX, _WEEKS_MAX = 62, 400
 
 
@@ -115,8 +117,10 @@ def _totals(orders: list[Order], days: int) -> dict[str, Any]:
 
 
 def _late(hour: int) -> bool:
-    """Ordered from 21:00 to 04:59."""
-    return hour >= LATE_FROM or hour < LATE_UNTIL
+    """Ordered in the late window (21:00 to 04:59 by default)."""
+    if LATE_FROM > LATE_UNTIL:  # across midnight
+        return hour >= LATE_FROM or hour < LATE_UNTIL
+    return LATE_FROM <= hour < LATE_UNTIL
 
 
 def _order(order: Order) -> dict[str, Any]:

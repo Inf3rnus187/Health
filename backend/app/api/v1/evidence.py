@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, Form, Query, UploadFile, status
 from fastapi.responses import Response
 
+from app.core.config import get_settings
 from app.core.deps import ReaderDep, SessionDep, UserDep
 from app.core.errors import InvalidInputError, NotFoundError
 from app.models.work import Evidence
@@ -18,7 +19,8 @@ from app.services.daily_rollup import user_zone
 
 router = APIRouter(prefix="/evidence", tags=["evidence"])
 
-_MAX_BYTES = 30 * 1024 * 1024
+_MAX_MB = get_settings().evidence_max_mb
+_MAX_BYTES = _MAX_MB * 1024 * 1024
 
 
 @router.get("", response_model=list[EvidenceOut])
@@ -115,7 +117,7 @@ async def _upload(file: UploadFile | None) -> tuple[str, str, bytes] | None:
         return None
     data = await file.read()
     if len(data) > _MAX_BYTES:
-        raise InvalidInputError("File over 30 MB")
+        raise InvalidInputError(f"File over {_MAX_MB} MB")
     return file.filename, file.content_type or "", data
 
 

@@ -12,8 +12,10 @@ from __future__ import annotations
 import io
 from typing import Any
 
-_DPI = 200
-_MAX_PAGES = 12
+from app.core.config import get_settings
+
+_DPI = get_settings().ocr_dpi
+_MAX_PAGES = get_settings().ocr_max_pages
 
 
 def available() -> bool:

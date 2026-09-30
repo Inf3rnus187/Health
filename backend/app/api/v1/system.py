@@ -2,7 +2,8 @@
 
 Administrator only: the host's state and its updates concern the whole
 hub. Every user's page still sees a new build (``/version.json``) and
-offers to reload.
+offers to reload. The page's own settings (``/system/settings``) are
+read before signing in.
 """
 
 from __future__ import annotations
@@ -14,8 +15,30 @@ from fastapi import APIRouter
 from app.core.deps import PrincipalDep
 from app.core.deps_admin import AdminDep
 from app.services import updates
+from app.services.client_settings import client_settings
 
 router = APIRouter(prefix="/system", tags=["system"])
+
+
+@router.get("/settings")
+async def settings() -> dict[str, Any]:
+    """The web page's timings and its forms' limits (no sign-in).
+
+    Read by the page before it shows anything, from the hub's
+    environment (docs/guides/configuration.md, « Page web »): seconds
+    between retries while the hub restarts (``retry_s``), between two
+    session renewals (``renew_every_s``: the access token's life less
+    ``WEB_RENEW_MARGIN_S``), between looks for a new version
+    (``update_check_s``, ``update_look_s`` while updating,
+    ``update_state_s``), between looks at an AI reading under way
+    (``poll_s``), the refreshes after an import or a photo, the « Par
+    page » choices (``page_sizes``), the photos a meal takes
+    (``meal_photos``), the longest analysis delay
+    (``meal_analysis_max_delay_min``), the weekly maximum drawn on the
+    work chart (``work_max_week_hours``). Nothing secret, nothing of a
+    user's.
+    """
+    return client_settings()
 
 
 @router.get("/version")

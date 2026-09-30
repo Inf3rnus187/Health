@@ -27,8 +27,9 @@ _OPTIONS = {"temperature": 0, "seed": 42, "num_ctx": 8192}
 # One request at a time: a local model serves requests sequentially, so
 # parallel worker jobs would only queue inside Ollama and hit timeouts
 # (e.g. while re-analysing a whole photo history).
-_GATE = asyncio.Semaphore(1)
-_TIMEOUT = 600.0  # a 27B model reading a long report can be slow
+_GATE = asyncio.Semaphore(get_settings().ollama_concurrency)
+#: A 27B model reading a long report can be slow (OLLAMA_TIMEOUT_S).
+_TIMEOUT = get_settings().ollama_timeout_s
 
 
 def document_model() -> str:

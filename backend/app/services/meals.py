@@ -14,6 +14,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.errors import InvalidInputError, NotFoundError
 from app.models.base import new_uuid, utcnow
 from app.models.meal import Meal
@@ -28,8 +29,8 @@ TYPES = {
     "dinner": "Dîner",
     "snack": "Collation",
 }
-_DESCRIPTION_MAX = 2000
-_MORE_PHOTOS = 6
+_DESCRIPTION_MAX = get_settings().meal_description_max
+_MORE_PHOTOS = get_settings().meal_max_photos
 #: Default meal by local hour (before 10:30 breakfast… after 18:00 dinner).
 _MEAL_HOURS = ((10.5, "breakfast"), (15.0, "lunch"), (18.0, "snack"))
 

@@ -15,8 +15,10 @@ import time
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.core.config import get_settings
+
 LOGGER = "app.access"
-_SLOW_MS = 1000
+_SLOW_MS = get_settings().log_slow_ms
 _log = logging.getLogger(LOGGER)
 
 

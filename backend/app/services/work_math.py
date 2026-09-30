@@ -13,12 +13,13 @@ from statistics import fmean
 from typing import Any, NamedTuple
 from zoneinfo import ZoneInfo
 
+from app.core.config import get_settings
 from app.models.work import WorkSession
 from app.services import work_days
 
 #: Legal maximums used as flags (Code du travail).
-MAX_DAY_HOURS = 10.0
-MAX_WEEK_HOURS = 48.0
+MAX_DAY_HOURS = get_settings().work_max_day_hours
+MAX_WEEK_HOURS = get_settings().work_max_week_hours
 _WEEKDAYS = 5
 
 

@@ -15,18 +15,20 @@ from statistics import fmean
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from app.core.config import get_settings
 from app.models.work import Evidence
 from app.services import evidence, work_corr
 from app.services.timed_entries import utc
 from app.services.traces import MEAL_KINDS
 
-#: A trace at or after this hour on a working day is "late".
-LATE = time(21, 0)
+#: A trace at or after this hour on a working day is "late"
+#: (WORK_NIGHT_START).
+LATE = time.fromisoformat(get_settings().work_night_start)
 #: Traces that place you somewhere (not a meal, not a document).
 PRESENCE = {"transport", "taxi", "parking", "hotel", "activite"}
-_LONG_DAY_H = 10.0
+_LONG_DAY_H = get_settings().work_max_day_hours
 #: A trace this long (a parking or hotel stay) also marks the next days.
-_STAY = timedelta(hours=6)
+_STAY = timedelta(hours=get_settings().work_stay_hours)
 
 
 def per_day(

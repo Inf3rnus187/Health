@@ -30,7 +30,7 @@ WriteDep = Annotated[Principal, Depends(require_scope(WRITE_MEASUREMENTS))]
 UploadDep = Annotated[
     Principal, Depends(require_scope_flex(WRITE_MEASUREMENTS))
 ]
-_CHUNK = 1 << 20
+_CHUNK = get_settings().upload_chunk_kb * 1024
 
 
 @router.post(

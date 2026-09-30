@@ -10,10 +10,12 @@ from functools import lru_cache
 from typing import Annotated
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+from pydantic_settings import NoDecode, SettingsConfigDict
+
+from app.core.tuning import Tuning
 
 
-class Settings(BaseSettings):
+class Settings(Tuning):
     """Typed runtime settings, validated once at startup."""
 
     model_config = SettingsConfigDict(

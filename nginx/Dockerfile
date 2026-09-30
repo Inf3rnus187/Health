@@ -26,7 +26,23 @@ RUN pnpm build
 
 # --- Serve static assets with Nginx ---
 FROM nginx:1.27-alpine AS runtime
-COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+# nginx's image fills the template at start (envsubst) with the WEB_…
+# variables only, into /etc/nginx/conf.d/default.conf. The defaults
+# below are the values it always had; docker-compose.yml passes the
+# ones set in .env (docs/guides/configuration.md, « Serveur web »).
+ENV NGINX_ENVSUBST_FILTER=^WEB_ \
+    WEB_MAX_BODY_MB=32 \
+    WEB_API_TIMEOUT_S=120 \
+    WEB_SYNC_TIMEOUT_S=600 \
+    WEB_IMPORT_TIMEOUT_S=3600 \
+    WEB_GZIP_LEVEL=5 \
+    WEB_GZIP_MIN_BYTES=1024 \
+    WEB_DNS_TTL_S=10 \
+    WEB_PROXY_BUFFER_KB=64 \
+    WEB_PROXY_BUFFERS=32 \
+    WEB_PROXY_BUSY_KB=128 \
+    WEB_ASSETS_CACHE_DAYS=30
+COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \

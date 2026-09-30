@@ -14,6 +14,7 @@ from sqlalchemy import delete as sql_delete
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.errors import InvalidInputError, NotFoundError
 from app.models.base import new_uuid
 from app.models.health_raw import HealthSample
@@ -25,7 +26,7 @@ from app.services.daily_rollup import user_zone
 from app.services.timed_entries import utc
 
 DEVICE = "Saisie manuelle"
-_MAX_HOURS = 20
+_MAX_HOURS = get_settings().sleep_manual_max_hours
 
 
 async def add(
@@ -43,7 +44,7 @@ async def add(
     minutes = (end - start).total_seconds() / 60
     if not 0 < minutes <= _MAX_HOURS * 60:
         raise InvalidInputError(
-            "Le lever doit suivre le coucher (20 h au plus)."
+            f"Le lever doit suivre le coucher ({_MAX_HOURS:g} h au plus)."
         )
     metric = await timed_entries.metric_for(session, SLEEP_RAW)
     row = HealthSample(

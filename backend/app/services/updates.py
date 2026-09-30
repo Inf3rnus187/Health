@@ -20,10 +20,10 @@ from app.core.config import get_settings
 from app.core.errors import ConflictError
 
 #: The host's cron beat this recently: « Installer » can be offered.
-FRESH_SECONDS = 180
+FRESH_SECONDS = get_settings().update_fresh_s
 #: A request not taken by then, or an update running longer, is stuck.
-TAKEN_SECONDS = 180
-RUNNING_SECONDS = 20 * 60
+TAKEN_SECONDS = get_settings().update_taken_s
+RUNNING_SECONDS = get_settings().update_running_s
 _PARTS = {"api": "API et worker", "web": "interface web", "mcp": "serveur MCP"}
 _REQUEST = "update-request"
 #: The host's copy of the request it took (it cannot delete the API's

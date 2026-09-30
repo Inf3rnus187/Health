@@ -18,13 +18,14 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.errors import InvalidInputError
 from app.services import work, work_parse
 from app.services.daily_rollup import user_zone
 from app.services.work_parse import Event, Span
 
 #: At most this many unreadable lines are listed back.
-MAX_SKIPPED = 50
+MAX_SKIPPED = get_settings().import_report_lines
 _DELIMITER = re.compile(r"[;,\t|]")
 
 
