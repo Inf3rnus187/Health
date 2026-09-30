@@ -62,6 +62,14 @@ où il peut aller jusqu'à ≈ 2,9 s (1,7 s de démarrage et 1,2 s de
 recomptage), à vérifier sur la ligne `reconciled` ou avec la commande
 « 1 contre 4 processus » de la section (5).
 
+**Chez l'utilisateur, après la mise à jour** (4 processus, deux
+passages) : **6,8 s et 7,1 s**, contre 9,1–9,5 s avant (−2,4 s).
+Depuis la première version à un seul cœur : 16,6 s → ≈ 7 s. Ce qui
+reste : le démarrage des processus (≈ 1,7 s, plus long que les
+premières étapes qu'il recouvre, 1,3 s) puis la plus longue métrique,
+l'énergie au repos (5,0–5,3 s), qu'un seul processus calcule de bout
+en bout.
+
 **Mêmes résultats** : les 44 016 jours écrits ont le même md5 qu'avant
 (`dddedef5…`) avec 1, 4 et 8 processus ; les nombres de relevés
 recomptés sont exacts (0 écart avec un `GROUP BY` sur les 2 415 530

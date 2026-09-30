@@ -440,7 +440,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   in turn, 5 times): 5.73 → 5.30 s median, faster each time; the 44 016
   days written keep the same md5 with 1, 4 and 8 processes and the
   counts are exact. On 4 cores the gain is small; at the user's (16
-  threads, half free) up to ≈ 2.9 s of the 9.2 s may go.
+  threads, half free), measured after the update: 9.1–9.5 s → 6.8 and
+  7.1 s (16.6 s before the reconcile used several cores).
 - **PostgreSQL's memory is set in `.env`** (for the administrator):
   `DB_SHARED_BUFFERS`, `DB_EFFECTIVE_CACHE_SIZE`, `DB_WORK_MEM`,
   `DB_MAINTENANCE_WORK_MEM`, and `DB_SHM_SIZE` for parallel queries
