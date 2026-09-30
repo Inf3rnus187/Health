@@ -27,7 +27,7 @@ Guiding constraints (non‑negotiable):
 ## Status — what this milestone delivers
 
 All phases of the [roadmap](docs/architecture.md#roadmap) are implemented
-and tested:
+and tested (what comes next: [ideas and work to come](docs/idees.md)):
 
 | Area | Status |
 |------|--------|

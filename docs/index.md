@@ -21,6 +21,8 @@
 - [Data model](data-model.md) — the fixed schema and the dynamic registry.
 - [Performances](performance.md) — mesures avant / après de chaque
   optimisation, méthode, ce qui reste lent, tampons nginx.
+- [Idées et travaux à venir](idees.md) — ce qui n'est pas commencé,
+  ce qui attend une décision (paniers drive, poids unitaire…).
 - [Architecture Decision Records](adr/) — the structural decisions.
 - [CLAUDE.md](../CLAUDE.md) — the rules for every change: privacy,
   isolation, and the documents each commit must update.

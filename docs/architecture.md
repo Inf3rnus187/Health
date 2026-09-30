@@ -192,3 +192,7 @@ Phases, per the specification (§18):
 7. **MCP** — tools wired to the MCP hub. ✅
 8. **Automations** — NFC/Shortcuts, capture rules, reminders. ✅
 9. **Hardening & docs** — MFA, media encryption, RGPD erasure, SBOM+scans in CI. ✅
+
+Next — not started, or waiting for a decision: [ideas and work to come](idees.md)
+(drive baskets when the stock runs low, a stable unit weight between
+meals, reconcile in SQL, the planned hardening).
