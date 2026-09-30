@@ -7,12 +7,14 @@ day/week/month/year view over the whole history.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import date, timedelta
+from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.measurement import Measurement
-from app.services import measurements as measure
 from app.services import metrics as metrics_service
 
 BUCKETS = frozenset({"day", "week", "month", "year"})
@@ -23,20 +25,26 @@ async def trend(
 ) -> list[tuple[date, float]]:
     """Return ``(bucket start, value)`` points for a metric."""
     metric = await metrics_service.get_metric(session, metric_key)
-    rows = await measure.query(session, user_id, metric_key=metric_key)
-    grouped = _group(rows, bucket)
+    rows = await session.execute(  # the day and the value, not whole rows
+        select(Measurement.date_key, Measurement.value_num)
+        .where(
+            Measurement.user_id == user_id,
+            Measurement.metric_id == metric.id,
+            Measurement.value_num.is_not(None),
+        )
+        .order_by(Measurement.date_key, Measurement.recorded_at)
+    )
+    grouped = _group(rows.all(), bucket)
     agg = metric.aggregation_hint
     ordered = sorted(grouped.items())
     return [(day, _reduce(values, agg)) for day, values in ordered]
 
 
-def _group(rows: list[Measurement], bucket: str) -> dict[date, list[float]]:
-    """Collect numeric daily values into calendar buckets."""
+def _group(rows: Sequence[Any], bucket: str) -> dict[date, list[float]]:
+    """Collect numeric daily values (day, value) into calendar buckets."""
     grouped: dict[date, list[float]] = {}
-    for row in rows:
-        if row.value_num is None:
-            continue
-        grouped.setdefault(_key(row.date_key, bucket), []).append(row.value_num)
+    for day, value in rows:
+        grouped.setdefault(_key(day, bucket), []).append(value)
     return grouped
 
 

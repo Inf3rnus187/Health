@@ -44,7 +44,13 @@ async def levels(session: AsyncSession, user_id: str) -> dict[str, Any]:
     known = {f.id: f for f in await foods.list_foods(session, user_id)}
     start = min((utc(m[0].at) for m in by_food.values()), default=None)
     eaten, pending = await eaten_since(session, user_id, start)
-    found = [level(known[fid], moves, eaten) for fid, moves in by_food.items()]
+    per_food: dict[str, list[Eaten]] = defaultdict(list)
+    for line in eaten:  # each food reads its own lines, not every meal's
+        per_food[line[0]].append(line)
+    found = [
+        level(known[fid], moves, per_food[fid])
+        for fid, moves in by_food.items()
+    ]
     return {
         "foods": sorted(found, key=lambda lv: lv["name"]),
         "pending_meals": pending,
@@ -58,7 +64,9 @@ async def eaten_since(
     if start is None:
         return [], 0
     rows = await session.execute(
-        select(Meal).where(
+        select(  # the analysed lines only, not the whole meal
+            Meal.id, Meal.eaten_at, Meal.analysis_status, Meal.analysis["items"]
+        ).where(
             Meal.user_id == user_id,
             Meal.eaten_at >= start,
             Meal.price.is_(None),
@@ -66,10 +74,10 @@ async def eaten_since(
     )
     eaten: list[Eaten] = []
     pending = 0
-    for meal in rows.scalars():
-        pending += meal.analysis_status in _PENDING
-        if meal.analysis_status == "done" and meal.analysis:
-            eaten += _lines(meal)
+    for meal_id, at, status, items in rows.all():
+        pending += status in _PENDING
+        if status == "done" and items:
+            eaten += _lines(meal_id, utc(at), items)
     return eaten, pending
 
 
@@ -122,12 +130,13 @@ def _described(
     }
 
 
-def _lines(meal: Meal) -> list[Eaten]:
+def _lines(meal_id: str, at: datetime, items: Any) -> list[Eaten]:
     """The meal's lines computed from a sheet of « Mes aliments »."""
-    at = utc(meal.eaten_at)
+    if not isinstance(items, list):
+        return []
     return [
-        (str(item["food_id"]), at, float(item.get("grams") or 0), meal.id)
-        for item in (meal.analysis or {}).get("items") or []
+        (str(item["food_id"]), at, float(item.get("grams") or 0), meal_id)
+        for item in items
         if isinstance(item, dict)
         and item.get("food_id")
         and item.get("source") == "étiquette"

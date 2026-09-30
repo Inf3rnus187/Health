@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.health_raw import HealthSample
 from app.models.measurement import Measurement
 from app.models.metric import MetricDefinition
+from app.services import metric_memo
 from app.services.apple_health.metrics_cache import MetricCache
 from app.services.apple_health.spec import (
     QUANTITY_SPECS,
@@ -102,6 +103,7 @@ async def _merge_one(
     count = await _move(session, user_id, source, found[target])
     if not await _used(session, source.id, None):
         await session.delete(source)
+        metric_memo.forget(session)
     return count
 
 

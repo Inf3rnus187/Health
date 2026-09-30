@@ -72,6 +72,18 @@ asks for, never who eats them. A barcode on a
   (`client_temp`) until the API had it. Answers over 2 MB (an export, a
   report, a large decrypted photo) still spill briefly to nginx's
   `proxy_temp`, inside the container, never on a volume.
+- **Compression never touches a secret**: nginx gzips text (the page's
+  code, the API's JSON) except the answers that carry a session or a
+  token — `/api/v1/auth/…`, `/api/v1/tokens`, `/api/v1/sync/shortcut` —
+  so the size of a compressed answer cannot leak one (BREACH).
+- **The API's address is asked again**: nginx resolves `api` through
+  Docker's DNS every 10 s (`resolver 127.0.0.11`), so a rebuilt API
+  container is reached at its new address; it never falls back to
+  anything outside the compose network.
+- **A request keeps the metrics it read** (`services/metric_memo.py`):
+  the definitions of the shared catalogue only (no user data), for that
+  request's database session; forgotten on rollback or when metrics are
+  deleted.
 - **Photo metadata**: meal and food photos are decoded and re-encoded as
   JPEG without EXIF (no GPS) before storage (`services/imaging.py`,
   `meal_photo.py`, `meal_extra.py`, `food_photos.py`). Body photos: the

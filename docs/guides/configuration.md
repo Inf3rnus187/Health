@@ -74,6 +74,14 @@ visite) ramène à la page de connexion. Une mise à jour qui ajoute un
 index sur les relevés le construit au démarrage : quelques secondes de
 plus (≈ 3 s pour 2,35 millions de relevés, migration `0025`).
 
+Quand une mise à jour ne reconstruit que l'API, son nouveau conteneur
+reçoit une autre adresse sur le réseau Docker : nginx redemande
+l'adresse de `api` au DNS de Docker toutes les 10 s (`resolver
+127.0.0.11` dans `nginx/default.conf`), la page revient donc seule.
+Avant, nginx gardait l'adresse lue à son démarrage et répondait 502
+(« connect() failed (111: Connection refused) ») jusqu'à `docker compose
+restart web`.
+
 **Notification dans la page.** Toutes les 5 minutes, la page compare sa
 version à celle installée (`/version.json`, une par construction de
 l'interface) : après une mise à jour, « **Nouvelle version installée —
@@ -196,9 +204,9 @@ Puis, si la mise à jour touche les données (voir le CHANGELOG) :
 |---------|------|
 | `db` | PostgreSQL (volume `pgdata`). |
 | `redis` | File des tâches de fond. |
-| `api` | FastAPI (`/api/v1`), applique les migrations au démarrage ; lit `run/` (état des mises à jour). Appelle aussi Ollama : lecture d'une étiquette nutritionnelle (Mes aliments) et, quand la file (Redis) est indisponible, rapport construit sur place, synthèse clinique comprise. |
+| `api` | FastAPI (`/api/v1`), applique les migrations au démarrage ; lit `run/` (état des mises à jour). Appelle aussi Ollama : lecture d'une étiquette nutritionnelle (Mes aliments) et, quand la file (Redis) est indisponible, rapport construit sur place, synthèse clinique comprise. `API_WORKERS` processus (4 par défaut) répondent en même temps, chacun avec au plus 10 connexions à PostgreSQL. |
 | `worker` | Tâches longues : imports Apple, lecture IA des documents, des photos et des repas, rapports, réconciliation. |
-| `web` | Nginx + interface React, port `WEB_PORT`. |
+| `web` | Nginx + interface React, port `WEB_PORT` ; compresse le texte envoyé (gzip), sauf les réponses qui portent une session ou un jeton. |
 | `mcp` | Serveur MCP (optionnel, profil `mcp`), publié sur `MCP_BIND:MCP_PORT` (pas derrière nginx) — voir le [guide MCP](mcp.md). |
 
 Volumes et dossiers montés :
@@ -326,6 +334,7 @@ nginx (`X-Real-IP`) et la durée de la requête.
 | Variable | Rôle |
 |----------|------|
 | `WEB_PORT` | Port de l'interface (`8082`). |
+| `API_WORKERS` | Processus de l'API (`4`). Environ un par cœur ; 8 au plus avec les 100 connexions par défaut de PostgreSQL (10 par processus, plus celles du `worker`). Mesures : [performance.md](../performance.md). |
 | `VITE_MAP_KEY` | Clé MapTiler gratuite pour le fond de carte (rebuild `web`). |
 | `VITE_TILE_URL` / `VITE_TILE_ATTRIB` | Autre fournisseur de tuiles ; `none` = tracé seul. |
 

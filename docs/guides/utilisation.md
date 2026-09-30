@@ -46,7 +46,19 @@ sans usage), la page de connexion le dit : « Session expirée :
 reconnecte-toi ». Si le hub ne répond pas au chargement (l'API
 redémarre après une mise à jour, quelques secondes), la page affiche
 « Le hub ne répond pas (redémarrage après une mise à jour ?) — nouvel
-essai toutes les 5 s… » et revient seule, toujours connectée.
+essai toutes les 5 s… » et revient seule, toujours connectée (en moins
+de 10 s une fois l'API relancée, même si la mise à jour n'a reconstruit
+qu'elle).
+
+**Chargement.** Le site ne télécharge d'abord que l'accueil ; chaque
+page (Santé, Travail, Journal…) arrive à sa première ouverture — un bref
+« Chargement… » la première fois, puis plus rien. Après une mise à jour,
+seul le code du hub est rechargé, pas les bibliothèques (graphiques,
+carte). Une page restée ouverte pendant une mise à jour se recharge
+d'elle-même (une fois) en ouvrant une page pas encore vue ; si elle n'y
+arrive toujours pas : « Cette page n'a pas pu se charger (le hub vient
+d'être mis à jour ?) » et un bouton **Recharger**. Les mesures :
+[performance.md](../performance.md).
 
 **Vos choix restent après un rechargement** (F5, retour sur la page, le
 lendemain) : la **période** de chaque carte (Mes journées, Sessions,

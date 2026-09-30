@@ -8,11 +8,12 @@ dashboards, Santé, Données, the reports and the MCP server all use it.
 
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import date, timedelta
 from statistics import fmean
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.measurement import Measurement
@@ -36,12 +37,53 @@ async def overview(
 ) -> dict[str, Any]:
     """Everything a page shows about one metric."""
     metric = await metrics_service.get_metric(session, key)
+    return (await _views(session, user_id, {key: metric}, days))[key]
+
+
+async def overviews(
+    session: AsyncSession, user_id: str, keys: list[str], days: int = 365
+) -> dict[str, dict[str, Any]]:
+    """Several metrics read together (the home page's tiles).
+
+    A handful of queries for all of them, not a set per metric. Unknown
+    keys are left out.
+    """
+    found = await metrics_service.prefetch(session, keys)
+    return await _views(session, user_id, found, days)
+
+
+async def _views(
+    session: AsyncSession,
+    user_id: str,
+    metrics: dict[str, MetricDefinition],
+    days: int,
+) -> dict[str, dict[str, Any]]:
+    """Each metric's view, from rows read for all of them at once."""
+    ids = list({metric.id for metric in metrics.values()})
+    newest = await _newest(session, user_id, ids)
+    lasts = {mid: row.date_key for mid, row in newest.items()}
+    rows = await _since(session, user_id, lasts, max(days, 30))
+    history = await _history(session, user_id, list(lasts))
+    out = {}
+    for key, metric in metrics.items():
+        found = (newest.get(metric.id), rows.get(metric.id, []), history)
+        out[key] = await _view(session, user_id, metric, found, days)
+    return out
+
+
+async def _view(
+    session: AsyncSession,
+    user_id: str,
+    metric: MetricDefinition,
+    found: tuple[Measurement | None, list[Row], dict[str, Any]],
+    days: int,
+) -> dict[str, Any]:
+    """One metric's view from its newest row, its window and its history."""
+    newest, rows, history = found
     out = _head(metric)
-    newest = await _newest(session, user_id, metric.id)
-    if newest is None:
+    if newest is None or not rows:
         return out
     last = newest.date_key
-    rows = await _since(session, user_id, metric.id, last, max(days, 30))
     reading = await readings.latest(session, user_id, metric, newest)
     out.update(
         latest={
@@ -52,7 +94,7 @@ async def overview(
         },
         day={"date": last.isoformat(), "value": rows[-1][1]},
         **_stats(rows, last),
-        **await _history(session, user_id, metric.id),
+        **history[metric.id],
         series=[
             {"date": d.isoformat(), "value": round(v, 2)}
             for d, v in rows
@@ -77,61 +119,92 @@ def _head(metric: MetricDefinition) -> dict[str, Any]:
     }
 
 
-def _numeric(user_id: str, metric_id: str) -> list[Any]:
-    """The user's numeric daily values of one metric."""
-    return [
-        Measurement.user_id == user_id,
-        Measurement.metric_id == metric_id,
-        Measurement.value_num.is_not(None),
-    ]
+def _numeric(user_id: str) -> list[Any]:
+    """The user's numeric daily values."""
+    return [Measurement.user_id == user_id, Measurement.value_num.is_not(None)]
 
 
 async def _newest(
-    session: AsyncSession, user_id: str, metric_id: str
-) -> Measurement | None:
-    """The newest numeric daily row (the day shown, the latest reading)."""
-    result = await session.execute(
-        select(Measurement)
-        .where(*_numeric(user_id, metric_id))
-        .order_by(Measurement.date_key.desc(), Measurement.recorded_at.desc())
-        .limit(1)
+    session: AsyncSession, user_id: str, ids: list[str]
+) -> dict[str, Measurement]:
+    """Each metric's newest numeric daily row (the day shown, the reading).
+
+    The rows of each metric's last day, in one query; then that day's
+    latest entry.
+    """
+    last_days = (
+        select(Measurement.metric_id, func.max(Measurement.date_key))
+        .where(*_numeric(user_id), Measurement.metric_id.in_(ids))
+        .group_by(Measurement.metric_id)
     )
-    return result.scalar_one_or_none()
+    rows = await session.execute(
+        select(Measurement).where(
+            *_numeric(user_id),
+            tuple_(Measurement.metric_id, Measurement.date_key).in_(last_days),
+        )
+    )
+    out: dict[str, Measurement] = {}
+    for row in rows.scalars():
+        best = out.get(row.metric_id)
+        rank = (row.recorded_at, row.id)
+        if best is None or rank > (best.recorded_at, best.id):
+            out[row.metric_id] = row
+    return out
 
 
 async def _since(
-    session: AsyncSession, user_id: str, metric_id: str, last: date, days: int
-) -> list[Row]:
-    """The daily values of the last ``days`` days, oldest first.
+    session: AsyncSession, user_id: str, lasts: dict[str, date], days: int
+) -> dict[str, list[Row]]:
+    """Each metric's daily values of its last ``days`` days, oldest first.
 
     Only the window a page shows is read, not years of values: the
     counts over all time come from :func:`_history`.
     """
-    result = await session.execute(
-        select(Measurement.date_key, Measurement.value_num)
-        .where(
-            *_numeric(user_id, metric_id),
+    if not lasts:
+        return {}
+    windows = [
+        and_(
+            Measurement.metric_id == mid,
             Measurement.date_key > last - timedelta(days=days),
         )
-        .order_by(Measurement.date_key, Measurement.recorded_at)
+        for mid, last in lasts.items()
+    ]
+    result = await session.execute(
+        select(
+            Measurement.metric_id, Measurement.date_key, Measurement.value_num
+        )
+        .where(*_numeric(user_id), or_(*windows))
+        .order_by(Measurement.date_key, Measurement.recorded_at, Measurement.id)
     )
-    return [(day, float(value)) for day, value in result.all()]
+    out: dict[str, list[Row]] = defaultdict(list)
+    for mid, day, value in result.all():
+        out[mid].append((day, float(value)))
+    return out
 
 
 async def _history(
-    session: AsyncSession, user_id: str, metric_id: str
-) -> dict[str, Any]:
+    session: AsyncSession, user_id: str, ids: list[str]
+) -> dict[str, dict[str, Any]]:
     """Days counted, first day and sources over all time, by the database."""
     result = await session.execute(
         select(
+            Measurement.metric_id,
             Measurement.source,
             func.count(),
             func.min(Measurement.date_key),
         )
-        .where(*_numeric(user_id, metric_id))
-        .group_by(Measurement.source)
+        .where(*_numeric(user_id), Measurement.metric_id.in_(ids))
+        .group_by(Measurement.metric_id, Measurement.source)
     )
-    found = sorted(result.all(), key=lambda row: (-row[1], row[2], row[0]))
+    per_metric: dict[str, list[Any]] = defaultdict(list)
+    for mid, *row in result.all():
+        per_metric[mid].append(row)
+    return {mid: _counted(found) for mid, found in per_metric.items()}
+
+
+def _counted(found: list[Any]) -> dict[str, Any]:
+    """One metric's day count, first day and sources (most days first)."""
+    found = sorted(found, key=lambda row: (-row[1], row[2], row[0]))
     return {
         "days_count": sum(int(row[1]) for row in found),
         "first_day": min(row[2] for row in found).isoformat(),

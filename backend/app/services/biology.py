@@ -26,7 +26,7 @@ from app.models.metric import MetricDefinition
 from app.schemas.measurement import MeasurementIn
 from app.services import biology_catalog as cat
 from app.services import measurements as measure
-from app.services import ocr
+from app.services import metric_memo, ocr
 from app.services.apple_health.metrics_cache import MetricCache
 from app.services.apple_health.spec import MetricSpec
 
@@ -209,6 +209,7 @@ async def _drop_empty(session: AsyncSession, metric_ids: list[str]) -> int:
     result = await session.execute(
         delete(MetricDefinition).where(MetricDefinition.id.in_(empty))
     )
+    metric_memo.forget(session)
     return cast("CursorResult[Any]", result).rowcount or 0
 
 

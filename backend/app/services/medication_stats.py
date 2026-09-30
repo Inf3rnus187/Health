@@ -19,7 +19,7 @@ from datetime import date, datetime, timedelta
 from statistics import median
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import InvalidInputError
@@ -93,18 +93,14 @@ async def adherence(
         .where(Treatment.user_id == user_id)
         .order_by(Treatment.name)
     )
-    intakes = await session.execute(
-        select(MedicationIntake).where(MedicationIntake.user_id == user_id)
-    )
-    by_treatment: dict[str | None, list[MedicationIntake]] = {}
-    for intake in intakes.scalars():
-        by_treatment.setdefault(intake.treatment_id, []).append(intake)
+    bounds = await _bounds(session, user_id)
+    doses = await _doses(session, user_id, span)
     items = []
     for treatment in rows.scalars():
-        doses = by_treatment.get(treatment.id, [])
-        window = _window(treatment, doses, span, zone)
+        window = _window(treatment, bounds.get(treatment.id), span, zone)
         if window is not None:
-            items.append(_stats(treatment, doses, window, zone))
+            mine = doses.get(treatment.id, [])
+            items.append(_stats(treatment, mine, window, zone))
     return {
         "start": span[0].isoformat(),
         "end": span[1].isoformat(),
@@ -112,17 +108,48 @@ async def adherence(
     }
 
 
+async def _bounds(
+    session: AsyncSession, user_id: str
+) -> dict[str | None, tuple[date, date]]:
+    """Each treatment's first and last dose day, counted by the database."""
+    rows = await session.execute(
+        select(
+            MedicationIntake.treatment_id,
+            func.min(MedicationIntake.date_key),
+            func.max(MedicationIntake.date_key),
+        )
+        .where(MedicationIntake.user_id == user_id)
+        .group_by(MedicationIntake.treatment_id)
+    )
+    return {tid: (first, last) for tid, first, last in rows.all()}
+
+
+async def _doses(
+    session: AsyncSession, user_id: str, span: tuple[date, date]
+) -> dict[str | None, list[MedicationIntake]]:
+    """The doses of the period only, per treatment (not years of them)."""
+    rows = await session.execute(
+        select(MedicationIntake).where(
+            MedicationIntake.user_id == user_id,
+            MedicationIntake.date_key.between(span[0], span[1]),
+        )
+    )
+    out: dict[str | None, list[MedicationIntake]] = {}
+    for intake in rows.scalars():
+        out.setdefault(intake.treatment_id, []).append(intake)
+    return out
+
+
 def _window(
     treatment: Treatment,
-    doses: list[MedicationIntake],
+    bounds: tuple[date, date] | None,
     span: tuple[date, date],
     zone: Any,
 ) -> tuple[date, date] | None:
     """The treatment's days within the period (None: none)."""
-    first = min((d.date_key for d in doses), default=None)
+    first, last = bounds or (None, None)
     created = utc(treatment.created_at).astimezone(zone).date()
     begin = treatment.start_date or min(first or created, created)
-    last = max((d.date_key for d in doses), default=None)
     today = datetime.now(zone).date()
     end = treatment.end_date or (today if treatment.active else last)
     if end is None:

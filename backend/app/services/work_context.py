@@ -13,12 +13,13 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from statistics import median
-from typing import Any
+from typing import Any, NamedTuple
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import NotFoundError
 from app.models.health_raw import HealthSample
 from app.models.work import Evidence, WorkSession
 from app.services import evidence, metrics, sleep_nights, work_days
@@ -36,6 +37,8 @@ _DAYS = (
     "dimanche",
 )
 _MORNING = 12
+#: Local day → (rank in the list, item, its local start, its local end).
+_Items = dict[date, list[tuple[int, Evidence, datetime, datetime | None]]]
 #: What the viewer shows of a proof (the file itself is fetched apart).
 _SHOWN = ("place", "amount", "currency", "description", "file_name",
           "media_type", "count")  # fmt: skip
@@ -54,15 +57,13 @@ async def incomplete(
     if not todo:
         return []
     usual = _usual([v for v in views if v["status"] == "complete"], tz)
-    items = await evidence.list_items(session, user_id)
-    days = [v["date_key"] for v in todo]
-    nights = await sleep_nights.nights(
-        session, user_id, min(days), max(days) + timedelta(days=1), tz
-    )
+    items = _by_day(await evidence.list_items(session, user_id), tz)
+    nights = await _nights(session, user_id, [v["date_key"] for v in todo], tz)
+    steps = await _steps(session)
     out = []
     for view in sorted(todo, key=lambda v: v["date_key"], reverse=True):
         context = await _context(
-            session, user_id, view, (items, nights, usual), tz
+            session, user_id, view, _Data(items, nights, usual, steps), tz
         )
         day = [v for v in views if v["date_key"] == view["date_key"]]
         context["others"] = [_other(view, o, tz) for o in day if o is not view]
@@ -74,14 +75,14 @@ async def _context(
     session: AsyncSession,
     user_id: str,
     view: dict[str, Any],
-    data: tuple[list[Evidence], dict[date, Any], dict[str, Any]],
+    data: _Data,
     tz: ZoneInfo,
 ) -> dict[str, Any]:
     """What else says when the day started or ended."""
-    items, nights, usual = data
+    items, nights, usual, steps = data
     day = view["date_key"]
     wanted = "end" if view["status"] == "missing_end" else "start"
-    seen = _seen(items, day, wanted, tz)
+    seen = _seen(items, day, wanted)
     woke, slept = nights.get(day), nights.get(day + timedelta(days=1))
     return {
         "missing": wanted,
@@ -89,7 +90,7 @@ async def _context(
         "evidence": seen,
         "wake_time": _clock(woke.wake_time) if woke else None,
         "bedtime": _clock(slept.bedtime) if slept else None,
-        "activity": await _activity(session, user_id, day, tz),
+        "activity": await _activity(session, user_id, steps, day, tz),
         "usual": {
             "weekday": _DAYS[day.weekday()],
             "that_weekday": usual[wanted].get(day.weekday()),
@@ -98,27 +99,68 @@ async def _context(
     }
 
 
-def _seen(
-    items: list[Evidence], day: date, wanted: str, tz: ZoneInfo
-) -> list[dict[str, Any]]:
+class _Data(NamedTuple):
+    """What every day to complete is read against (read once)."""
+
+    items: _Items
+    nights: dict[date, Any]
+    usual: dict[str, Any]
+    steps: str | None
+
+
+def _by_day(items: list[Evidence], tz: ZoneInfo) -> _Items:
+    """Proofs and traces by local day (a stay: under each day it covers).
+
+    Read once for every day to complete, not once per day.
+    """
+    out: _Items = defaultdict(list)
+    for rank, item in enumerate(items):
+        at = utc(item.occurred_at).astimezone(tz)
+        end = utc(item.ended_at).astimezone(tz) if item.ended_at else None
+        out[at.date()].append((rank, item, at, end))
+        day = at.date() + timedelta(days=1)
+        while end is not None and day <= end.date():
+            out[day].append((rank, item, at, end))
+            day += timedelta(days=1)
+    return out
+
+
+def _seen(items: _Items, day: date, wanted: str) -> list[dict[str, Any]]:
     """Proofs and traces of the day, and stays covering it.
 
     A missing clock-out also gets the next morning's (a taxi at 03:47).
     """
-    out = []
-    for item in items:
-        at = utc(item.occurred_at).astimezone(tz)
-        end = utc(item.ended_at).astimezone(tz) if item.ended_at else None
-        next_morning = (
-            wanted == "end"
-            and at.date() == day + timedelta(days=1)
-            and at.hour < _MORNING
-        )
-        covers = end is not None and at.date() <= day <= end.date()
-        if at.date() == day or next_morning or covers:
-            out.append(_item(item, at, end))
-    out.sort(key=lambda e: e.pop("sort"))
-    return out
+    found = {entry[0]: entry for entry in items.get(day, [])}
+    if wanted == "end":
+        for entry in items.get(day + timedelta(days=1), []):
+            if entry[2].date() > day and entry[2].hour < _MORNING:
+                found[entry[0]] = entry
+    ordered = sorted(found.values(), key=lambda e: (e[2].isoformat(), e[0]))
+    return [_item(item, at, end) for _, item, at, end in ordered]
+
+
+async def _nights(
+    session: AsyncSession, user_id: str, days: list[date], tz: ZoneInfo
+) -> dict[date, Any]:
+    """The nights of the days to complete and of their next days only."""
+    wanted = sorted({d + timedelta(days=k) for d in days for k in (0, 1)})
+    found: dict[date, Any] = {}
+    first = wanted[0]
+    for prev, day in zip(wanted, [*wanted[1:], None], strict=True):
+        if day is None or day - prev > timedelta(days=1):
+            found |= await sleep_nights.nights(
+                session, user_id, first, prev, tz
+            )
+            first = day or prev
+    return found
+
+
+async def _steps(session: AsyncSession) -> str | None:
+    """The steps metric's id (None without one), looked up once."""
+    try:
+        return (await metrics.get_metric(session, "activity.steps")).id
+    except NotFoundError:
+        return None
 
 
 def _item(item: Evidence, at: datetime, end: datetime | None) -> dict[str, Any]:
@@ -134,7 +176,6 @@ def _item(item: Evidence, at: datetime, end: datetime | None) -> dict[str, Any]:
         "at": at.isoformat() if known else None,
         "end_at": end.isoformat() if end else None,
         "time": shown + (f" → {end:%d/%m %H:%M}" if end else ""),
-        "sort": at.isoformat(),
         **{k: getattr(item, k) for k in _SHOWN},
     }
 
@@ -179,12 +220,14 @@ def _free(
 
 
 async def _activity(
-    session: AsyncSession, user_id: str, day: date, tz: ZoneInfo
+    session: AsyncSession,
+    user_id: str,
+    steps: str | None,
+    day: date,
+    tz: ZoneInfo,
 ) -> dict[str, str | None]:
     """The first and last steps of the day (Apple Health)."""
-    try:
-        metric = await metrics.get_metric(session, "activity.steps")
-    except Exception:  # noqa: BLE001 - no steps metric: no activity
+    if steps is None:
         return {"first": None, "last": None}
     start, end = day_bounds(day, tz)
     found = await session.execute(
@@ -192,7 +235,7 @@ async def _activity(
             func.min(HealthSample.start_at), func.max(HealthSample.end_at)
         ).where(
             HealthSample.user_id == user_id,
-            HealthSample.metric_id == metric.id,
+            HealthSample.metric_id == steps,
             HealthSample.start_at >= start,
             HealthSample.start_at < end,
         )

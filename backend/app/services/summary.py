@@ -8,11 +8,10 @@ daily sparkline) so the home page reads like a dashboard, not a list.
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import NotFoundError
 from app.services import metric_overview
 
 #: The metrics shown as tiles, in order (missing ones are skipped).
@@ -63,20 +62,23 @@ class Tile(NamedTuple):
 
 async def headline(session: AsyncSession, user_id: str) -> list[Tile]:
     """Return the latest value + stats of each available headline metric."""
+    views = await metric_overview.overviews(
+        session, user_id, [*HEADLINE_KEYS, _WATER_KEY], days=30
+    )
     tiles: list[Tile] = []
     for key in HEADLINE_KEYS:
-        tile = await _tile(session, user_id, key)
+        tile = _tile(key, views.get(key))
         if tile is not None:
             tiles.append(tile)
-    water = await _water_tile(session, user_id)
+    water = _water_tile(views.get(_WATER_KEY))
     if water is not None:
         tiles.append(water)
     return tiles
 
 
-async def _water_tile(session: AsyncSession, user_id: str) -> Tile | None:
+def _water_tile(view: dict[str, Any] | None) -> Tile | None:
     """Litres d'eau (1.5 L per finished bottle) from the stored counter."""
-    bottles = await _tile(session, user_id, _WATER_KEY)
+    bottles = _tile(_WATER_KEY, view)
     if bottles is None:
         return None
     return Tile(
@@ -97,13 +99,9 @@ def _liters(bottles: float | None) -> float | None:
     return None if bottles is None else round(bottles * _LITERS_PER_BOTTLE, 2)
 
 
-async def _tile(session: AsyncSession, user_id: str, key: str) -> Tile | None:
+def _tile(key: str, view: dict[str, Any] | None) -> Tile | None:
     """A tile built from the metric overview (same numbers everywhere)."""
-    try:
-        view = await metric_overview.overview(session, user_id, key, days=30)
-    except NotFoundError:
-        return None
-    if view["latest"] is None:
+    if view is None or view["latest"] is None:
         return None
     series = [point["value"] for point in view["series"]]
     # A value known only by its day shows no (made-up) time.

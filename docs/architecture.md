@@ -35,7 +35,10 @@ flowchart LR
   build) and reverse‑proxies `/api` — there is no `/mcp` location. It sets
   the strict CSP and other security headers, caps request bodies at 25 MB
   (no cap for `/api/v1/imports/apple-health` and `/api/v1/sync/auto-export`)
-  and logs URLs with `token=***`.
+  and logs URLs with `token=***`. It streams request bodies to the API,
+  gzips text (not the answers carrying a session or a token) and asks
+  Docker's DNS for the API's address every 10 s (a rebuilt `api` gets a
+  new one). The SPA loads each page's code when first opened.
 * **api** (FastAPI, async) is the single source of truth. Every write is
   audited; all reads are isolated per `user_id`. It applies the migrations
   when it starts (`backend/entrypoint.sh`: `alembic upgrade head` unless

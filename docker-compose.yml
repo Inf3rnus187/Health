@@ -44,6 +44,9 @@ services:
       TMPDIR: /data/exports/tmp
       # The commit running (./update.sh exports it), printed on reports.
       GIT_COMMIT: ${GIT_COMMIT:-}
+      # API processes answering at the same time (one per core is a good
+      # start; each holds up to 10 database connections).
+      WEB_CONCURRENCY: ${API_WORKERS:-4}
     # Reach Ollama running on the Docker host (Linux needs this mapping so
     # OLLAMA_URL=http://host.docker.internal:11434 resolves).
     extra_hosts:

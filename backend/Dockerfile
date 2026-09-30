@@ -46,7 +46,10 @@ RUN chmod +x entrypoint.sh
 USER appuser
 EXPOSE 8000
 ENTRYPOINT ["./entrypoint.sh"]
+# Processes: WEB_CONCURRENCY (gunicorn reads it; docker-compose.yml sets
+# it from API_WORKERS, 4 by default).
+ENV WEB_CONCURRENCY=2
 CMD ["gunicorn", "app.main:app", \
      "-k", "uvicorn.workers.UvicornWorker", \
-     "-b", "0.0.0.0:8000", "-w", "2", \
+     "-b", "0.0.0.0:8000", \
      "--access-logfile", "-"]

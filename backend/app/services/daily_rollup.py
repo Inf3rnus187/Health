@@ -13,7 +13,9 @@ in the web form after the scale synced) is kept.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import UTC, date, datetime, time
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -89,11 +91,22 @@ async def _scan(
         stmt = stmt.where(HealthSample.start_at >= floor)
     days: Days = {}
     result = await session.stream(stmt.execution_options(yield_per=_STREAM))
-    async for at, value, unit, source in result:
-        local = (at if at.tzinfo else at.replace(tzinfo=UTC)).astimezone(tz)
-        acc = days.setdefault(local.date(), {}).setdefault(source, Acc())
-        acc.add(local, convert(float(value), unit or "", metric.unit))
+    async for rows in result.partitions():  # a block at a time, not a row
+        _fold(days, rows, tz, metric.unit)
     return days
+
+
+def _fold(
+    days: Days, rows: Sequence[Any], tz: ZoneInfo, unit: str | None
+) -> None:
+    """Add a block of samples to their day's and source's accumulator."""
+    for at, value, sample_unit, source in rows:
+        local = (at if at.tzinfo else at.replace(tzinfo=UTC)).astimezone(tz)
+        per_source = days.setdefault(local.date(), {})
+        acc = per_source.get(source)
+        if acc is None:
+            acc = per_source[source] = Acc()
+        acc.add(local, convert(float(value), sample_unit or "", unit))
 
 
 async def _existing(

@@ -30,12 +30,15 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.health_raw import HealthSample
-from app.services import measurements, timed_entries
+from app.models.measurement import Measurement
+from app.services import measurements, metrics, timed_entries
 from app.services.apple_health.spec import SLEEP_RAW
 from app.services.timed_entries import utc
 
 #: A night runs from 18:00 the day before to 18:00 the wake-up day.
 _CUT = time(18, 0)
+#: No sleep sample lasts longer (a night, a nap, « au lit »: hours).
+_LONGEST = timedelta(days=2)
 _AWAKENING = timedelta(minutes=5)
 _BLOCK_GAP = timedelta(minutes=60)
 
@@ -71,6 +74,10 @@ async def nights(
         select(HealthSample).where(
             HealthSample.user_id == user_id,
             HealthSample.metric_id == metric.id,
+            # bounds the index (user, metric, start) can read: a sleep
+            # sample never lasts two days
+            HealthSample.start_at >= start - _LONGEST,
+            HealthSample.start_at < end,
             HealthSample.end_at >= start,
             HealthSample.end_at < end,
         )
@@ -101,10 +108,14 @@ async def first_day(
     )
     first = raw.scalar_one_or_none()
     days = [utc(first).astimezone(tz).date()] if first else []
-    daily = await measurements.query(
-        session, user_id, metric_key="sleep.asleep"
+    asleep = await metrics.get_metric(session, "sleep.asleep")
+    daily = await session.execute(  # the first day, not every daily row
+        select(func.min(Measurement.date_key)).where(
+            Measurement.user_id == user_id,
+            Measurement.metric_id == asleep.id,
+        )
     )
-    days += [row.date_key for row in daily[:1]]
+    days += [day for day in [daily.scalar_one_or_none()] if day]
     return min(days) if days else None
 
 

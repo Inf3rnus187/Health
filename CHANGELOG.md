@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **Compressed answers never carry a secret**: nginx gzips text but
+  not sign-in, session renewal, API tokens nor a Shortcut with its token
+  (BREACH).
 - **Health data sent to the hub no longer lands on nginx's disk**: the
   bodies of `/api/` requests (meal photos, documents, Health Auto
   Export's JSON…) were written unencrypted to a temporary file of the
@@ -51,6 +54,29 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The site no longer stays on « Le hub ne répond pas » after an
+  update**: an update rebuilding the API alone gave its new container a
+  new address; nginx kept the old one (« connect() failed (111:
+  Connection refused) », 502 on every call) until `web` restarted. nginx
+  now asks Docker's DNS again every 10 s: reproduced locally (still 502
+  12 s after the API moved), fixed (back within 10 s).
+- **Every route measured, the slow ones fixed** (5 years of fake data in
+  every domain, old and new code side by side, answers identical; see
+  [docs/performance.md](docs/performance.md)): « À compléter » 1 375 →
+  293 ms, adherence 229 → 14 ms, `/facts` 289 → 34 ms, stock 427 →
+  210 ms, home 110 → 68 ms (17 tiles read together: 5 queries instead of
+  88), trends 28 → 12 ms, nights 43 → 28 ms, a full reconcile 56 → 19 s
+  (samples read by blocks of 20 000, not one by one; the 44 016 daily
+  values rebuilt identical).
+- **The site loads faster on a phone**: nginx compresses text (nothing
+  was: the page's code 1 047 → 308 KB, a dashboard's JSON 594 → 45 KB),
+  each page's code is fetched when first opened (185 KB to open the home
+  page instead of 1 047 KB), the libraries apart so an update reloads
+  only the hub's own code. On a simulated 4G phone the login page shows
+  in 0.58 s instead of 2.90 s. A page left open during an update reloads
+  itself once when it opens a page whose code the update replaced, and
+  otherwise says « Cette page n'a pas pu se charger » with « Recharger »
+  (checked: a real build A → B while the page is open).
 - **« Supprimer les données importées » says what stays**: its
   confirmation now names Health Auto Export and the iPhone app beside
   entries, counters, meals and documents (only the Apple export's rows
@@ -319,6 +345,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`API_WORKERS`** (default 4, was a fixed 2): the API processes
+  answering at the same time; each holds at most 10 database
+  connections. Ten people opening Accueil then Santé together: a page in
+  0.50 s with 4 processes instead of 0.74 s with 2.
 - **API logs with the time and the duration**: each request has one
   line — UTC time (like nginx's), client, request, status, milliseconds;
   a request of a second or more ends with `slow`. nginx's lines end with

@@ -23,6 +23,112 @@ la méthode ci-dessous, et noté ici (règle de [CLAUDE.md](../CLAUDE.md)).
 
 ## Journal
 
+### 2026-09-30 (2) — toutes les routes, le site, plusieurs utilisateurs
+
+**Données** : le jeu factice couvre maintenant chaque domaine sur 5 ans
+— 2 415 530 relevés bruts, 44 016 valeurs quotidiennes, 5 475 repas
+analysés, 1 303 pointages, 3 863 preuves et traces, 10 385 prises de
+médicaments, 3 000 résultats de labo, 300 ECG, 1 653 séances, 500
+tracés GPS, 150 aliments et 3 000 mouvements de stock.
+
+**Méthode** : les 74 routes GET mesurées une à une ; pour chaque route
+changée, l'ancien code (commit `a1bdf58`) et le nouveau tournent côte à
+côte sur les mêmes données et sont appelés en alternance (9 à 15 appels,
+médiane). Les réponses des 72 routes comparables sont identiques octet
+pour octet (`/measurements` sans filtre : même contenu, son ordre variait
+déjà d'un appel à l'autre).
+
+| Route (page) | Avant | Après |
+|---|---:|---:|
+| `/work/incomplete` (Travail → « À compléter ») | 1 375 ms | 293 ms |
+| `/medications/adherence` (Suivi → observance) | 229 ms | 14 ms |
+| `/facts` sur un mois (rapports, MCP) | 289 ms | 34 ms |
+| `/facts` sans période | 291 ms | 55 ms |
+| `/stock` (Journal → stock) | 427 ms | 210 ms |
+| `/summary` (Accueil) | 110 ms | 68 ms |
+| `/journal/days` (Journal, un mois) | 35 ms | 24 ms |
+| `/sleep/nights` (un mois) | 43 ms | 28 ms |
+| `/trends` (courbes par semaine / mois) | 18–28 ms | 10–12 ms |
+| Réconciliation complète (Données → Réconcilier, 2,4 M relevés) | 56,2 s | 19,3 s |
+
+Causes et corrections :
+
+1. **« À compléter »** chargeait les nuits de 5 ans (33 451 phases de
+   sommeil) pour quelques jours à compléter, relisait les 3 863 preuves
+   pour chacun de ces jours et cherchait la métrique « pas » à chaque
+   jour. Les nuits sont lues pour les jours à compléter seulement, les
+   preuves rangées par jour une fois, la métrique lue une fois.
+2. **Observance et `/facts`** chargeaient toutes les prises depuis le
+   début : seules celles de la période sont lues, les premières et
+   dernières dates sont comptées par PostgreSQL.
+3. **Stock** : les repas ne sont plus relus en entier (photos,
+   aliments, analyse) mais seulement leurs lignes analysées, et chaque
+   aliment ne parcourt que ses propres lignes.
+4. **Accueil** : les 17 tuiles sont lues ensemble (5 requêtes au lieu de
+   88) ; une page garde en mémoire, le temps de la requête, les métriques
+   déjà lues (oubliées si la requête est annulée).
+5. **Nuits** : la requête est bornée par l'heure de début (un relevé de
+   sommeil ne dure jamais deux jours), l'index la lit directement.
+6. **Tendances, première nuit connue** : le jour et la valeur seulement,
+   plus les lignes entières.
+7. **Réconciliation** : les relevés sont lus par blocs de 20 000 au lieu
+   d'un par un (385 000 allers-retours internes pour la seule fréquence
+   cardiaque) : fréquence cardiaque 7,7 s → 2,2 s. Reconstruites à neuf
+   par l'ancien et le nouveau code, les 44 016 valeurs quotidiennes sont
+   identiques (0 ligne de différence).
+
+**Le site (téléphone)** :
+
+| | Avant | Après |
+|---|---:|---:|
+| Code téléchargé pour ouvrir l'accueil | 1 047 Ko | 185 Ko |
+| Tableau de bord nutrition (JSON) | 594 Ko | 45 Ko |
+| Preuves, tout l'historique (JSON) | 1,5 Mo | 134 Ko |
+| Page de connexion affichée, 4G simulée* | 2,90 s | 0,58 s |
+| Tuiles de l'accueil après connexion, 4G simulée* | 1,01 s | 1,07 s |
+
+\* Chromium, 4 Mbit/s, 80 ms de latence, processeur ralenti 4 fois
+(un téléphone), cache vide, médiane de 3 chargements.
+
+- nginx compresse le texte (gzip) : rien ne l'était, ni le code de la
+  page ni le JSON de l'API. Jamais les réponses qui portent une session
+  ou un jeton (connexion, renouvellement, jetons, raccourci) : leur
+  taille compressée pourrait trahir un secret (attaque BREACH).
+- Chaque page n'est téléchargée qu'à sa première ouverture ; le code de
+  l'accueil part dès l'ouverture du site, pendant la connexion. Les
+  bibliothèques (React, graphiques, carte) sont à part : après une mise
+  à jour du hub, le navigateur ne recharge que le code du hub. Une page
+  restée ouverte pendant une mise à jour se recharge une fois (au plus
+  une par minute) quand le code d'une page a changé de nom ; vérifié
+  avec deux vraies versions A → B, et avec un fichier manquant (un seul
+  rechargement, puis le message « Cette page n'a pas pu se charger »).
+
+**Plusieurs utilisateurs** : N personnes ouvrent en même temps l'Accueil
+puis Santé (les appels de ton navigateur, en parallèle), 3 fois chacune.
+Médiane du temps d'une page :
+
+| Utilisateurs | 2 processus (avant) | 4 processus (défaut) | 8 processus |
+|---:|---:|---:|---:|
+| 1 | 134 ms | 154 ms | 107 ms |
+| 5 | 438 ms | 321 ms | 261 ms |
+| 10 | 743 ms | 504 ms | 347 ms |
+| 20 | 1 438 ms | 773 ms | 946 ms |
+
+La machine de mesure n'a que 4 cœurs, partagés avec PostgreSQL et le
+client : au-delà de 4 processus elle sature. Sur une machine plus
+grosse, `API_WORKERS` (un par cœur, 8 au plus avec les 100 connexions
+par défaut de PostgreSQL) monte plus haut.
+
+**Le plantage après la mise à jour de 10:06** : la mise à jour a
+reconstruit l'API seule ; son nouveau conteneur a reçu une autre adresse
+IP, et nginx, qui ne résolvait le nom `api` qu'à son démarrage, a
+continué d'appeler l'ancienne adresse (« connect() failed (111:
+Connection refused) », 502 partout, la page restait sur « Le hub ne
+répond pas… ») jusqu'au redémarrage de `web`. Reproduit à l'identique
+en local (l'API change d'adresse, 502 encore 12 s après) ; corrigé :
+nginx redemande l'adresse au DNS de Docker toutes les 10 s — même
+scénario, la page revient en moins de 10 s.
+
 ### 2026-09-30 — des millions de relevés Apple
 
 | Appel (page) | Avant | Après |
@@ -82,16 +188,26 @@ sur le processus occupé : d'où les pages « Chargement… » qui duraient.
 
 ## Ce qui reste lent, et pourquoi
 
-- **L'inventaire (≈ 340 ms)** compte exactement chaque relevé par
+- **L'inventaire (≈ 330 ms)** compte exactement chaque relevé par
   métrique et par source : PostgreSQL lit toute la table. Un index
   couvrant `(user_id, metric_id, source, start_at)` a été essayé : pas
   plus rapide (il faut quand même lire 2,35 millions d'entrées) et 8,5 s
-  de construction — pas retenu.
-- **Le total de la liste des relevés** (≈ 80 ms) : compté exactement,
+  de construction — pas retenu. Piste : une table de comptes tenue à
+  jour à chaque écriture de relevés (quelques millisecondes), au prix
+  d'un mécanisme de plus à garder juste à chaque import, synchro et
+  suppression.
+- **Le total de la liste des relevés** (≈ 60 ms) : compté exactement,
   pour la pagination.
-- **La reconstruction complète des valeurs quotidiennes** (Données →
-  Réconcilier) : 56 s pour 2,35 millions de relevés. Elle tourne dans le
-  `worker`, pas dans l'API : les pages restent libres.
+- **Les tableaux de bord sur tout l'historique** (≈ 50–200 ms, 5 ans de
+  points par métrique) : compressés, ils pèsent 10 fois moins sur le
+  réseau.
+- **La réconciliation complète** : 19 s pour 2,4 millions de relevés
+  (56 s avant). Piste : faire la règle du jour dans PostgreSQL (quelques
+  secondes), au prix d'une seconde écriture de cette règle. Elle tourne
+  dans le `worker`, pas dans l'API : les pages restent libres.
+- **`/measurements` sans aucun filtre** (≈ 1,7 s) : tout l'historique de
+  toutes les métriques ; le site filtre toujours, seul un assistant MCP
+  appelé sans métrique ni date le demanderait.
 - **L'analyse d'un repas** attend la réponse d'Ollama, qui a son propre
   conteneur (et sa carte graphique chez toi) ; l'attente se fait dans le
   `worker`, elle ne ralentit pas les pages.

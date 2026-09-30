@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import ConflictError, NotFoundError
 from app.models.metric import MetricDefinition
 from app.schemas.metric import MetricCreate, MetricUpdate
+from app.services import metric_memo
 from app.services.canonical import canonical
 
 
@@ -31,14 +32,41 @@ async def list_metrics(
 
 
 async def get_metric(session: AsyncSession, key: str) -> MetricDefinition:
-    """Return one metric by key (aliases resolve to their canonical)."""
+    """Return one metric by key (aliases resolve to their canonical).
+
+    Kept for the session once read (:mod:`metric_memo`).
+    """
+    wanted = canonical(key)
+    seen = metric_memo.seen(session)
+    kept: MetricDefinition | None = seen.get(wanted)
+    if kept is not None:
+        return kept
     result = await session.execute(
-        select(MetricDefinition).where(MetricDefinition.key == canonical(key))
+        select(MetricDefinition).where(MetricDefinition.key == wanted)
     )
     metric = result.scalar_one_or_none()
     if metric is None:
         raise NotFoundError(f"Unknown metric: {key}")
+    seen[wanted] = metric
     return metric
+
+
+async def prefetch(
+    session: AsyncSession, keys: list[str]
+) -> dict[str, MetricDefinition]:
+    """Several metrics by key in one query (unknown keys left out).
+
+    Kept for the session like :func:`get_metric`'s.
+    """
+    seen = metric_memo.seen(session)
+    wanted = {key: canonical(key) for key in keys}
+    missing = {c for c in wanted.values() if c not in seen}
+    if missing:
+        result = await session.execute(
+            select(MetricDefinition).where(MetricDefinition.key.in_(missing))
+        )
+        seen.update({metric.key: metric for metric in result.scalars()})
+    return {key: seen[c] for key, c in wanted.items() if c in seen}
 
 
 async def create_metric(

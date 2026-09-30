@@ -19,7 +19,7 @@ from app.core.errors import NotFoundError
 from app.models.health_raw import HealthSample
 from app.models.measurement import Measurement
 from app.models.metric import MetricDefinition
-from app.services import daily_rollup
+from app.services import daily_rollup, metric_memo
 from app.services.apple_health.metrics_cache import MetricCache
 from app.services.apple_health.spec import MetricSpec
 
@@ -27,11 +27,16 @@ from app.services.apple_health.spec import MetricSpec
 async def metric_for(
     session: AsyncSession, spec: MetricSpec
 ) -> MetricDefinition:
-    """The metric of a spec (created on first use)."""
+    """The metric of a spec (created on first use; kept for the session)."""
+    seen = metric_memo.seen(session)
+    found: MetricDefinition | None = seen.get(f"spec:{spec.key}")
+    if found is not None:
+        return found
     metric_id = await MetricCache().id_for(session, spec)
     metric = await session.get(MetricDefinition, metric_id)
     if metric is None:  # just created by the cache: cannot happen
         raise NotFoundError(f"Unknown metric: {spec.key}")
+    seen[f"spec:{spec.key}"] = metric
     return metric
 
 

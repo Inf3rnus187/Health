@@ -2,18 +2,20 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 
 import { useAuth } from './auth/useAuth';
 import { Layout } from './components/Layout';
-import { CarePage } from './pages/CarePage';
-import { DashboardsPage } from './pages/DashboardsPage';
-import { DataPage } from './pages/DataPage';
-import { HealthPage } from './pages/HealthPage';
-import { HomePage } from './pages/HomePage';
-import { ImportPage } from './pages/ImportPage';
-import { JournalPage } from './pages/JournalPage';
+import {
+  CarePage,
+  DashboardsPage,
+  DataPage,
+  HealthPage,
+  HomePage,
+  ImportPage,
+  JournalPage,
+  MedicalPage,
+  PhotosPage,
+  ReportsPage,
+  WorkPage,
+} from './pages/lazyPages';
 import { LoginPage } from './pages/LoginPage';
-import { MedicalPage } from './pages/MedicalPage';
-import { PhotosPage } from './pages/PhotosPage';
-import { ReportsPage } from './pages/ReportsPage';
-import { WorkPage } from './pages/WorkPage';
 
 function AppRoutes() {
   return (

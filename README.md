@@ -139,6 +139,7 @@ Every variable is explained in the
 | [MCP](docs/guides/mcp.md) | Brancher un assistant (Claude Desktop / Code, stdio) de façon sûre. |
 | [Référence API](docs/api.md) | Toutes les routes, leurs paramètres et le droit exigé (générée depuis le code). |
 | [Outils MCP](docs/mcp-tools.md) | Les 114 outils et leurs paramètres (générée depuis le serveur). |
+| [Performances](docs/performance.md) | Mesures avant / après de chaque optimisation, méthode, ce qui reste lent, plusieurs utilisateurs. |
 | [Multi-utilisateur](docs/multi-utilisateur.md) | Ce qui manque pour plusieurs comptes (on ne peut pas encore en créer un second) : analyse et plan. |
 | [Sécurité](SECURITY.md) | Niveaux d'accès, chiffrement, limites connues. |
 | [Architecture](docs/architecture.md), [modèle de données](docs/data-model.md), [ADR](docs/adr/) | Conception. |

@@ -35,4 +35,19 @@ export default defineConfig({
       '/api': 'http://localhost:8000',
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Libraries apart from the hub's own code: an update of the hub
+        // leaves them in the browser's cache (only the hub's code reloads).
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          query: ['@tanstack/react-query'],
+          charts: ['recharts'],
+          map: ['leaflet'],
+          dicom: ['dicom-parser'],
+        },
+      },
+    },
+  },
 });
