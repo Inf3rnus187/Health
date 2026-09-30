@@ -23,6 +23,55 @@ la méthode ci-dessous, et noté ici (règle de [CLAUDE.md](../CLAUDE.md)).
 
 ## Journal
 
+### 2026-09-30 (11) — écrire les relevés en un bloc (`COPY`)
+
+SQLAlchemy confie une liste de lignes à asyncpg **une ligne à la fois**
+(`executemany`, sans `RETURNING`). Le déclencheur qui tient
+`sample_counts` exact, prévu pour tourner une fois par requête, tournait
+donc une fois par ligne, et mettait à jour à chaque fois la même ligne
+de compteur dans la même transaction : de plus en plus lent à mesure
+que l'import avance. Ce déclencheur date de l'entrée (3) ; la mesure
+faite alors (« ≈ 1 % ») insérait 5 000 lignes par requête SQL, pas
+comme l'application : **la régression m'avait échappé**.
+
+Les relevés sont maintenant écrits par `COPY` (PostgreSQL), en un bloc,
+dans la même transaction, avec les mêmes contrôles (clés, identifiants
+HealthKit uniques) et les valeurs par défaut des colonnes remplies comme
+SQLAlchemy le faisait : synchro iPhone (relevés, sommes), Health Auto
+Export, import Apple. Le sommeil, qui écrit une ligne à la fois, garde
+l'insertion d'avant. SQLite (les tests) aussi.
+
+**Mesures** :
+
+| | ligne par ligne | `COPY` |
+|---|---:|---:|
+| 5 000 relevés, déclencheur compris | 0,59–0,66 s | **0,19–0,22 s** |
+| Premier envoi de l'app (20 requêtes, entrée (10)) | 24,0–27,6 s | **11,6–12,3 s** |
+| Import d'un export factice de 315 000 relevés | 198–218 s | **21–23 s** |
+
+Pour l'import, la version d'avant le déclencheur mettait 25,7–25,9 s :
+`COPY` fait mieux qu'avant la régression. (Méthode : export factice de
+fréquence cardiaque toutes les 5 min et de pas toutes les 10 min sur
+deux ans, importé dans une base PostgreSQL neuve, deux fois par version,
+à tour de rôle.)
+
+**Mêmes résultats** :
+- import : relevés écrits identiques (même empreinte dans les 4
+  passages), jours identiques (hors `recorded_at`, qui vaut l'heure de
+  l'import) ;
+- premier envoi de l'app : compteurs exacts (0 écart avec un comptage
+  complet), jours identiques à la version précédente dans 9 passages sur
+  11.
+
+Les 2 autres diffèrent sur **un** jour, au 16ᵉ chiffre (78.22499999999978
+contre 78.2249999999998) : le banc efface puis réinsère les mêmes relevés,
+et PostgreSQL les range à des endroits différents de la table selon la
+place libérée. Lus « dans l'ordre de la table », les relevés de ce jour
+s'additionnent alors dans un autre ordre. L'ancienne version varie de
+même d'un passage à l'autre (entrée (10)). À table identique, le
+résultat est identique au bit près ; seule une somme exacte, qui ne
+dépend plus de l'ordre, l'éviterait dans tous les cas.
+
 ### 2026-09-30 (10) — le premier envoi complet de l'app iPhone
 
 L'app iPhone de l'utilisateur envoie tout l'historique la première
@@ -455,6 +504,11 @@ Causes et corrections :
    import 9,8 s avec la table contre 9,7 s sans (≈ 1 %, dans le bruit) ;
    suppression de 100 000 relevés 1,45 s contre 1,13 s (il faut relire
    la nouvelle première ou dernière date d'un groupe entamé).
+   **Correction (entrée (11))** : cette mesure insérait 5 000 lignes par
+   requête SQL ; l'application, elle, les envoyait une par une
+   (`executemany` de SQLAlchemy), et le déclencheur tournait à chaque
+   ligne. L'import réel de 315 000 relevés factices est ainsi passé de
+   25,8 s à 198–218 s. Réparé par `COPY` : 21–23 s.
    Migration `0027` : 1,8 s sur 2,4 M relevés. « Réconcilier » la
    recalcule depuis les relevés, en contrôle.
 2. **Ramasse-miettes de Python** : chaque passe complète reparcourait

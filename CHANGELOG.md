@@ -440,6 +440,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   per process (331 MB for 4); they stop with the reconcile. `1` runs
   the metrics one after the other, as before (measured: as fast as the
   old code, 10.6 and 9.7 s against 10.8 and 9.7 s).
+- **Imports and syncs write samples 3 to 10 times faster again** (for
+  everyone). SQLAlchemy handed asyncpg the rows one at a time, so the
+  trigger keeping `sample_counts` exact (added with the inventory
+  speed-up above) ran once per row, updating the same count row again
+  and again: importing 315 000 fake samples went from 25.8 s to
+  198–218 s. The « ≈ 1 % » measured then inserted 5 000 rows per SQL
+  statement, unlike the app; the regression was missed. Samples are now
+  written with PostgreSQL's `COPY`, in one block, same transaction, same
+  checks, column defaults filled as before: iPhone sync (samples, sums),
+  Health Auto Export, Apple import. Import of 315 000 samples: 198–218 →
+  21–23 s (better than before the trigger); 5 000 samples: 0.59–0.66 →
+  0.19–0.22 s; an app's first sync of 20 requests: 24.0–27.6 → 11.6–
+  12.3 s. Samples and days written identical; counts exact.
 - **The iPhone app's first full sync no longer reads the whole history
   again at every request** (for everyone using the app). A first sync
   sends years of history in requests of at most 5 000 samples and 5 000

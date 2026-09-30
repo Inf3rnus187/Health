@@ -15,12 +15,13 @@ from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import delete, insert, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import new_uuid, utcnow
 from app.models.health_raw import HealthSample
 from app.schemas.healthkit import HkStatistic
+from app.services import sample_writes
 from app.services.apple_health.metrics_cache import MetricCache
 from app.services.apple_health.spec import synth_spec
 from app.services.healthkit_common import QUANTITY, SOURCE, Touched, aware
@@ -73,7 +74,7 @@ async def _replace(
     found = await session.execute(select(HealthSample.start_at).where(old))
     starts = list(found.scalars())
     await session.execute(delete(HealthSample).where(old))
-    await session.execute(insert(HealthSample), rows)
+    await sample_writes.write(session, rows)
     return starts
 
 

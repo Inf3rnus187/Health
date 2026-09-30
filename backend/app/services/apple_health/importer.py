@@ -16,9 +16,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.models.base import new_uuid, utcnow
-from app.models.health_raw import HealthSample, Workout
+from app.models.health_raw import Workout
 from app.schemas.measurement import MeasurementIn
 from app.services import measurements as measure
+from app.services import sample_writes
 from app.services.apple_health.accumulator import DailyAggregator
 from app.services.apple_health.hk_values import category_value
 from app.services.apple_health.metrics_cache import MetricCache
@@ -215,7 +216,7 @@ class _RawImporter:
     async def _flush(self) -> None:
         """Bulk-insert buffered samples and workouts (commit is separate)."""
         if self._samples:
-            await self.session.execute(insert(HealthSample), self._samples)
+            await sample_writes.write(self.session, self._samples)
             self.n_samples += len(self._samples)
             self._samples = []
         if self._workouts:

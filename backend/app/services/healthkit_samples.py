@@ -16,12 +16,13 @@ from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import delete, insert, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import new_uuid, utcnow
 from app.models.health_raw import HealthSample
 from app.schemas.healthkit import HkSample
+from app.services import sample_writes
 from app.services.apple_health.hk_values import category_value
 from app.services.apple_health.metrics_cache import MetricCache
 from app.services.apple_health.spec import (
@@ -73,8 +74,7 @@ async def store(
         if row is not None:
             rows[sample.uuid] = {**row, "user_id": user_id}
     await forget(session, user_id, list(rows), touched)
-    for part in chunks(list(rows.values())):
-        await session.execute(insert(HealthSample), part)
+    await sample_writes.write(session, list(rows.values()))
     sleep = await cache.id_for(session, SLEEP_RAW)
     for row in rows.values():
         _mark(touched, row, sleep)

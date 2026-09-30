@@ -20,7 +20,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, time, timedelta
 from typing import Any, NamedTuple
 
-from sqlalchemy import delete, insert, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -28,7 +28,7 @@ from app.models.base import new_uuid, utcnow
 from app.models.health_raw import HealthSample
 from app.models.metric import MetricDefinition
 from app.schemas.ingest import IngestResult
-from app.services import daily_rollup, hae_names
+from app.services import daily_rollup, hae_names, sample_writes
 from app.services.apple_health.metrics_cache import MetricCache
 from app.services.apple_health.spec import MetricSpec, synth_spec
 from app.services.apple_health.units import PERCENT_0_100
@@ -165,7 +165,7 @@ async def _store_raw(
     rows = [_raw_row(user_id, point) for point in points]
     for start in range(0, len(rows), _RAW_CHUNK):
         chunk = rows[start : start + _RAW_CHUNK]
-        await session.execute(insert(HealthSample), chunk)
+        await sample_writes.write(session, chunk)
 
 
 async def _clear_range(
