@@ -452,8 +452,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   in the same order: the same values to the last digit, split or not,
   1 or N processes (44 016 days, same md5; a test cuts across the change
   of time of 29 March). Test machine, 4 processes: 3.5 → 3.2 s; reading
-  in table order costs nothing (1 process 7.8 → 7.8 s). It matters most
-  with more processes (`RECONCILE_PARALLEL=8` on 16 threads).
+  in table order costs nothing (1 process 7.8 → 7.8 s). At the user's
+  (2 million samples, 16 threads): 1 process 17.7–18.7 → 14.0 s, 4
+  processes 6.8–7.1 → 5.4 s, 8 processes 4.4 s, with the same md5 of
+  all their days for 1, 4 and 8.
 - **Every recompute of daily values reads the samples twice as fast**
   (for everyone: reconcile, iPhone sync, Health Auto Export, work
   entries). Reading a metric's samples cost more than computing its

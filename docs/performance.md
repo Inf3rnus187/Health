@@ -84,6 +84,21 @@ relevés). Sur 4 cœurs pleins le gain reste modeste ; chez l'utilisateur
 (16 fils), il compte surtout avec `RECONCILE_PARALLEL=8`, où une métrique
 est coupée dès qu'elle dépasse 1/8 des relevés.
 
+**Chez l'utilisateur, après la mise à jour** (2 008 285 relevés,
+60 métriques, les trois réglages lancés à la suite) :
+
+| `RECONCILE_PARALLEL` | avant ce chantier | après |
+|---|---:|---:|
+| 1 | 17,7–18,7 s | **14,0 s** (lecture directe) |
+| 4 | 6,8–7,1 s | **5,4 s** (énergie au repos coupée en 2) |
+| 8 | — | **4,4 s** (repos en 3, énergie active en 2) |
+
+L'empreinte (md5) de tous ses jours est **identique** avec 1, 4 et 8
+processus : sur des données réelles, le calcul coupé et en parallèle
+écrit exactement ce qu'écrit un seul processus. Depuis la première
+version sur un seul cœur (16,6 s), la réconciliation est ≈ 4 fois plus
+rapide avec 8 processus.
+
 **Mêmes résultats** : les 44 016 jours ont le même md5 (`dddedef5…`)
 avec 1, 3 et 4 processus, coupés ou non, après une lecture interrompue ;
 les tests des synchros, de Health Auto Export, du travail et de
