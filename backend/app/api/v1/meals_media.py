@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, UploadFile, status
@@ -44,11 +45,13 @@ async def add(
     meal = await meals.get(session, principal.user.id, meal_id)
     data, kind = await file.read(), file.content_type or "image/"
     if not meal.photo_path:
-        meal.photo_path = meal_photo.save(meal.user_id, meal.id, data, kind)
+        meal.photo_path = await asyncio.to_thread(
+            meal_photo.save, meal.user_id, meal.id, data, kind
+        )
     elif len(meal.photos or []) >= MOST_PHOTOS:
         raise InvalidInputError(f"At most {MOST_PHOTOS} more photos")
     else:
-        meal_extra.add(meal, data, kind)
+        await asyncio.to_thread(meal_extra.add, meal, data, kind)
     await session.commit()
     if reread:
         await meal_ai.queue(session, meal)

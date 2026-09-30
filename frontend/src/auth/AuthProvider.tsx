@@ -40,18 +40,30 @@ function forget(): void {
   setAccessToken(null);
 }
 
+const RETRY_EVERY = 5000;
+const pause = (ms: number) => new Promise((done) => setTimeout(done, ms));
+
+/** Back into the session kept in this browser. A hub that does not
+ * answer (restarting after an update) is waited for, never a logout;
+ * only a refused session goes back to the login page. */
 async function restore(
   setUser: SetUser,
-  setReady: (ready: boolean) => void,
+  setWaiting: (waiting: boolean) => void,
 ): Promise<void> {
-  if (localStorage.getItem(REFRESH_KEY)) {
-    if (await renewSession()) {
-      setUser(await fetchMe().catch(() => null));
-    } else {
+  while (localStorage.getItem(REFRESH_KEY)) {
+    const renewal = await renewSession();
+    if (renewal === 'refused') {
       forget();
+      return;
     }
+    const me = renewal === 'renewed' ? await fetchMe().catch(() => null) : null;
+    if (me) {
+      setUser(me);
+      return;
+    }
+    setWaiting(true);
+    await pause(RETRY_EVERY);
   }
-  setReady(true);
 }
 
 /** While signed in: renew ahead of time; a lost session: log out. */
@@ -73,6 +85,7 @@ function useKeepAlive(user: User | null, expire: () => void): void {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
+  const [waiting, setWaiting] = useState(false);
   const [expired, setExpired] = useState(false);
   const signIn = useCallback(async (email: string, password: string) => {
     await doSignIn(email, password, setUser);
@@ -86,8 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
   useKeepAlive(user, expire);
   useEffect(() => {
-    void restore(setUser, setReady);
+    void restore(setUser, setWaiting).finally(() => setReady(true));
   }, []);
-  const value = { user, ready, expired, signIn, signOut };
+  const value = { user, ready, waiting, expired, signIn, signOut };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

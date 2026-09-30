@@ -2,7 +2,9 @@
 // The access token (15 min) is held in memory; the refresh token (14
 // days) lives in localStorage. An expired access token is renewed with
 // the refresh token and the call replayed — once, for every call waiting
-// at the same time — so a page left open never ends on « 401 ».
+// at the same time — so a page left open never ends on « 401 ». A hub
+// that does not answer (restarting after an update: 502) never logs
+// out: only a refused refresh token does.
 
 interface ApiError {
   code: string;
@@ -18,7 +20,7 @@ interface TokenPair {
 export const REFRESH_KEY = 'phoenix.refresh';
 
 let accessToken: string | null = null;
-let renewing: Promise<boolean> | null = null;
+let renewing: Promise<Renewal> | null = null;
 let onExpired: (() => void) | null = null;
 
 export function setAccessToken(token: string | null): void {
@@ -40,36 +42,48 @@ export function keepTokens(pair: TokenPair): void {
   localStorage.setItem(REFRESH_KEY, pair.refresh_token);
 }
 
-async function refreshWith(token: string): Promise<TokenPair | null> {
+/** How a renewal ended: a new pair, a refused token (log out), or a hub
+ * that did not answer (keep the session, try again). */
+export type Renewal = 'renewed' | 'refused' | 'unreachable';
+
+/** Longest wait for the hub's answer before calling it unreachable. */
+const REFRESH_TIMEOUT = 15_000;
+
+async function refreshWith(
+  token: string,
+): Promise<TokenPair | 'refused' | 'unreachable'> {
   const res = await fetch('/api/v1/auth/refresh', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refresh_token: token }),
+    signal: AbortSignal.timeout(REFRESH_TIMEOUT),
   }).catch(() => null);
-  return res?.ok ? ((await res.json()) as TokenPair) : null;
+  if (!res || res.status >= 500) return 'unreachable';
+  return res.ok ? ((await res.json()) as TokenPair) : 'refused';
 }
 
 const pause = (ms: number) => new Promise((done) => setTimeout(done, ms));
 
 /** Renew with the stored refresh token; another tab may have just done
  * it (the token then changed in localStorage): use the new one. */
-async function renew(): Promise<boolean> {
+async function renew(): Promise<Renewal> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const token = localStorage.getItem(REFRESH_KEY);
-    if (!token) return false;
-    const pair = await refreshWith(token);
-    if (pair) {
-      keepTokens(pair);
-      return true;
+    if (!token) return 'refused';
+    const got = await refreshWith(token);
+    if (typeof got === 'object') {
+      keepTokens(got);
+      return 'renewed';
     }
+    if (got === 'unreachable') return got;
     await pause(400);
-    if (localStorage.getItem(REFRESH_KEY) === token) return false;
+    if (localStorage.getItem(REFRESH_KEY) === token) return 'refused';
   }
-  return false;
+  return 'refused';
 }
 
 /** Renew the session once, whoever asks at the same time. */
-export function renewSession(): Promise<boolean> {
+export function renewSession(): Promise<Renewal> {
   renewing ??= renew().finally(() => {
     renewing = null;
   });
@@ -90,8 +104,9 @@ export async function authFetch(
 ): Promise<Response> {
   const res = await fetch(`/api/v1${path}`, withToken(init));
   if (res.status !== 401 || path.startsWith('/auth/')) return res;
-  if (await renewSession()) return fetch(`/api/v1${path}`, withToken(init));
-  onExpired?.();
+  const renewal = await renewSession();
+  if (renewal === 'renewed') return fetch(`/api/v1${path}`, withToken(init));
+  if (renewal === 'refused') onExpired?.();
   return res;
 }
 

@@ -73,8 +73,14 @@ asks for, never who eats them. A barcode on a
   are kept byte for byte with their SHA-256 so a copy can be checked:
   their EXIF/GPS stays.
 - **No token in the logs**: routes an iPhone Shortcut calls accept the
-  token as `?token=` (below); the API access log (`core/logging.py`,
-  `_NoTokens`) and nginx (`log_format no_token`) write `token=***`.
+  token as `?token=` (below); the API access log (`core/access_log.py`,
+  which replaces uvicorn's line) and nginx (`log_format no_token`) write
+  `token=***`. The API line holds the UTC time, the client address nginx
+  saw (`X-Real-IP`: an address of your network), the request line, the
+  status and the duration — never a header, a body or a token.
+- **An unreachable hub never logs out**: while the API restarts (an
+  update), the web page keeps its refresh token and tries again every
+  5 s; only a refresh the hub refuses (401) signs out.
 - **Updates without Docker access**: no container mounts `docker.sock`.
   `/system/update` (admin web session only) just drops a request file in
   `run/` (mounted at `/data/update`); the host's `update.sh`, run by the

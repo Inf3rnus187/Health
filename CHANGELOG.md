@@ -8,6 +8,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **The API's access line names the client nginx saw** (`X-Real-IP`, an
+  address of your network) instead of nginx's container; tokens in URLs
+  are still written `token=***`.
 - **The iPhone app's token goes in the header only**: `POST` and `GET
   /sync/healthkit` take a `write:measurements` token from the
   `Authorization` header and refuse `?token=`; they reach only the
@@ -40,6 +43,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Pages no longer wait behind a photo or a scan**: turning an iPhone
+  photo into a JPEG (a meal's, a food's, a progress photo), reading a
+  label or a barcode, and the OCR of documents, receipts and lab PDFs
+  ran inside the API's process and froze it while they worked: with two
+  processes, any page request landing on the busy one waited (a meal
+  with 3 photos sent by a Shortcut: 3.6 s for a request that takes
+  20 ms). That work now runs in a thread; the API keeps answering.
+- **An update no longer logs you out**: a page loaded while the API
+  restarted (502) threw the session away; it now shows « Le hub ne
+  répond pas (redémarrage après une mise à jour ?) — nouvel essai toutes
+  les 5 s… » and comes back on its own, still signed in. Only a session
+  the hub refuses goes back to the login page.
 - **A night is the watch's**: the Nuits view kept, among the devices of
   a night, the one that saw the most sleep — another app counting more
   minutes than the watch won. The Apple Watch (which writes the phases;
@@ -275,6 +290,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **API logs with the time and the duration**: each request has one
+  line — UTC time (like nginx's), client, request, status, milliseconds;
+  a request of a second or more ends with `slow`. nginx's lines end with
+  `rt=` (total) and `api=` (the API's share). Every other API log line
+  starts with its UTC time too. nginx keeps a meal photo in memory
+  instead of a temporary file (« buffered to a temporary file »).
 - **Sync from your own iPhone app: `POST /sync/healthkit`** — for an app
   reading HealthKit, incremental and without duplicates:
   - `samples` keyed by their HealthKit UUID (sent again = replaced),

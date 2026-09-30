@@ -41,7 +41,10 @@ dès qu'une requête le trouve expiré (la requête est alors rejouée, sans
 erreur à l'écran), y compris avec plusieurs onglets ouverts. Si la
 session ne peut plus être renouvelée (déconnexion ailleurs, 14 jours
 sans usage), la page de connexion le dit : « Session expirée :
-reconnecte-toi ».
+reconnecte-toi ». Si le hub ne répond pas au chargement (l'API
+redémarre après une mise à jour, quelques secondes), la page affiche
+« Le hub ne répond pas (redémarrage après une mise à jour ?) — nouvel
+essai toutes les 5 s… » et revient seule, toujours connectée.
 
 **Vos choix restent après un rechargement** (F5, retour sur la page, le
 lendemain) : la **période** de chaque carte (Mes journées, Sessions,

@@ -18,7 +18,9 @@ export async function uploadExport(
     return await send(file, onProgress);
   } catch (error) {
     const expired = (error as { status?: number }).status === 401;
-    if (expired && (await renewSession())) return send(file, onProgress);
+    if (expired && (await renewSession()) === 'renewed') {
+      return send(file, onProgress);
+    }
     throw error;
   }
 }

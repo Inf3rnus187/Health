@@ -7,6 +7,7 @@ the estimated nutrients into the same nutrition metrics as Apple.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import date, datetime
 from typing import Any
 
@@ -48,10 +49,12 @@ async def create(
         raise InvalidInputError(f"At most {1 + _MORE_PHOTOS} photos")
     meal = Meal(id=new_uuid(), user_id=user_id, photos=[], foods=[])
     await _apply(session, meal, fields)
-    if photos:
-        meal.photo_path = meal_photo.save(user_id, meal.id, *photos[0])
+    if photos:  # decoding a photo takes the CPU: not in the event loop
+        meal.photo_path = await asyncio.to_thread(
+            meal_photo.save, user_id, meal.id, *photos[0]
+        )
     for data, kind in photos[1:]:
-        meal_extra.add(meal, data, kind)
+        await asyncio.to_thread(meal_extra.add, meal, data, kind)
     if not meal.description and not meal.photo_path:
         raise InvalidInputError("Describe the meal or add a photo")
     session.add(meal)

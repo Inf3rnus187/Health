@@ -35,10 +35,16 @@ function AppRoutes() {
   );
 }
 
+const UNREACHABLE =
+  'Le hub ne répond pas (redémarrage après une mise à jour ?) — ' +
+  'nouvel essai toutes les 5 s…';
+
 export function App() {
-  const { user, ready } = useAuth();
+  const { user, ready, waiting } = useAuth();
   if (!ready) {
-    return <p className="center muted">Chargement…</p>;
+    return (
+      <p className="center muted">{waiting ? UNREACHABLE : 'Chargement…'}</p>
+    );
   }
   if (!user) {
     return <LoginPage />;

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from typing import cast
 
 import structlog
@@ -26,15 +27,15 @@ class _NoTokens(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         """Rewrite the line's message and arguments; always keep it."""
         if isinstance(record.msg, str):
-            record.msg = _redact(record.msg)
+            record.msg = redact(record.msg)
         if isinstance(record.args, tuple):
             record.args = tuple(
-                _redact(a) if isinstance(a, str) else a for a in record.args
+                redact(a) if isinstance(a, str) else a for a in record.args
             )
         return True
 
 
-def _redact(text: str) -> str:
+def redact(text: str) -> str:
     """``/sync/tally?token=abc&x=1`` → ``/sync/tally?token=***&x=1``."""
     return _TOKEN_IN_URL.sub(r"\1***", text)
 
@@ -47,11 +48,39 @@ def _hide_tokens() -> None:
             logger.addFilter(_NoTokens())
 
 
+#: The time of a log line, in UTC like nginx's (« 2026-09-30 05:37:56 +0000 »).
+_TIME = "%Y-%m-%d %H:%M:%S +0000"
+
+
+def _stamped(fmt: str) -> logging.Formatter:
+    """A formatter starting with the UTC time."""
+    formatter = logging.Formatter(f"%(asctime)s {fmt}", _TIME)
+    formatter.converter = time.gmtime
+    return formatter
+
+
+def _access_lines() -> None:
+    """The API's access lines (with time and duration), not uvicorn's."""
+    from app.core.access_log import LOGGER
+
+    access = logging.getLogger(LOGGER)
+    if not access.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(_stamped("%(message)s"))
+        access.addHandler(handler)
+        access.setLevel(logging.INFO)
+        access.propagate = False
+    logging.getLogger("uvicorn.access").disabled = True
+
+
 def configure_logging() -> None:
     """Configure ``structlog`` for JSON or console output."""
     settings = get_settings()
-    logging.basicConfig(format="%(message)s", level=settings.log_level.upper())
+    logging.basicConfig(level=settings.log_level.upper())
+    for handler in logging.getLogger().handlers:
+        handler.setFormatter(_stamped("%(levelname)s %(name)s %(message)s"))
     _hide_tokens()
+    _access_lines()
     renderer = (
         structlog.processors.JSONRenderer()
         if settings.log_json

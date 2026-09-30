@@ -35,7 +35,7 @@ _SIDE = 2048
 async def read(data: bytes) -> dict[str, Any]:
     """What the label says: name, brand, net weight, values per 100 g."""
     try:
-        image = imaging.normalize_bytes(data, _SIDE)
+        image = await asyncio.to_thread(imaging.normalize_bytes, data, _SIDE)
     except Exception as exc:  # noqa: BLE001 - any decoding failure
         raise InvalidInputError("Unreadable image") from exc
     try:

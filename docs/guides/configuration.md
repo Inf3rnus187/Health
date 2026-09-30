@@ -65,6 +65,13 @@ compose --profile mcp up -d --build mcp` :
   tout ; documentation seule → rien ;
 - `./update.sh --check` dit seulement ce qu'une mise à jour apporterait.
 
+**Pendant la mise à jour.** L'API redémarre quelques secondes (après
+chaque mise à jour qui la touche). Une page ouverte à ce moment-là
+affiche « Le hub ne répond pas (redémarrage après une mise à jour ?) —
+nouvel essai toutes les 5 s… » et revient seule, **toujours connectée** :
+seule une session refusée par le hub (jeton révoqué, 14 jours sans
+visite) ramène à la page de connexion.
+
 **Notification dans la page.** Toutes les 5 minutes, la page compare sa
 version à celle installée (`/version.json`, une par construction de
 l'interface) : après une mise à jour, « **Nouvelle version installée —
@@ -207,8 +214,18 @@ Journaux utiles :
 ```bash
 docker compose logs worker --since 30m     # lecture IA, imports, rapports
 docker compose logs api --since 30m
+docker compose logs api --since 1h | grep slow   # requêtes d'1 s ou plus
 docker compose ps
 ```
+
+Chaque requête de l'API a sa ligne, heure UTC comme nginx, client (celui
+que nginx a vu), requête, code, **durée** : `2026-09-30 05:37:56 +0000
+192.168.1.250 "GET /api/v1/meals?start=… HTTP/1.0" 200 45 ms` ; une
+requête d'une seconde ou plus finit par `slow`. Les lignes de nginx
+(`web`) finissent par `rt=` (durée totale, en secondes) et `api=` (durée
+de l'API ; `-` pour une page ou un fichier servi par nginx seul) : une
+page lente avec un `api=` court vient du réseau ou du navigateur, un
+`api=` long de l'API.
 
 ## Variables d'environnement
 
@@ -285,7 +302,9 @@ lancer ensuite « Réanalyser tout l'historique ».
 | `LOG_JSON` | `true` : journaux JSON. |
 
 Un jeton passé dans l'URL (`?token=`) est écrit `token=***` dans les
-journaux d'accès de l'API et de nginx.
+journaux d'accès de l'API et de nginx. Toute ligne de l'API commence par
+son heure UTC ; la ligne d'accès (`app.access`) donne l'adresse du
+client transmise par nginx (`X-Real-IP`) et la durée de la requête.
 
 ### Interface web et carte des parcours
 

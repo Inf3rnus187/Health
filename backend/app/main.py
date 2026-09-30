@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.v1 import health
 from app.api.v1.router import api_router
+from app.core.access_log import AccessLog
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.core.logging import configure_logging
@@ -76,6 +77,7 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(SecurityHeadersMiddleware)
     _add_cors(app)
+    app.add_middleware(AccessLog)  # outermost: times the whole request
     _register_errors(app)
     app.include_router(health.router)
     app.include_router(api_router, prefix=settings.api_v1_prefix)

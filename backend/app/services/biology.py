@@ -11,6 +11,7 @@ OCR, handled elsewhere.
 
 from __future__ import annotations
 
+import asyncio
 import re
 from datetime import date
 from io import BytesIO
@@ -62,7 +63,7 @@ async def import_pdf(
     session: AsyncSession, user_id: str, data: bytes
 ) -> dict[str, Any]:
     """Parse a lab PDF and record its values as measurements."""
-    readings = parse_text(_extract(data))
+    readings = parse_text(await asyncio.to_thread(_extract, data))
     if not readings:
         return {"added": 0, "metrics": 0, "dates": []}
     added = await store(session, user_id, readings, source="biology")

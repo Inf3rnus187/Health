@@ -8,6 +8,7 @@ Facts is asked for the product — a proposal for a new food sheet.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from sqlalchemy import select
@@ -25,7 +26,7 @@ async def scan(
 ) -> dict[str, Any]:
     """The barcodes on the photo, the user's food, the online product."""
     online = get_settings().food_lookup_online
-    codes = barcode_read.read(data)
+    codes = await asyncio.to_thread(barcode_read.read, data)
     out: dict[str, Any] = {
         "barcodes": codes,
         "food": None,

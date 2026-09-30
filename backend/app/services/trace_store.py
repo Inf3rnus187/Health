@@ -9,6 +9,7 @@ a meal bought can also be logged as a meal with its price.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 from datetime import date, timedelta
 from typing import Any
@@ -45,7 +46,9 @@ async def import_traces(
     report: dict[str, Any] = {"dry_run": dry_run, "files": []}
     logged: list[Meal] = []
     for name, kind, data in files:
-        found, skipped, about = trace_import.read(data, name, kind, tz, person)
+        found, skipped, about = await asyncio.to_thread(
+            trace_import.read, data, name, kind, tz, person
+        )
         counts = {"new": 0, "merged": 0, "duplicates": 0}
         for trace in found:
             state, meal = await _save(

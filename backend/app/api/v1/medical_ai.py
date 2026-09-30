@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from fastapi import APIRouter, status
@@ -43,7 +44,9 @@ async def text(
 ) -> dict[str, Any]:
     """The text the AI reads from a document (OCR for a scan)."""
     doc = await medical.get_document(session, principal.user.id, doc_id)
-    content = document_text.extract(medical.read_file(doc), doc.media_type)
+    content = await asyncio.to_thread(
+        document_text.extract, medical.read_file(doc), doc.media_type
+    )
     return {
         "id": doc.id,
         "title": doc.title,

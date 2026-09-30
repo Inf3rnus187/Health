@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Form, UploadFile, status
@@ -62,7 +63,9 @@ async def add_photo(
     """Add a photo: ``kind`` = ``pack`` (the box) or ``label`` (values)."""
     food = await foods.get(session, principal.user.id, food_id)
     data = await file.read()
-    food_photos.add(food, data, file.content_type or "", kind)
+    await asyncio.to_thread(
+        food_photos.add, food, data, file.content_type or "", kind
+    )
     await session.commit()
     return FoodOut.of(food)
 

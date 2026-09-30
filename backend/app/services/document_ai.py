@@ -78,7 +78,7 @@ async def analyze(
     session: AsyncSession, doc: MedicalDocument
 ) -> dict[str, Any]:
     """Read, extract, ground, store and summarise one document."""
-    content = document_text.extract(medical.read_file(doc), doc.media_type)
+    content = await _read(doc)
     day = document_facts.document_day(doc, content.text)
     exact = document_facts.exact(content.text, doc.kind, day)
     proposed, values_error = await document_reading.extract_values(content)
@@ -103,6 +103,13 @@ async def analyze(
         "ai_error": values_error or summary_error,
         "finished_at": _iso(),
     }
+
+
+async def _read(doc: MedicalDocument) -> Any:
+    """The document's text (OCR for a scan: in a thread, it takes long)."""
+    return await asyncio.to_thread(
+        document_text.extract, medical.read_file(doc), doc.media_type
+    )
 
 
 async def requeue_stale(session: AsyncSession) -> int:

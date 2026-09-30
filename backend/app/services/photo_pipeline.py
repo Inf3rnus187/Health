@@ -8,6 +8,7 @@ long-term statistics are computed on read by :mod:`photo_trend`.
 
 from __future__ import annotations
 
+import asyncio
 import math
 from pathlib import Path
 from typing import Any
@@ -48,7 +49,7 @@ async def _normalize(session: AsyncSession, photo: Photo) -> bytes | None:
             photo.user_id, photo.id, photo.angle
         )
         original = photo_storage.read_bytes(Path(photo.original_path))
-        normalized = imaging.normalize_bytes(original)
+        normalized = await asyncio.to_thread(imaging.normalize_bytes, original)
         photo_storage.write_bytes(target, normalized)
         photo.normalized_path = str(target)
         photo.status = "normalized"
