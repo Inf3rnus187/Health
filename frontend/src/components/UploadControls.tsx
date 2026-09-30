@@ -11,8 +11,9 @@ interface UploadControlsProps {
 
 const CONFIRM =
   'Supprimer tout ce qui vient de l’export Apple (relevés, séances, ECG, ' +
-  'tracés GPS, dossier CDA) ? Vos saisies, compteurs, repas et documents ' +
-  'restent. Cette action ne peut pas être annulée.';
+  'tracés GPS, dossier CDA) ? Vos saisies, compteurs, repas, documents, ' +
+  'Health Auto Export et l’app iPhone restent. Cette action ne peut pas ' +
+  'être annulée.';
 
 export function UploadControls(props: UploadControlsProps) {
   const reset = () => {

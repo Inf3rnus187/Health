@@ -22,10 +22,12 @@ l'IA, saisie. Toutes les pages lisent les **mêmes** valeurs
 (« vue d'ensemble » d'une métrique : dernier relevé, moyenne du jour,
 moyennes 7 / 30 jours, sources).
 
-- **Relevés bruts** : chaque mesure horodatée (Apple, Health Auto Export).
+- **Relevés bruts** : chaque mesure horodatée (Apple, Health Auto Export,
+  l'app iPhone).
 - **Valeurs journalières** : recalculées depuis le brut avec une règle
-  unique — un seul canal Apple par jour (l'export natif et Health Auto
-  Export portent les mêmes données : jamais additionnés), plus les autres
+  unique — un seul canal Apple par jour (l'export natif, Health Auto
+  Export et l'app iPhone portent les mêmes données : jamais additionnés),
+  plus les autres
   sources ; une saisie explicite (pesée, labo) est conservée.
 - Une valeur connue seulement par son jour (labo, FibroScan) est datée du
   jour de l'examen, sans heure inventée.
@@ -1364,7 +1366,8 @@ résultats d'examens), **Chronologie**, **Documents** (ajout + liste),
   **« Supprimer les données importées »** efface d'un coup tout ce qui
   vient de l'export Apple (relevés, séances, ECG, tracés GPS, dossier
   CDA), après confirmation (« ne peut pas être annulée ») ; les saisies,
-  compteurs, repas, Health Auto Export et documents restent.
+  compteurs, repas, Health Auto Export, l'app iPhone (HealthKit) et
+  documents restent.
 - **Synchro iPhone (export CSV)** : « Créer l'URL d'upload » crée un
   jeton `write:measurements` (« iPhone (CSV) ») et affiche une fois
   `…/api/v1/imports/apple-health?token=…`, à coller dans l'envoi du
@@ -1380,7 +1383,9 @@ résultats d'examens), **Chronologie**, **Documents** (ajout + liste),
   l'app envoie : relevés par UUID (renvoyés = remplacés, supprimés dans
   Santé = supprimés ici), **sommes HealthKit** pour pas, distance,
   énergie (jamais l'iPhone + la montre deux fois), phases du sommeil
-  (les phases de la montre, le temps au lit de l'iPhone), entraînements — le
+  (les phases de la montre ; le temps au lit de tous les appareils qui
+  l'écrivent, l'iPhone surtout, chevauchements fusionnés, jamais
+  additionnés), entraînements — le
   format exact est dans le [guide d'ingestion](ingestion.md#iphone-app-healthkit--synchealthkit).
   Une journée prend **un seul** canal Apple (export, Health Auto Export
   ou l'app) : arrête Health Auto Export quand l'app synchronise.

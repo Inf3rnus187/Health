@@ -5,7 +5,7 @@ client MCP) **l'accès à tout le hub** : données Apple Santé, Dossier,
 Suivi, documents et leur texte, marqueurs, poids, photos, Journal (pipi,
 repas), aliments et table Ciqual, médicaments et observance, rapports
 avec synthèse et vérification, automatisations, heures de travail,
-dossier travail et santé — **105 outils**, listés avec leurs paramètres
+dossier travail et santé — **114 outils**, listés avec leurs paramètres
 dans [`mcp-tools.md`](../mcp-tools.md) (généré depuis le serveur). Chaque
 outil appelle l'API REST : il voit exactement ce que voient les pages.
 
@@ -129,7 +129,9 @@ Depuis un autre poste, la même commande à travers SSH :
 
 ## 5. Ce que l'assistant peut faire
 
-- **Lire** : accueil, toute métrique (vue d'ensemble, valeurs, relevés
+- **Lire** : accueil (`health_summary` : heure du dernier café, de la
+  dernière cigarette ou bouteille ; énergie apportée par les repas à
+  côté de la dépense, active et de repos), toute métrique (vue d'ensemble, valeurs, relevés
   bruts, tendances), inventaire des sources, Dossier (résultats, suggestions,
   chronologie), Suivi, documents et **le texte lu par l'IA**, marqueurs,
   poids, photos, séances / ECG / parcours, rapports et synthèses.

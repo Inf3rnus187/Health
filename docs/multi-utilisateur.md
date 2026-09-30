@@ -81,7 +81,7 @@ formulaire** (`*_id`) est rechargé avec `user_id` avant usage.
 
 | # | Où | Risque | Correction | État |
 |---|----|--------|------------|------|
-| C | `?token=` dans les URL (raccourcis) → journaux gunicorn/uvicorn et nginx | vol d'un jeton en lisant un journal | filtrés (`token=***`) | ✅ |
+| C | `?token=` dans les URL (raccourcis) → journal d'accès de l'API (`app.access`) et nginx | vol d'un jeton en lisant un journal | filtrés (`token=***`) | ✅ |
 | M3 | journal d'audit | garde des valeurs de santé après l'effacement du compte | n'y écrire que l'action, l'entité et l'id ; purge à la suppression du compte | ⏳ |
 | — | journaux applicatifs | des valeurs de santé ou des textes de repas peuvent y passer | relecture des `log.*` : ids et compteurs seulement | ⏳ |
 

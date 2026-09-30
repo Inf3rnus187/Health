@@ -229,13 +229,17 @@ de l'API ; `-` pour une page ou un fichier servi par nginx seul) : une
 page lente avec un `api=` court vient du réseau ou du navigateur, un
 `api=` long de l'API.
 
-nginx garde en mémoire une réponse de l'API jusqu'à 2 Mo (32 × 64 Ko,
-`proxy_buffers` dans `nginx/default.conf`) : une photo de repas n'est
-plus écrite sur le disque (« buffered to a temporary file »). Les
-tampons sont pris au besoin et rendus à la fin de la requête ; une
-réponse plus grande (export, rapport PDF) déborde dans un fichier
-temporaire comme avant, sans erreur. Les durées mesurées avant / après
-chaque optimisation sont dans [performance.md](../performance.md).
+Ce que tu envoies au hub (photos de repas, documents, JSON de Health
+Auto Export) passe directement de nginx à l'API, au fil de l'eau
+(`proxy_request_buffering off` dans `nginx/default.conf`) : plus de
+fichier temporaire sur le disque de nginx ni d'avertissement « a client
+request body is buffered to a temporary file ». La limite de 25 Mo par
+requête reste. Dans l'autre sens, nginx garde en mémoire une réponse de
+l'API jusqu'à 2 Mo (32 × 64 Ko, `proxy_buffers`), pris au besoin et
+rendus à la fin de la requête ; une réponse plus grande (export,
+rapport PDF) déborde dans un fichier temporaire comme avant, sans
+erreur. Les mesures avant / après de chaque optimisation sont dans
+[performance.md](../performance.md).
 
 ## Variables d'environnement
 
@@ -309,12 +313,13 @@ lancer ensuite « Réanalyser tout l'historique ».
 | Variable | Rôle |
 |----------|------|
 | `LOG_LEVEL` | `INFO` (ou `DEBUG` pour diagnostiquer). |
-| `LOG_JSON` | `true` : journaux JSON. |
+| `LOG_JSON` | `true` : les messages des services en JSON (heure dans le champ `timestamp`) ; `false` : les mêmes, lisibles. La ligne d'accès (`app.access`) et les autres restent en texte, précédées de l'heure UTC. |
 
 Un jeton passé dans l'URL (`?token=`) est écrit `token=***` dans les
-journaux d'accès de l'API et de nginx. Toute ligne de l'API commence par
-son heure UTC ; la ligne d'accès (`app.access`) donne l'adresse du
-client transmise par nginx (`X-Real-IP`) et la durée de la requête.
+journaux d'accès de l'API et de nginx. Chaque ligne de l'API porte son
+heure UTC (en tête, ou dans le champ `timestamp` d'une ligne JSON) ; la
+ligne d'accès (`app.access`) donne l'adresse du client transmise par
+nginx (`X-Real-IP`) et la durée de la requête.
 
 ### Interface web et carte des parcours
 

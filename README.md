@@ -47,13 +47,14 @@ and tested:
 | **Photo pipeline** (upload → EXIF‑strip/normalize → Ollama vision → compare) | ✅ |
 | **Dashboards** per domain (`/dashboard/{domain}` + React domain tabs) | ✅ |
 | **Exports** of daily values CSV/JSON/XLSX/FHIR + async **clinical PDF** reports | ✅ |
-| **MCP server** — 105 tools covering the whole hub, as a REST‑API client (each client uses its own `hub:full` token) | ✅ |
+| **MCP server** — 114 tools covering the whole hub, as a REST‑API client (each client uses its own `hub:full` token) | ✅ |
 | **Automations** (trigger→action: reminder/capture) + run endpoint | ✅ |
 | **Hardening**: optional TOTP MFA (API only, no web screen yet), at‑rest file encryption, RGPD erasure | ✅ |
 | **Supply chain**: gitleaks, pip‑audit, pnpm audit, Trivy, syft SBOM (CI) | ✅ |
 | **Apple Health import** (web + API): all raw samples, workouts, ECG, GPS, CDA | ✅ |
 | ECG waveform & GPS route **viewers**; day/week/month/year charts + wheel zoom | ✅ |
 | **iPhone sync** — SimpleHealthExportCSV zip upload (auto‑detected import) | ✅ |
+| **iPhone app sync** — your own HealthKit app: `POST /sync/healthkit` (samples by UUID, hourly sums, nights, workouts, deletions; token in the header only) | ✅ |
 | **Dark theme** + mobile‑responsive layout | ✅ |
 | **Multi‑page UI** (Accueil/récap · Tableaux de bord · Santé · Données · Rapports · Import) | ✅ |
 | **Rapports** (générer PDF clinique/CSV/JSON/XLSX/FHIR + télécharger) & **exports** dans l'UI | ✅ |
@@ -134,10 +135,10 @@ Every variable is explained in the
 | [Configuration](docs/guides/configuration.md) | Installer, mettre à jour, toutes les variables, jetons et scopes, services, journaux. |
 | [Utilisation](docs/guides/utilisation.md) | Chaque page (Accueil, Données, Dossier, Photos, Suivi, Rapports, Import…) et les parcours types. |
 | [IA médicale](docs/guides/ia-medicale.md) | MedGemma par tâche, lecture des documents et valeurs rejetées, synthèse clinique, méthode photo, dépannage. |
-| [Ingestion](docs/guides/ingestion.md) | Apple Santé, Health Auto Export, Raccourcis, montre, PPC, photos. |
+| [Ingestion](docs/guides/ingestion.md) | Apple Santé, Health Auto Export, ta propre app iPhone (HealthKit), Raccourcis, montre, PPC, photos. |
 | [MCP](docs/guides/mcp.md) | Brancher un assistant (Claude Desktop / Code, stdio) de façon sûre. |
 | [Référence API](docs/api.md) | Toutes les routes, leurs paramètres et le droit exigé (générée depuis le code). |
-| [Outils MCP](docs/mcp-tools.md) | Les 105 outils et leurs paramètres (générée depuis le serveur). |
+| [Outils MCP](docs/mcp-tools.md) | Les 114 outils et leurs paramètres (générée depuis le serveur). |
 | [Multi-utilisateur](docs/multi-utilisateur.md) | Ce qui manque pour plusieurs comptes (on ne peut pas encore en créer un second) : analyse et plan. |
 | [Sécurité](SECURITY.md) | Niveaux d'accès, chiffrement, limites connues. |
 | [Architecture](docs/architecture.md), [modèle de données](docs/data-model.md), [ADR](docs/adr/) | Conception. |
@@ -301,7 +302,10 @@ Détails d'architecture dans
 
 Le web **ne peut pas** lire HealthKit, et iOS **refuse d'importer un
 raccourci non signé** (la signature Apple exige un appareil Apple — donc
-impossible à fabriquer côté serveur). La voie fiable utilise un raccourci
+impossible à fabriquer côté serveur). Ta propre app iPhone qui lit
+HealthKit envoie directement à `POST /sync/healthkit` (voir le
+[guide d'ingestion](docs/guides/ingestion.md)). Sans app, la voie fiable
+utilise un raccourci
 **déjà signé et distribué** : **SimpleHealthExportCSV** (RoutineHub,
 gratuit). Il exporte tes données Santé en CSV (un fichier par type),
 zippés, et sait les **uploader** vers une URL.
@@ -393,7 +397,7 @@ phoenix-health-hub/
 │   └── app/{core,models,schemas,services,api,workers,seed}
 ├── frontend/               # React + Vite + TS (theme, api, components)
 ├── nginx/                  # reverse proxy + React build image
-├── mcp/                    # MCP server (105 tools, API client)
+├── mcp/                    # MCP server (114 tools, API client)
 ├── tools/                  # custom code-limit checker
 └── docs/                   # architecture, data model, guides, ADRs
 ```

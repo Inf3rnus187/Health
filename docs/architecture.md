@@ -12,7 +12,7 @@ flowchart LR
   end
 
   UI -->|"/api, /version.json"| Nginx[web · Nginx]
-  Watch -->|"/ingest/*, /sync/health, /sync/tally, /sync/auto-export, /imports/apple-health, /meals, /medications/take, /work/clock…"| Nginx
+  Watch -->|"/ingest/*, /sync/health, /sync/healthkit, /sync/tally, /sync/auto-export, /imports/apple-health, /meals, /medications/take, /work/clock…"| Nginx
   Scripts -->|/api/v1| Nginx
   Nginx -->|proxy /api| API[api · FastAPI]
   AIclientMCP -->|"MCP_BIND:MCP_PORT (not via Nginx)"| MCP[mcp · MCP server]

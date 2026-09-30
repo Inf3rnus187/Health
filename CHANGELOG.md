@@ -8,6 +8,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **Health data sent to the hub no longer lands on nginx's disk**: the
+  bodies of `/api/` requests (meal photos, documents, Health Auto
+  Export's JSON…) were written unencrypted to a temporary file of the
+  `web` container before reaching the API (« a client request body is
+  buffered to a temporary file » in its log); they are now streamed to
+  the API as they arrive. Checked through nginx: a 7.9 MB meal photo, a
+  650 KB Health Auto Export JSON (also sent chunked) arrive whole, no
+  warning, and a body over 25 MB is still refused (413).
 - **The API's access line names the client nginx saw** (`X-Real-IP`, an
   address of your network) instead of nginx's container; tokens in URLs
   are still written `token=***`.
@@ -43,6 +51,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **« Supprimer les données importées » says what stays**: its
+  confirmation now names Health Auto Export and the iPhone app beside
+  entries, counters, meals and documents (only the Apple export's rows
+  go). Docs brought up to date: the iPhone app in the README, the
+  architecture and the user guide (one Apple channel a day, time in bed
+  merged across devices), `GET /nutrition/references` in the ingestion
+  guide, the home tiles in the MCP guide, 114 MCP tools, what
+  `LOG_JSON` changes.
 - **Pages with years of Apple data load several times faster** (2.35
   million fake samples over 5 years, median of 3 calls, see
   [docs/performance.md](docs/performance.md)): Santé → Activité 1 274 →
@@ -307,9 +323,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   line — UTC time (like nginx's), client, request, status, milliseconds;
   a request of a second or more ends with `slow`. nginx's lines end with
   `rt=` (total) and `api=` (the API's share). Every other API log line
-  starts with its UTC time too. nginx keeps an API answer of up to 2 MB
-  (a meal photo) in memory instead of a temporary file (« buffered to a
-  temporary file »); a larger one still spills to a file, as before.
+  carries its UTC time too (first, or in a JSON line's `timestamp`).
+  nginx keeps an API answer of up to 2 MB (a meal photo) in memory
+  instead of a temporary file; a larger one still spills to a file, as
+  before.
 - **Sync from your own iPhone app: `POST /sync/healthkit`** — for an app
   reading HealthKit, incremental and without duplicates:
   - `samples` keyed by their HealthKit UUID (sent again = replaced),

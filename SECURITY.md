@@ -64,6 +64,14 @@ asks for, never who eats them. A barcode on a
   (`TMPDIR=/data/exports/tmp`) and the PostgreSQL database itself (values,
   notes, AI readings). Losing the key makes the encrypted files
   unreadable for good.
+- **nginx writes no body sent to disk**: what a page, a Shortcut or an
+  app sends through `/api/` (meal photos, documents, Health Auto
+  Export's JSON…) is streamed to the API as it arrives
+  (`proxy_request_buffering off`, `nginx/default.conf`); it used to sit
+  unencrypted in a temporary file of the `web` container
+  (`client_temp`) until the API had it. Answers over 2 MB (an export, a
+  report, a large decrypted photo) still spill briefly to nginx's
+  `proxy_temp`, inside the container, never on a volume.
 - **Photo metadata**: meal and food photos are decoded and re-encoded as
   JPEG without EXIF (no GPS) before storage (`services/imaging.py`,
   `meal_photo.py`, `meal_extra.py`, `food_photos.py`). Body photos: the

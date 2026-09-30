@@ -96,21 +96,34 @@ sur le processus occupé : d'où les pages « Chargement… » qui duraient.
   conteneur (et sa carte graphique chez toi) ; l'attente se fait dans le
   `worker`, elle ne ralentit pas les pages.
 
-## nginx : réponses de l'API en mémoire
+## nginx : envois et réponses
 
-`location /api/` garde en mémoire jusqu'à 64 Ko d'en-têtes
-(`proxy_buffer_size`) et 32 × 64 Ko = 2 Mo de réponse
-(`proxy_buffers`). Une photo de repas (200 Ko à 1 Mo) y tient : plus
-d'écriture sur le disque ni d'avertissement « buffered to a temporary
-file ».
+**Envois** (photos de repas, documents, JSON de Health Auto Export) :
+nginx les transmet à l'API au fil de l'eau (`proxy_request_buffering
+off`). Avant, tout envoi de plus de 16 Ko était d'abord écrit en entier
+dans un fichier temporaire de nginx, non chiffré, puis relu pour l'API —
+c'est l'avertissement « a client request body is buffered to a
+temporary file » vu sur `POST /api/v1/sync/auto-export`. Vérifié
+derrière un nginx 1.24 avec la configuration du dépôt :
 
-- **Tailles variables** : les tampons sont pris au besoin (une réponse
-  JSON de 5 Ko en utilise un seul) et rendus à la fin de la requête.
-- **Réponse de plus de 2 Mo** (export, rapport PDF, très grande photo) :
+| Envoi | Avant | Après |
+|---|---|---|
+| Health Auto Export, JSON de 650 Ko | fichier temporaire + avertissement | transmis directement, 200 |
+| Le même, envoyé par morceaux (« chunked ») | fichier temporaire | transmis directement, 200 |
+| Repas avec une photo de 7,9 Mo | fichier temporaire + avertissement | transmis directement, 201, photo relue |
+| Envoi de plus de 25 Mo | refusé (413) | refusé (413) |
+
+La taille des envois peut varier librement : rien n'est gardé en
+mémoire côté nginx, l'API lit le corps à mesure qu'il arrive.
+
+**Réponses** : `location /api/` garde en mémoire jusqu'à 64 Ko
+d'en-têtes (`proxy_buffer_size`) et 32 × 64 Ko = 2 Mo de réponse
+(`proxy_buffers`). Une photo de repas affichée (200 Ko à 1 Mo) y tient.
+
+- Les tampons sont pris au besoin (une réponse JSON de 5 Ko en utilise
+  un seul) et rendus à la fin de la requête.
+- Une réponse de plus de 2 Mo (export, rapport PDF, très grande photo) :
   le surplus part dans un fichier temporaire de nginx, comme avant —
-  aucune erreur, aucune coupure, seulement l'avertissement dans le
-  journal de `web`.
-- **Mémoire** : au plus ~2 Mo par réponse en cours ; 20 grandes photos
-  chargées en même temps ≈ 40 Mo, rendus aussitôt après.
-- Les envois (photos, exports Apple) ne sont pas concernés : ce réglage
-  ne touche que les réponses.
+  aucune erreur, aucune coupure.
+- Mémoire : au plus ~2 Mo par réponse en cours ; 20 grandes photos
+  affichées en même temps ≈ 40 Mo, rendus aussitôt après.
