@@ -7,17 +7,6 @@ livrées sont dans la [feuille de route](architecture.md#roadmap).
 
 ## En attente d'une décision
 
-### Poids unitaire stable d'un repas à l'autre
-
-Deux repas identiques analysés à quelques minutes d'écart peuvent donner
-des grammes un peu différents : pour « 2 œufs », l'IA estime un œuf à
-50 g une fois, 60 g la suivante. Deux options :
-
-- **reprendre automatiquement** le premier poids trouvé pour cet aliment ;
-- un bouton **« Garder ce poids »** qui l'enregistre dans la fiche de
-  « Mes aliments » (le code fait déjà « nombre × poids de la fiche »
-  quand la fiche en a un).
-
 ### Réconciliation calculée dans PostgreSQL
 
 Aujourd'hui : 11,9 s pour 2,4 millions de relevés, dans le worker, sans
@@ -27,6 +16,26 @@ découpage en jours locaux, la conversion des unités (dont « 0,97 →
 97 % ») et le calcul par source existeraient alors **en deux copies**,
 Python (synchros, tests) et SQL, qui finiraient par diverger. Pas fait
 tant que ce risque n'est pas accepté.
+
+## Décidé, rien à coder
+
+### Poids unitaire d'un repas à l'autre (décidé le 30/09/2026)
+
+**Le constat.** Sans poids écrit, le poids d'une unité (une tomate, un
+concombre) est estimé par l'IA et change d'un repas à l'autre : deux
+tomates comptées 2 × 125 g un jour, 2 × 150 g un autre ; un demi
+concombre 75 g ou 150 g.
+
+**Les options écartées.**
+- Retenir la première estimation : stable mais au hasard.
+- Un bouton « Garder ce poids » : une fiche au poids moyen fixe, stable
+  mais pas le poids du jour.
+
+**Décision : l'utilisateur écrit le poids pesé dans la description**
+(`2 tomates 240 g`, `2 tomates (240 g)`, `240 g de tomates`,
+`tomates : 240 g`). Le hub le garde tel quel (« écrits par toi ») :
+c'est déjà le cas, vérifié sur ces quatre tournures. Les légumes
+varient trop d'une pièce à l'autre pour un poids fixe.
 
 ## Idées
 

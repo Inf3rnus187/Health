@@ -243,7 +243,11 @@ journal), **Repas** (le formulaire et la liste) et **Mes aliments**.
   × le poids d'une tomate moyenne estimé par l'IA), « 185 g, ta portion », « 125 g
   saisis » (formulaire), « 185 g, le paquet », « 400 g estimés par
   l'IA ». Pour qu'aucune quantité ne soit estimée : écrire les grammes
-  (balance) ou avoir une fiche avec son unité.
+  (balance) ou avoir une fiche avec son unité. Sans poids écrit, le
+  poids d'une tomate ou d'un concombre estimé par l'IA change d'un repas
+  à l'autre ; pesés, les légumes sont exacts. Toutes ces tournures sont
+  lues : `2 tomates 240 g`, `2 tomates (240 g)`, `240 g de tomates`,
+  `tomates : 240 g`.
 
   Puis les **nutriments** (énergie, protéines, glucides dont sucres,
   lipides dont saturés, fibres, sodium), une **note 0–10**, un verdict,
