@@ -32,6 +32,10 @@ tant que ce risque n'est pas accepté.
 
 ### Paniers drive remplis par le hub quand le stock baisse
 
+**Statut : noté pour plus tard, pas commencé.** Première enseigne :
+**Leclerc** (décidé le 30/09/2026). La recherche et la réflexion
+ci-dessous sont faites : repartir d'ici, sans les refaire.
+
 **Ce qui est décidé.**
 - Le hub **crée et remplit le panier** chez l'enseigne drive de chaque
   utilisateur, rien de plus. **La commande et le paiement se font
@@ -97,6 +101,64 @@ tant que ce risque n'est pas accepté.
      l'utilisateur dans un vrai Chrome, tenu par un conteneur dédié du
      hub, un appel à la fois, à rythme humain (DataDome).
 
+**Ce que la recherche a appris (30/09/2026, liens plus bas).**
+- **Aucune enseigne ne publie d'API ouverte** pour remplir le panier
+  d'un client. Carrefour le dit lui-même dans son projet MCP.
+- **Tous les projets de la communauté passent par le site privé** de
+  l'enseigne, avec la session du client, pilotée dans un vrai Chrome
+  (par CDP ou Playwright). Serveurs MCP existants : Leclerc (v0.3),
+  Auchan (actif), Intermarché (débutant), Carrefour (archivé).
+- **Aucun ne commande ni ne paie** : ils s'arrêtent au panier, comme le
+  hub.
+- **Anti-robot DataDome** (Leclerc, Auchan) : seul un vrai Chrome passe,
+  un appel à la fois, à rythme humain. Cinq ajouts au panier lancés en
+  même temps se font bloquer.
+- **Ces outils cassent souvent** : un vérificateur Auchan est mort avec
+  le nouveau site en 2023, le serveur MCP Carrefour a été archivé en
+  août 2026.
+- **Seule piste officielle : Intermarché** (Les Mousquetaires), qui a
+  deux portails développeurs. Ce qu'ils ouvrent (catalogue, magasins,
+  panier ?) et à qui (public ou partenaires) reste à lire : ces sites,
+  lobehub, glama et Reddit n'étaient pas lisibles depuis
+  l'environnement de travail.
+- **Façons de garder la session**, vues dans ces projets :
+  - Leclerc : connexion faite une fois dans un vrai Chrome dont le
+    profil est gardé ;
+  - Auchan : cookies lus dans le navigateur installé, ou une variable
+    d'environnement ;
+  - Intermarché : l'onglet où l'utilisateur est connecté, sans exporter
+    les cookies ;
+  - Carrefour : e-mail et mot de passe en variables d'environnement.
+
+  Le hub, lui, gardera identifiants et session chiffrés, par
+  utilisateur (règles plus bas).
+
+**Leclerc, par où commencer** (d'après
+[api-capture.md](https://github.com/skunkobi/mcp-leclerc-drive/blob/main/docs/api-capture.md)
+et [mcp-leclerc-drive](https://github.com/skunkobi/mcp-leclerc-drive/tree/main)).
+- **Les appels du site.**
+  - La recherche de produits renvoie une page HTML, à lire.
+  - Un seul point d'entrée modifie le panier : ajouter, changer la
+    quantité, retirer (quantité 0).
+  - Le panier se lit dans les pages du magasin ; il n'a pas de point
+    d'entrée à lui.
+  - Les magasins se trouvent par une API JSON (autocomplétion, magasins
+    proches).
+- **La session** tient par des cookies, protégés par DataDome. Le
+  projet passe par un vrai Chrome (CDP) qui porte les cookies,
+  l'empreinte du navigateur et les défis résolus.
+- **Le rythme** : un appel à la fois, avec une pause entre deux ; jamais
+  en parallèle.
+- **Ce que le projet fait** : magasins, recherche, ajout, retrait,
+  quantité, lecture du panier. Pas de créneau ni de commande, ce qui
+  correspond au périmètre du hub. Licence MIT : on peut s'en inspirer
+  en le citant.
+- **Premier essai à faire**, avant d'écrire le module du hub : Chrome
+  dans un conteneur du hub, connexion avec un compte de test, puis
+  recherche, ajout et lecture du panier à rythme humain. On vérifie que
+  DataDome laisse passer depuis le serveur, et combien de temps la
+  session tient.
+
 **Points techniques à régler (d'après les références).**
 - DataDome repère plus facilement un Chrome qui tourne sur un serveur
   sans écran. À tester avec l'enseigne choisie avant de s'engager.
@@ -139,7 +201,8 @@ tant que ce risque n'est pas accepté.
 - Les risques (conditions d'utilisation de l'enseigne, compte bloqué)
   sont expliqués sur la page « Mon drive » avant d'activer.
 
-**Reste à choisir.** L'enseigne et le magasin par lesquels commencer.
+**Reste à choisir, au moment de s'y mettre.** Le magasin Leclerc de
+chaque utilisateur, qui se choisit dans la page « Mon drive ».
 
 **Références** (lues le 30/09/2026 ; certains sites n'étaient pas
 lisibles depuis l'environnement de travail et restent à lire).
