@@ -53,6 +53,7 @@ async def run(session: AsyncSession, user_id: str) -> dict[str, Any]:
     started = time.perf_counter()
     tz = await daily_rollup.user_zone(session, user_id)
     processes = await _processes(session, user_id)
+    await session.commit()  # nothing held while waiting for the cores
     # The processes load their code while the first steps run.
     async with reconcile_parallel.started(user_id, tz, processes) as workers:
         catalog = await _catalog(session, user_id)

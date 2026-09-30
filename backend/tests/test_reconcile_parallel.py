@@ -241,6 +241,43 @@ async def test_more_processes_than_metrics(
     assert ended == [0] * 8
 
 
+async def test_accounts_reconciled_together_take_the_cores_in_turn(
+    monkeypatch: pytest.MonkeyPatch, member: dict[str, str]
+) -> None:
+    """Two accounts at once: one set of processes at a time, both right."""
+    accounts = [
+        await _user(get_settings().admin_email),
+        await _user("membre@example.com"),
+    ]
+    for user_id in accounts:
+        await _seed(user_id)
+    monkeypatch.setattr(get_settings(), "reconcile_parallel", 1)
+    expected = []
+    for user_id in accounts:
+        await _reconcile(user_id)
+        expected.append(await _days(user_id))
+        await _wipe(user_id)
+    active, peak = [0], [0]
+    real = reconcile_parallel.started
+
+    @asynccontextmanager
+    async def spy(*args: Any) -> AsyncIterator[list[Process]]:
+        async with real(*args) as workers:
+            active[0] += 1
+            peak[0] = max(peak[0], active[0])
+            await asyncio.sleep(0.3)  # the other account tries meanwhile
+            try:
+                yield workers
+            finally:
+                active[0] -= 1
+
+    monkeypatch.setattr(reconcile_parallel, "started", spy)
+    monkeypatch.setattr(get_settings(), "reconcile_parallel", 2)
+    await asyncio.gather(*(_reconcile(user_id) for user_id in accounts))
+    assert [await _days(user_id) for user_id in accounts] == expected
+    assert peak == [1]
+
+
 async def test_counts_rebuilt_while_days_are_computed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

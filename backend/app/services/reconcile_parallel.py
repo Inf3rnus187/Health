@@ -47,6 +47,8 @@ from app.services.daily_rollup import Span
 Spent = tuple[float, str, int]
 #: The folder holding the ``app`` package, for the processes' imports.
 _ROOT = str(Path(__file__).resolve().parents[2])
+#: Held by the reconcile whose processes run (one at a time per worker).
+_CORES = asyncio.Lock()
 
 
 @asynccontextmanager
@@ -55,23 +57,30 @@ async def started(
 ) -> AsyncIterator[list[Process]]:
     """``processes`` processes, started now and stopped on leaving.
 
-    On an error or a cancel they are killed: the metric each one was on
-    is not committed, those already done are (as one after the other).
+    One reconcile at a time has processes in a worker (:data:`_CORES`):
+    accounts reconciled together take the cores in turn, never
+    ``processes`` × accounts processes and connections. On an error or a
+    cancel they are killed: the metric each one was on is not committed,
+    those already done are (as one after the other).
     """
-    workers: list[Process] = []
-    try:
-        for _ in range(processes):
-            workers.append(await _start(user_id, tz))
-        yield workers
-        for worker in workers:
-            if worker.stdin is not None:
-                worker.stdin.close()  # the ones left without a metric too
-            await worker.wait()
-    finally:
-        for worker in workers:
-            if worker.returncode is None:  # an error or a cancel
-                worker.kill()
+    if processes <= 0:  # computed here, one metric after the other
+        yield []
+        return
+    async with _CORES:
+        workers: list[Process] = []
+        try:
+            for _ in range(processes):
+                workers.append(await _start(user_id, tz))
+            yield workers
+            for worker in workers:
+                if worker.stdin is not None:
+                    worker.stdin.close()  # the ones left without a metric
                 await worker.wait()
+        finally:
+            for worker in workers:
+                if worker.returncode is None:  # an error or a cancel
+                    worker.kill()
+                    await worker.wait()
 
 
 class Piece(NamedTuple):

@@ -23,6 +23,21 @@ la méthode ci-dessous, et noté ici (règle de [CLAUDE.md](../CLAUDE.md)).
 
 ## Journal
 
+### 2026-09-30 (9) — plusieurs comptes réconciliés en même temps
+
+Le `worker` exécute jusqu'à 10 tâches à la fois (`WORKER_MAX_JOBS`).
+Dix comptes qui importent en même temps auraient lancé chacun
+`RECONCILE_PARALLEL` processus : 40 processus et 40 connexions en plus,
+près des 100 que PostgreSQL accepte (l'API et le worker en tiennent
+déjà 50). Une seule réconciliation à la fois a maintenant ses processus
+dans un worker ; les autres attendent leur tour sans garder de
+transaction ouverte. Le calcul étant limité par le processeur, le temps
+total pour tous les comptes ne change pas : chacun a tous les cœurs à
+son tour au lieu d'un quart en même temps. Un compte d'une seule
+métrique (ou `RECONCILE_PARALLEL=1`) ne lance aucun processus et
+n'attend pas. Un test réconcilie deux comptes à la fois : jamais deux
+groupes de processus en même temps, les jours des deux justes.
+
 ### 2026-09-30 (8) — couper une grosse métrique en périodes
 
 Une réconciliation ne peut pas aller plus vite que sa plus grosse

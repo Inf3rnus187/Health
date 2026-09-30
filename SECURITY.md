@@ -26,6 +26,14 @@ security is a first‑class concern (§12).
 - **Secrets**: never committed; injected via `.env`; `.env` is git‑ignored
   and `install.sh` generates a strong `SECRET_KEY`. **gitleaks** runs in
   pre‑commit and CI.
+- **Bounded work in the worker**: a reconcile runs its metrics in
+  `RECONCILE_PARALLEL` processes of its own (`python -m
+  app.cli.rollup_worker`, same user, same environment, one database
+  connection each, stopped with it or killed on an error). One reconcile
+  at a time has processes in a worker: accounts importing or reconciling
+  together wait their turn, so they cannot multiply processes and
+  connections (10 jobs × 4 processes would have come near PostgreSQL's
+  100 connections). A reconcile waiting its turn holds no transaction.
 - **Transport**: the app speaks HTTP only internally; terminate TLS with your
   own reverse proxy.
 - **Outbound calls**: none with personal data. The one lookup, Open

@@ -8,6 +8,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Security
 
+- **Several accounts reconciled at once no longer multiply processes and
+  database connections** (for the administrator of a hub with several
+  users). The worker runs up to 10 jobs at once (`WORKER_MAX_JOBS`): 10
+  accounts importing together would each have started
+  `RECONCILE_PARALLEL` processes, 40 more connections near PostgreSQL's
+  100. One reconcile at a time now has processes in a worker; the others
+  wait their turn, holding no transaction meanwhile. The total time is
+  the same (the work is processor-bound), the load is bounded. A test
+  reconciles two accounts at once: never two sets of processes, both
+  accounts' days right (it fails without the lock).
+
 - **The web page's settings are public, and hold nothing private**:
   `GET /system/settings` (read before signing in) gives only timings and
   form limits from the environment — no secret, nothing of an account.
