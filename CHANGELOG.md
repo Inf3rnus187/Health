@@ -62,6 +62,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **The slow pages left are fast, nothing left out** (same fake data,
+  old and new code side by side over HTTP, all 71 GET routes compared:
+  identical answers; see [docs/performance.md](docs/performance.md)):
+  Données' inventory 364 → 23 ms (the raw samples' counts are kept by
+  the database, table `sample_counts`, exact at every write: an import
+  costs ≈ 1 % more, deleting 100 000 samples 1.45 s instead of 1.13 s);
+  `/measurements` without a filter (an MCP call) 2 130 → 404 ms, from
+  January 244 → 63 ms (read as columns, written in one pass; the order
+  between two values of the same day and time, left to chance before,
+  is now fixed by id); dashboards over the whole history 164–213 →
+  61–82 ms (the objects an API process keeps for life are left out of
+  Python's garbage collections, `GC_FREEZE`; large series written
+  directly instead of being validated twice; the rolling window slides,
+  same result to the last bit); stock 154 → 80 ms, « À compléter »
+  291 → 181 ms; a full reconcile 16.3 → 11.9 s (conversions prepared once
+  per unit, rows read without the ORM; the 37 238 computed days
+  identical). The security headers are added without copying each
+  answer.
 - **A meal's AI remarks agree with its reference table** (for
   everyone): the table could say « protéines : au-dessus de la part du
   dîner » while a remark said « apport modéré ». The model now gets each

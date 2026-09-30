@@ -26,7 +26,7 @@ from app.models.health_raw import HealthSample
 from app.models.measurement import Measurement
 from app.models.metric import MetricDefinition
 from app.models.user import User
-from app.services.apple_health.units import convert
+from app.services.apple_health.units import converter
 from app.services.daily_acc import HEALTHKIT, Acc, reduce_day
 
 #: Sources that only ever wrote daily roll-ups of HealthKit samples.
@@ -91,7 +91,9 @@ async def _scan(
         floor = datetime.combine(since, time.min, tzinfo=tz).astimezone(UTC)
         stmt = stmt.where(HealthSample.start_at >= floor)
     days: Days = {}
-    result = await session.stream(stmt.execution_options(yield_per=_STREAM))
+    # Plain rows (no ORM loading: a rebuild reads millions of them).
+    connection = await session.connection()
+    result = await connection.stream(stmt.execution_options(yield_per=_STREAM))
     async for rows in result.partitions():  # a block at a time, not a row
         _fold(days, rows, tz, metric.unit)
     return days
@@ -107,7 +109,7 @@ def _fold(
         acc = per_source.get(source)
         if acc is None:
             acc = per_source[source] = Acc()
-        acc.add(local, convert(float(value), sample_unit or "", unit))
+        acc.add(local, converter(sample_unit or "", unit)(float(value)))
 
 
 async def _existing(

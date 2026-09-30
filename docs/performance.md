@@ -23,6 +23,90 @@ la méthode ci-dessous, et noté ici (règle de [CLAUDE.md](../CLAUDE.md)).
 
 ## Journal
 
+### 2026-09-30 (3) — inventaire, liste complète, tableaux de bord, réconciliation
+
+Rien de retiré : mêmes données, même précision, chaque réponse comparée
+à celle de l'ancien code.
+
+**Méthode** : mêmes données factices (2 415 530 relevés, 44 016 valeurs
+quotidiennes). L'ancien code (commit `c4a5a9d`) et le nouveau tournent
+chacun dans un vrai serveur uvicorn, sur la même base, appelés **en
+HTTP en alternance** (15 appels, médiane). Les **71 routes GET** du site
+comparées : réponses identiques octet pour octet, sauf `/measurements`
+(mêmes valeurs ; l'ordre entre deux valeurs du même jour et de la même
+heure, 17 803 sur 44 016, était laissé au hasard de PostgreSQL : il est
+désormais fixé par l'identifiant). Aucune route plus lente au-delà du
+bruit de mesure (± 5 ms).
+
+| Route (page) | Avant | Après |
+|---|---:|---:|
+| `/data/inventory` (Données → inventaire) | 364 ms | 23 ms |
+| `/measurements` sans filtre (appel MCP sans métrique ni date, 12,9 Mo) | 2 130 ms | 404 ms |
+| `/measurements?start=…` (depuis le 1er janvier, 6 566 valeurs) | 244 ms | 63 ms |
+| `/measurements?metric_key=body.weight` | 32 ms | 17 ms |
+| `/dashboard/nutrition` (tout l'historique, 14 600 points) | 213 ms | 78 ms |
+| `/dashboard/activity` fenêtre 7 j / 365 j | 164 / 192 ms | 61 / 82 ms |
+| `/dashboard/heart` | 42 ms | 24 ms |
+| `/stock` (Journal → stock) | 154 ms | 80 ms |
+| `/work/incomplete` (Travail → « À compléter ») | 291 ms | 181 ms |
+| `/evidence` (Travail → preuves) | 205 ms | 123 ms |
+| Réconciliation complète (worker, 2,4 M relevés) | 16,3 s | 11,9 s |
+
+Causes et corrections :
+
+1. **Inventaire** : il comptait les 2,4 millions de relevés à chaque
+   affichage (286 ms sur 294). La table `sample_counts` garde, par
+   métrique et par source, le nombre de relevés et leurs dates de début
+   et de fin ; **la base elle-même la tient exacte** (déclencheurs sur
+   `health_samples`, dans la même transaction que chaque écriture :
+   import, synchro, fusion, suppression, suppression de compte). Lecture
+   de la partie « relevés bruts » : 286 → 1,5 ms ; total vérifié égal au
+   vrai comptage (2 415 530 = 2 415 530), aussi après des écritures
+   annulées. **Ce que ça coûte à l'écriture** (100 000 relevés, lots de
+   5 000 comme un import, 4 mesures de chaque, transaction annulée) :
+   import 9,8 s avec la table contre 9,7 s sans (≈ 1 %, dans le bruit) ;
+   suppression de 100 000 relevés 1,45 s contre 1,13 s (il faut relire
+   la nouvelle première ou dernière date d'un groupe entamé).
+   Migration `0027` : 1,8 s sur 2,4 M relevés. « Réconcilier » la
+   recalcule depuis les relevés, en contrôle.
+2. **Ramasse-miettes de Python** : chaque passe complète reparcourait
+   les centaines de milliers d'objets permanents de l'API (routes,
+   schémas, tables) : 80 à 110 ms de plus sur une réponse qui crée
+   beaucoup d'objets. Ils sont « gelés » une fois le processus démarré
+   (`gc.freeze`, réglable : `GC_FREEZE`) ; tableau nutrition mesuré en
+   processus : 184 ms (ramasse-miettes normal), 74 ms (gelé), 69 ms (sans
+   ramasse-miettes du tout). Même chose dans le worker.
+3. **Réponses revalidées par FastAPI** : une route qui renvoie un modèle
+   le voyait reconverti en dictionnaire puis **revalidé en entier** avant
+   d'être écrit (113 ms sur 264 pour un tableau de 14 600 points). Les
+   tableaux de bord et les séries s'écrivent directement depuis leur
+   modèle déjà validé (`core/responses.py`) ; leurs points sont validés
+   en une passe au lieu d'un objet à la fois (14,7 → 2,3 ms pour 2 075
+   points). Octets identiques.
+4. **Moyenne glissante** : la fenêtre glisse le long des jours triés au
+   lieu d'être recherchée pour chaque jour ; même calcul (`fsum` / nombre,
+   ce que faisait `statistics.fmean`). 1 200 cas comparés (5 agrégations
+   × 6 fenêtres × 40 séries aléatoires, jours en double compris) :
+   identiques au bit près ; 4,7 → 2,3 ms par série.
+5. **Liste des valeurs** (`/measurements`) : lues en colonnes (plus
+   d'objets ORM) et écrites par le sérialiseur de pydantic directement
+   depuis les types de la base, `value` lu par la même règle que le
+   schéma (`first_set`) : même texte que le schéma, octet pour octet
+   (test). La validation ligne par ligne coûtait 420 à 620 ms.
+6. **En-têtes de sécurité** : l'intergiciel `BaseHTTPMiddleware`
+   recopiait chaque réponse par morceaux ; réécrit en ASGI simple (les
+   mêmes quatre en-têtes, ajoutés de la même façon : même test passé sur
+   l'ancien et le nouveau).
+7. **Réconciliation** : lecture des relevés sans la couche ORM, conversion
+   d'unité préparée une fois par unité au lieu d'être refaite pour chacun
+   des 2,4 M relevés (même règle, même calcul : testé au bit près sur
+   chaque paire d'unités), comparaisons directes au lieu de `min()` /
+   `max()`. Les 37 238 jours des 21 métriques calculés par l'ancien et le
+   nouveau code : identiques (valeur à pleine précision, source, heure).
+   Lecture et calcul 13,8 → 10,3 s. Les synchros (Health Auto Export,
+   app iPhone), qui recalculent leurs jours de la même façon, en
+   profitent aussi.
+
 ### 2026-09-30 (2) — toutes les routes, le site, plusieurs utilisateurs
 
 **Données** : le jeu factice couvre maintenant chaque domaine sur 5 ans
@@ -188,26 +272,18 @@ sur le processus occupé : d'où les pages « Chargement… » qui duraient.
 
 ## Ce qui reste lent, et pourquoi
 
-- **L'inventaire (≈ 330 ms)** compte exactement chaque relevé par
-  métrique et par source : PostgreSQL lit toute la table. Un index
-  couvrant `(user_id, metric_id, source, start_at)` a été essayé : pas
-  plus rapide (il faut quand même lire 2,35 millions d'entrées) et 8,5 s
-  de construction — pas retenu. Piste : une table de comptes tenue à
-  jour à chaque écriture de relevés (quelques millisecondes), au prix
-  d'un mécanisme de plus à garder juste à chaque import, synchro et
-  suppression.
-- **Le total de la liste des relevés** (≈ 60 ms) : compté exactement,
-  pour la pagination.
-- **Les tableaux de bord sur tout l'historique** (≈ 50–200 ms, 5 ans de
-  points par métrique) : compressés, ils pèsent 10 fois moins sur le
-  réseau.
-- **La réconciliation complète** : 19 s pour 2,4 millions de relevés
-  (56 s avant). Piste : faire la règle du jour dans PostgreSQL (quelques
-  secondes), au prix d'une seconde écriture de cette règle. Elle tourne
-  dans le `worker`, pas dans l'API : les pages restent libres.
-- **`/measurements` sans aucun filtre** (≈ 1,7 s) : tout l'historique de
-  toutes les métriques ; le site filtre toujours, seul un assistant MCP
-  appelé sans métrique ni date le demanderait.
+- **La réconciliation complète** : 11,9 s pour 2,4 millions de relevés.
+  Elle tourne dans le `worker`, pas dans l'API : les pages restent
+  libres pendant ce temps. Aller à quelques secondes demanderait de
+  ranger les relevés par jour **dans PostgreSQL** : le découpage en
+  jours locaux (fuseau horaire), la conversion des unités (dont la règle
+  « 0,97 → 97 % ») et le calcul par source existeraient alors **deux
+  fois**, en Python (synchros, SQLite des tests) et en SQL. Deux copies
+  d'une règle finissent par diverger, et une divergence donnerait des
+  valeurs du jour différentes selon le chemin : pas fait.
+- **`/measurements` sans aucun filtre** (≈ 0,4 s) : 44 000 valeurs,
+  12,9 Mo. Le site filtre toujours ; seul un assistant MCP appelé sans
+  métrique ni date le demande.
 - **L'analyse d'un repas** attend la réponse d'Ollama, qui a son propre
   conteneur (et sa carte graphique chez toi) ; l'attente se fait dans le
   `worker`, elle ne ralentit pas les pages.

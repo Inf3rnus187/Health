@@ -16,6 +16,7 @@ from app.core.access_log import AccessLog
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.core.logging import configure_logging
+from app.core.memory import lifespan
 from app.core.middleware import SecurityHeadersMiddleware
 
 settings = get_settings()
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
         openapi_url=f"{prefix}/openapi.json",
         docs_url=f"{prefix}/docs",
         redoc_url=f"{prefix}/redoc",
+        lifespan=lifespan,
     )
     app.add_middleware(SecurityHeadersMiddleware)
     _add_cors(app)

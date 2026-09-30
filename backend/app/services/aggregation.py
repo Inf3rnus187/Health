@@ -6,9 +6,8 @@ there is exactly one source of truth for every raw value.
 
 from __future__ import annotations
 
-from bisect import bisect_left, bisect_right
 from datetime import date, timedelta
-from statistics import fmean
+from math import fsum
 
 
 def _apply(values: list[float], agg: str) -> float:
@@ -21,7 +20,7 @@ def _apply(values: list[float], agg: str) -> float:
         return max(values)
     if agg == "last":
         return values[-1]
-    return fmean(values)
+    return fsum(values) / len(values)  # what statistics.fmean computes
 
 
 def rolling(
@@ -29,15 +28,21 @@ def rolling(
 ) -> list[tuple[date, float]]:
     """Return the trailing-``window`` ``agg`` for each day present.
 
-    The window's bounds are found by bisection in the sorted days: each
-    point reads only its own window, not the whole series.
+    The window slides along the sorted days (its first and past-the-end
+    indexes only move forward): each point reads only its own window,
+    the values of every source of its day included.
     """
     ordered = sorted(points)
     days = [d for d, _ in ordered]
     values = [v for _, v in ordered]
+    span = timedelta(days=window - 1)
     out: list[tuple[date, float]] = []
-    for day in days:
-        start = bisect_left(days, day - timedelta(days=window - 1))
-        chunk = values[start : bisect_right(days, day)]
-        out.append((day, _apply(chunk, agg)))
+    start = end = 0
+    for index, day in enumerate(days):
+        end = max(end, index + 1)
+        while end < len(days) and days[end] == day:
+            end += 1
+        while days[start] < day - span:
+            start += 1
+        out.append((day, _apply(values[start:end], agg)))
     return out

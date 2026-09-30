@@ -49,6 +49,10 @@ Paramètres : `key`* (string), `days` (integer, défaut `365`)
 
 Daily values (all sources) of a metric between two ISO dates.
 
+By day, then time (then id: the same order on every call). Without a
+metric nor dates: every daily value of the whole history (tens of
+thousands, a few MB) — give ``metric_key`` or dates when you can.
+
 Paramètres : `metric_key` (string | null, défaut `None`), `start` (string | null, défaut `None`), `end` (string | null, défaut `None`)
 
 ### `get_samples`

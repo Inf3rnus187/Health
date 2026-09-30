@@ -14,6 +14,7 @@ from app.models.base import utcnow
 from app.models.measurement import Measurement
 from app.models.metric import MetricDefinition
 from app.schemas.measurement import MeasurementIn
+from app.services import measurement_list
 from app.services import measurement_values as values
 from app.services import metrics as metrics_service
 from app.services.aggregation import rolling
@@ -53,18 +54,16 @@ async def query(
     event_id: str | None = None,
 ) -> list[Measurement]:
     """Return raw measurements matching the given filters."""
-    stmt = select(Measurement).where(Measurement.user_id == user_id)
-    if metric_key is not None:
-        metric = await metrics_service.get_metric(session, metric_key)
-        stmt = stmt.where(Measurement.metric_id == metric.id)
-    if start is not None:
-        stmt = stmt.where(Measurement.date_key >= start)
-    if end is not None:
-        stmt = stmt.where(Measurement.date_key <= end)
-    if event_id is not None:
-        stmt = stmt.where(Measurement.event_id == event_id)
-    stmt = stmt.order_by(Measurement.date_key, Measurement.recorded_at)
-    result = await session.execute(stmt)
+    wanted = await measurement_list.conditions(
+        session,
+        user_id,
+        metric_key=metric_key,
+        start=start,
+        end=end,
+        event_id=event_id,
+    )
+    stmt = select(Measurement).where(*wanted)
+    result = await session.execute(stmt.order_by(*measurement_list.ORDER))
     return list(result.scalars().all())
 
 

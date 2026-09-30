@@ -64,7 +64,12 @@ async def get_measurements(
     start: str | None = None,
     end: str | None = None,
 ) -> Any:
-    """Daily values (all sources) of a metric between two ISO dates."""
+    """Daily values (all sources) of a metric between two ISO dates.
+
+    By day, then time (then id: the same order on every call). Without a
+    metric nor dates: every daily value of the whole history (tens of
+    thousands, a few MB) — give ``metric_key`` or dates when you can.
+    """
     params = {"metric_key": metric_key, "start": start, "end": end}
     return await client.get("/measurements", params)
 

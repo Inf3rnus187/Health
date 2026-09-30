@@ -2,10 +2,20 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import date, datetime, time
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
+
+#: The typed columns, in the order ``value`` reads them.
+VALUE_COLUMNS = ("value_num", "value_bool", "value_text", "value_time",
+                 "value_json")  # fmt: skip
+
+
+def first_set(columns: Iterable[Any]) -> Any:
+    """The first typed column holding something (None: none does)."""
+    return next((c for c in columns if c is not None), None)
 
 
 class MeasurementIn(BaseModel):
@@ -46,17 +56,7 @@ class MeasurementOut(BaseModel):
     @property
     def value(self) -> Any:
         """Return whichever typed column holds this value."""
-        columns = (
-            self.value_num,
-            self.value_bool,
-            self.value_text,
-            self.value_time,
-            self.value_json,
-        )
-        for candidate in columns:
-            if candidate is not None:
-                return candidate
-        return None
+        return first_set(getattr(self, name) for name in VALUE_COLUMNS)
 
 
 class IdList(BaseModel):

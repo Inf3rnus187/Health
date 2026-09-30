@@ -2,7 +2,9 @@
 
 One table answering "what do I have, where did it come from, which
 period does it cover": raw samples and daily values, by source, with
-their first / last dates — so nothing stays invisible.
+their first / last dates — so nothing stays invisible. The raw samples'
+counts are kept by the database (a few ms instead of counting millions
+of rows, docs/performance.md).
 """
 
 from __future__ import annotations
@@ -12,9 +14,9 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.health_raw import HealthSample
 from app.models.measurement import Measurement
 from app.models.metric import MetricDefinition
+from app.services import sample_counts
 
 Row = dict[str, Any]
 
@@ -39,19 +41,12 @@ async def inventory(session: AsyncSession, user_id: str) -> list[Row]:
 
 
 async def _raw(session: AsyncSession, user_id: str) -> dict[str, list[Row]]:
-    """Raw samples per metric and source: count and period."""
-    result = await session.execute(
-        select(
-            HealthSample.metric_id,
-            HealthSample.source,
-            func.count(),
-            func.min(HealthSample.start_at),
-            func.max(HealthSample.start_at),
-        )
-        .where(HealthSample.user_id == user_id)
-        .group_by(HealthSample.metric_id, HealthSample.source)
-    )
-    return _group(result.all())
+    """Raw samples per metric and source: count and period.
+
+    Read from the counts the database keeps exact at each write
+    (:mod:`app.models.sample_counts`), not by counting every sample.
+    """
+    return _group(await sample_counts.of_user(session, user_id))
 
 
 async def _daily(session: AsyncSession, user_id: str) -> dict[str, list[Row]]:

@@ -8,6 +8,8 @@ through unchanged so an unexpected unit never aborts an import.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
+from functools import lru_cache
 
 # HealthKit spells glucose molarity with its molar mass: mmol<180.15…>/L.
 _MOLAR_MASS = re.compile(r"<[^>]*>")
@@ -48,13 +50,41 @@ PERCENT_0_100 = "pct"
 
 def convert(value: float, src: str, dst: str | None) -> float:
     """Return ``value`` expressed in the destination unit."""
+    return converter(src, dst)(value)
+
+
+@lru_cache(maxsize=512)
+def converter(src: str, dst: str | None) -> Callable[[float], float]:
+    """The conversion from ``src`` to ``dst``, prepared once per pair.
+
+    A fraction (0.97) becomes a percentage whatever its unit; a 0-100
+    percentage stays; the unit's molar mass is ignored; °F becomes °C;
+    else the pair's factor (none: unchanged). A rebuild of millions of
+    samples prepares it once per unit, not once per sample.
+    """
     if src == PERCENT_0_100:
-        return value
-    if dst == "%" and 0.0 < value <= 1.0:
-        return value * 100.0
-    src = _MOLAR_MASS.sub("", src)
+        return _same
+    rest = _plain(_MOLAR_MASS.sub("", src), dst)
+    if dst == "%":
+        return lambda v: v * 100.0 if 0.0 < v <= 1.0 else rest(v)
+    return rest
+
+
+def _plain(src: str, dst: str | None) -> Callable[[float], float]:
+    """Without the fraction rule: same, °F → °C, or a factor."""
     if not dst or not src or src == dst:
-        return value
+        return _same
     if src == "degF" and dst == "°C":
-        return (value - 32.0) * 5.0 / 9.0
-    return value * _FACTORS.get((src, dst), 1.0)
+        return _fahrenheit
+    factor = _FACTORS.get((src, dst), 1.0)
+    return lambda v: v * factor
+
+
+def _same(value: float) -> float:
+    """Unchanged."""
+    return value
+
+
+def _fahrenheit(value: float) -> float:
+    """°F → °C."""
+    return (value - 32.0) * 5.0 / 9.0

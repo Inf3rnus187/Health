@@ -8,7 +8,7 @@ from fastapi import APIRouter, Query
 
 from app.core.deps import ReaderDep, SessionDep
 from app.core.errors import InvalidInputError
-from app.schemas.measurement import SeriesPoint, TrendOut
+from app.schemas.measurement import TrendOut
 from app.services import trends as svc
 
 router = APIRouter(prefix="/trends", tags=["trends"])
@@ -28,5 +28,5 @@ async def index(
     return TrendOut(
         metric_key=metric_key,
         bucket=bucket,
-        points=[SeriesPoint(date_key=day, value=val) for day, val in points],
+        points=[{"date_key": day, "value": val} for day, val in points],
     )

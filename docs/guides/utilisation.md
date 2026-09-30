@@ -129,13 +129,17 @@ dossier CDA importé (recherche, pages).
 - **Tout ce qui est enregistré** : chaque métrique, ses relevés bruts et
   valeurs journalières par source avec leurs dates — c'est l'endroit pour
   vérifier que Apple, Health Auto Export et les labos concordent. Filtre
-  et pages (25 par défaut).
+  et pages (25 par défaut). Les nombres de relevés bruts sont tenus à
+  jour par la base à chaque import, synchro ou suppression : la carte
+  s'affiche aussitôt, même avec des millions de relevés, et ses nombres
+  sont exacts (pas une estimation).
 - **Réconcilier et recalculer les valeurs journalières** : fusionne les
   clés en double, aligne les données sur le catalogue Apple, recalcule
   chaque valeur journalière depuis le brut. **Aucune IA.** Elle se lance
   **toute seule** à la fin de chaque import Apple Santé (`export.zip` ou
   zip SimpleHealthExportCSV) ; le bouton sert après une mise à jour du
-  hub, ou pour tout recalculer à la main.
+  hub, ou pour tout recalculer à la main. Elle recompte aussi les
+  relevés bruts depuis zéro, en contrôle de l'inventaire.
 - **Une mesure en détail** : choisir une métrique → graphique + chiffres.
 - **Données brutes** : relevés paginés, filtrables par métrique et dates.
 

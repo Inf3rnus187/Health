@@ -117,7 +117,10 @@ asks for, never who eats them. A barcode on a
   user's cron, does `git pull --ff-only` and the rebuild
   (`services/updates.py`, `update.sh`). The API never runs git or Docker.
 - **RGPD**: `DELETE /api/v1/me` erases the account and its data (DB
-  cascade + `MEDIA_DIR/<user>/` and `EXPORTS_DIR/<user>/`).
+  cascade + `MEDIA_DIR/<user>/` and `EXPORTS_DIR/<user>/`). The raw
+  samples' counts (`sample_counts`, the inventory) go with the samples:
+  the database's triggers remove them as the cascade deletes the
+  samples (tested on PostgreSQL).
   `GET /export?format=csv|json|xlsx|fhir` exports the **daily values
   only** (`measurements`: date, metric, value, unit, source —
   `services/export.py`): not the raw samples, documents, photos, meals,

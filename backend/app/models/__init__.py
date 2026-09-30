@@ -6,6 +6,7 @@ Alembic autogeneration and ``create_all`` see the full fixed schema.
 
 from __future__ import annotations
 
+from app.models import sample_counts  # the counts' table and triggers
 from app.models.audit import AuditLog
 from app.models.automation import Automation
 from app.models.base import Base
@@ -70,5 +71,6 @@ __all__ = [
     "RouteFile",
     "User",
     "WorkSession",
+    "sample_counts",
     "Workout",
 ]

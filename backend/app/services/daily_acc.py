@@ -27,8 +27,8 @@ class Acc:
         """Fold in one sample."""
         self.count += 1
         self.total += value
-        self.low = min(self.low, value)
-        self.high = max(self.high, value)
+        self.low = min(value, self.low)
+        self.high = max(value, self.high)
         if self.last_at is None or at >= self.last_at:
             self.last, self.last_at = value, at
 

@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.constants import NUMERIC_TYPES
 from app.models.metric import MetricDefinition
 from app.schemas.dashboard import DashboardOut, DashboardSeries
-from app.schemas.measurement import SeriesPoint
 from app.services import measurements as measure
 from app.services import metrics as metrics_service
 
@@ -42,5 +41,6 @@ async def _series(
         unit=metric.unit,
         agg=metric.aggregation_hint,
         window_days=window,
-        points=[SeriesPoint(date_key=d, value=v) for d, v in points],
+        # validated in one pass (not one object at a time)
+        points=[{"date_key": d, "value": v} for d, v in points],
     )

@@ -107,6 +107,11 @@ class Tuning(BaseSettings):
     #: A trace this close to one already kept is the same (seconds).
     trace_same_time_s: float = Field(60.0, ge=0)
 
+    # --- Memory ---------------------------------------------------------------
+    #: Leave the objects a process keeps for its whole life out of Python's
+    #: garbage collections, once started (app/core/memory.py).
+    gc_freeze: bool = True
+
     # --- Logs ---------------------------------------------------------------
     #: An API request this long or longer ends with ``slow`` in the log.
     log_slow_ms: int = Field(1000, ge=1)

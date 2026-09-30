@@ -251,6 +251,19 @@ curated value per day), these keep **every** imported record:
 - `clinical_observations` / `clinical_documents` — observations parsed
   from the CDA document, plus the stored raw `export_cda.xml`.
 - `import_jobs` — background import status and progress.
+- `sample_counts (user_id, metric_id, source, n, first_at, last_at)` —
+  how many raw samples each metric has per source, and their first and
+  last `start_at`: what Données' inventory shows. **Kept exact by the
+  database itself**: triggers on `health_samples` update it in the same
+  transaction as every insert, update, delete or truncate, whoever
+  writes (import, sync, merge, delete, account deletion). PostgreSQL:
+  one trigger per statement, reading the rows the statement changed
+  (an import batch of 5 000 rows updates a few counts once); a delete
+  that removes a group's first or last sample reads the new bound
+  (`app/models/sample_counts.py`). SQLite (tests): the same rules row by
+  row. No foreign key: an account's samples go with it, and their
+  counts with them. « Réconcilier » recomputes it from the samples, as
+  a check. Created with `health_samples` and by migration `0027`.
 
 These are additive (migrations `0004`, `0005`); the daily roll-ups written
 into `measurements` remain the dashboards' plottable cache.
@@ -363,3 +376,4 @@ fresh database built from the live models is left untouched (ADR‑0004).
 | `0024_healthkit_ids` | `health_samples.external_id`, `workouts.external_id` + unique `(user_id, external_id)` indexes. |
 | `0025_samples_user_start` | Index `ix_samples_user_start` on `health_samples (user_id, start_at)` ([performance](performance.md)). |
 | `0026_meal_analysis_after` | `meals.analysis_after` (a reading put off, POST /meals `analysis_delay_min`). |
+| `0027_sample_counts` | `sample_counts` and its `health_samples` triggers, filled from the samples (the table locked against writes meanwhile: 1.8 s for 2.4 million samples) ([performance](performance.md)). |

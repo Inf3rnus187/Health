@@ -7,11 +7,8 @@ headers here (§12.1).
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
-
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import Response
+from starlette.datastructures import MutableHeaders
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 _HEADERS = {
     "X-Content-Type-Options": "nosniff",
@@ -21,16 +18,32 @@ _HEADERS = {
 }
 
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Attach baseline security headers to every response."""
+class SecurityHeadersMiddleware:
+    """Attach baseline security headers to every response.
 
-    async def dispatch(
-        self,
-        request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
-    ) -> Response:
-        """Add security headers to the downstream response."""
-        response = await call_next(request)
-        for key, value in _HEADERS.items():
-            response.headers.setdefault(key, value)
-        return response
+    Plain ASGI: it adds the headers to the answer's first message and
+    lets the body through untouched (``BaseHTTPMiddleware`` copied every
+    answer through a stream: 60 ms for a 580 KB dashboard,
+    docs/performance.md). A header the route set itself is kept.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        """Wrap the application."""
+        self.app = app
+
+    async def __call__(
+        self, scope: Scope, receive: Receive, send: Send
+    ) -> None:
+        """Add the security headers to the downstream response."""
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def sending(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                for key, value in _HEADERS.items():
+                    headers.setdefault(key, value)
+            await send(message)
+
+        await self.app(scope, receive, sending)

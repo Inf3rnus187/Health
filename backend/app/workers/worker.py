@@ -11,6 +11,7 @@ from typing import Any
 from arq import cron
 from arq.connections import RedisSettings
 
+from app.core import memory
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
 from app.workers.jobs import analyze_document, analyze_meal, reconcile_data
@@ -75,6 +76,12 @@ async def _startup(ctx: dict[str, Any]) -> None:
     configure_logging()
     _log.info("worker_started")
     await _resume_documents()
+    memory.freeze()
+
+
+async def _shutdown(ctx: dict[str, Any]) -> None:
+    """Give the frozen objects back before the worker ends."""
+    memory.thaw()
 
 
 async def _resume_documents() -> None:
@@ -114,6 +121,7 @@ class WorkerSettings:
         )
     ]
     on_startup = _startup
+    on_shutdown = _shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
     # Full-history imports can run for many minutes (WORKER_JOB_TIMEOUT_S).
     job_timeout = get_settings().worker_job_timeout_s

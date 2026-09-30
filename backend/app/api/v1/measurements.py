@@ -5,11 +5,12 @@ from __future__ import annotations
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.core.constants import AGGREGATIONS
 from app.core.deps import Principal, ReaderDep, SessionDep, require_scope
 from app.core.errors import InvalidInputError
+from app.core.responses import model_json
 from app.core.scopes import WRITE_MEASUREMENTS
 from app.models.measurement import Measurement
 from app.schemas.common import Message
@@ -19,9 +20,8 @@ from app.schemas.measurement import (
     MeasurementBatch,
     MeasurementOut,
     Series,
-    SeriesPoint,
 )
-from app.services import audit, overwrites
+from app.services import audit, measurement_list, overwrites
 from app.services import measurements as svc
 
 router = APIRouter(prefix="/measurements", tags=["measurements"])
@@ -70,18 +70,20 @@ async def series(
     metric_key: Annotated[str, Query()],
     agg: Annotated[str, Query()] = "avg",
     window: Annotated[int, Query(ge=1, le=365)] = 7,
-) -> Series:
+) -> Response:
     """Return a rolling-aggregated series for a numeric metric."""
     if agg not in AGGREGATIONS:
         raise InvalidInputError(f"invalid agg: {agg}")
     points = await svc.aggregate(
         session, principal.user.id, metric_key, agg, window
     )
-    return Series(
-        metric_key=metric_key,
-        agg=agg,
-        window_days=window,
-        points=[SeriesPoint(date_key=d, value=v) for d, v in points],
+    return model_json(
+        Series(
+            metric_key=metric_key,
+            agg=agg,
+            window_days=window,
+            points=[{"date_key": d, "value": v} for d, v in points],
+        )
     )
 
 
@@ -93,9 +95,13 @@ async def index(
     start: Annotated[date | None, Query()] = None,
     end: Annotated[date | None, Query()] = None,
     event_id: Annotated[str | None, Query()] = None,
-) -> list[Measurement]:
-    """Return raw measurements matching the given filters."""
-    return await svc.query(
+) -> Response:
+    """Return raw measurements matching the given filters.
+
+    By day, then time (then id: the same order on every call). Without
+    any filter: every daily value of every metric, the whole history.
+    """
+    body = await measurement_list.as_json(
         session,
         principal.user.id,
         metric_key=metric_key,
@@ -103,6 +109,7 @@ async def index(
         end=end,
         event_id=event_id,
     )
+    return Response(body, media_type="application/json")
 
 
 @router.delete("/{measurement_id}", response_model=Message)

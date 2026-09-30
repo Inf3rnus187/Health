@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.logging import get_logger
 from app.models.health_raw import HealthSample
 from app.models.metric import MetricDefinition
-from app.services import canonical, catalog_sync, daily_rollup
+from app.services import canonical, catalog_sync, daily_rollup, sample_counts
 
 _log = get_logger("reconcile")
 
@@ -30,6 +30,7 @@ async def run(session: AsyncSession, user_id: str) -> dict[str, Any]:
     """Merge aliases, then rebuild every sampled metric; report counts."""
     catalog = await _catalog(session, user_id)
     merged = await canonical.merge(session, user_id)
+    await sample_counts.rebuild(session, user_id)  # a check, kept exact
     await session.commit()
     tz = await daily_rollup.user_zone(session, user_id)
     days = 0

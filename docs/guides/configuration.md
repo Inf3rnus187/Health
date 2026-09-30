@@ -504,6 +504,12 @@ Plus grand : moins d'allers-retours avec la base, plus de mémoire.
 | `CHAT_TRACE_MAX_CHARS` | `8000` | Caractères d'une trace tirée d'une conversation exportée. |
 | `TRACE_SAME_TIME_S` | `60` | Deux traces aussi proches sont la même (pas de doublon). |
 
+#### Mémoire
+
+| Variable | Défaut | Rôle |
+|----------|--------|------|
+| `GC_FREEZE` | `true` | Une fois l'API (ou le worker) démarrée, ses objets permanents (routes, schémas, tables) sont mis à l'écart du ramasse-miettes de Python : il ne les reparcourt plus à chaque passe (80 à 110 ms de moins sur un grand tableau de bord, [performance](../performance.md)). Rien de ce qu'une requête crée n'est gardé plus longtemps. `false` : comportement standard de Python. |
+
 #### Journaux et mises à jour
 
 | Variable | Défaut | Rôle |
