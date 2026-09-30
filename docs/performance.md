@@ -98,15 +98,26 @@ docker compose logs worker --since 30m | grep reconciled
 chaque métrique dans son processus.
 
 **Chez l'utilisateur** (16 fils, machine partagée avec d'autres
-conteneurs, 4 Go de mémoire libre sur 62) : 16,6 s → **13,8 s**
-seulement. Chaque métrique y a pris environ deux fois plus longtemps
-qu'en séquentiel (énergie au repos 3,9 → 7,2 s, énergie active
-2,8 → 5,1 s, pas 0,8 → 2,9 s) : une ressource partagée sature quand
-4 tournent ensemble (processeur pris par d'autres conteneurs, disque
-si la table de 1,4 Go n'est plus dans le cache du système, ou temps
-volé par l'hyperviseur). Pour le savoir, la commande ci-dessous
-relance la réconciliation avec 1 puis 4 processus et relève pendant
-chaque passage l'état de la machine (`vmstat`).
+conteneurs, 4 Go de mémoire disponible sur 62). La réconciliation
+automatique juste après la mise à jour a pris 13,8 s (16,6 s avant),
+chaque métrique environ deux fois plus longue que seule : elle tournait
+pendant le redémarrage des conteneurs. Mesurée ensuite au calme avec la
+commande ci-dessous, deux fois chaque réglage :
+
+| | 1 processus | 4 processus |
+|---|---:|---:|
+| durée | 17,7 s et 18,7 s | **9,5 s et 9,5 s** |
+| processeur libre | 64–67 % | 56–59 % |
+| attente disque | 4–6 % | 3–7 % |
+| temps volé | 0 % | 0 % |
+
+Ni le processeur, ni le disque, ni l'hyperviseur ne saturent. Le
+plancher est la plus longue métrique (énergie au repos, 5,3 s avec 4
+processus, 4,6–4,9 s seule), qu'un seul processus calcule ; le reste
+est fixe : recomptage des relevés, liste des métriques, démarrage des
+processus. Sur la machine de mesure, à chaud : recomptage 0,6 s,
+catalogue et alias 0,1 s, liste 0,2 s, jours 3,7–3,9 s dont 3,1–3,3 s
+pour la plus longue métrique.
 
 #### Mesurer chez soi : 1 contre 4 processus
 

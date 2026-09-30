@@ -73,10 +73,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   time, whatever started the reconcile; a process that fails stops the
   others at once (the metric each was on is not committed). Same times
   and the same days, same md5, on the test data; a test covers the
-  script case. Measured at the user's: 16.6 → 13.8 s only, each metric
-  about twice as long as alone; docs/performance.md gives a command
-  that measures 1 against 4 processes and what the machine does
-  meanwhile.
+  script case. Measured at the user's, quietly, twice each: 1 process
+  17.7 and 18.7 s, 4 processes 9.5 and 9.5 s, with 56–59 % of the
+  processor still free and no disk wait to speak of (the 13.8 s just
+  after the update ran while the containers restarted);
+  docs/performance.md gives the command, which measures 1 against 4
+  processes and what the machine does meanwhile.
 - **A day's value no longer changes in its last digit from one
   recompute to the next** (for everyone). PostgreSQL starts reading a
   large table where the previous read of it stopped, so the samples of
