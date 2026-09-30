@@ -13,12 +13,12 @@ in the web form after the scale synced) is kept.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
 from datetime import UTC, date, datetime, time
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select, text
+from sqlalchemy import Select, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -91,17 +91,40 @@ async def _scan(
         floor = datetime.combine(since, time.min, tzinfo=tz).astimezone(UTC)
         stmt = stmt.where(HealthSample.start_at >= floor)
     days: Days = {}
-    # Plain rows (no ORM loading: a rebuild reads millions of them).
-    connection = await session.connection()
-    if connection.dialect.name == "postgresql":
-        # A large table is read from its start, not from where another
-        # read of it stopped: the samples always come in the same order,
-        # so a day's sum is the same to the last digit.
-        await connection.execute(text("SET LOCAL synchronize_seqscans = off"))
-    result = await connection.stream(stmt.execution_options(yield_per=_STREAM))
-    async for rows in result.partitions():  # a block at a time, not a row
+    async for rows in _blocks(session, stmt):
         _fold(days, rows, tz, metric.unit)
     return days
+
+
+async def _blocks(
+    session: AsyncSession, stmt: Select[Any]
+) -> AsyncIterator[Sequence[Any]]:
+    """The statement's plain rows, a block at a time (not a row, nor all).
+
+    PostgreSQL: read by asyncpg itself, with the very SQL SQLAlchemy
+    compiles (same plan, same order of rows) but without its row objects,
+    which took half the time of reading a million samples. The table is
+    read from its start, not from where another read of it stopped: the
+    samples always come in the same order, so a day's sum is the same to
+    the last digit.
+    """
+    connection = await session.connection()
+    if connection.dialect.name != "postgresql":
+        result = await connection.stream(
+            stmt.execution_options(yield_per=_STREAM)
+        )
+        async for rows in result.partitions():
+            yield rows
+        return
+    await connection.execute(text("SET LOCAL synchronize_seqscans = off"))
+    compiled = stmt.compile(dialect=connection.dialect)
+    params = [compiled.params[name] for name in compiled.positiontup or ()]
+    raw = (await connection.get_raw_connection()).driver_connection
+    if raw is None:  # never: a pooled asyncpg connection
+        raise RuntimeError("no asyncpg connection")
+    cursor = await raw.cursor(str(compiled), *params)  # in the transaction
+    while rows := await cursor.fetch(_STREAM):
+        yield rows
 
 
 def _fold(

@@ -23,6 +23,50 @@ la méthode ci-dessous, et noté ici (règle de [CLAUDE.md](../CLAUDE.md)).
 
 ## Journal
 
+### 2026-09-30 (7) — lire les relevés sans la couche SQLAlchemy
+
+Pour recalculer les jours d'une métrique, on lit tous ses relevés
+(heure, valeur, unité, source). Mesuré sur la machine de mesure, c'est
+cette **lecture** qui coûtait, pas le calcul : énergie au repos
+(372 316 relevés) 0,9–1,1 s de lecture sur 1,4 s ; énergie active
+(930 782 relevés) 2,0 s sur 2,8 s. Et dans cette lecture, la moitié
+venait des objets « ligne » de SQLAlchemy :
+
+| Lecture seule | SQLAlchemy (avant) | asyncpg directement |
+|---|---:|---:|
+| énergie au repos | 0,87–0,98 s | 0,52–0,60 s |
+| énergie active | 1,80–1,90 s | 0,95–0,97 s |
+
+Sur PostgreSQL, les relevés sont maintenant lus par le pilote asyncpg
+lui-même, **avec la requête que SQLAlchemy compile** (même texte, mêmes
+paramètres, donc même plan et même ordre des lignes), dans la même
+transaction, par blocs de `ROLLUP_READ_BLOCK`. Le calcul qui suit n'a
+pas changé. SQLite (les tests) garde la lecture d'avant. Tous les
+recalculs en profitent : réconciliation, synchro iPhone, Health Auto
+Export, saisies du travail.
+
+**Mesure** (réconciliation complète, 2,4 M relevés, à chaud, ancienne
+et nouvelle version à tour de rôle, 5 fois, médianes) :
+
+| Processus | avant | après |
+|---|---:|---:|
+| 1 (et chaque synchro) | 10,4 s | **7,6 s** (−27 %, 5 fois sur 5) |
+| 2 | 4,4 s | **4,0 s** (4 fois sur 5) |
+| 4 | 3,5 s | 3,5 s |
+
+Avec 4 processus sur les 4 cœurs de la machine de mesure, le processeur
+est plein (84–86 % occupé) : l'énergie active attend PostgreSQL, qui
+parcourt la table et envoie ses 930 000 lignes pendant que les cœurs
+sont pris, et le gain côté Python ne se voit plus. Chez l'utilisateur,
+plus de la moitié des 16 fils restent libres pendant une
+réconciliation : le gain y est attendu, à vérifier sur la ligne
+`reconciled`.
+
+**Mêmes résultats** : les 44 016 jours écrits ont le même md5
+(`dddedef5…`) avec 1 et 4 processus, et après une lecture interrompue
+de la table. Les tests des synchros, de Health Auto Export, du travail
+et de l'équivalence des résultats passent sur PostgreSQL.
+
 ### 2026-09-30 (6) — la réconciliation sans temps mort
 
 Chez l'utilisateur, une réconciliation de 9,1–9,3 s (4 processus) se

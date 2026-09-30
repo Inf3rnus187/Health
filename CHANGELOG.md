@@ -429,6 +429,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   per process (331 MB for 4); they stop with the reconcile. `1` runs
   the metrics one after the other, as before (measured: as fast as the
   old code, 10.6 and 9.7 s against 10.8 and 9.7 s).
+- **Every recompute of daily values reads the samples twice as fast**
+  (for everyone: reconcile, iPhone sync, Health Auto Export, work
+  entries). Reading a metric's samples cost more than computing its
+  days, and half of the reading was SQLAlchemy's row objects: on
+  PostgreSQL the samples are now read by asyncpg itself, with the very
+  SQL SQLAlchemy compiles (same plan, same order of rows), in the same
+  transaction. Reading only: 0.87–0.98 → 0.52–0.60 s for 372 316
+  samples, 1.80–1.90 → 0.95–0.97 s for 930 782. Full reconcile on the
+  test machine (median of 5, versions in turn): one process 10.4 →
+  7.6 s, two 4.4 → 4.0 s, four 3.5 → 3.5 s (its 4 cores are full
+  there). The 44 016 days written keep the same md5.
 - **The reconcile no longer waits for its processes nor for its count
   check** (for everyone). Its `RECONCILE_PARALLEL` processes now start
   at the reconcile's beginning and load their code while the catalogue,
