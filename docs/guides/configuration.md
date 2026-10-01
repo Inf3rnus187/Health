@@ -69,6 +69,15 @@ compose --profile mcp up -d --build mcp` :
   utilisables ;
 - `./update.sh --check` dit seulement ce qu'une mise à jour apporterait.
 
+**Quel code tourne ?** `./version.sh` (lecture seule) affiche le commit
+du dépôt (date, titre), celui avec lequel l'API et le worker ont démarré
+(`GIT_COMMIT`, donné par `update.sh`), la migration de la base et la
+dernière mise à jour, puis « ✓ L'API et le worker tournent avec le code
+serveur du dépôt » ou « ⚠ … lancer ./update.sh ». Une mise à jour de la
+documentation ou de la page seule laisse l'API sur son commit précédent
+(même code serveur) : pas d'alerte. À mettre devant une commande de
+diagnostic : `./version.sh && docker compose logs api …`.
+
 **Pendant la mise à jour.** L'API redémarre quelques secondes (après
 chaque mise à jour qui la touche). Une page ouverte à ce moment-là
 affiche « Le hub ne répond pas (redémarrage après une mise à jour ?) —
@@ -333,9 +342,11 @@ journaux d'accès de l'API et de nginx. Chaque ligne de l'API porte son
 heure UTC (en tête, ou dans le champ `timestamp` d'une ligne JSON) ; la
 ligne d'accès (`app.access`) donne l'adresse du client transmise par
 nginx (`X-Real-IP`) et la durée de la requête. Chaque synchro de l'app
-iPhone ajoute une ligne `healthkit_synced` : les nombres (relevés,
-sommes, entraînements, suppressions, jours, lignes refusées) et la durée
-de chaque étape en millisecondes (`ms`), aussi gardée dans le journal
+iPhone ajoute une ligne `healthkit_synced` : le commit du code qui
+tourne (`commit`), les nombres (relevés, sommes, entraînements,
+suppressions, jours, lignes refusées) et la durée de chaque étape en
+millisecondes (`ms`), de la réception du corps (`receive`, `json`,
+`token`, `validate`) à l'écriture en base, aussi gardée dans le journal
 d'audit du compte — jamais une valeur ni un UUID (détail des étapes :
 [performances](../performance.md)).
 

@@ -1448,11 +1448,14 @@ résultats d'examens), **Chronologie**, **Documents** (ajout + liste),
   …/api/v1/sync/healthkit` avec le même jeton, champ `refused`. **Où
   passe le temps d'une synchro** (si le journal dit `slow`) : chaque
   synchro écrit la durée de chacune de ses étapes en millisecondes —
-  relevés, sommes, jours recalculés et chaque métrique (`days:heart.rate`…),
-  écriture en base, total — dans le journal (`docker compose logs api
+  réception et lecture du JSON, jeton, vérification, relevés, sommes,
+  jours recalculés et chaque métrique (`days:heart.rate`…), écriture en
+  base, total depuis l'arrivée de la requête — avec le commit du code
+  qui tourne, dans le journal (`./version.sh && docker compose logs api
   --no-log-prefix | grep healthkit_synced`) et dans le journal d'audit
-  (champ `ms`), à relire même des mois après ; le détail des étapes est
-  dans [performances](../performance.md). Ce que
+  (champs `ms`, `commit`), à relire même des mois après ; le détail des
+  étapes est dans [performances](../performance.md). `./version.sh`
+  affiche d'abord quel code tourne. Ce que
   l'app envoie : relevés par UUID (renvoyés = remplacés, supprimés dans
   Santé = supprimés ici), **sommes HealthKit** pour pas, distance,
   énergie (jamais l'iPhone + la montre deux fois), phases du sommeil

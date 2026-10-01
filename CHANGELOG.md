@@ -424,6 +424,23 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`./version.sh`: which code runs, before reading any log** (for the
+  administrator). One look at the host: the repository's commit (date,
+  title), the commit the API and the worker were started with, the
+  database's migration and the last update, then « ✓ L'API et le worker
+  tournent avec le code serveur du dépôt » or « ⚠ … lancer
+  ./update.sh ». An update of the docs or the page alone leaves the API
+  on its older commit with the same server code: no false alarm. Put it
+  in front of a diagnostic command (`./version.sh && docker compose
+  logs api …`). It only reads.
+
+- **A sync's time now counts from the request's arrival, and says which
+  code ran.** Before the route: `receive` (the body from nginx), `json`
+  (read as JSON), `token` (checked, with its database connection),
+  `validate` (each field checked); `total` starts with the access line,
+  so the access line minus `total` is only the answer being written.
+  The log line and the audit record carry the `commit` running.
+
 - **Every iPhone app sync says where its time went** (for the
   administrator, to find what to speed up — today or months later).
   Each `POST /sync/healthkit` times its steps: zone, deletions, samples,

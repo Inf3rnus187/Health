@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends
 
+from app.core.config import get_settings
 from app.core.deps import Principal, SessionDep, require_scope
 from app.core.logging import get_logger
 from app.core.scopes import WRITE_MEASUREMENTS
-from app.core.timing import Steps
+from app.core.timing import Steps, request_steps
 from app.schemas.healthkit import (
     HealthKitResult,
     HealthKitStatus,
@@ -24,9 +25,29 @@ _log = get_logger("healthkit_sync")
 AppDep = Annotated[Principal, Depends(require_scope(WRITE_MEASUREMENTS))]
 
 
+async def _token_checked(
+    steps: Annotated[Steps, Depends(request_steps)], principal: AppDep
+) -> Steps:
+    """The sync's clock, with ``token`` counted.
+
+    The token checked (and the database session opened for it), after
+    the body read as JSON.
+    """
+    del principal
+    steps.lap("token")
+    return steps
+
+
+#: The clock of a sync, from the request's arrival (see ``ms``).
+StepsDep = Annotated[Steps, Depends(_token_checked)]
+
+
 @router.post("/healthkit", response_model=HealthKitResult)
 async def push(
-    body: HealthKitSync, principal: AppDep, session: SessionDep
+    body: HealthKitSync,
+    steps: StepsDep,
+    principal: AppDep,
+    session: SessionDep,
 ) -> HealthKitResult:
     """Store what the iPhone app read in HealthKit since its last sync.
 
@@ -47,32 +68,41 @@ async def push(
     fatal. The touched days are recomputed (``days``: from the first to
     the last day the request changes, so a first sync may send years of
     history in successive requests). Token scope ``write:measurements``,
-    in the ``Authorization`` header only. The time of each step is
-    logged (``healthkit_synced``) and kept in the audit log (``ms``).
+    in the ``Authorization`` header only. The time of each step, from
+    the body received to the commit, is logged (``healthkit_synced``,
+    with the commit running) and kept in the audit log (``ms``).
     """
-    steps = Steps()
+    steps.lap("validate")  # the JSON checked against HealthKitSync
     result = await healthkit_sync.sync(session, principal.user.id, body, steps)
+    commit = get_settings().git_commit or None  # the code that ran
     await audit.record(
         session,
         action="sync",
         entity="healthkit",
         user_id=principal.user.id,
         source="app" if principal.token_id else "web",
-        # counts, refusals (type, reason) and times: no value
-        payload={**result, "ms": steps.report()},
+        # counts, refusals (type, reason), times, commit: no value
+        payload={**result, "ms": steps.report(), "commit": commit},
     )
     with steps.step("commit"):
         await session.commit()
+    _logged(principal.user.id, result, steps, commit)
+    return HealthKitResult(**result)
+
+
+def _logged(
+    user_id: str, result: dict[str, Any], steps: Steps, commit: str | None
+) -> None:
+    """The ``healthkit_synced`` line: counts, refused lines, times."""
     counts = {k: v for k, v in result.items() if k != "skipped"}
-    skipped = sum(line["count"] for line in result["skipped"])
     _log.info(
         "healthkit_synced",
-        user_id=principal.user.id,
+        user_id=user_id,
+        commit=commit,
         **counts,
-        skipped=skipped,
+        skipped=sum(line["count"] for line in result["skipped"]),
         ms=steps.report(),
     )
-    return HealthKitResult(**result)
 
 
 @router.get("/healthkit", response_model=HealthKitStatus)

@@ -29,15 +29,19 @@ Pas une optimisation : un **relevé des temps**, pour savoir quoi
 optimiser — aujourd'hui ou dans six mois. Chaque `POST /sync/healthkit`
 chronomètre ses étapes et les écrit :
 
-- dans le journal de l'API, une ligne JSON `healthkit_synced` :
-  ```bash
-  docker compose logs api --no-log-prefix | grep healthkit_synced | tail -5
-  ```
-- dans le journal d'audit du compte (champ `ms`, gardé tant que la base
-  l'est) :
-  ```bash
-  docker compose exec db psql -U phoenix phoenix -c "select created_at, payload->'ms' from audit_log where action='sync' and entity='healthkit' order by created_at desc limit 10"
-  ```
+- dans le journal de l'API, une ligne JSON `healthkit_synced`, avec le
+  **commit** du code qui l'a produite (`commit`) ;
+- dans le journal d'audit du compte (champs `ms` et `commit`, gardés
+  tant que la base l'est).
+
+```bash
+./version.sh && docker compose logs api --no-log-prefix | grep -E "healthkit_synced|sync/healthkit" | tail -6
+./version.sh && docker compose exec db psql -U phoenix phoenix -c "select created_at, payload->>'commit' as commit, payload->'ms' from audit_log where action='sync' and entity='healthkit' order by created_at desc limit 10"
+```
+
+`./version.sh` affiche d'abord le code qui tourne (commit du dépôt,
+de l'API et du worker, migration de la base, dernière mise à jour) : on
+sait de quel code viennent les lignes qui suivent.
 
 Les étapes, en millisecondes, dans l'ordre où elles tournent (l'ordre
 de la ligne du journal ; dans l'audit, PostgreSQL range les clés à sa
@@ -45,6 +49,10 @@ façon) :
 
 | Clé | Ce qui est mesuré |
 |-----|-------------------|
+| `receive` | Le corps de la requête reçu (de nginx), jusqu'à son dernier octet. |
+| `json` | Sa lecture en JSON (FastAPI, avant toute vérification). |
+| `token` | Le jeton vérifié (et la connexion à la base ouverte pour lui). |
+| `validate` | Le JSON vérifié champ par champ (`HealthKitSync`). |
 | `zone` | Le fuseau du compte. |
 | `deleted` | Les relevés et entraînements supprimés dans Santé. |
 | `samples` | Les relevés : lecture, remplacement par UUID, écriture. |
@@ -55,16 +63,25 @@ façon) :
 | `days:<métrique>` | … et chacune (par ex. `days:heart.rate`) : la plus lente saute aux yeux. |
 | `workout_days` | Les jours des entraînements. |
 | `commit` | L'écriture en base (journal seulement : l'audit est écrit avant). |
-| `total` | Du début de la route à la fin (dans l'audit : avant le `commit`). |
+| `total` | De l'arrivée de la requête à la fin (dans l'audit : avant le `commit`). |
 
-La ligne d'accès de la même requête (`"POST /api/v1/sync/healthkit …"
-… ms`) compte en plus la lecture du JSON, le jeton et la réponse :
-**durée de la ligne d'accès − `total`** = ce temps-là.
+Le `total` part du même instant que la ligne d'accès de la requête
+(`"POST /api/v1/sync/healthkit …" … ms`) : **durée de la ligne d'accès −
+`total`** = l'écriture de la réponse, quelques ms. L'envoi depuis
+l'iPhone jusqu'à nginx n'y est pas : nginx reçoit tout le corps avant de
+le passer à l'API.
+
+**Première mesure chez l'utilisateur** (avant `receive`…`validate`) :
+6 relevés et 117 sommes horaires, 13 jours recalculés : `total` 277 ms
+(ligne d'accès 296 ms), dont `statistics` 143 ms, `samples` 62 ms,
+`days` 61 ms (8 métriques, 5 à 12 ms chacune). À creuser ensuite : les
+sommes et les relevés, longs pour si peu de lignes.
 
 Coût du relevé : 1,05 µs par étape mesurée (`timeit`, 200 000 fois),
 une vingtaine d'étapes par synchro, soit moins de 0,05 ms. Aucune
 réponse ne change (mêmes tests). Aucune valeur, date de relevé ou UUID
-n'est écrit : des noms d'étape, des clés de métrique et des durées.
+n'est écrit : des noms d'étape, des clés de métrique, des durées et le
+commit.
 
 ### 2026-10-01 (12) — les petites synchros de l'app iPhone
 

@@ -288,6 +288,7 @@ async def test_each_step_of_a_sync_is_timed_in_the_log_and_the_audit(
     client: AsyncClient, auth: dict[str, str]
 ) -> None:
     """Where a sync's time goes, logged and kept: no value, no UUID."""
+    from app.core.config import get_settings
     from structlog.testing import capture_logs
 
     app = await _app(client, auth)
@@ -297,14 +298,22 @@ async def test_each_step_of_a_sync_is_timed_in_the_log_and_the_audit(
     assert sent.status_code == 200, sent.text
     [line] = [log for log in logs if log["event"] == "healthkit_synced"]
     assert (line["samples"], line["deleted"], line["skipped"]) == (1, 0, 0)
-    steps = ["zone", "deleted", "samples", "statistics", "workouts", "sleep"]
-    steps += ["days", "days:heart.rate", "workout_days"]
+    steps = ["receive", "json", "token", "validate", "zone", "deleted"]
+    steps += ["samples", "statistics", "workouts", "sleep", "days"]
+    steps += ["days:heart.rate", "workout_days"]
     assert list(line["ms"]) == [*steps, "commit", "total"]
+    ms = line["ms"]
+    top = [step for step in steps if ":" not in step] + ["commit"]
+    # the total runs from the request's arrival: every step fits (± 1 ms
+    # of rounding each)
+    assert ms["total"] >= sum(ms[step] for step in top) - len(top)
+    assert line["commit"] == (get_settings().git_commit or None)
     assert all(isinstance(ms, int) and ms >= 0 for ms in line["ms"].values())
     assert "61.5" not in str(line) and "T1" not in str(line)
     payload = await _last_sync_payload(auth)
     # audited before the commit; PostgreSQL's JSONB sorts the keys
     assert set(payload["ms"]) == {*steps, "total"}
+    assert payload["commit"] == line["commit"]
 
 
 async def _last_sync_payload(auth: dict[str, str]) -> dict[str, Any]:

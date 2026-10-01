@@ -2,7 +2,10 @@
 
 ``2026-09-30 05:37:56 +0000 192.168.1.250 "GET /api/v1/meals HTTP/1.0"
 200 45 ms`` — the time in UTC like nginx's log, the client nginx saw
-(``X-Real-IP``), and the time the API took. A request of a second or
+(``X-Real-IP``), and the time the API took (from the first byte the
+middleware sees; when it began and when the body had arrived are left
+in the request's state for a route timing its steps:
+:func:`app.core.timing.request_steps`). A request of a second or
 more ends with ``slow``, easy to find (``docker compose logs api | grep
 slow``). A token in the URL (``?token=…``) is written ``token=***``.
 Replaces uvicorn's own access line, which had no time.
@@ -12,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import Any
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
@@ -37,6 +41,8 @@ class AccessLog:
             await self.app(scope, receive, send)
             return
         start, status = time.perf_counter(), [500]
+        state = scope.setdefault("state", {})
+        state["started"] = start  # a route's own timing starts here too
 
         async def sending(message: Message) -> None:
             if message["type"] == "http.response.start":
@@ -44,10 +50,22 @@ class AccessLog:
             await send(message)
 
         try:
-            await self.app(scope, receive, sending)
+            await self.app(scope, _received(receive, state), sending)
         finally:
             ms = (time.perf_counter() - start) * 1000
             _log.info(line(scope, status[0], ms))
+
+
+def _received(receive: Receive, state: dict[str, Any]) -> Receive:
+    """``receive``, noting in ``state`` when the body's last part came."""
+
+    async def receiving() -> Message:
+        message = await receive()
+        if message["type"] == "http.request" and not message.get("more_body"):
+            state["received"] = time.perf_counter()
+        return message
+
+    return receiving
 
 
 def line(scope: Scope, status: int, ms: float) -> str:
