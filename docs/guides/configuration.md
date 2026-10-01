@@ -543,6 +543,7 @@ Plus grand : moins d'allers-retours avec la base, plus de mémoire.
 | Variable | Défaut | Rôle |
 |----------|--------|------|
 | `GC_FREEZE` | `true` | Une fois l'API (ou le worker) démarrée, ses objets permanents (routes, schémas, tables) sont mis à l'écart du ramasse-miettes de Python : il ne les reparcourt plus à chaque passe (80 à 110 ms de moins sur un grand tableau de bord, [performance](../performance.md)). Rien de ce qu'une requête crée n'est gardé plus longtemps. `false` : comportement standard de Python. Le temps des passes restantes pendant une synchro de l'app iPhone est dans sa trace (`gc`). |
+| `API_WARMUP` | `true` | Au démarrage de chaque processus de l'API (après les migrations, avant de répondre), une connexion à la base est ouverte et les **lectures** d'une synchro de l'app iPhone sont jouées une fois, pour un compte qui ne peut pas exister (`00000000-…`), puis annulées : rien n'est écrit, aucune donnée d'un compte n'est lue. La première synchro après une mise à jour n'est plus la lente (médiane 176 → 128 ms sur le banc). Coût : 50 à 80 ms au démarrage de chaque processus ; ligne `warmed` dans le journal (`warmup_failed` si elle échoue — l'API démarre quand même). `false` : rien au démarrage. |
 
 #### Journaux et mises à jour
 

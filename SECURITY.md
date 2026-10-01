@@ -171,6 +171,10 @@ with the user id). `./version.sh` on the host only reads (git, the
 containers' `GIT_COMMIT`, the database's migration). The status adds
 up the owner's own audited refusals of the last `SYNC_REFUSED_DAYS`
 days; another account's syncs are never read. Nothing leaves the hub.
+When an API process starts, it runs a sync's reads once for an account
+id no account can have (`API_WARMUP`, `services/warmup.py`) and rolls
+back: no row is written, no account's data is read (a test checks that
+no write statement is sent and every table keeps its rows).
 
 ### Token in the URL (`?token=`)
 

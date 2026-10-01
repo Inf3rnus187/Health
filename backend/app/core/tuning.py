@@ -129,6 +129,9 @@ class Tuning(BaseSettings):
     #: Leave the objects a process keeps for its whole life out of Python's
     #: garbage collections, once started (app/core/memory.py).
     gc_freeze: bool = True
+    #: Each API process runs a sync's reads once when it starts, for no
+    #: account (app/services/warmup.py): its first sync is not the slow one.
+    api_warmup: bool = True
 
     # --- Logs ---------------------------------------------------------------
     #: An API request this long or longer ends with ``slow`` in the log.

@@ -437,6 +437,25 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **The first sync after an update is no longer the slow one** (for
+  everyone using the iPhone app). Each API process paid, on its first
+  sync after a start, for its database connection, its first prepared
+  statements and its code run once (212 ms at the user's, 32 ms the
+  next one; 4 processes, so 4 such syncs per update). When a process
+  starts (after the migrations, before it answers), it now opens one
+  connection — the one its syncs then reuse — and runs a sync's
+  **reads** once, for an account id no account can have, then rolls
+  back: nothing written, no account's data read (tested: no write
+  statement sent, every table keeps its rows, on SQLite and
+  PostgreSQL). `API_WARMUP` (`true`); a failure is logged
+  (`warmup_failed`) and the API starts anyway. Looking up a sample
+  sent again no longer looks up (or makes) the sleep metric when none
+  is stored. Bench (HTTP, fake data, 6 starts each): first sync after a
+  start 176.5 → 127.5 ms (median; 140–197 → 111–150 ms), the next ones
+  unchanged (88 / 86.5 ms); same fingerprints, counts exact. Cost:
+  50–80 ms when each process starts. Method in
+  [docs/performance.md](docs/performance.md).
+
 - **A sync's trace shows Python's garbage collections, and new samples
   delete nothing** (for the administrator, and everyone syncing). At
   the user's, with the host's memory freed (266 → 110 ms a sync, no

@@ -82,6 +82,47 @@ async def _forget(
     )
 
 
+#: An account id no account has (ids are random version-4 UUIDs).
+NOBODY = "00000000-0000-0000-0000-000000000000"
+#: A small body, as the app sends: read once to ready the validation.
+_WARM_BODY = {
+    "samples": [
+        {"uuid": "warmup", "type": "HKQuantityTypeIdentifierHeartRate",
+         "start": "2026-01-01T08:00:00+01:00", "value": 60, "unit": "count/min"}
+    ],
+    "statistics": [
+        {"type": "HKQuantityTypeIdentifierStepCount",
+         "start": "2026-01-01T08:00:00+01:00",
+         "end": "2026-01-01T09:00:00+01:00", "sum": 1.0, "unit": "count"}
+    ],
+}  # fmt: skip
+
+
+async def warm(session: AsyncSession) -> None:
+    """Run a sync's reads once, for :data:`NOBODY`: nothing is written.
+
+    The first sync a process handles after a start opened its database
+    connection, prepared its statements and ran the code for the first
+    time (212 ms at the user's; 32 ms after). Run when the process starts
+    (:mod:`app.services.warmup`), on the connection its syncs reuse: the
+    body's validation, the zone, the samples sent again (none found: no
+    delete), the sums already stored, the days' samples (none: no write).
+    No account's row is read; the caller rolls the transaction back.
+    """
+    HealthKitSync.model_validate(_WARM_BODY)
+    tz = await daily_rollup.user_zone(session, NOBODY)
+    await healthkit_samples.forget(session, NOBODY, ["warmup"], Touched())
+    now = datetime.now(UTC)
+    span = {"start_at": now - timedelta(hours=1), "end_at": now}
+    await healthkit_stats.stored(session, NOBODY, {NOBODY: {"warmup": span}})
+    nobody = MetricDefinition(id=NOBODY, key="warmup", unit="count/min")
+    day = now.astimezone(tz).date()
+    today = (day, day + timedelta(days=1))
+    await daily_rollup.rebuild_days(
+        session, NOBODY, nobody, tz, (None, today, True)
+    )
+
+
 async def status(session: AsyncSession, user_id: str) -> dict[str, Any]:
     """What the hub holds from the app: counts and newest per metric.
 

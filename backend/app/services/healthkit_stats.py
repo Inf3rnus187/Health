@@ -58,8 +58,8 @@ async def store(
     if not groups:
         return 0
     with steps.step("statistics:read"):
-        stored = await _stored(session, user_id, groups)
-    gone, new = _changes(groups, stored)
+        found = await stored(session, user_id, groups)
+    gone, new = _changes(groups, found)
     with steps.step("statistics:delete"):
         for part in chunks([row.id for row in gone]):
             await session.execute(
@@ -104,7 +104,7 @@ async def _groups(
     return groups
 
 
-async def _stored(
+async def stored(
     session: AsyncSession,
     user_id: str,
     groups: dict[str, dict[str, dict[str, Any]]],

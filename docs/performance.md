@@ -23,6 +23,43 @@ la méthode ci-dessous, et noté ici (règle de [CLAUDE.md](../CLAUDE.md)).
 
 ## Journal
 
+### 2026-10-01 (17) — la première synchro après une mise à jour
+
+**Constat** (entrée 16, chez l'utilisateur) : une synchro sans rien de
+neuf prend 32 ms, mais la **première** que chaque processus de l'API
+traite après un redémarrage 212 ms : connexion à ouvrir (`token`
+58 ms), premières requêtes à préparer et code joué une première fois
+(`validate` 12, `samples:forget` 36 ms). Avec 4 processus, 4 synchros
+lentes après chaque mise à jour.
+
+**Changement** (`services/warmup.py`, `healthkit_sync.warm`) : au
+démarrage de chaque processus (après les migrations, avant de
+répondre), **une** connexion est ouverte — celle que ses synchros
+réutilisent ensuite, quand elles arrivent une à une (le pool n'en ouvre
+d'autres qu'en cas d'appels simultanés ; en ouvrir cinq les ferait
+tourner, chacune à moitié prête) — et les **lectures** d'une synchro y
+sont jouées une fois pour un compte impossible (`00000000-…`) : jeton,
+validation d'un petit corps, fuseau, UUID renvoyés (aucun trouvé : ni
+suppression, ni recherche de métrique), sommes déjà stockées, relevés
+du jour (aucun : rien écrit). Puis annulation. Testé : aucune
+instruction d'écriture envoyée, chaque table garde ses lignes (SQLite
+et PostgreSQL). En passant : la recherche d'un UUID renvoyé ne cherche
+(ni ne crée) plus la métrique du sommeil quand rien n'est trouvé.
+
+**Mesure** (banc HTTP de l'entrée 14, base factice, 6 démarrages de
+chaque côté, première synchro après chaque démarrage) :
+
+| | Médiane | Valeurs |
+|---|---:|---|
+| Avant (`d3af6f6`) | 176,5 ms | 197, 140, 183, 192, 161, 170 |
+| Après | **127,5 ms** | 118, 129, 126, 150, 149, 111 |
+
+`token` 51–57 → 4–5 ms (connexion prête), `validate` 12 → 4–8 ms.
+Synchros suivantes inchangées (médiane 88 / 86,5 ms). Le reste à froid
+est l'écriture (non jouée, à dessein) et le recalcul des jours.
+Empreintes identiques avant / après, compteurs exacts. Coût : 50 à
+80 ms au démarrage de chaque processus (ligne `warmed`).
+
 ### 2026-10-01 (16) — la machine d'abord ; le ramasse-miettes dans la trace
 
 **Une synchro lente peut venir de l'hôte, pas du hub.** Chez

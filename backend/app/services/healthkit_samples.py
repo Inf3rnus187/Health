@@ -98,11 +98,9 @@ async def forget(
 
     The UUIDs a sync sends are mostly new: when none is stored, nothing
     is deleted — an empty ``DELETE`` still ran the count trigger (5.7 ms
-    measured at the user's).
+    measured at the user's) — and no metric is looked up (nor made).
     """
-    if not uuids:
-        return 0
-    sleep, count = await touched.cache.id_for(session, SLEEP_RAW), 0
+    count = 0
     for part in chunks(uuids):
         mine = (HealthSample.user_id == user_id) & (
             HealthSample.external_id.in_(part)
@@ -116,11 +114,13 @@ async def forget(
             ).where(mine)
         )
         rows = found.mappings().all()
+        if not rows:  # no delete, so no run of the count trigger
+            continue
+        sleep = await touched.cache.id_for(session, SLEEP_RAW)
         for row in rows:
             _mark(touched, dict(row), sleep)
         count += len(rows)
-        if rows:  # none: no delete, so no run of the count trigger
-            await session.execute(delete(HealthSample).where(mine))
+        await session.execute(delete(HealthSample).where(mine))
     return count
 
 

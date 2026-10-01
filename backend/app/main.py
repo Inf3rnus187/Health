@@ -6,6 +6,9 @@ Assembles middleware, error handling and the versioned router. Import
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -18,6 +21,7 @@ from app.core.errors import AppError
 from app.core.logging import configure_logging
 from app.core.memory import lifespan
 from app.core.middleware import SecurityHeadersMiddleware
+from app.services import warmup
 
 settings = get_settings()
 
@@ -63,6 +67,14 @@ def _add_cors(app: FastAPI) -> None:
     )
 
 
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Ready the first sync, then leave the lasting objects out of GC."""
+    await warmup.run()  # its statements and caches frozen too
+    async with lifespan(app):
+        yield
+
+
 def create_app() -> FastAPI:
     """Build and configure the FastAPI application."""
     configure_logging()
@@ -75,7 +87,7 @@ def create_app() -> FastAPI:
         openapi_url=f"{prefix}/openapi.json",
         docs_url=f"{prefix}/docs",
         redoc_url=f"{prefix}/redoc",
-        lifespan=lifespan,
+        lifespan=_lifespan,
     )
     app.add_middleware(SecurityHeadersMiddleware)
     _add_cors(app)
