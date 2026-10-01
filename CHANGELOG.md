@@ -440,6 +440,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   per process (331 MB for 4); they stop with the reconcile. `1` runs
   the metrics one after the other, as before (measured: as fast as the
   old code, 10.6 and 9.7 s against 10.8 and 9.7 s).
+- **A small sync from the iPhone app takes ≈ 0.1 s instead of 1–3.5 s**
+  (for everyone using the app). Two causes, each per type of sum and
+  per sync: the count trigger read back both dates of the `healthkit`
+  group when a sync replaced its latest sums, the first one only after
+  every older sample of the native export (160–180 ms warm, 12.6 s
+  cold) — it now reads back only the removed date, a few ms (migration
+  `0029`); and finding the stored sums a sync overlaps read the
+  metric's history from 2021 (≈ 70 ms to find, as much to delete) — a
+  partial index of the app's sums by their end finds them in a few rows
+  (migration `0030`). Measured with syncs like the user's (111 sums,
+  177 samples): 640–1 030 → 92–174 ms; days written identical, counts
+  exact; the first full sync unchanged (≈ 10 s for 20 requests).
 - **Imports and syncs write samples 3 to 10 times faster again** (for
   everyone). SQLAlchemy handed asyncpg the rows one at a time, so the
   trigger keeping `sample_counts` exact (added with the inventory

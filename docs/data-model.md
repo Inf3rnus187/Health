@@ -239,7 +239,12 @@ curated value per day), these keep **every** imported record:
   `start_at`, value, unit, device); millions of rows, indexed
   `(user_id, metric_id, start_at)` (one metric over a period) and
   `(user_id, start_at)` (every metric by date, newest first: Données'
-  « Tout ce qui est enregistré »; migration `0025`).
+  « Tout ce qui est enregistré »; migration `0025`), and, for the iPhone
+  app's sums only (`external_id LIKE 'stat:%'`, a partial index of a
+  few hundred kB), `(user_id, metric_id, end_at)`: a sync finds the
+  sums its own overlap in a few rows instead of reading the metric's
+  history (`ix_samples_stats_end`, migration `0030`). Raw samples are
+  written by PostgreSQL's `COPY` (`services/sample_writes.py`).
 - `workouts` — one row per session (type, duration, energy, distance,
   `source`: `apple` or `healthkit`).
 - `health_samples.external_id` / `workouts.external_id` — the id a row
@@ -262,8 +267,10 @@ curated value per day), these keep **every** imported record:
   writes (import, sync, merge, delete, account deletion). PostgreSQL:
   one trigger per statement, reading the rows the statement changed
   (an import batch of 5 000 rows updates a few counts once); a delete
-  that removes a group's first or last sample reads the new bound
-  (`app/models/sample_counts.py`). SQLite (tests): the same rules row by
+  that removes a group's first or last sample reads that bound again,
+  and only that one (migration `0029`: reading the first date of a
+  source after every older sample of the others cost 160–180 ms at each
+  sync) (`app/models/sample_counts.py`). SQLite (tests): the same rules row by
   row. No foreign key: an account's samples go with it, and their
   counts with them. « Réconcilier » recomputes it from the samples, as
   a check. Created with `health_samples` and by migration `0027`.
@@ -381,3 +388,5 @@ fresh database built from the live models is left untouched (ADR‑0004).
 | `0026_meal_analysis_after` | `meals.analysis_after` (a reading put off, POST /meals `analysis_delay_min`). |
 | `0027_sample_counts` | `sample_counts` and its `health_samples` triggers, filled from the samples (the table locked against writes meanwhile: 1.8 s for 2.4 million samples) ([performance](performance.md)). |
 | `0028_user_reconciled_commit` | `users.reconciled_commit` (the version of the account's last full reconcile). |
+| `0029_sample_counts_one_bound` | The count triggers read again only the bound a delete removed (the last date when a sync replaces its latest sums): 160–180 ms → a few ms per type of sum and per sync. |
+| `0030_samples_stats_end` | Partial index `ix_samples_stats_end` on `health_samples (user_id, metric_id, end_at)` for the iPhone app's sums ([performance](performance.md)). |

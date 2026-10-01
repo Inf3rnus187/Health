@@ -9,9 +9,15 @@ delete, account deletion), since the database itself does it.
 
 PostgreSQL: one statement-level trigger per operation, reading the rows
 the statement changed (transition tables): an import of 5 000 rows
-updates a few count rows once. A delete that removes a group's first or
-last sample reads the new bound through ``ix_samples_user_metric_start``.
-SQLite (tests): the same rules, row by row.
+updates a few count rows once (rows are written by ``COPY``,
+:mod:`app.services.sample_writes`). A delete that removes a group's
+first or last sample reads **that** bound again, and only that one,
+through ``ix_samples_user_metric_start``: a sync replacing its latest
+sums reads the last date back from the end (a few ms), never the first
+date, which the index (without the source) could only reach after every
+older sample of the other sources (160–180 ms on 930 000 samples, at
+every sync — migration 0029). SQLite (tests): the same rules, row by
+row.
 
 Not an ORM table of ``Base.metadata``: created and dropped with
 ``health_samples`` (below) and by migration 0027, so a new samples table
@@ -76,14 +82,14 @@ BEGIN
           AND c.source = g.source;
         DELETE FROM sample_counts WHERE n <= 0;
         UPDATE sample_counts c SET
-            first_at = (SELECT min(s.start_at) FROM health_samples s
-                        WHERE s.user_id = c.user_id
-                          AND s.metric_id = c.metric_id
-                          AND s.source = c.source),
-            last_at = (SELECT max(s.start_at) FROM health_samples s
-                       WHERE s.user_id = c.user_id
-                         AND s.metric_id = c.metric_id
-                         AND s.source = c.source)
+            first_at = coalesce(c.first_at,
+                (SELECT min(s.start_at) FROM health_samples s
+                 WHERE s.user_id = c.user_id AND s.metric_id = c.metric_id
+                   AND s.source = c.source)),
+            last_at = coalesce(c.last_at,
+                (SELECT max(s.start_at) FROM health_samples s
+                 WHERE s.user_id = c.user_id AND s.metric_id = c.metric_id
+                   AND s.source = c.source))
         WHERE c.first_at IS NULL OR c.last_at IS NULL;
     END IF;
     IF TG_OP IN ('INSERT', 'UPDATE') THEN
@@ -140,12 +146,14 @@ _LITE_REMOVE = """
         first_at = (SELECT min(s.start_at) FROM health_samples s
                     WHERE s.user_id = old.user_id
                       AND s.metric_id = old.metric_id
-                      AND s.source = old.source),
+                      AND s.source = old.source)
+    WHERE {same} AND old.start_at <= first_at;
+    UPDATE sample_counts SET
         last_at = (SELECT max(s.start_at) FROM health_samples s
                    WHERE s.user_id = old.user_id
                      AND s.metric_id = old.metric_id
                      AND s.source = old.source)
-    WHERE {same} AND (old.start_at <= first_at OR old.start_at >= last_at);"""
+    WHERE {same} AND old.start_at >= last_at;"""
 
 
 #: The counts computed from the samples themselves (a rebuild).

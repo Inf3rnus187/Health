@@ -23,6 +23,46 @@ la méthode ci-dessous, et noté ici (règle de [CLAUDE.md](../CLAUDE.md)).
 
 ## Journal
 
+### 2026-10-01 (12) — les petites synchros de l'app iPhone
+
+Chez l'utilisateur, des synchros de **quelques relevés** (0 à 177
+relevés et 111 sommes horaires) prenaient 1,2 à 3,5 s
+(`docker compose logs api | grep sync/healthkit`, et leur contenu dans
+`audit_log`). Deux causes, toutes deux par type de somme et par synchro :
+
+1. **Le compteur de relevés** (entrée (3)) : la synchro remplace les
+   sommes des dernières heures, et l'effacement retire la dernière date
+   du canal `healthkit`. Le déclencheur relisait alors **les deux**
+   dates ; la première, par un index qui ne connaît pas la source,
+   n'arrivait qu'après tous les relevés plus anciens de l'export natif
+   (925 628 lus pour en trouver un) : 160–180 ms à chaud, 12,6 s à
+   froid. Il ne relit maintenant que la date effacée (`coalesce`) :
+   **5,9–14,9 ms**, mêmes compteurs (migration `0029`).
+2. **La recherche des sommes à remplacer** (`start < fin AND end >
+   début`, présente depuis la création de la synchro) : sans index sur
+   la fin, PostgreSQL lisait la métrique depuis 2021 jusqu'à la fin de
+   la période (≈ 70 ms pour trouver, autant pour effacer). Un index
+   **partiel** ne contient que les sommes de l'app, par leur fin
+   (176 kB ici, 0,3 s à créer) : **12 ms → 0,06 ms**. Le motif
+   `external_id LIKE 'stat:%'` est écrit tel quel dans la requête, sans
+   paramètre, pour que PostgreSQL puisse toujours s'en servir (migration
+   `0030`).
+
+**Banc** : base de mesure (export natif), 29 jours de sommes horaires
+`healthkit` pour 4 types déjà là, puis 6 synchros comme celles de
+l'utilisateur (111 sommes remplaçant les dernières heures + 177
+fréquences cardiaques), version poussée + base en `0028` contre nouvelle
+version + base en `0030`, à tour de rôle, deux fois :
+
+| | avant | après |
+|---|---:|---:|
+| une petite synchro | 640–1 030 ms | **92–174 ms** |
+
+Jours écrits identiques (même empreinte), compteurs exacts (0 écart).
+Le premier envoi complet (entrée (10)) ne bouge pas : 10,0 / 9,9 s
+avant, 10,1 / 9,8 s après. Migrations jouées dans les deux sens sur
+PostgreSQL et sur SQLite.
+
 ### 2026-09-30 (11) — écrire les relevés en un bloc (`COPY`)
 
 SQLAlchemy confie une liste de lignes à asyncpg **une ligne à la fois**

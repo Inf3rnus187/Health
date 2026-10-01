@@ -18,10 +18,17 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
+
+#: The ``external_id`` of the iPhone app's sums (services/healthkit_stats).
+STATS_PREFIX = "stat:"
+#: The rows of the partial index ``ix_samples_stats_end``: those sums. A
+#: query reaches the index only with this very text, written as is.
+STATS_ONLY = f"external_id LIKE '{STATS_PREFIX}%'"
 
 
 class HealthSample(UUIDMixin, TimestampMixin, Base):
@@ -57,6 +64,16 @@ class HealthSample(UUIDMixin, TimestampMixin, Base):
         Index("ix_samples_user_start", "user_id", "start_at"),
         Index(
             "ux_samples_user_external", "user_id", "external_id", unique=True
+        ),
+        #: The iPhone app's sums by their end: a sync finds the sums its
+        #: own overlap in a few rows, not by reading the metric's history.
+        Index(
+            "ix_samples_stats_end",
+            "user_id",
+            "metric_id",
+            "end_at",
+            postgresql_where=text(STATS_ONLY),
+            sqlite_where=text(STATS_ONLY),
         ),
     )
 

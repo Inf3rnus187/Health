@@ -15,18 +15,18 @@ from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import new_uuid, utcnow
-from app.models.health_raw import HealthSample
+from app.models.health_raw import STATS_ONLY, STATS_PREFIX, HealthSample
 from app.schemas.healthkit import HkStatistic
 from app.services import sample_writes
 from app.services.apple_health.metrics_cache import MetricCache
 from app.services.apple_health.spec import synth_spec
 from app.services.healthkit_common import QUANTITY, SOURCE, Touched, aware
 
-PREFIX = "stat:"
+PREFIX = STATS_PREFIX
 DEVICE = "Statistiques HealthKit"
 _DISCRETE = "ponctuel : l'envoyer dans samples"
 _EMPTY = "intervalle vide : end doit suivre start"
@@ -67,7 +67,9 @@ async def _replace(
         (HealthSample.user_id == user_id)
         & (HealthSample.metric_id == metric_id)
         & (HealthSample.source == SOURCE)
-        & HealthSample.external_id.like(f"{PREFIX}%")
+        # Written as is (not a parameter): the partial index of the sums
+        # by their end applies, a few rows instead of the metric's history.
+        & text(STATS_ONLY)
         & (HealthSample.start_at < high)
         & (HealthSample.end_at > low)
     )
