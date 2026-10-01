@@ -19,12 +19,12 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.timing import Steps
 from app.models.base import new_uuid, utcnow
 from app.models.health_raw import HealthSample
 from app.schemas.healthkit import HkSample
 from app.services import sample_writes
 from app.services.apple_health.hk_values import category_value
-from app.services.apple_health.metrics_cache import MetricCache
 from app.services.apple_health.spec import (
     SLEEP_RAW,
     SLEEP_STAGE_MAP,
@@ -65,16 +65,26 @@ async def store(
     user_id: str,
     samples: list[HkSample],
     tz: ZoneInfo,
-    touched: Touched,
+    at: tuple[Touched, Steps],
 ) -> int:
-    """Store the samples: a UUID sent again replaces its sample."""
-    cache, rows = MetricCache(), {}
-    for sample in samples:
-        row = await _row(session, sample, tz, cache, touched)
-        if row is not None:
-            rows[sample.uuid] = {**row, "user_id": user_id}
-    await forget(session, user_id, list(rows), touched)
-    await sample_writes.write(session, list(rows.values()))
+    """Store the samples: a UUID sent again replaces its sample.
+
+    The refused ones are counted first; the metrics of the others are
+    then looked up in one query (``samples:forget``: the UUIDs sent
+    again removed; ``samples:write``: the rows written).
+    """
+    touched, steps = at
+    kept = _checked(samples, tz, touched)
+    cache = touched.cache
+    await cache.preload(session, [SLEEP_RAW, *(spec for _, spec, _ in kept)])
+    rows = {}
+    for sample, spec, value in kept:
+        row = _row(sample, tz, value, await cache.id_for(session, spec))
+        rows[sample.uuid] = {**row, "user_id": user_id}
+    with steps.step("samples:forget"):
+        await forget(session, user_id, list(rows), touched)
+    with steps.step("samples:write"):
+        await sample_writes.write(session, list(rows.values()))
     sleep = await cache.id_for(session, SLEEP_RAW)
     for row in rows.values():
         _mark(touched, row, sleep)
@@ -85,7 +95,9 @@ async def forget(
     session: AsyncSession, user_id: str, uuids: list[str], touched: Touched
 ) -> int:
     """Remove the samples with these UUIDs (their days change)."""
-    sleep, count = await MetricCache().id_for(session, SLEEP_RAW), 0
+    if not uuids:
+        return 0
+    sleep, count = await touched.cache.id_for(session, SLEEP_RAW), 0
     for part in chunks(uuids):
         mine = (HealthSample.user_id == user_id) & (
             HealthSample.external_id.in_(part)
@@ -113,30 +125,46 @@ def _mark(touched: Touched, row: dict[str, Any], sleep: str) -> None:
         touched.metric(row["metric_id"], row["start_at"])
 
 
-async def _row(
-    session: AsyncSession,
+Checked = tuple[HkSample, MetricSpec, tuple[float | None, str | None]]
+
+
+def _checked(
+    samples: list[HkSample], tz: ZoneInfo, touched: Touched
+) -> list[Checked]:
+    """The samples accepted, with their metric and value.
+
+    The others are counted in ``skipped``.
+    """
+    kept = []
+    for sample in samples:
+        spec = _spec(sample)
+        if spec is None:
+            touched.skip(sample.type, _UNKNOWN)
+            continue
+        start = aware(sample.start, tz)
+        end = aware(sample.end, tz) if sample.end else None
+        value = _value(sample, spec, start, end)
+        if isinstance(value, str):
+            touched.skip(sample.type, value)
+            continue
+        kept.append((sample, spec, value))
+    return kept
+
+
+def _row(
     sample: HkSample,
     tz: ZoneInfo,
-    cache: MetricCache,
-    touched: Touched,
-) -> dict[str, Any] | None:
-    """The row of one sample, or None (counted in ``skipped``)."""
-    spec = _spec(sample)
-    if spec is None:
-        touched.skip(sample.type, _UNKNOWN)
-        return None
-    start = aware(sample.start, tz)
-    end = aware(sample.end, tz) if sample.end else None
-    value = _value(sample, spec, start, end)
-    if isinstance(value, str):
-        touched.skip(sample.type, value)
-        return None
+    value: tuple[float | None, str | None],
+    metric_id: str,
+) -> dict[str, Any]:
+    """The row of one accepted sample."""
     return {
-        "id": new_uuid(), "metric_id": await cache.id_for(session, spec),
-        "start_at": start, "end_at": end, "value_num": value[0],
-        "value_text": value[1], "unit": sample.unit, "source": SOURCE,
-        "device": sample.device, "external_id": sample.uuid,
-        "created_at": utcnow(),
+        "id": new_uuid(), "metric_id": metric_id,
+        "start_at": aware(sample.start, tz),
+        "end_at": aware(sample.end, tz) if sample.end else None,
+        "value_num": value[0], "value_text": value[1],
+        "unit": sample.unit, "source": SOURCE, "device": sample.device,
+        "external_id": sample.uuid, "created_at": utcnow(),
     }  # fmt: skip
 
 

@@ -21,7 +21,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import new_uuid, utcnow
 from app.models.health_raw import HealthSample
-from app.services.apple_health.metrics_cache import MetricCache
 from app.services.apple_health.spec import (
     SLEEP_RAW,
     SLEEP_STAGE_MAP,
@@ -49,7 +48,9 @@ async def recompute(
     session: AsyncSession, user_id: str, tz: ZoneInfo, touched: Touched
 ) -> None:
     """Each changed night's minutes per stage, from its best device."""
-    cache = MetricCache()
+    if not touched.nights:
+        return  # no sleep sample changed: nothing to look up
+    cache = touched.cache
     raw = await cache.id_for(session, SLEEP_RAW)
     for day in sorted({_wake_day(end, tz) for end in touched.nights}):
         device, minutes = _pick(await _night(session, user_id, raw, day, tz))

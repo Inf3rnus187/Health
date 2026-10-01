@@ -62,15 +62,17 @@ async def push(
     ``uuid``, ``activity``, ``start``, ``end``, ``duration_min``,
     ``energy_kcal``, ``distance_km``); ``deleted`` (5000 UUIDs). Dates
     ISO 8601 (without offset: local). A UUID sent again replaces itself;
-    sums replace those they overlap. A cumulative type sent as samples,
-    a discrete one as statistics, an unknown type or value is refused
-    and counted in ``skipped`` (``type``, ``reason``, ``count``), never
-    fatal. The touched days are recomputed (``days``: from the first to
-    the last day the request changes, so a first sync may send years of
-    history in successive requests). Token scope ``write:measurements``,
-    in the ``Authorization`` header only. The time of each step, from
-    the body received to the commit, is logged (``healthkit_synced``,
-    with the commit running) and kept in the audit log (``ms``).
+    sums replace those they overlap, except those stored exactly as
+    sent, which stay (no write, no day recomputed). A cumulative type
+    sent as samples, a discrete one as statistics, an unknown type or
+    value is refused and counted in ``skipped`` (``type``, ``reason``,
+    ``count``), never fatal. The changed days are recomputed (``days``:
+    from the first to the last day the request changes, so a first sync
+    may send years of history in successive requests). Token scope
+    ``write:measurements``, in the ``Authorization`` header only. The
+    time of each step, from the body received to the commit, is logged
+    (``healthkit_synced``, with the commit running) and kept in the
+    audit log (``ms``).
     """
     steps.lap("validate")  # the JSON checked against HealthKitSync
     result = await healthkit_sync.sync(session, principal.user.id, body, steps)

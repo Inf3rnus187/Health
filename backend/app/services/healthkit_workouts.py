@@ -71,6 +71,8 @@ async def recompute(
     session: AsyncSession, user_id: str, tz: ZoneInfo, starts: list[datetime]
 ) -> int:
     """Each changed day's session count and totals; the days done."""
+    if not starts:
+        return 0  # no workout changed: nothing to look up
     cache = MetricCache()
     ids = {
         spec.key: await cache.id_for(session, spec) for spec in WORKOUT_SPECS

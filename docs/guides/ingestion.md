@@ -158,16 +158,24 @@ up to today: a request of 2023 does not read 2024–2026 again (measured
 on a first sync of 20 requests over an existing export: 43–45 s → 24–
 27 s, [performance](../performance.md)). Send the history in any order.
 
-**Answer** — how many `samples`, `statistics`, `workouts` were stored,
-`deleted` removed, `days` of daily values recomputed, and `skipped`:
+**Sums sent again** — the app may send today's hours at every sync: a
+sum already stored exactly as sent (same type, interval, value, unit)
+stays as it is, costs nothing and recomputes no day; only the hours
+that changed are replaced.
+
+**Answer** — how many `samples`, `statistics`, `workouts` were accepted,
+`deleted` removed, `days` of daily values recomputed (those that
+changed), and `skipped`:
 `{"type", "reason", "count"}` for each kind of line refused (unknown
 type, cumulative sent as a sample, discrete as a sum, sleep without
 `end` or with a value outside 0-5, category without its name…). A
 refused line never fails the request. The counts and the refusals
 (type, reason, count — never a value) are kept in the account's audit
 log, for the status below, with the milliseconds of each step (`ms`:
-`receive`, `json`, `token`, `validate`, `samples`, `statistics`, `days`,
-`days:<metric>`… `total` from the request's arrival) and the `commit`
+`receive`, `json`, `token`, `validate`, `samples` (`samples:forget`,
+`samples:write`), `statistics` (`statistics:read`, `:delete`,
+`:write`), `days`, `days:<metric>`… `total` from the request's arrival)
+and the `commit`
 running, also in the API log line `healthkit_synced` — to see what a
 slow sync spent its time on ([performance](../performance.md)).
 

@@ -7,6 +7,8 @@ sync without a migration.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +22,23 @@ class MetricCache:
     def __init__(self) -> None:
         """Start with an empty id cache."""
         self._ids: dict[str, str] = {}
+
+    async def preload(
+        self, session: AsyncSession, specs: Iterable[MetricSpec]
+    ) -> None:
+        """Resolve these specs' ids in one query (the missing ones made)."""
+        wanted = {spec.key: spec for spec in specs if spec.key not in self._ids}
+        if not wanted:
+            return
+        found = await session.execute(
+            select(MetricDefinition.key, MetricDefinition.id).where(
+                MetricDefinition.key.in_(list(wanted))
+            )
+        )
+        self._ids.update({key: metric_id for key, metric_id in found.all()})
+        for key, spec in wanted.items():
+            if key not in self._ids:
+                await self.id_for(session, spec)  # a new metric, made
 
     async def id_for(self, session: AsyncSession, spec: MetricSpec) -> str:
         """Return the metric id for a spec, creating the metric if new."""

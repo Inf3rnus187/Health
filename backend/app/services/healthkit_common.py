@@ -10,6 +10,7 @@ from typing import TypeVar
 from zoneinfo import ZoneInfo
 
 from app.core.config import get_settings
+from app.services.apple_health.metrics_cache import MetricCache
 
 #: The channel the app's data is stored under (one HealthKit channel per
 #: day, like the native export and Health Auto Export: never added up).
@@ -34,6 +35,8 @@ class Touched:
     workouts: list[datetime] = field(default_factory=list)
     #: (type, reason) → lines refused.
     skipped: Counter[tuple[str, str]] = field(default_factory=Counter)
+    #: The metrics' ids, looked up once for the whole sync.
+    cache: MetricCache = field(default_factory=MetricCache)
 
     def metric(self, metric_id: str, at: datetime) -> None:
         """Mark a metric's day as changed."""

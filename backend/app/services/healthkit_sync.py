@@ -28,6 +28,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.timing import Steps
+from app.models.audit import AuditLog
 from app.models.health_raw import HealthSample, Workout
 from app.models.measurement import Measurement
 from app.models.metric import MetricDefinition
@@ -93,10 +94,11 @@ async def status(session: AsyncSession, user_id: str) -> dict[str, Any]:
         )
     )
     count, last_workout = workouts.one()
-    stamps = [_utc(r[4]) for r in rows if r[4]]
-    stamps += [_utc(last_workout)] if last_workout else []
+    synced = await _synced(session, user_id)
+    stamps = [r[4] for r in rows] + [last_workout, synced]
+    found = [_utc(at) for at in stamps if at]
     return {
-        "last_sync_at": max(stamps) if stamps else None,
+        "last_sync_at": max(found) if found else None,
         "samples": sum(r[2] for r in rows),
         "workouts": count,
         "metrics": [
@@ -105,6 +107,22 @@ async def status(session: AsyncSession, user_id: str) -> dict[str, Any]:
         ],
         "refused": await healthkit_refused.recent(session, user_id),
     }
+
+
+async def _synced(session: AsyncSession, user_id: str) -> datetime | None:
+    """When the account's last sync was received (its audit record).
+
+    A sync that only sends sums already stored writes no row: the
+    rows' times alone would not show it.
+    """
+    found = await session.execute(
+        select(func.max(AuditLog.created_at)).where(
+            AuditLog.user_id == user_id,
+            AuditLog.action == "sync",
+            AuditLog.entity == "healthkit",
+        )
+    )
+    return found.scalar_one_or_none()
 
 
 async def _store(
@@ -117,11 +135,11 @@ async def _store(
     tz, touched, steps = at
     with steps.step("samples"):
         samples = await healthkit_samples.store(
-            session, user_id, body.samples, tz, touched
+            session, user_id, body.samples, tz, (touched, steps)
         )
     with steps.step("statistics"):
         statistics = await healthkit_stats.store(
-            session, user_id, body.statistics, tz, touched
+            session, user_id, body.statistics, tz, (touched, steps)
         )
     with steps.step("workouts"):
         workouts = await healthkit_workouts.store(
@@ -172,9 +190,17 @@ async def _days(
     A changed day left without any sample loses this channel's value.
     Each metric is timed (``days:<key>``).
     """
+    if not touched.metrics:
+        return 0  # nothing changed: no metric to load
     total = 0
+    loaded = await session.execute(
+        select(MetricDefinition).where(
+            MetricDefinition.id.in_(list(touched.metrics))
+        )
+    )
+    metrics = {metric.id: metric for metric in loaded.scalars()}
     for metric_id, instants in touched.metrics.items():
-        metric = await session.get(MetricDefinition, metric_id)
+        metric = metrics.get(metric_id)
         if metric is None:
             continue
         days = {_utc(at).astimezone(tz).date() for at in instants}

@@ -23,6 +23,58 @@ la méthode ci-dessous, et noté ici (règle de [CLAUDE.md](../CLAUDE.md)).
 
 ## Journal
 
+### 2026-10-01 (14) — une synchro ne réécrit plus les sommes inchangées
+
+**Constat** (relevé des temps, entrée 13, chez l'utilisateur) : une
+synchro de 10 relevés et 118 sommes, `total` 605 ms, dont `samples`
+243 ms (premier appel après un redémarrage), `statistics` 171 ms et
+`days` 112 ms. L'app renvoie à chaque synchro **toutes les heures du
+jour** ; seule l'heure en cours a changé. Chaque somme était pourtant
+effacée, réécrite, et le jour de chaque type recalculé — par type :
+6 `DELETE`, 6 `COPY` (33,5 ms à eux seuls), 6 recalculs, et une
+vingtaine de recherches de métriques.
+
+**Changement** (`services/healthkit_stats.py`) : une somme déjà stockée
+exactement comme envoyée (type, intervalle, valeur, unité) reste ; les
+autres sont effacées puis écrites **en une instruction chacune pour
+tous les types**, lues en une instruction (`UNION ALL`, une branche par
+type sur l'index partiel des sommes : vérifié par `EXPLAIN` sur 78 828
+sommes factices, chaque branche lit l'index par type et fin — un `OR`
+pouvait ne lire l'index que par compte) ; seuls les jours modifiés sont
+recalculés. Les métriques d'une synchro sont cherchées une fois, en une
+requête ; sans sommeil ni entraînement, leurs métriques ne sont plus
+cherchées. Même résultat que tout remplacer : les lignes gardées sont
+celles qu'on aurait réécrites à l'identique.
+
+**Méthode** : banc HTTP (`uvicorn` réel, un processus comme chacun du
+hub), base factice de 2,4 millions de relevés, 29 jours de sommes
+horaires déjà envoyés ; puis 3 démarrages × 6 synchros comme l'app :
+10 relevés (fréquence cardiaque, repos, VFC, bruit) et les heures du
+jour de 6 types (90 à 126 sommes), l'heure en cours qui grandit et une
+nouvelle heure toutes les deux synchros. L'ancien code (`3c12288`) et
+le nouveau, chacun depuis son propre dossier, deux passes.
+
+| | Synchro habituelle (médiane) | 1ʳᵉ après un démarrage (médiane) |
+|---|---:|---:|
+| Avant (`3c12288`) | 148 ms, 143 ms | 225 ms, 215 ms |
+| Après | **78 ms, 82 ms** (version finale : 74 ms) | **170 ms, 160 ms** (141 ms) |
+
+Détail après, synchro habituelle : `statistics` 9–12 ms (50–84
+avant ; dont `statistics:read` 2–4, `:delete` 3–4, `:write` 2),
+`samples` 7–11 ms, `days` 41–54 ms (≈ 4 ms par métrique réellement
+modifiée — le reste à gagner, dans le code partagé avec la
+réconciliation).
+
+**Mêmes réponses** : après les 18 synchros, empreinte md5 des valeurs
+quotidiennes `healthkit` et des relevés (type, identifiant, début, fin,
+valeur, unité) identique avant / après
+(`e0fc6ac0…`, `039ae356…`), compteurs `sample_counts` exacts (0
+écart). Tests : une somme renvoyée à l'identique garde sa ligne et ne
+recalcule aucun jour ; l'heure modifiée seule est réécrite ; « Dernière
+synchro » avance quand même ; une ligne refusée ne crée pas de
+métrique ; « jamais compté deux fois » (par heure puis par jour)
+inchangé — SQLite et PostgreSQL.
+
 ### 2026-10-01 (13) — où passe le temps d'une synchro de l'app iPhone
 
 Pas une optimisation : un **relevé des temps**, pour savoir quoi
@@ -55,8 +107,10 @@ façon) :
 | `validate` | Le JSON vérifié champ par champ (`HealthKitSync`). |
 | `zone` | Le fuseau du compte. |
 | `deleted` | Les relevés et entraînements supprimés dans Santé. |
-| `samples` | Les relevés : lecture, remplacement par UUID, écriture. |
-| `statistics` | Les sommes horaires : celles qu'elles chevauchent ôtées, écriture. |
+| `samples` | Les relevés : lecture, remplacement par UUID, écriture… |
+| `samples:forget`, `samples:write` | … dont les UUID renvoyés ôtés, et l'écriture. |
+| `statistics` | Les sommes horaires… |
+| `statistics:read`, `:delete`, `:write` | … dont la lecture de celles déjà stockées, l'effacement de celles qui changent, l'écriture des nouvelles. |
 | `workouts` | Les entraînements. |
 | `sleep` | Les nuits refaites depuis les phases. |
 | `days` | Les valeurs quotidiennes recalculées, toutes métriques… |

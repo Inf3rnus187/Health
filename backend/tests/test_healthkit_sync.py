@@ -121,6 +121,70 @@ async def test_cumulative_types_come_as_sums_never_added_twice(
     assert refused.json()["skipped"][0]["reason"].startswith("ponctuel")
 
 
+async def test_sums_sent_again_unchanged_are_left_as_they_are(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """Today's hours sent again: only the hour that changed is rewritten.
+
+    Same day values as replacing them all; the last sync still moves.
+    """
+    app = await _app(client, auth)
+    hours = [_steps("08:00", "09:00", 400), _steps("09:00", "10:00", 600)]
+    await client.post(URL, json={"statistics": hours}, headers=app)
+    first = await _sum_ids()
+    again = await client.post(URL, json={"statistics": hours}, headers=app)
+    assert again.json()["statistics"] == 2  # accepted, as before
+    assert again.json()["days"] == 0  # nothing changed: no day recomputed
+    assert await _sum_ids() == first  # the same rows, not rewritten
+    status = (await client.get(URL, headers=app)).json()
+    synced = await client.post(URL, json={"statistics": hours}, headers=app)
+    assert synced.status_code == 200
+    later = (await client.get(URL, headers=app)).json()["last_sync_at"]
+    assert later > status["last_sync_at"]  # the sync is seen all the same
+    grew = [hours[0], _steps("09:00", "10:00", 700)]
+    changed = await client.post(URL, json={"statistics": grew}, headers=app)
+    assert changed.json()["days"] == 1
+    ids = await _sum_ids()
+    assert ids[0] == first[0] and ids[1] != first[1]  # 9 h only
+    assert await _day(client, auth, "activity.steps") == 1100
+
+
+async def test_a_refused_sum_makes_no_metric(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """A line refused never creates its type's metric."""
+    from app.core.db import SessionFactory
+    from app.models.metric import MetricDefinition
+    from sqlalchemy import func, select
+
+    app = await _app(client, auth)
+    empty = {**_steps("09:00", "09:00", 5), "type": f"{Q}NouveauCumulTest"}
+    sent = await client.post(URL, json={"statistics": [empty]}, headers=app)
+    assert sent.json()["skipped"][0]["count"] == 1
+    async with SessionFactory() as session:
+        made = await session.execute(
+            select(func.count()).where(
+                MetricDefinition.key.like("%nouveau%cumul%")
+            )
+        )
+        assert made.scalar_one() == 0
+
+
+async def _sum_ids() -> list[str]:
+    """The ids of the stored sums, in time order."""
+    from app.core.db import SessionFactory
+    from app.models.health_raw import HealthSample
+    from sqlalchemy import select
+
+    async with SessionFactory() as session:
+        found = await session.execute(
+            select(HealthSample.id)
+            .where(HealthSample.external_id.like("stat:%"))
+            .order_by(HealthSample.start_at)
+        )
+        return list(found.scalars())
+
+
 def _sleep(
     uuid: str, start: str, end: str, value: int, device: str
 ) -> dict[str, Any]:
@@ -299,8 +363,8 @@ async def test_each_step_of_a_sync_is_timed_in_the_log_and_the_audit(
     [line] = [log for log in logs if log["event"] == "healthkit_synced"]
     assert (line["samples"], line["deleted"], line["skipped"]) == (1, 0, 0)
     steps = ["receive", "json", "token", "validate", "zone", "deleted"]
-    steps += ["samples", "statistics", "workouts", "sleep", "days"]
-    steps += ["days:heart.rate", "workout_days"]
+    steps += ["samples", "samples:forget", "samples:write", "statistics"]
+    steps += ["workouts", "sleep", "days", "days:heart.rate", "workout_days"]
     assert list(line["ms"]) == [*steps, "commit", "total"]
     ms = line["ms"]
     top = [step for step in steps if ":" not in step] + ["commit"]

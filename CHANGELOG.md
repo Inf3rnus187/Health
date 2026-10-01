@@ -424,6 +424,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A sync of the iPhone app no longer rewrites the sums it sends
+  again unchanged** (for everyone using the app). At each sync the app
+  sends today's hours again; only the hour still counting has changed.
+  Each was deleted, written again and its day recomputed, type by type
+  (6 deletions, 6 writes, every type's day). Now a sum stored exactly
+  as sent (type, interval, value, unit) stays; the others are deleted
+  and written in one statement each for all types, read in one
+  statement too (one branch per type on the partial index), and only
+  the days that changed are recomputed. The metrics of a sync are
+  looked up once, in one query (20 lookups before); a sync without
+  sleep or workouts no longer looks theirs up. « Dernière synchro »
+  now also reads the sync's audit record (a sync that changes nothing
+  writes no row). Measured over HTTP on fake data (2.4 million samples,
+  3 starts × 6 syncs of 10 samples and 90–126 sums, twice): usual sync
+  143–148 → 74–82 ms (median), first sync after a start 215–225 →
+  141–170 ms; days and samples identical (same fingerprints), counts
+  exact. New steps in the times: `samples:forget`, `samples:write`,
+  `statistics:read`, `statistics:delete`, `statistics:write`. Method in
+  [docs/performance.md](docs/performance.md).
+
 - **`./version.sh`: which code runs, before reading any log** (for the
   administrator). One look at the host: the repository's commit (date,
   title), the commit the API and the worker were started with, the
