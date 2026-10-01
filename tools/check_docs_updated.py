@@ -2,7 +2,8 @@
 
 Run by pre-commit on the staged files. When application code changes
 (backend/app, backend/alembic, frontend/src, mcp/phoenix_mcp, nginx,
-docker-compose.yml, update.sh, install.sh), the same commit must also
+docker-compose.yml, update.sh, install.sh, version.sh), the same commit
+must also
 change CHANGELOG.md and at least one hand-written document (README.md,
 SECURITY.md, docs/…, excluding the generated references docs/api.md and
 docs/mcp-tools.md). A pure test, tooling or documentation change passes.
@@ -24,6 +25,7 @@ _CODE = (
     "docker-compose.yml",
     "update.sh",
     "install.sh",
+    "version.sh",
 )
 _GENERATED = ("docs/api.md", "docs/mcp-tools.md")
 

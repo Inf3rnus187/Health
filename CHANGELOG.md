@@ -73,6 +73,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Three settings were missing from `.env.example`** (for the
+  administrator): `UPDATE_DIR`, `GIT_COMMIT` (leave it unset:
+  `./update.sh` gives it) and `REDIS_URL` (set by compose; only outside
+  Docker). They were in the configuration guide, but the test checking
+  the example covered only the tuning values: it now covers every
+  setting the API reads, so a new one cannot be left out. The check
+  that a code change comes with its CHANGELOG and docs now also watches
+  `version.sh`. Found by an audit of the 33 commits since 30 September
+  (each with its CHANGELOG and a hand-written doc; the generated API and
+  MCP references up to date at each; one measurement, « pages no longer
+  wait behind a photo », written in `docs/performance.md` one commit
+  later than its change).
+
 - **A reconcile started by a script given on Python's input no longer
   fails** (for the administrator: `docker compose exec worker python -
   <<EOF …`). The parallel reconcile's first version started its

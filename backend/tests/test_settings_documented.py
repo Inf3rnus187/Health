@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.core.tuning import Tuning
+from app.core.config import Settings
 
 ROOT = Path(__file__).resolve().parents[2]
 #: Read by compose or nginx, not by the API.
@@ -32,7 +32,8 @@ OUTSIDE = [
 
 
 def _names() -> list[str]:
-    return [name.upper() for name in Tuning.model_fields] + OUTSIDE
+    """Every setting the API reads (its tuning included), and the others."""
+    return [name.upper() for name in Settings.model_fields] + OUTSIDE
 
 
 def test_each_setting_is_in_the_guide_and_the_example() -> None:
