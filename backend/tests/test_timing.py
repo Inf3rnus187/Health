@@ -12,6 +12,12 @@ def _clock(times: list[float]) -> Iterator[float]:
     yield from times
 
 
+@pytest.fixture(autouse=True)
+def _no_collection(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The garbage collector's time held still (a pass may happen)."""
+    monkeypatch.setattr(timing.memory, "collected", lambda: 0.0)
+
+
 def test_each_step_is_timed_in_order_and_added_up(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -25,7 +31,7 @@ def test_each_step_is_timed_in_order_and_added_up(
         pass
     with steps.step("a"):
         pass
-    assert steps.report() == {"a": 15, "b": 240, "total": 300}
+    assert steps.report() == {"a": 15, "b": 240, "gc": 0, "total": 300}
 
 
 def test_a_failing_step_is_timed_too(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -34,7 +40,7 @@ def test_a_failing_step_is_timed_too(monkeypatch: pytest.MonkeyPatch) -> None:
     steps = timing.Steps()
     with pytest.raises(ValueError, match="bad"), steps.step("read"):
         raise ValueError("bad")
-    assert steps.report() == {"read": 20, "total": 30}
+    assert steps.report() == {"read": 20, "gc": 0, "total": 30}
 
 
 def test_a_lap_counts_since_the_last_step(
@@ -49,7 +55,7 @@ def test_a_lap_counts_since_the_last_step(
         pass
     steps.lap("after")
     assert steps.report() == {
-        "before": 100, "work": 50, "after": 250, "total": 500
+        "before": 100, "work": 50, "after": 250, "gc": 0, "total": 500
     }  # fmt: skip
 
 
@@ -63,4 +69,22 @@ async def test_a_request_clock_starts_when_the_request_arrived(
     state = {"started": 2.0, "received": 2.020}
     request = Request({"type": "http", "state": state})
     steps = await timing.request_steps(request)
-    assert steps.report() == {"receive": 20, "json": 10, "total": 100}
+    assert steps.report() == {"receive": 20, "json": 10, "gc": 0, "total": 100}
+
+
+def test_the_collections_time_is_added_up(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A full collection during the work shows in ``gc``."""
+    import gc
+
+    from app.core import memory
+
+    monkeypatch.undo()  # the real clock and collector
+    before = memory.collected()
+    steps = timing.Steps()
+    kept = [[i] for i in range(200_000)]  # objects to walk
+    gc.collect()
+    assert memory.collected() > before
+    assert steps.report()["gc"] >= 0
+    del kept

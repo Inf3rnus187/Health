@@ -1451,7 +1451,7 @@ résultats d'examens), **Chronologie**, **Documents** (ajout + liste),
   réception et lecture du JSON, jeton, vérification, relevés, sommes
   (lecture, effacement, écriture), jours recalculés et chaque métrique
   (`days:heart.rate`…), écriture en
-  base, total depuis l'arrivée de la requête — avec le commit du code
+  base, ramasse-miettes de Python (`gc`), total depuis l'arrivée de la requête — avec le commit du code
   qui tourne, dans le journal (`./version.sh && docker compose logs api
   --no-log-prefix | grep healthkit_synced`) et dans le journal d'audit
   (champs `ms`, `commit`), à relire même des mois après ; le détail des

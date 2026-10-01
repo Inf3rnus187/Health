@@ -346,7 +346,8 @@ iPhone ajoute une ligne `healthkit_synced` : le commit du code qui
 tourne (`commit`), les nombres (relevés, sommes, entraînements,
 suppressions, jours, lignes refusées) et la durée de chaque étape en
 millisecondes (`ms`), de la réception du corps (`receive`, `json`,
-`token`, `validate`) à l'écriture en base, aussi gardée dans le journal
+`token`, `validate`) à l'écriture en base, plus le temps passé dans le
+ramasse-miettes de Python pendant ce temps (`gc`), aussi gardée dans le journal
 d'audit du compte — jamais une valeur ni un UUID (détail des étapes :
 [performances](../performance.md)).
 
@@ -541,7 +542,7 @@ Plus grand : moins d'allers-retours avec la base, plus de mémoire.
 
 | Variable | Défaut | Rôle |
 |----------|--------|------|
-| `GC_FREEZE` | `true` | Une fois l'API (ou le worker) démarrée, ses objets permanents (routes, schémas, tables) sont mis à l'écart du ramasse-miettes de Python : il ne les reparcourt plus à chaque passe (80 à 110 ms de moins sur un grand tableau de bord, [performance](../performance.md)). Rien de ce qu'une requête crée n'est gardé plus longtemps. `false` : comportement standard de Python. |
+| `GC_FREEZE` | `true` | Une fois l'API (ou le worker) démarrée, ses objets permanents (routes, schémas, tables) sont mis à l'écart du ramasse-miettes de Python : il ne les reparcourt plus à chaque passe (80 à 110 ms de moins sur un grand tableau de bord, [performance](../performance.md)). Rien de ce qu'une requête crée n'est gardé plus longtemps. `false` : comportement standard de Python. Le temps des passes restantes pendant une synchro de l'app iPhone est dans sa trace (`gc`). |
 
 #### Journaux et mises à jour
 

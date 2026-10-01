@@ -437,6 +437,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **A sync's trace shows Python's garbage collections, and new samples
+  delete nothing** (for the administrator, and everyone syncing). At
+  the user's, with the host's memory freed (266 → 110 ms a sync, no
+  code changed), two steps stayed above the test bench: `validate`
+  13 ms and `samples:forget` 33 ms. Measured on their hub (read-only):
+  validating the same body takes 0.29 ms, the lookup by UUID 0.2 ms,
+  and the `DELETE` that finds nothing 0.03 ms — but it still runs the
+  count trigger, 5.7 ms. Now: (1) when none of the UUIDs sent is stored,
+  no `DELETE` is sent (samples and workouts), so no trigger; (2) each
+  sync's `ms` holds `gc`, the time the API process spent in garbage
+  collections during the sync (a pause inside the other steps, not
+  added to them), to see whether that is what remains. Bench (HTTP,
+  fake data, 3 starts × 6 syncs, twice): `samples:forget` 4 → 1 ms,
+  `samples` 9 → 7 ms (medians); totals within noise (86/78 before,
+  91/84 ms after); same fingerprints, counts exact. A UUID sent again
+  still replaces its sample (tested). Method in
+  [docs/performance.md](docs/performance.md).
+
 - **Removing a sample no longer reads the other sources' history**
   (for everyone; seen at the user's: `deleted` 59–80 ms and
   `samples:forget` 79–155 ms for one or a few UUIDs). When a delete

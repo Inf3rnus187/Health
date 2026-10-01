@@ -94,7 +94,12 @@ async def store(
 async def forget(
     session: AsyncSession, user_id: str, uuids: list[str], touched: Touched
 ) -> int:
-    """Remove the samples with these UUIDs (their days change)."""
+    """Remove the samples with these UUIDs (their days change).
+
+    The UUIDs a sync sends are mostly new: when none is stored, nothing
+    is deleted — an empty ``DELETE`` still ran the count trigger (5.7 ms
+    measured at the user's).
+    """
     if not uuids:
         return 0
     sleep, count = await touched.cache.id_for(session, SLEEP_RAW), 0
@@ -110,10 +115,12 @@ async def forget(
                 HealthSample.value_num,
             ).where(mine)
         )
-        for row in found.mappings():
+        rows = found.mappings().all()
+        for row in rows:
             _mark(touched, dict(row), sleep)
-            count += 1
-        await session.execute(delete(HealthSample).where(mine))
+        count += len(rows)
+        if rows:  # none: no delete, so no run of the count trigger
+            await session.execute(delete(HealthSample).where(mine))
     return count
 
 

@@ -3,9 +3,10 @@
 A sync (or any work made of steps) times each named step with
 :meth:`Steps.step`, or what happened since the last step with
 :meth:`Steps.lap`, and reports the milliseconds per step, in the order
-they started, and the ``total`` since the start: written in the log and
-kept in the audit log, to find what got slow — today or months later.
-A step run several times adds up. Costs about a microsecond per step.
+they started, the process's garbage collections meanwhile (``gc``) and
+the ``total`` since the start: written in the log and kept in the audit
+log, to find what got slow — today or months later. A step run several
+times adds up. Costs about a microsecond per step.
 
 :func:`request_steps` starts the clock when the request arrived (the
 access log's start), so the time before the route runs is counted too:
@@ -20,6 +21,8 @@ from contextlib import contextmanager
 
 from starlette.requests import Request
 
+from app.core import memory
+
 
 class Steps:
     """Milliseconds spent per named step of one piece of work."""
@@ -29,6 +32,7 @@ class Steps:
         self._started = time.perf_counter() if started is None else started
         self._mark = self._started
         self._spent: dict[str, float] = {}
+        self._gc = memory.collected()
 
     @contextmanager
     def step(self, name: str) -> Iterator[None]:
@@ -48,10 +52,15 @@ class Steps:
         self._mark = at
 
     def report(self) -> dict[str, int]:
-        """Each step's milliseconds, then ``total`` since the start."""
+        """Each step's milliseconds, ``gc``, then ``total`` since the start.
+
+        ``gc``: the process's garbage collections meanwhile — inside the
+        steps' times, not added to them.
+        """
         total = time.perf_counter() - self._started
         spent = {name: round(s * 1000) for name, s in self._spent.items()}
-        return {**spent, "total": round(total * 1000)}
+        gc = round((memory.collected() - self._gc) * 1000)
+        return {**spent, "gc": gc, "total": round(total * 1000)}
 
 
 async def request_steps(request: Request) -> Steps:

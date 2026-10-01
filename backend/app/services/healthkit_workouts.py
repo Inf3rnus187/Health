@@ -63,7 +63,8 @@ async def forget(
         starts = list(found.scalars())
         touched.workouts.extend(starts)
         count += len(starts)
-        await session.execute(delete(Workout).where(mine))
+        if starts:  # none stored: nothing to delete
+            await session.execute(delete(Workout).where(mine))
     return count
 
 

@@ -8,6 +8,10 @@ process is started, they are frozen (``gc.freeze``): collections walk
 only the objects of the requests. Nothing a request makes is kept any
 longer. Thawed at shutdown so the process ends cleanly. ``GC_FREEZE=
 false`` turns it off.
+
+The time the process spends in collections is added up
+(:func:`collected`): a sync's trace says how much of it fell during the
+sync (``gc``) — a pause that lands inside any of its steps.
 """
 
 from __future__ import annotations
@@ -15,9 +19,32 @@ from __future__ import annotations
 import gc
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from time import perf_counter
 from typing import Any
 
 from app.core.config import get_settings
+
+#: Seconds spent in collections since the process started, and the start
+#: of the collection under way.
+_spent = [0.0]
+_began: list[float] = []
+
+
+def _clock(phase: str, info: dict[str, Any]) -> None:
+    """Add up each collection's time (one of ``gc.callbacks``)."""
+    del info
+    if phase == "start":
+        _began.append(perf_counter())
+    elif _began:
+        _spent[0] += perf_counter() - _began.pop()
+
+
+gc.callbacks.append(_clock)
+
+
+def collected() -> float:
+    """Seconds this process has spent in garbage collections so far."""
+    return _spent[0]
 
 
 def freeze() -> None:

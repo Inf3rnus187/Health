@@ -174,7 +174,8 @@ refused line never fails the request. The counts and the refusals
 log, for the status below, with the milliseconds of each step (`ms`:
 `receive`, `json`, `token`, `validate`, `samples` (`samples:forget`,
 `samples:write`), `statistics` (`statistics:read`, `:delete`,
-`:write`), `days`, `days:<metric>`… `total` from the request's arrival)
+`:write`), `days`, `days:<metric>`… `gc` — Python's garbage collections
+meanwhile, inside those steps — and `total` from the request's arrival)
 and the `commit`
 running, also in the API log line `healthkit_synced` — to see what a
 slow sync spent its time on ([performance](../performance.md)).

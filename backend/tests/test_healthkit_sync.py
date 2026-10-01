@@ -365,7 +365,7 @@ async def test_each_step_of_a_sync_is_timed_in_the_log_and_the_audit(
     steps = ["receive", "json", "token", "validate", "zone", "deleted"]
     steps += ["samples", "samples:forget", "samples:write", "statistics"]
     steps += ["workouts", "sleep", "days", "days:heart.rate", "workout_days"]
-    assert list(line["ms"]) == [*steps, "commit", "total"]
+    assert list(line["ms"]) == [*steps, "commit", "gc", "total"]
     ms = line["ms"]
     top = [step for step in steps if ":" not in step] + ["commit"]
     # the total runs from the request's arrival: every step fits (± 1 ms
@@ -376,8 +376,39 @@ async def test_each_step_of_a_sync_is_timed_in_the_log_and_the_audit(
     assert "61.5" not in str(line) and "T1" not in str(line)
     payload = await _last_sync_payload(auth)
     # audited before the commit; PostgreSQL's JSONB sorts the keys
-    assert set(payload["ms"]) == {*steps, "total"}
+    assert set(payload["ms"]) == {*steps, "gc", "total"}
     assert payload["commit"] == line["commit"]
+
+
+async def test_new_samples_delete_nothing(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """UUIDs never stored: no DELETE, so no run of the count trigger.
+
+    A UUID sent again still replaces its sample.
+    """
+    from app.core.db import engine
+    from sqlalchemy import event
+
+    app = await _app(client, auth)
+    deletes: list[str] = []
+
+    def _seen(*args: Any) -> None:
+        if args[2].lstrip().upper().startswith("DELETE FROM HEALTH_SAMPLES"):
+            deletes.append(args[2])
+
+    event.listen(engine.sync_engine, "before_cursor_execute", _seen)
+    try:
+        await client.post(
+            URL, json={"samples": [_hr("N1", "08:00", 60)]}, headers=app
+        )
+        assert deletes == []
+        again = {"samples": [_hr("N1", "08:00", 64)]}
+        await client.post(URL, json=again, headers=app)
+        assert len(deletes) == 1  # the stored one replaced
+    finally:
+        event.remove(engine.sync_engine, "before_cursor_execute", _seen)
+    assert await _day(client, auth, "heart.rate") == 64
 
 
 async def _last_sync_payload(auth: dict[str, str]) -> dict[str, Any]:

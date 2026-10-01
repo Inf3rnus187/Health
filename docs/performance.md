@@ -23,6 +23,53 @@ la méthode ci-dessous, et noté ici (règle de [CLAUDE.md](../CLAUDE.md)).
 
 ## Journal
 
+### 2026-10-01 (16) — la machine d'abord ; le ramasse-miettes dans la trace
+
+**Une synchro lente peut venir de l'hôte, pas du hub.** Chez
+l'utilisateur, toutes les étapes étaient 10 à 20 fois plus lentes que
+sur le banc, y compris `validate` (du Python pur). Mesures sur l'hôte
+(commandes en lecture seule, ci-dessous) : processeur 2,4 fois plus
+lent par cœur (le calcul de référence en 1,24–1,41 s contre 0,51–0,56 s
+ici), et surtout **mémoire saturée** — 61 Go utilisés sur 62, 1,5 Go
+disponible, swap plein. Un autre service, sans limite mémoire, en
+occupait 24 Go. Une fois redémarré (27 Go disponibles), même code :
+synchro habituelle **266 → 110 ms** (`token` 22 → 7, `statistics`
+57 → 20, `days` 48 → 19, `commit` 8 → 5 ms) ; la première après un
+redémarrage de l'API reste plus longue (650 ms : connexions et plans
+neufs).
+
+À vérifier avant de chercher dans le code :
+
+```bash
+./version.sh
+docker compose exec -T api python -c "import time;t=time.perf_counter();sum(i*i for i in range(10**7));print(round(time.perf_counter()-t,2),'s')"
+free -h; vmstat 1 5        # disponible, swap ; si/so ≠ 0 : la machine échange
+docker stats --no-stream --format "{{.MemPerc}}\t{{.MemUsage}}\t{{.Name}}" | LC_ALL=C sort -rn | head -8
+docker compose exec db psql -U phoenix phoenix -c "select round(100.0*blks_hit/nullif(blks_hit+blks_read,0),1) as cache_pct from pg_stat_database where datname=current_database()"
+```
+
+**Ce qui restait au-dessus du banc** : `validate` 13 ms et
+`samples:forget` 33 ms. Mesuré chez l'utilisateur sans rien écrire
+(objet en mémoire ; `SELECT`/`DELETE` d'UUID inexistants dans une
+transaction annulée, comptage des relevés identique avant / après) :
+valider le même corps 0,29 ms ; chercher les UUID 0,2 ms ; le `DELETE`
+qui ne trouve rien 0,03 ms, mais son trigger des compteurs 5,7 ms.
+
+**Changements** : (1) aucun `DELETE` quand aucun UUID envoyé n'est
+stocké (relevés, entraînements) — plus de trigger pour rien ; (2) la
+trace de chaque synchro contient `gc`, le temps passé par le processus
+de l'API dans le ramasse-miettes de Python pendant la synchro (compté à
+l'intérieur des autres étapes, pas en plus), pour voir si c'est lui qui
+reste. Coût : deux appels d'horloge par passe du ramasse-miettes.
+
+**Mesure** (banc HTTP de l'entrée 14, base factice, 3 démarrages × 6
+synchros, deux passes ; `46271fe` contre le nouveau code) :
+`samples:forget` médiane **4 → 1 ms**, `samples` 9 → 7 ms ; total en
+régime normal 86 et 78 ms avant, 91 et 84 ms après (dans le bruit de
+± 10 ms : sur le banc, le trigger ne coûtait que 1 à 3 ms) ; `gc` au
+plus 4 ms. Empreintes des jours et des relevés identiques
+(`e0fc6ac0…`, `039ae356…`), compteurs exacts.
+
 ### 2026-10-01 (15) — supprimer un relevé ne relit plus l'historique des autres sources
 
 **Constat** chez l'utilisateur, après l'entrée 14 (`045d400`) :
@@ -166,6 +213,7 @@ façon) :
 | `days:<métrique>` | … et chacune (par ex. `days:heart.rate`) : la plus lente saute aux yeux. |
 | `workout_days` | Les jours des entraînements. |
 | `commit` | L'écriture en base (journal seulement : l'audit est écrit avant). |
+| `gc` | Le ramasse-miettes de Python pendant la synchro (à l'intérieur des étapes ci-dessus, pas en plus). |
 | `total` | De l'arrivée de la requête à la fin (dans l'audit : avant le `commit`). |
 
 Le `total` part du même instant que la ligne d'accès de la requête
