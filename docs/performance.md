@@ -60,6 +60,15 @@ est l'écriture (non jouée, à dessein) et le recalcul des jours.
 Empreintes identiques avant / après, compteurs exacts. Coût : 50 à
 80 ms au démarrage de chaque processus (ligne `warmed`).
 
+**Résultat chez l'utilisateur** (`f75e2bb`) : 4 lignes `warmed`, 125 à
+135 ms chacune au démarrage. Première synchro après la mise à jour :
+**212 → 159 ms** (`token` 58 → 5, `validate` 12 → 6 ms). Ce qui reste
+sur cette première synchro est le côté écriture — `samples:forget`
+59 ms (le premier `DELETE` de la connexion fait préparer le trigger des
+compteurs) et `samples:write` 33 ms (le premier `COPY`) : les préparer
+demanderait d'écrire, même dans une transaction annulée, ce que la
+préparation s'interdit.
+
 ### 2026-10-01 (16) — la machine d'abord ; le ramasse-miettes dans la trace
 
 **Une synchro lente peut venir de l'hôte, pas du hub.** Chez

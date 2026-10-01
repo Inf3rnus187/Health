@@ -453,8 +453,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   is stored. Bench (HTTP, fake data, 6 starts each): first sync after a
   start 176.5 → 127.5 ms (median; 140–197 → 111–150 ms), the next ones
   unchanged (88 / 86.5 ms); same fingerprints, counts exact. Cost:
-  50–80 ms when each process starts. Method in
-  [docs/performance.md](docs/performance.md).
+  50–80 ms when each process starts. At the user's: 125–135 ms per
+  process at start; first sync after the update 212 → 159 ms (`token`
+  58 → 5 ms); the rest is the first write of the connection (its count
+  trigger), left cold on purpose: readying it would mean writing.
+  Method in [docs/performance.md](docs/performance.md).
 
 - **A sync's trace shows Python's garbage collections, and new samples
   delete nothing** (for the administrator, and everyone syncing). At
