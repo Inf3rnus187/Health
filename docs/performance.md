@@ -70,6 +70,16 @@ régime normal 86 et 78 ms avant, 91 et 84 ms après (dans le bruit de
 plus 4 ms. Empreintes des jours et des relevés identiques
 (`e0fc6ac0…`, `039ae356…`), compteurs exacts.
 
+**Résultat chez l'utilisateur** (`cc0726a`) : `gc` 1 à 2 ms — le
+ramasse-miettes n'est pas en cause. Une synchro sans rien de neuf (134
+sommes renvoyées, toutes inchangées) : **32 ms** au total (`validate`
+1, `token` 7, `statistics` 12, `days` 0). Les étapes longues venaient
+de la **première synchro de chaque processus** de l'API après un
+redémarrage (4 processus, `API_WORKERS`) : connexion neuve (`token`
+58 ms), premières requêtes préparées et premier passage dans le code
+(`validate` 12, `samples:forget` 36 ms) — 212 ms. Ce coût ne revient
+qu'après une mise à jour.
+
 ### 2026-10-01 (15) — supprimer un relevé ne relit plus l'historique des autres sources
 
 **Constat** chez l'utilisateur, après l'entrée 14 (`045d400`) :

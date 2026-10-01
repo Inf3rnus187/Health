@@ -452,8 +452,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   fake data, 3 starts × 6 syncs, twice): `samples:forget` 4 → 1 ms,
   `samples` 9 → 7 ms (medians); totals within noise (86/78 before,
   91/84 ms after); same fingerprints, counts exact. A UUID sent again
-  still replaces its sample (tested). Method in
-  [docs/performance.md](docs/performance.md).
+  still replaces its sample (tested). At the user's afterwards: `gc`
+  1–2 ms, so not the cause; a sync bringing nothing new takes 32 ms in
+  all; the long steps were each API process's first sync after a
+  restart (new connection, first prepared statements: 212 ms). Method
+  in [docs/performance.md](docs/performance.md).
 
 - **Removing a sample no longer reads the other sources' history**
   (for everyone; seen at the user's: `deleted` 59–80 ms and
