@@ -60,6 +60,17 @@ class HealthSample(UUIDMixin, TimestampMixin, Base):
             "ix_samples_user_metric_start", "user_id", "metric_id", "start_at"
         ),
         Index("ix_samples_user_source", "user_id", "source"),
+        #: One count group (account, metric, source) by date: when a
+        #: delete removes a group's first or last sample, the count
+        #: trigger reads the new bound in one step — not through every
+        #: sample of the other sources (up to 10 s on 370 000).
+        Index(
+            "ix_samples_group_start",
+            "user_id",
+            "metric_id",
+            "source",
+            "start_at",
+        ),
         #: Every metric by date (Données), newest first.
         Index("ix_samples_user_start", "user_id", "start_at"),
         Index(

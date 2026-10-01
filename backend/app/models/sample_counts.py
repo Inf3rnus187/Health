@@ -11,13 +11,13 @@ PostgreSQL: one statement-level trigger per operation, reading the rows
 the statement changed (transition tables): an import of 5 000 rows
 updates a few count rows once (rows are written by ``COPY``,
 :mod:`app.services.sample_writes`). A delete that removes a group's
-first or last sample reads **that** bound again, and only that one,
-through ``ix_samples_user_metric_start``: a sync replacing its latest
-sums reads the last date back from the end (a few ms), never the first
-date, which the index (without the source) could only reach after every
-older sample of the other sources (160–180 ms on 930 000 samples, at
-every sync — migration 0029). SQLite (tests): the same rules, row by
-row.
+first or last sample reads **that** bound again, and only that one
+(migration 0029), through ``ix_samples_group_start`` (account, metric,
+source, date — migration 0031): one step down the index. Without the
+source in the index, the bound of the app's samples came only after
+every sample of the native export of the same metric (a sync deleting
+the app's oldest heart-rate sample: 121–140 ms, up to 10 s cold, on
+370 000 samples). SQLite (tests): the same rules, row by row.
 
 Not an ORM table of ``Base.metadata``: created and dropped with
 ``health_samples`` (below) and by migration 0027, so a new samples table

@@ -424,6 +424,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Removing a sample no longer reads the other sources' history**
+  (for everyone; seen at the user's: `deleted` 59–80 ms and
+  `samples:forget` 79–155 ms for one or a few UUIDs). When a delete
+  removes the first or last sample of a count group (account, metric,
+  source), the trigger keeping `sample_counts` exact reads that date
+  again; the only index by date had no source, so the app's
+  (`healthkit`) bound came only after every native-export sample of the
+  same metric. A new index `ix_samples_group_start` (account, metric,
+  source, date — migration `0031`) reads it in one step. Measured on
+  fake data (370 000 heart-rate samples), a sync deleting the app's
+  oldest heart-rate sample: 121–140 → 8–9 ms (10.7 s → 2.2 ms for the
+  bare `DELETE` cold); its newest: 11–12 → 7 ms. Cost: built once at
+  the API's start (≈ 10 s for 2.4 million samples, ≈ 2–3 s for 600 000;
+  writes wait meanwhile); importing 315 000 fake samples 24.7–26.6 s
+  before, 24.9–25.3 s after (no measurable cost); counts exact, same
+  fingerprints. SQLite (tests) now reads samples in its rows' order
+  when the table's order is asked, as PostgreSQL does: the new index
+  had made it pick another order, so another channel on a tie. Method
+  in [docs/performance.md](docs/performance.md).
+
 - **A sync of the iPhone app no longer rewrites the sums it sends
   again unchanged** (for everyone using the app). At each sync the app
   sends today's hours again; only the hour still counting has changed.

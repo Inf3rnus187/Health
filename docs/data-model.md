@@ -243,8 +243,13 @@ curated value per day), these keep **every** imported record:
   app's sums only (`external_id LIKE 'stat:%'`, a partial index of a
   few hundred kB), `(user_id, metric_id, end_at)`: a sync finds the
   sums its own overlap in a few rows instead of reading the metric's
-  history (`ix_samples_stats_end`, migration `0030`). Raw samples are
-  written by PostgreSQL's `COPY` (`services/sample_writes.py`).
+  history (`ix_samples_stats_end`, migration `0030`), and
+  `(user_id, metric_id, source, start_at)`, one count group by date:
+  when a delete removes a group's first or last sample, the count
+  trigger reads the new bound in one step, not through the other
+  sources' samples (`ix_samples_group_start`, migration `0031`). Raw
+  samples are written by PostgreSQL's `COPY`
+  (`services/sample_writes.py`).
 - `workouts` — one row per session (type, duration, energy, distance,
   `source`: `apple` or `healthkit`).
 - `health_samples.external_id` / `workouts.external_id` — the id a row
@@ -390,3 +395,4 @@ fresh database built from the live models is left untouched (ADR‑0004).
 | `0028_user_reconciled_commit` | `users.reconciled_commit` (the version of the account's last full reconcile). |
 | `0029_sample_counts_one_bound` | The count triggers read again only the bound a delete removed (the last date when a sync replaces its latest sums): 160–180 ms → a few ms per type of sum and per sync. |
 | `0030_samples_stats_end` | Partial index `ix_samples_stats_end` on `health_samples (user_id, metric_id, end_at)` for the iPhone app's sums ([performance](performance.md)). |
+| `0031_samples_group_start` | Index `ix_samples_group_start` on `health_samples (user_id, metric_id, source, start_at)`: the count trigger's bound read again in one step (a sync deleting the app's oldest heart-rate sample: 121–140 → 8–9 ms) ([performance](performance.md)). Built once at the API's start (≈ 10 s for 2.4 million samples; writes wait meanwhile). |

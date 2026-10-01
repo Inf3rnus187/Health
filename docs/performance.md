@@ -23,6 +23,55 @@ la méthode ci-dessous, et noté ici (règle de [CLAUDE.md](../CLAUDE.md)).
 
 ## Journal
 
+### 2026-10-01 (15) — supprimer un relevé ne relit plus l'historique des autres sources
+
+**Constat** chez l'utilisateur, après l'entrée 14 (`045d400`) :
+`deleted` 59–80 ms pour **un** UUID supprimé dans Santé, et
+`samples:forget` 79–155 ms pour 6 à 15 relevés. Une suppression par UUID
+devrait prendre une milliseconde.
+
+**Cause** : le trigger qui tient `sample_counts` exact relit la
+première ou la dernière date d'un groupe (compte, métrique, source)
+quand une suppression la retire (entrée 12, migration `0029`). Le seul
+index par date, `(user_id, metric_id, start_at)`, n'a pas la source :
+la date du groupe `healthkit` ne venait qu'après tous les relevés de
+l'export natif (`apple`) de la même métrique. Reproduit sur la base
+factice (372 315 relevés de fréquence cardiaque `apple`, 576 de l'app),
+le `DELETE` seul, dans une transaction annulée :
+
+| Relevé de l'app supprimé | Sans l'index | Avec |
+|---|---:|---:|
+| le plus ancien | 10 738 ms | 2,2 ms |
+| le plus récent | 666 ms | 5,7 ms |
+| un du milieu | 1,8 ms | 1,7 ms |
+
+**Changement** : index `ix_samples_group_start` `(user_id, metric_id,
+source, start_at)` (migration `0031`) — le minimum et le maximum d'un
+groupe en une descente d'index. Aucun code changé.
+
+**Mesure par la synchro** (`healthkit_sync.sync`, processus chaud, deux
+passes, transaction annulée) : une synchro qui supprime le plus ancien
+relevé de fréquence cardiaque de l'app, `deleted` **121–140 → 8–9 ms** ;
+le plus récent 11–12 → 7 ms ; un du milieu 7 → 6 ms. Banc HTTP de
+l'entrée 14 avec, à chaque synchro, un UUID supprimé et un relevé
+renvoyé : `deleted` 6–12 ms dans les deux cas (le relevé retiré y est le
+plus récent, peu de relevés d'autres sources après lui), empreintes
+identiques avec et sans l'index, compteurs exacts.
+
+**Coût** : construit une fois au démarrage de l'API (9,7 s pour 2,4
+millions de relevés, ≈ 2–3 s pour 600 000 ; les écritures attendent
+pendant ce temps). Écriture : import de 315 000 relevés factices
+(`imp_bench`, schéma neuf) 26,6 et 24,7 s avant, 24,9, 25,2 et 25,3 s
+après — pas d'écart mesurable ; compteurs exacts.
+
+**Tests (SQLite)** : avec ce nouvel index, SQLite choisissait selon la
+requête l'un ou l'autre index, donc un autre ordre de lecture — et, à
+égalité de relevés entre deux canaux, un autre canal pour le jour
+(réconciliation entière contre découpée). La lecture « dans l'ordre de
+la table » de `daily_rollup` y est maintenant explicite (`ORDER BY
+rowid`), comme PostgreSQL lit déjà sans index (balayage ou bitmap,
+ordre physique).
+
 ### 2026-10-01 (14) — une synchro ne réécrit plus les sommes inchangées
 
 **Constat** (relevé des temps, entrée 13, chez l'utilisateur) : une

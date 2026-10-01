@@ -18,7 +18,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import Select, select, text
+from sqlalchemy import Select, literal_column, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -175,6 +175,8 @@ async def _blocks(
     """
     connection = await session.connection()
     if connection.dialect.name != "postgresql":
+        if in_table_order:  # SQLite (tests): its rows' order, not an index's
+            stmt = stmt.order_by(literal_column("rowid"))
         result = await connection.stream(
             stmt.execution_options(yield_per=_STREAM)
         )
