@@ -282,3 +282,42 @@ async def _audit_sync(
             )
         )
         await session.commit()
+
+
+async def test_each_step_of_a_sync_is_timed_in_the_log_and_the_audit(
+    client: AsyncClient, auth: dict[str, str]
+) -> None:
+    """Where a sync's time goes, logged and kept: no value, no UUID."""
+    from structlog.testing import capture_logs
+
+    app = await _app(client, auth)
+    body = {"samples": [_hr("T1", "08:00", 61.5)], "deleted": ["T0"]}
+    with capture_logs() as logs:
+        sent = await client.post(URL, json=body, headers=app)
+    assert sent.status_code == 200, sent.text
+    [line] = [log for log in logs if log["event"] == "healthkit_synced"]
+    assert (line["samples"], line["deleted"], line["skipped"]) == (1, 0, 0)
+    steps = ["zone", "deleted", "samples", "statistics", "workouts", "sleep"]
+    steps += ["days", "days:heart.rate", "workout_days"]
+    assert list(line["ms"]) == [*steps, "commit", "total"]
+    assert all(isinstance(ms, int) and ms >= 0 for ms in line["ms"].values())
+    assert "61.5" not in str(line) and "T1" not in str(line)
+    payload = await _last_sync_payload(auth)
+    # audited before the commit; PostgreSQL's JSONB sorts the keys
+    assert set(payload["ms"]) == {*steps, "total"}
+
+
+async def _last_sync_payload(auth: dict[str, str]) -> dict[str, Any]:
+    """The audit payload of the admin's latest sync."""
+    from app.core.db import SessionFactory
+    from app.models.audit import AuditLog
+    from sqlalchemy import select
+
+    async with SessionFactory() as session:
+        found = await session.execute(
+            select(AuditLog.payload)
+            .where(AuditLog.action == "sync", AuditLog.entity == "healthkit")
+            .order_by(AuditLog.created_at.desc())
+            .limit(1)
+        )
+        return dict(found.scalar_one())

@@ -332,7 +332,12 @@ Un jeton passé dans l'URL (`?token=`) est écrit `token=***` dans les
 journaux d'accès de l'API et de nginx. Chaque ligne de l'API porte son
 heure UTC (en tête, ou dans le champ `timestamp` d'une ligne JSON) ; la
 ligne d'accès (`app.access`) donne l'adresse du client transmise par
-nginx (`X-Real-IP`) et la durée de la requête.
+nginx (`X-Real-IP`) et la durée de la requête. Chaque synchro de l'app
+iPhone ajoute une ligne `healthkit_synced` : les nombres (relevés,
+sommes, entraînements, suppressions, jours, lignes refusées) et la durée
+de chaque étape en millisecondes (`ms`), aussi gardée dans le journal
+d'audit du compte — jamais une valeur ni un UUID (détail des étapes :
+[performances](../performance.md)).
 
 ### Interface web et carte des parcours
 

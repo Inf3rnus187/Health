@@ -23,6 +23,49 @@ la méthode ci-dessous, et noté ici (règle de [CLAUDE.md](../CLAUDE.md)).
 
 ## Journal
 
+### 2026-10-01 (13) — où passe le temps d'une synchro de l'app iPhone
+
+Pas une optimisation : un **relevé des temps**, pour savoir quoi
+optimiser — aujourd'hui ou dans six mois. Chaque `POST /sync/healthkit`
+chronomètre ses étapes et les écrit :
+
+- dans le journal de l'API, une ligne JSON `healthkit_synced` :
+  ```bash
+  docker compose logs api --no-log-prefix | grep healthkit_synced | tail -5
+  ```
+- dans le journal d'audit du compte (champ `ms`, gardé tant que la base
+  l'est) :
+  ```bash
+  docker compose exec db psql -U phoenix phoenix -c "select created_at, payload->'ms' from audit_log where action='sync' and entity='healthkit' order by created_at desc limit 10"
+  ```
+
+Les étapes, en millisecondes, dans l'ordre où elles tournent (l'ordre
+de la ligne du journal ; dans l'audit, PostgreSQL range les clés à sa
+façon) :
+
+| Clé | Ce qui est mesuré |
+|-----|-------------------|
+| `zone` | Le fuseau du compte. |
+| `deleted` | Les relevés et entraînements supprimés dans Santé. |
+| `samples` | Les relevés : lecture, remplacement par UUID, écriture. |
+| `statistics` | Les sommes horaires : celles qu'elles chevauchent ôtées, écriture. |
+| `workouts` | Les entraînements. |
+| `sleep` | Les nuits refaites depuis les phases. |
+| `days` | Les valeurs quotidiennes recalculées, toutes métriques… |
+| `days:<métrique>` | … et chacune (par ex. `days:heart.rate`) : la plus lente saute aux yeux. |
+| `workout_days` | Les jours des entraînements. |
+| `commit` | L'écriture en base (journal seulement : l'audit est écrit avant). |
+| `total` | Du début de la route à la fin (dans l'audit : avant le `commit`). |
+
+La ligne d'accès de la même requête (`"POST /api/v1/sync/healthkit …"
+… ms`) compte en plus la lecture du JSON, le jeton et la réponse :
+**durée de la ligne d'accès − `total`** = ce temps-là.
+
+Coût du relevé : 1,05 µs par étape mesurée (`timeit`, 200 000 fois),
+une vingtaine d'étapes par synchro, soit moins de 0,05 ms. Aucune
+réponse ne change (mêmes tests). Aucune valeur, date de relevé ou UUID
+n'est écrit : des noms d'étape, des clés de métrique et des durées.
+
 ### 2026-10-01 (12) — les petites synchros de l'app iPhone
 
 Chez l'utilisateur, des synchros de **quelques relevés** (0 à 177

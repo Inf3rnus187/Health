@@ -7,7 +7,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from app.core.deps import Principal, SessionDep, require_scope
+from app.core.logging import get_logger
 from app.core.scopes import WRITE_MEASUREMENTS
+from app.core.timing import Steps
 from app.schemas.healthkit import (
     HealthKitResult,
     HealthKitStatus,
@@ -16,6 +18,7 @@ from app.schemas.healthkit import (
 from app.services import audit, healthkit_sync
 
 router = APIRouter(prefix="/sync", tags=["sync"])
+_log = get_logger("healthkit_sync")
 
 #: The app sends its token in the Authorization header (never the URL).
 AppDep = Annotated[Principal, Depends(require_scope(WRITE_MEASUREMENTS))]
@@ -44,18 +47,31 @@ async def push(
     fatal. The touched days are recomputed (``days``: from the first to
     the last day the request changes, so a first sync may send years of
     history in successive requests). Token scope ``write:measurements``,
-    in the ``Authorization`` header only.
+    in the ``Authorization`` header only. The time of each step is
+    logged (``healthkit_synced``) and kept in the audit log (``ms``).
     """
-    result = await healthkit_sync.sync(session, principal.user.id, body)
+    steps = Steps()
+    result = await healthkit_sync.sync(session, principal.user.id, body, steps)
     await audit.record(
         session,
         action="sync",
         entity="healthkit",
         user_id=principal.user.id,
         source="app" if principal.token_id else "web",
-        payload=result,  # counts and refusals (type, reason): no value
+        # counts, refusals (type, reason) and times: no value
+        payload={**result, "ms": steps.report()},
     )
-    await session.commit()
+    with steps.step("commit"):
+        await session.commit()
+    counts = {k: v for k, v in result.items() if k != "skipped"}
+    skipped = sum(line["count"] for line in result["skipped"])
+    _log.info(
+        "healthkit_synced",
+        user_id=principal.user.id,
+        **counts,
+        skipped=skipped,
+        ms=steps.report(),
+    )
     return HealthKitResult(**result)
 
 

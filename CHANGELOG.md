@@ -424,6 +424,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Every iPhone app sync says where its time went** (for the
+  administrator, to find what to speed up — today or months later).
+  Each `POST /sync/healthkit` times its steps: zone, deletions, samples,
+  sums, workouts, nights, the days recomputed (all, and each metric:
+  `days:heart.rate`…), the workouts' days, the commit and the total, in
+  milliseconds. They go to the API log (`healthkit_synced`, with the
+  counts) and to the account's audit log (`ms`; the commit is logged
+  only, it comes after). The access line's duration minus `total` is
+  the reading of the JSON and the token. No value, sample date or UUID
+  is written. Cost measured: 1.05 µs per step, under 0.05 ms a sync;
+  same answers (tests). Method in
+  [docs/performance.md](docs/performance.md).
+
 - **See from the hub whether the iPhone app's lines were all kept** (for
   everyone syncing with their own app). Each sync now records in the
   account's audit log the lines it refused (type, reason, count — never

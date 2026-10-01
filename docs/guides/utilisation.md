@@ -1445,7 +1445,14 @@ résultats d'examens), **Chronologie**, **Documents** (ajout + liste),
   reçue avant le 1ᵉʳ octobre 2026 ne notait pas ses refus : elle n'est
   pas comptée comme vérifiée (« pas encore vérifiable » si aucune ne
   l'est). La même chose est lisible par l'app ou un raccourci : `GET
-  …/api/v1/sync/healthkit` avec le même jeton, champ `refused`. Ce que
+  …/api/v1/sync/healthkit` avec le même jeton, champ `refused`. **Où
+  passe le temps d'une synchro** (si le journal dit `slow`) : chaque
+  synchro écrit la durée de chacune de ses étapes en millisecondes —
+  relevés, sommes, jours recalculés et chaque métrique (`days:heart.rate`…),
+  écriture en base, total — dans le journal (`docker compose logs api
+  --no-log-prefix | grep healthkit_synced`) et dans le journal d'audit
+  (champ `ms`), à relire même des mois après ; le détail des étapes est
+  dans [performances](../performance.md). Ce que
   l'app envoie : relevés par UUID (renvoyés = remplacés, supprimés dans
   Santé = supprimés ici), **sommes HealthKit** pour pas, distance,
   énergie (jamais l'iPhone + la montre deux fois), phases du sommeil

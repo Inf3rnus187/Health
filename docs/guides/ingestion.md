@@ -165,7 +165,10 @@ type, cumulative sent as a sample, discrete as a sum, sleep without
 `end` or with a value outside 0-5, category without its name…). A
 refused line never fails the request. The counts and the refusals
 (type, reason, count — never a value) are kept in the account's audit
-log, for the status below.
+log, for the status below, with the milliseconds of each step (`ms`:
+`samples`, `statistics`, `days`, `days:<metric>`… `total`), also in the
+API log line `healthkit_synced` — to see what a slow sync spent its
+time on ([performance](../performance.md)).
 
 **One channel a day** — the app's data is stored under the source
 `healthkit`, which counts as a HealthKit channel with the native export

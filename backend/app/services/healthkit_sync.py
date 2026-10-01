@@ -27,6 +27,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.timing import Steps
 from app.models.health_raw import HealthSample, Workout
 from app.models.measurement import Measurement
 from app.models.metric import MetricDefinition
@@ -43,25 +44,41 @@ from app.services.healthkit_common import SOURCE, Touched, chunks
 
 
 async def sync(
-    session: AsyncSession, user_id: str, body: HealthKitSync
+    session: AsyncSession, user_id: str, body: HealthKitSync, steps: Steps
 ) -> dict[str, Any]:
-    """Store what the app sends, then recompute the days it touches."""
-    tz = await daily_rollup.user_zone(session, user_id)
+    """Store what the app sends, then recompute the days it touches.
+
+    Each step is timed in ``steps`` (the route logs and audits them).
+    """
+    with steps.step("zone"):
+        tz = await daily_rollup.user_zone(session, user_id)
     touched = Touched()
-    gone = body.deleted
-    deleted = await healthkit_samples.forget(session, user_id, gone, touched)
-    deleted += await healthkit_workouts.forget(session, user_id, gone, touched)
-    counts = await _store(session, user_id, body, tz, touched)
-    await healthkit_sleep.recompute(session, user_id, tz, touched)
-    days = await _days(session, user_id, tz, touched)
-    days += await healthkit_workouts.recompute(
-        session, user_id, tz, touched.workouts
-    )
+    with steps.step("deleted"):
+        deleted = await _forget(session, user_id, body.deleted, touched)
+    counts = await _store(session, user_id, body, (tz, touched, steps))
+    with steps.step("sleep"):
+        await healthkit_sleep.recompute(session, user_id, tz, touched)
+    with steps.step("days"):
+        days = await _days(session, user_id, tz, touched, steps)
+    with steps.step("workout_days"):
+        days += await healthkit_workouts.recompute(
+            session, user_id, tz, touched.workouts
+        )
     skipped = [
         {"type": kind, "reason": reason, "count": count}
         for (kind, reason), count in sorted(touched.skipped.items())
     ]
     return {**counts, "deleted": deleted, "days": days, "skipped": skipped}
+
+
+async def _forget(
+    session: AsyncSession, user_id: str, gone: list[str], touched: Touched
+) -> int:
+    """Remove the samples and workouts deleted in Health; how many."""
+    deleted = await healthkit_samples.forget(session, user_id, gone, touched)
+    return deleted + await healthkit_workouts.forget(
+        session, user_id, gone, touched
+    )
 
 
 async def status(session: AsyncSession, user_id: str) -> dict[str, Any]:
@@ -94,21 +111,23 @@ async def _store(
     session: AsyncSession,
     user_id: str,
     body: HealthKitSync,
-    tz: ZoneInfo,
-    touched: Touched,
+    at: tuple[ZoneInfo, Touched, Steps],
 ) -> dict[str, int]:
-    """Store the samples, sums and workouts; how many of each."""
-    return {
-        "samples": await healthkit_samples.store(
+    """Store the samples, sums and workouts (each timed); how many."""
+    tz, touched, steps = at
+    with steps.step("samples"):
+        samples = await healthkit_samples.store(
             session, user_id, body.samples, tz, touched
-        ),
-        "statistics": await healthkit_stats.store(
+        )
+    with steps.step("statistics"):
+        statistics = await healthkit_stats.store(
             session, user_id, body.statistics, tz, touched
-        ),
-        "workouts": await healthkit_workouts.store(
+        )
+    with steps.step("workouts"):
+        workouts = await healthkit_workouts.store(
             session, user_id, body.workouts, tz, touched
-        ),
-    }
+        )
+    return {"samples": samples, "statistics": statistics, "workouts": workouts}
 
 
 async def _per_metric(session: AsyncSession, user_id: str) -> list[Any]:
@@ -137,7 +156,11 @@ async def _per_metric(session: AsyncSession, user_id: str) -> list[Any]:
 
 
 async def _days(
-    session: AsyncSession, user_id: str, tz: ZoneInfo, touched: Touched
+    session: AsyncSession,
+    user_id: str,
+    tz: ZoneInfo,
+    touched: Touched,
+    steps: Steps,
 ) -> int:
     """Recompute each touched metric over the days the sync changed.
 
@@ -147,6 +170,7 @@ async def _days(
     history again (days after the last one received keep their samples,
     so their values). Read in the table's order, as the reconcile reads.
     A changed day left without any sample loses this channel's value.
+    Each metric is timed (``days:<key>``).
     """
     total = 0
     for metric_id, instants in touched.metrics.items():
@@ -155,11 +179,12 @@ async def _days(
             continue
         days = {_utc(at).astimezone(tz).date() for at in instants}
         span = (min(days), max(days) + timedelta(days=1))
-        found = await daily_rollup.rebuild_days(
-            session, user_id, metric, tz, (None, span, True)
-        )
+        with steps.step(f"days:{metric.key}"):
+            found = await daily_rollup.rebuild_days(
+                session, user_id, metric, tz, (None, span, True)
+            )
+            await _clear_empty(session, user_id, metric_id, days - found)
         total += len(found)
-        await _clear_empty(session, user_id, metric_id, days - found)
     return total
 
 

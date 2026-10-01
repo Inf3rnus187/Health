@@ -164,7 +164,9 @@ writes, replaces and deletes only its owner's rows of the `healthkit`
 channel, by HealthKit UUID (unique per user: another account's UUIDs are
 never reached), and each sync is audited (`sync` / `healthkit`: the
 counts, and since 1 October 2026 the refused lines as type, reason and
-count — never a value, a date of a sample or a UUID). The status adds
+count, and the milliseconds of each step (`ms`, step names and metric
+keys) — never a value, a date of a sample or a UUID). The same counts
+and times go to the API log (`healthkit_synced`, with the user id). The status adds
 up the owner's own audited refusals of the last `SYNC_REFUSED_DAYS`
 days; another account's syncs are never read. Nothing leaves the hub.
 
