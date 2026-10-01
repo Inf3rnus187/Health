@@ -1435,7 +1435,17 @@ résultats d'examens), **Chronologie**, **Documents** (ajout + liste),
   l'app »** crée un jeton `write:measurements` (« App iPhone
   (HealthKit) », affiché une seule fois, à mettre dans l'en-tête
   `Authorization: Bearer …` — jamais dans l'URL), et « Dernière synchro »
-  dit quand l'app a envoyé, combien de relevés et d'entraînements. Ce que
+  dit quand l'app a envoyé, combien de relevés et d'entraînements.
+  Dessous, **les lignes refusées** des 7 derniers jours
+  (`SYNC_REFUSED_DAYS`) : « ✓ Aucune ligne refusée sur 7 j (N synchros
+  vérifiées) » quand le hub a tout gardé ; sinon « ⚠ N lignes refusées »
+  puis, par type, la raison (par ex. « cumulé : l'envoyer dans
+  statistics », « ponctuel : l'envoyer dans samples », « type inconnu »),
+  le nombre et la dernière fois — de quoi corriger l'app. Une synchro
+  reçue avant le 1ᵉʳ octobre 2026 ne notait pas ses refus : elle n'est
+  pas comptée comme vérifiée (« pas encore vérifiable » si aucune ne
+  l'est). La même chose est lisible par l'app ou un raccourci : `GET
+  …/api/v1/sync/healthkit` avec le même jeton, champ `refused`. Ce que
   l'app envoie : relevés par UUID (renvoyés = remplacés, supprimés dans
   Santé = supprimés ici), **sommes HealthKit** pour pas, distance,
   énergie (jamais l'iPhone + la montre deux fois), phases du sommeil

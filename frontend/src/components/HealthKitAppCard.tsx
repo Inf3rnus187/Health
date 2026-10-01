@@ -1,7 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { fetchHealthKitStatus } from '../api/healthkit';
+import {
+  fetchHealthKitStatus,
+  type RefusedKind,
+  type RefusedLines,
+} from '../api/healthkit';
 import type { TokenCreated } from '../api/types';
 import { useMintToken } from '../hooks/useTokens';
 import { frNumber } from '../utils/format';
@@ -24,9 +28,46 @@ function Secret({ token }: { token: string }) {
   );
 }
 
-/** « 1 relevé », « 1 234 relevés ». */
+/** « 1 relevé », « 1 234 relevés », « 2 lignes refusées ». */
 function count(n: number, noun: string): string {
-  return `${frNumber(n, 0)} ${noun}${n > 1 ? 's' : ''}`;
+  return `${frNumber(n, 0)} ${n > 1 ? noun.replace(/(\S+)/g, '$1s') : noun}`;
+}
+
+/** Each kind refused: type, why, how many, last time (wraps). */
+function RefusedList({ kinds }: { kinds: RefusedKind[] }) {
+  return (
+    <ul className="refused-list">
+      {kinds.map((kind) => {
+        const last = new Date(kind.last).toLocaleString('fr-FR');
+        const lines = `${frNumber(kind.count, 0)} (dernière le ${last})`;
+        return (
+          <li key={`${kind.type}|${kind.reason}`}>
+            <code>{kind.type}</code> — {kind.reason} : {lines}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** The lines the hub refused lately: none, or each type with why. */
+function Refused({ refused }: { refused: RefusedLines }) {
+  if (refused.checked === 0) {
+    return <p className="muted">Lignes refusées : pas encore vérifiable.</p>;
+  }
+  const checked = count(refused.checked, 'synchro vérifiée');
+  const over = `sur ${refused.days} j (${checked})`;
+  if (refused.lines === 0) {
+    return <p className="muted">✓ Aucune ligne refusée {over}.</p>;
+  }
+  return (
+    <>
+      <p className="refused-title">
+        ⚠ {count(refused.lines, 'ligne refusée')} {over} :
+      </p>
+      <RefusedList kinds={refused.kinds} />
+    </>
+  );
 }
 
 function LastSync() {
@@ -40,10 +81,13 @@ function LastSync() {
   }
   const at = new Date(data.last_sync_at).toLocaleString('fr-FR');
   return (
-    <p className="muted">
-      Dernière synchro : {at} · {count(data.samples, 'relevé')} ·{' '}
-      {count(data.workouts, 'entraînement')}
-    </p>
+    <>
+      <p className="muted">
+        Dernière synchro : {at} · {count(data.samples, 'relevé')} ·{' '}
+        {count(data.workouts, 'entraînement')}
+      </p>
+      <Refused refused={data.refused} />
+    </>
   );
 }
 

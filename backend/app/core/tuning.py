@@ -106,6 +106,8 @@ class Tuning(BaseSettings):
     chat_trace_max_chars: int = Field(8000, ge=500)
     #: A trace this close to one already kept is the same (seconds).
     trace_same_time_s: float = Field(60.0, ge=0)
+    #: The iPhone app's status adds up the lines refused over these days.
+    sync_refused_days: int = Field(7, ge=1, le=366)
 
     # --- Reconcile after an update of the hub -------------------------------
     #: A new version (GIT_COMMIT) reconciles each user's history once, in

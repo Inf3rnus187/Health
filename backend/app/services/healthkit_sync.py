@@ -33,6 +33,7 @@ from app.models.metric import MetricDefinition
 from app.schemas.healthkit import HealthKitSync
 from app.services import (
     daily_rollup,
+    healthkit_refused,
     healthkit_samples,
     healthkit_sleep,
     healthkit_stats,
@@ -64,7 +65,10 @@ async def sync(
 
 
 async def status(session: AsyncSession, user_id: str) -> dict[str, Any]:
-    """What the hub holds from the app: counts and newest per metric."""
+    """What the hub holds from the app: counts and newest per metric.
+
+    And the lines it refused lately (:mod:`healthkit_refused`).
+    """
     rows = await _per_metric(session, user_id)
     workouts = await session.execute(
         select(func.count(Workout.id), func.max(Workout.created_at)).where(
@@ -82,6 +86,7 @@ async def status(session: AsyncSession, user_id: str) -> dict[str, Any]:
             {"key": r[0], "label": r[1], "samples": r[2], "last": _utc(r[3])}
             for r in rows
         ],
+        "refused": await healthkit_refused.recent(session, user_id),
     }
 
 

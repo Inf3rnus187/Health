@@ -210,6 +210,18 @@ body {
   flex-wrap: wrap;
 }
 
+.refused-title {
+  color: var(--color-warn);
+  margin: 0 0 4px;
+}
+
+.refused-list {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
 .secret-code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;

@@ -424,6 +424,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **See from the hub whether the iPhone app's lines were all kept** (for
+  everyone syncing with their own app). Each sync now records in the
+  account's audit log the lines it refused (type, reason, count — never
+  a value). Import › App iPhone shows them over the last 7 days
+  (`SYNC_REFUSED_DAYS`): « ✓ Aucune ligne refusée sur 7 j (N synchros
+  vérifiées) », or « ⚠ N lignes refusées » with each type, its reason
+  (cumulative sent as a sample, discrete sent as a sum, unknown type…),
+  how many and the last time. The app or a Shortcut reads the same in
+  `GET /sync/healthkit` (`refused`, same token), and the assistant in
+  `iphone_app_sync`. A sync received before this version did not record
+  its refusals: it is not counted as checked. Tested: counts per type,
+  old syncs apart, older than the window left out, another account's
+  syncs never counted.
+
 - **A reconcile uses several processor cores** (for everyone, and for
   the administrator: `RECONCILE_PARALLEL`, 4 by default). Recomputing a
   metric's days is Python work on one core; the metrics share nothing,

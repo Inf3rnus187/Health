@@ -53,7 +53,7 @@ async def push(
         entity="healthkit",
         user_id=principal.user.id,
         source="app" if principal.token_id else "web",
-        payload={k: v for k, v in result.items() if k != "skipped"},
+        payload=result,  # counts and refusals (type, reason): no value
     )
     await session.commit()
     return HealthKitResult(**result)
@@ -61,10 +61,14 @@ async def push(
 
 @router.get("/healthkit", response_model=HealthKitStatus)
 async def state(principal: AppDep, session: SessionDep) -> HealthKitStatus:
-    """What the hub holds from the app (to resume after a reinstall).
+    """What the hub holds from the app, and the lines it refused lately.
 
-    ``last_sync_at``, ``samples``, ``workouts``, and per metric ``key``,
-    ``label``, ``samples``, ``last`` (newest sample start). Same token.
+    To resume after a reinstall: ``last_sync_at``, ``samples``,
+    ``workouts``, per metric ``key``, ``label``, ``samples``, ``last``
+    (newest sample start). ``refused``: the lines refused over the last
+    ``SYNC_REFUSED_DAYS`` days (``days``, ``syncs``, ``checked``: syncs
+    that recorded refusals, ``lines``, and per ``type`` and ``reason``
+    their ``count`` and ``last`` time). Same token, or the web session.
     """
     return HealthKitStatus(
         **await healthkit_sync.status(session, principal.user.id)

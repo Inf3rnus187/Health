@@ -185,7 +185,10 @@ Depuis un autre poste, la même commande à travers SSH :
 - **App iPhone (HealthKit)** : `iphone_app_sync` — ce que ton app a
   envoyé (dernière synchro, relevés, entraînements, et par mesure le
   nombre et le plus récent) : « mon app a-t-elle synchronisé cette
-  nuit ? ». L'envoi lui-même est fait par l'app (`POST /sync/healthkit`).
+  nuit ? » ; et les **lignes refusées** des 7 derniers jours (`refused` :
+  par type, la raison et le nombre) : « le hub a-t-il tout gardé de ce
+  que l'app envoie ? ». L'envoi lui-même est fait par l'app (`POST
+  /sync/healthkit`).
 - **Mes aliments** : `list_foods`, `save_food` (valeurs pour 100 g,
   autres noms, poids du paquet, **portion habituelle** `portion_g` —
   une fiche par format : petite et grosse boîte —, **unité**

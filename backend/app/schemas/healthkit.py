@@ -79,6 +79,27 @@ class HealthKitResult(BaseModel):
     skipped: list[dict[str, Any]]
 
 
+class RefusedKind(BaseModel):
+    """One kind of line refused: its type, why, how many, last when."""
+
+    type: str
+    reason: str
+    count: int
+    last: datetime
+
+
+class RefusedLines(BaseModel):
+    """Lines refused over the last ``days`` (``SYNC_REFUSED_DAYS``)."""
+
+    days: int
+    #: Syncs received over those days, and those that recorded refusals
+    #: (a sync from before 1 October 2026 did not: not counted as none).
+    syncs: int
+    checked: int
+    lines: int
+    kinds: list[RefusedKind]
+
+
 class HealthKitStatus(BaseModel):
     """What the hub holds from the app."""
 
@@ -87,3 +108,4 @@ class HealthKitStatus(BaseModel):
     workouts: int
     #: Per metric: ``key``, ``label``, ``samples``, ``last`` (newest start).
     metrics: list[dict[str, Any]]
+    refused: RefusedLines

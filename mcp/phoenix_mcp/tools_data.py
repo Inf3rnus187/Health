@@ -166,7 +166,11 @@ async def iphone_app_sync() -> Any:
 
     ``last_sync_at``, ``samples``, ``workouts`` and per metric its count
     and newest sample (``last``): to say whether the app synced and up
-    to when. The app pushes with POST /sync/healthkit (not a tool).
+    to when. ``refused``: the lines the hub refused over the last
+    ``days`` (``lines``, and per ``kinds`` the type, reason, count and
+    last time; ``checked`` syncs recorded their refusals) — to say
+    whether anything sent was left out, and why. The app pushes with
+    POST /sync/healthkit (not a tool).
     """
     return await client.get("/sync/healthkit")
 

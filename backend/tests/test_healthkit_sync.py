@@ -218,3 +218,67 @@ async def test_each_account_syncs_its_own_and_only_by_header(
     token = app["Authorization"].split()[1]
     in_url = await client.post(f"{URL}?token={token}", json={})
     assert in_url.status_code == 401  # the header only
+
+
+async def test_refused_lines_are_kept_and_shown_to_their_account(
+    client: AsyncClient, auth: dict[str, str], member: dict[str, str]
+) -> None:
+    """The status adds up the lines refused lately, each account its own."""
+    app = await _app(client, auth)
+    assert (await client.get(URL, headers=app)).json()["refused"] == {
+        "days": 7, "syncs": 0, "checked": 0, "lines": 0, "kinds": [],
+    }  # fmt: skip
+    bad = [
+        {"uuid": "S1", "type": f"{Q}StepCount", "start": f"{DAY}T09:00:00",
+         "value": 120, "unit": "count"},
+        {"uuid": "S2", "type": f"{Q}StepCount", "start": f"{DAY}T10:00:00",
+         "value": 80, "unit": "count"},
+        {"uuid": "X1", "type": "Pouls", "start": f"{DAY}T09:00:00", "value": 1},
+    ]  # fmt: skip
+    await client.post(
+        URL, json={"samples": [*bad, _hr("A1", "08:00", 60)]}, headers=app
+    )
+    await client.post(
+        URL, json={"samples": [_hr("A2", "09:00", 61)]}, headers=app
+    )
+    await _audit_sync(auth, days_ago=1, payload={"samples": 3})  # before
+    await _audit_sync(auth, days_ago=8, payload={"samples": 1, "skipped": [
+        {"type": "Pouls", "reason": "ancien", "count": 9}]})  # fmt: skip
+    refused = (await client.get(URL, headers=auth)).json()["refused"]
+    assert (refused["syncs"], refused["checked"], refused["lines"]) == (3, 2, 3)
+    kinds = [(k["type"], k["count"]) for k in refused["kinds"]]
+    assert kinds == [(f"{Q}StepCount", 2), ("Pouls", 1)]  # most first
+    assert refused["kinds"][0]["reason"].startswith("cumulé")
+    theirs = (await client.get(URL, headers=member)).json()["refused"]
+    assert (theirs["syncs"], theirs["lines"]) == (0, 0)  # not their syncs
+
+
+async def _audit_sync(
+    auth: dict[str, str], days_ago: int, payload: dict[str, Any]
+) -> None:
+    """A sync recorded ``days_ago`` (the admin's), as the route records."""
+    from datetime import timedelta
+
+    from app.core.config import get_settings
+    from app.core.db import SessionFactory
+    from app.models.audit import AuditLog
+    from app.models.base import utcnow
+    from app.models.user import User
+    from sqlalchemy import select
+
+    async with SessionFactory() as session:
+        admin = await session.execute(
+            select(User.id).where(User.email == get_settings().admin_email)
+        )
+        session.add(
+            AuditLog(
+                user_id=admin.scalar_one(),
+                actor="user",
+                action="sync",
+                entity="healthkit",
+                source="app",
+                payload=payload,
+                created_at=utcnow() - timedelta(days=days_ago),
+            )
+        )
+        await session.commit()

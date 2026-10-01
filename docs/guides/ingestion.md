@@ -163,7 +163,9 @@ on a first sync of 20 requests over an existing export: 43–45 s → 24–
 `{"type", "reason", "count"}` for each kind of line refused (unknown
 type, cumulative sent as a sample, discrete as a sum, sleep without
 `end` or with a value outside 0-5, category without its name…). A
-refused line never fails the request.
+refused line never fails the request. The counts and the refusals
+(type, reason, count — never a value) are kept in the account's audit
+log, for the status below.
 
 **One channel a day** — the app's data is stored under the source
 `healthkit`, which counts as a HealthKit channel with the native export
@@ -174,6 +176,20 @@ Health Auto Export once the app syncs.
 **Status** — `GET /sync/healthkit` (same token): `last_sync_at`,
 `samples`, `workouts` and per metric `key`, `label`, `samples`, `last`
 (newest sample): to resume after a reinstall (the anchors are lost).
+And `refused`, the lines refused over the last `SYNC_REFUSED_DAYS` days
+(7): `days`, `syncs` received, `checked` (the syncs that recorded their
+refusals — not those received before 1 October 2026), `lines` refused
+and `kinds`, per type and reason, the most refused first:
+
+```json
+"refused": {"days": 7, "syncs": 3, "checked": 3, "lines": 26,
+  "kinds": [{"type": "HKQuantityTypeIdentifierStepCount",
+             "reason": "cumulé : l'envoyer dans statistics (sommes HealthKit)",
+             "count": 24, "last": "2026-10-01T03:28:32Z"}]}
+```
+
+`lines: 0` with `checked > 0`: nothing the app sent was left out. The
+web page shows the same under Import › App iPhone.
 
 **Suggested app flow**:
 

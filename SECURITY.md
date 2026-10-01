@@ -162,8 +162,11 @@ a `write:measurements` token sent **in the `Authorization` header
 only** — never `?token=` (an app has no reason to put it in a URL). It
 writes, replaces and deletes only its owner's rows of the `healthkit`
 channel, by HealthKit UUID (unique per user: another account's UUIDs are
-never reached), and each sync is audited (`sync` / `healthkit`, counts).
-Nothing leaves the hub.
+never reached), and each sync is audited (`sync` / `healthkit`: the
+counts, and since 1 October 2026 the refused lines as type, reason and
+count — never a value, a date of a sample or a UUID). The status adds
+up the owner's own audited refusals of the last `SYNC_REFUSED_DAYS`
+days; another account's syncs are never read. Nothing leaves the hub.
 
 ### Token in the URL (`?token=`)
 

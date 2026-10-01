@@ -519,6 +519,7 @@ Plus grand : moins d'allers-retours avec la base, plus de mémoire.
 | `IMPORT_REPORT_LINES` | `50` | Lignes listées dans le compte rendu d'un import (lignes ignorées, périodes). |
 | `CHAT_TRACE_MAX_CHARS` | `8000` | Caractères d'une trace tirée d'une conversation exportée. |
 | `TRACE_SAME_TIME_S` | `60` | Deux traces aussi proches sont la même (pas de doublon). |
+| `SYNC_REFUSED_DAYS` | `7` | Jours de synchros de l'app iPhone dont les lignes refusées s'affichent (Import › App iPhone, `GET /sync/healthkit` → `refused`), lues dans le journal d'audit du compte (1 à 366). |
 
 #### Mémoire
 
